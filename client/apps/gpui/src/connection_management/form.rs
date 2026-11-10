@@ -91,7 +91,11 @@ impl ConnectionManagement {
                 self.username = username.clone();
                 self.connection_sql_account =
                     if secret_ref.provider == SecretProvider::MacOsKeychain {
-                        Uuid::parse_str(&secret_ref.key).ok()
+                        // A reference with nothing behind it opens as an
+                        // empty field, as in the connection editor.
+                        Uuid::parse_str(&secret_ref.key).ok().filter(|id| {
+                            !matches!(crate::sql_credentials::load_password(*id), Ok(None))
+                        })
                     } else {
                         None
                     };

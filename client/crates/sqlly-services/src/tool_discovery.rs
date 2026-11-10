@@ -274,6 +274,39 @@ pub fn well_known_dirs() -> Vec<PathBuf> {
     dirs
 }
 
+/// Pure: the directories named by a `PATH` value, empty entries dropped.
+fn path_entries(path_var: &str) -> Vec<PathBuf> {
+    let entries: Vec<PathBuf> = if cfg!(windows) {
+        split_windows_path_var(path_var)
+    } else {
+        std::env::split_paths(path_var).collect()
+    };
+    entries
+        .into_iter()
+        .filter(|dir| !dir.as_os_str().is_empty())
+        .collect()
+}
+
+/// Pure: split a Windows `PATH` on `;`, honouring `"…"` around an entry. Unlike
+/// `std::env::split_paths`, a `"` with no closing partner is dropped rather than
+/// opening a quote that runs to the end and swallows every later entry, so one
+/// malformed entry no longer hides the rest of `PATH`.
+fn split_windows_path_var(path_var: &str) -> Vec<PathBuf> {
+    let mut entries = Vec::new();
+    let mut current = String::new();
+    let mut in_quote = false;
+    for (i, c) in path_var.char_indices() {
+        match c {
+            '"' if in_quote => in_quote = false,
+            '"' => in_quote = path_var[i + 1..].contains('"'),
+            ';' if !in_quote => entries.push(PathBuf::from(std::mem::take(&mut current))),
+            _ => current.push(c),
+        }
+    }
+    entries.push(PathBuf::from(current));
+    entries
+}
+
 /// Pure: given the override map, the PATH string, the well-known dirs and a
 /// `exists(&Path) -> bool` probe, produce the candidate path per tool.
 pub fn resolve_paths(
@@ -291,7 +324,7 @@ pub fn resolve_paths(
             continue;
         }
         if let Some(path) = path_var {
-            for dir in std::env::split_paths(path) {
+            for dir in path_entries(path) {
                 if let Some(candidate) = probe_in_dir(&dir, tool, exists) {
                     found.insert(tool, (candidate, ToolSource::Path));
                     break;
@@ -816,6 +849,51 @@ mod tests {
         assert_eq!(
             resolved.get(&NativeTool::PgDump),
             Some(&(tool, ToolSource::Path))
+        );
+    }
+
+    #[test]
+    fn windows_path_split_keeps_entries_after_an_unclosed_quote() {
+        // std's Windows split_paths lets the unclosed quote swallow every
+        // later `;`, which hid the real tool directory (build 14444).
+        assert_eq!(
+            split_windows_path_var("\"C:\\Program Files\\broken;C:\\tools;;D:\\bin"),
+            vec![
+                PathBuf::from("C:\\Program Files\\broken"),
+                PathBuf::from("C:\\tools"),
+                PathBuf::new(),
+                PathBuf::from("D:\\bin"),
+            ]
+        );
+    }
+
+    #[test]
+    fn windows_path_split_honours_balanced_quotes() {
+        assert_eq!(
+            split_windows_path_var("\"C:\\odd;name\";C:\\tools"),
+            vec![PathBuf::from("C:\\odd;name"), PathBuf::from("C:\\tools")]
+        );
+        assert_eq!(
+            split_windows_path_var("\"C:\\Program Files\\PostgreSQL\\16\\bin\""),
+            vec![PathBuf::from("C:\\Program Files\\PostgreSQL\\16\\bin")]
+        );
+    }
+
+    #[test]
+    fn empty_path_entries_are_not_probed_as_the_working_directory() {
+        let probed = std::cell::RefCell::new(Vec::new());
+        let sep = if cfg!(windows) { ";" } else { ":" };
+        resolve_paths(&HashMap::new(), Some(sep), &[], &|p| {
+            probed.borrow_mut().push(p.to_path_buf());
+            false
+        });
+        assert!(
+            probed
+                .borrow()
+                .iter()
+                .all(|p| p.parent() != Some(Path::new(""))),
+            "probed a bare file name: {:?}",
+            probed.borrow()
         );
     }
 

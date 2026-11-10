@@ -21,10 +21,11 @@
 #![forbid(unsafe_code)]
 
 pub mod catalog;
+mod connect_error;
 
 use crate::driver::QueryStreamer;
 use crate::sql_text::may_change_database;
-use futures::StreamExt;
+use futures::{FutureExt, StreamExt};
 use mysql_async::consts::{ColumnFlags, ColumnType};
 use mysql_async::prelude::*;
 use mysql_async::{Column, Row, Value};
@@ -209,16 +210,19 @@ async fn open_with(profile: &ConnectionProfile, found_rows: bool) -> StudioResul
             mysql_async::OptsBuilder::from_opts(opts).client_found_rows(true),
         );
     }
-    let conn = tokio::time::timeout(profile.timeout(), mysql_async::Conn::new(opts))
-        .await
-        .map_err(|_| {
-            StudioError::Connection(format!(
-                "timed out connecting to {} after {:?}",
-                profile.server,
-                profile.timeout()
-            ))
-        })?
-        .map_err(to_connection_error)?;
+    let attempt = connect_error::ConnectAttempt::new(profile, &opts);
+    // The driver panics, rather than erroring, on an authentication plugin it
+    // was built without; `explain_panic` turns that into a sign-in error.
+    let connecting = std::panic::AssertUnwindSafe(mysql_async::Conn::new(opts)).catch_unwind();
+    let conn = match tokio::time::timeout(profile.timeout(), connecting).await {
+        Err(_) => return Err(connect_error::timed_out(&attempt, profile.timeout())),
+        Ok(Err(panic)) => {
+            return Err(connect_error::explain_panic(panic, &attempt)
+                .unwrap_or_else(|panic| std::panic::resume_unwind(panic)));
+        }
+        Ok(Ok(Err(error))) => return Err(connect_error::explain(error, Some(&attempt))),
+        Ok(Ok(Ok(conn))) => conn,
+    };
     let client = MySqlClient {
         conn: tokio::sync::Mutex::new(conn),
         left_profile_database: std::sync::atomic::AtomicBool::new(false),
@@ -736,21 +740,7 @@ fn value_to_cell(value: &Value, column: &Column) -> CellValue {
 }
 
 fn to_connection_error(error: mysql_async::Error) -> StudioError {
-    if matches!(
-        error,
-        mysql_async::Error::Driver(mysql_async::DriverError::CleartextPluginDisabled)
-    ) {
-        return StudioError::AuthenticationMessage(sqlly_core::DisplayMessage::new(
-            "services.mysql.cleartext_guidance",
-            "This MySQL account signs in with a cleartext password (PAM or LDAP authentication). SQLLY only sends it over an encrypted connection with a verified server certificate: set TLS to Verify CA or Verify full in the connection editor.",
-        ));
-    }
-    let text = error.to_string();
-    if text.contains("Access denied") {
-        StudioError::Authentication(text)
-    } else {
-        crate::connect_hint::connection_with_local_network_hint(text)
-    }
+    connect_error::explain(error, None)
 }
 
 fn to_query_error(error: mysql_async::Error) -> StudioError {

@@ -1895,7 +1895,13 @@ impl ConnectionEditor {
         {
             editor.username = username.clone();
             editor.sql_account = if secret_ref.provider == SecretProvider::MacOsKeychain {
-                Uuid::parse_str(&secret_ref.key).ok()
+                // A reference with nothing behind it (a blank password saved
+                // before passwordless accounts existed, or an entry removed
+                // from the keyring) opens as an empty field rather than a
+                // mask that claims a password is stored; saving repairs it.
+                Uuid::parse_str(&secret_ref.key)
+                    .ok()
+                    .filter(|id| !matches!(crate::sql_credentials::load_password(*id), Ok(None)))
             } else {
                 None
             };
@@ -2116,10 +2122,18 @@ impl ConnectionEditor {
         let original_id = original.id.0;
         let name = unique_copy_name(&original.name, existing_names);
         let DuplicatedProfile { profile, secrets } = original.duplicate_named(name);
+        // The copy's re-minted password reference has no keyring entry until
+        // Save; keep it, where an existing profile would open as blank.
+        let fresh_account = profile
+            .authentication
+            .secret_ref()
+            .filter(|r| r.provider == SecretProvider::MacOsKeychain)
+            .and_then(|r| Uuid::parse_str(&r.key).ok());
         let mut editor =
             Self::from_profile(router, log, entra_accounts_registry, profile, window, cx);
         editor.editing_id = None;
         editor.duplicate_of = Some(original_id);
+        editor.sql_account = fresh_account;
 
         // Each fresh keyring reference the form now holds maps back to the
         // original's entry; read that entry into the matching input.
@@ -7127,8 +7141,14 @@ fn assemble_profile(input: ProfileInputs) -> Result<ConnectionProfile, String> {
     }
 
     profile.authentication = match input.auth_mode {
+        // An empty field is an account that has no password (a saved one
+        // shows the mask, never an empty field): the profile carries an empty
+        // in-memory secret and needs no keyring entry, like a blank libSQL
+        // token below.
         AuthMode::SqlLogin => {
-            let account_id = if input.persistable {
+            let account_id = if password.is_empty() {
+                None
+            } else if input.persistable {
                 Some(input.sql_account.unwrap_or_else(Uuid::new_v4))
             } else {
                 input.sql_account
@@ -7136,7 +7156,7 @@ fn assemble_profile(input: ProfileInputs) -> Result<ConnectionProfile, String> {
             AuthenticationType::SqlLogin {
                 username,
                 secret_ref: SecretRef {
-                    provider: if account_id.is_some() || input.persistable {
+                    provider: if account_id.is_some() {
                         SecretProvider::MacOsKeychain
                     } else {
                         SecretProvider::InMemory
@@ -8431,6 +8451,49 @@ mod tests {
         assert_eq!(secret_ref.provider, SecretProvider::MacOsKeychain);
         assert_ne!(secret_ref.key, "must-not-persist");
         assert!(Uuid::parse_str(&secret_ref.key).is_ok());
+    }
+
+    #[test]
+    fn blank_sql_login_password_saves_as_passwordless_without_a_keyring_entry() {
+        for (persistable, sql_account) in [
+            (true, None),
+            (true, Some(Uuid::new_v4())),
+            (false, None),
+            (false, Some(Uuid::new_v4())),
+        ] {
+            let mut input = inputs();
+            input.persistable = persistable;
+            input.sql_account = sql_account;
+            input.password = String::new();
+
+            let profile = assemble_profile(input).unwrap();
+            let AuthenticationType::SqlLogin { secret_ref, .. } = &profile.authentication else {
+                panic!("expected SQL login");
+            };
+            assert_eq!(secret_ref.provider, SecretProvider::InMemory);
+            assert_eq!(secret_ref.key, "");
+            // Connecting resolves it to an empty password, not an error.
+            let hydrated = crate::sql_credentials::hydrate_profile(profile).unwrap();
+            let secret_ref = hydrated.authentication.secret_ref().unwrap();
+            assert_eq!(
+                sqlly_core::secret_resolver::resolve_secret(secret_ref).unwrap(),
+                ""
+            );
+        }
+    }
+
+    #[test]
+    fn untouched_mask_keeps_the_saved_keyring_password() {
+        let account = Uuid::new_v4();
+        let mut input = inputs();
+        input.persistable = true;
+        input.sql_account = Some(account);
+        input.password = password_mask();
+
+        let profile = assemble_profile(input).unwrap();
+        let secret_ref = profile.authentication.secret_ref().unwrap();
+        assert_eq!(secret_ref.provider, SecretProvider::MacOsKeychain);
+        assert_eq!(secret_ref.key, account.to_string());
     }
 
     #[test]

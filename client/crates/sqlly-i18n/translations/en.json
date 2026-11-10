@@ -3378,7 +3378,7 @@
       },
       "missing_sql_password": {
         "location": "Desktop app → Connecting to a server: error shown when the connection uses a saved SQL login (or auth token) but its password is missing from the system keychain, so connecting fails.",
-        "value": "The saved SQL account has no password in the system keyring."
+        "value": "The password for this saved connection is missing from the system keyring, so SQLLY has nothing to sign in with. Its keyring entry was removed, or the connection was saved with a blank password by an older version of SQLLY. Edit the connection, enter the password (or leave it blank if the account has none), and save."
       },
       "missing_ssh_secret": {
         "location": "Desktop app → Connecting through an SSH tunnel: error shown when the saved SSH password or key passphrase for the tunnel or jump host is missing from the system keychain.",
@@ -29132,6 +29132,70 @@
       }
     },
     "mysql": {
+      "connect_tls_untrusted_certificate": {
+        "location": "Connection editor → Test Connection, and the connection error shown when connecting to a MySQL or MariaDB server: message shown when the server's TLS certificate is self-signed or from an unknown certificate authority and the TLS mode verifies it; {server} is the server name the user entered and {detail} is the raw driver error. Keep SQL statements, server setting names, plugin names and product names as they are; the quoted TLS option names must match the TLS dropdown in the connection editor.",
+        "value": "Connection error: the TLS certificate from {server} is not trusted. It is self-signed or was issued by a certificate authority this computer does not know, and this connection's TLS mode checks the certificate. MariaDB 11.4 and later and MySQL 5.7 and later create a self-signed certificate on their own, so this is normal for a local or test server. To connect, edit the connection and set TLS to \"Require (no verification)\" (still encrypted), or keep verification and choose the server's CA certificate file in the TLS section. Driver detail: {detail}"
+      },
+      "connect_tls_hostname_mismatch": {
+        "location": "Connection editor → Test Connection, and the connection error shown when connecting to a MySQL or MariaDB server: message shown when the server's TLS certificate does not list the host name being connected to; {server} is the server name the user entered and {detail} is the raw driver error. Keep SQL statements, server setting names, plugin names and product names as they are; the quoted TLS option names must match the TLS dropdown in the connection editor.",
+        "value": "Connection error: the TLS certificate from {server} was issued for a different host name. It does not list the name or address you are connecting with, and the TLS mode \"Verify full\" checks that. To connect, use the host name the certificate was issued for, or edit the connection and set TLS to \"Verify CA\" (checks the certificate authority but not the host name). Driver detail: {detail}"
+      },
+      "connect_tls_certificate_expired": {
+        "location": "Connection editor → Test Connection, and the connection error shown when connecting to a MySQL or MariaDB server: message shown when the server's TLS certificate has expired or is not yet valid; {server} is the server name the user entered and {detail} is the raw driver error. Keep SQL statements, server setting names, plugin names and product names as they are; the quoted TLS option names must match the TLS dropdown in the connection editor.",
+        "value": "Connection error: the TLS certificate from {server} has expired or is not valid yet. Check that the date and time on this computer are correct; if they are, the certificate must be renewed on the server. To connect without checking the certificate, edit the connection and set TLS to \"Require (no verification)\". Driver detail: {detail}"
+      },
+      "connect_tls_failed": {
+        "location": "Connection editor → Test Connection, and the connection error shown when connecting to a MySQL or MariaDB server: message shown when the TLS handshake fails for a reason other than an untrusted, mismatched or expired certificate; {server} is the server name the user entered and {detail} is the raw driver error. Keep SQL statements, server setting names, plugin names and product names as they are; the quoted TLS option names must match the TLS dropdown in the connection editor.",
+        "value": "Connection error: the encrypted (TLS) connection to {server} could not be set up. The server and SQLLY could not agree on TLS settings, or a certificate was rejected. Check the TLS section of the connection: the TLS mode, the CA certificate file, and the client certificate and key. Driver detail: {detail}"
+      },
+      "connect_tls_not_enabled_on_server": {
+        "location": "Connection editor → Test Connection, and the connection error shown when connecting to a MySQL or MariaDB server: message shown when the connection's TLS mode requires encryption but the server has TLS turned off; {server} is the server name the user entered and {detail} is the raw driver error. Keep SQL statements, server setting names, plugin names and product names as they are; the quoted TLS option names must match the TLS dropdown in the connection editor.",
+        "value": "Connection error: {server} does not have TLS (SSL) turned on, but this connection's TLS mode requires an encrypted connection, and SQLLY never falls back to an unencrypted one on its own. To connect, edit the connection and set TLS to \"Disable\" (the connection will not be encrypted), or turn on TLS on the server. MariaDB 11.3 and earlier has TLS off unless it was configured. Driver detail: {detail}"
+      },
+      "connect_socket_only_account": {
+        "location": "Connection editor → Test Connection, and the connection error shown when connecting to a MySQL or MariaDB server: message shown when the server refuses an account that may only sign in through the local Unix socket (server error 1698); {user} is the account name and {detail} is the raw server error. Keep SQL statements, server setting names, plugin names and product names as they are; the quoted TLS option names must match the TLS dropdown in the connection editor.",
+        "value": "Authentication failed: the account {user} can only sign in through the server's local Unix socket, not over the network. SQLLY connects over the network (TCP), so the server refuses this account whatever password you enter. This is the default for root and for your operating-system user on Homebrew, package and installer setups of MariaDB and MySQL. To connect, give the account a password in the mysql or mariadb command-line client, for example ALTER USER '{user}'@'localhost' IDENTIFIED BY 'a-new-password'; or create another user that has a password, then enter that password here. Server detail: {detail}"
+      },
+      "connect_access_denied": {
+        "location": "Connection editor → Test Connection, and the connection error shown when connecting to a MySQL or MariaDB server: message shown when the server rejects the user name or password (server error 1045); {user} is the account name and {detail} is the raw server error. Keep SQL statements, server setting names, plugin names and product names as they are; the quoted TLS option names must match the TLS dropdown in the connection editor.",
+        "value": "Authentication failed: the server rejected the user name or password for {user}. Check both for typos. MySQL and MariaDB accounts are tied to the address you connect from, so an account created for 'localhost' may not accept a connection from another address, and the same user name can have a different password for each address. Server detail: {detail}"
+      },
+      "connect_access_denied_no_password": {
+        "location": "Connection editor → Test Connection, and the connection error shown when connecting to a MySQL or MariaDB server: message shown when the server rejects a sign-in because no password was sent (server error 1045, using password: NO); {user} is the account name and {detail} is the raw server error. Keep SQL statements, server setting names, plugin names and product names as they are; the quoted TLS option names must match the TLS dropdown in the connection editor.",
+        "value": "Authentication failed: no password was sent for {user}, and the server requires one for this account. Edit the connection, enter the password, and try again. Server detail: {detail}"
+      },
+      "connect_host_not_allowed": {
+        "location": "Connection editor → Test Connection, and the connection error shown when connecting to a MySQL or MariaDB server: message shown when the server does not allow any account to connect from this computer's address (server error 1130); {detail} is the raw server error. Keep SQL statements, server setting names, plugin names and product names as they are; the quoted TLS option names must match the TLS dropdown in the connection editor.",
+        "value": "Connection error: the server does not accept sign-ins from this computer's address. No account on the server is set up to connect from here; accounts are often created for 'localhost' only. On the server, create or change an account so its host part matches this computer (for example 'user'@'%'), or connect through an SSH tunnel. Server detail: {detail}"
+      },
+      "connect_unknown_database": {
+        "location": "Connection editor → Test Connection, and the connection error shown when connecting to a MySQL or MariaDB server: message shown when the database named in the connection does not exist (server error 1049); {database} is the database name the user entered and {detail} is the raw server error. Keep SQL statements, server setting names, plugin names and product names as they are; the quoted TLS option names must match the TLS dropdown in the connection editor.",
+        "value": "Connection error: the database \"{database}\" does not exist on this server. The user name and password were accepted. Edit the connection and correct the Database field, or clear it to connect without a default database. Server detail: {detail}"
+      },
+      "connect_database_access_denied": {
+        "location": "Connection editor → Test Connection, and the connection error shown when connecting to a MySQL or MariaDB server: message shown when the account signed in but may not use the database named in the connection (server error 1044); {user} is the account name, {database} is the database name and {detail} is the raw server error. Keep SQL statements, server setting names, plugin names and product names as they are; the quoted TLS option names must match the TLS dropdown in the connection editor.",
+        "value": "Connection error: the account {user} signed in, but it is not allowed to use the database \"{database}\". Edit the connection and choose a database this account can use or clear the Database field, or grant the account access on the server. Server detail: {detail}"
+      },
+      "connect_too_many_connections": {
+        "location": "Connection editor → Test Connection, and the connection error shown when connecting to a MySQL or MariaDB server: message shown when the server refuses new connections because it reached its connection limit (server error 1040); {server} is the server name the user entered and {detail} is the raw server error. Keep SQL statements, server setting names, plugin names and product names as they are; the quoted TLS option names must match the TLS dropdown in the connection editor.",
+        "value": "Connection error: {server} has reached its limit of open connections and is refusing new ones. Close connections that are no longer needed, or raise max_connections on the server, then try again. Server detail: {detail}"
+      },
+      "connect_refused": {
+        "location": "Connection editor → Test Connection, and the connection error shown when connecting to a MySQL or MariaDB server: message shown when nothing is listening at the host and port; {server} and {port} are the host and port the user entered and {detail} is the raw driver error. Keep SQL statements, server setting names, plugin names and product names as they are; the quoted TLS option names must match the TLS dropdown in the connection editor.",
+        "value": "Connection error: nothing is accepting connections at {server} on port {port}. Either the server is not running, it listens on a different port, or it is configured to accept only local socket connections (skip-networking) or connections on another network address (bind-address). Start the server and check the Server and Port fields. Driver detail: {detail}"
+      },
+      "connect_host_not_found": {
+        "location": "Connection editor → Test Connection, and the connection error shown when connecting to a MySQL or MariaDB server: message shown when the host name cannot be resolved; {server} is the server name the user entered and {detail} is the raw driver error. Keep SQL statements, server setting names, plugin names and product names as they are; the quoted TLS option names must match the TLS dropdown in the connection editor.",
+        "value": "Connection error: the host name \"{server}\" could not be found. Check the Server field for typos, and check that your network or VPN connection is up. Driver detail: {detail}"
+      },
+      "connect_timed_out": {
+        "location": "Connection editor → Test Connection, and the connection error shown when connecting to a MySQL or MariaDB server: message shown when the server does not complete the connection within the connection timeout; {server} and {port} are the host and port the user entered and {seconds} is the timeout in whole seconds. Keep SQL statements, server setting names, plugin names and product names as they are; the quoted TLS option names must match the TLS dropdown in the connection editor.",
+        "value": "Connection error: timed out connecting to {server} on port {port}; there was no complete reply within the {seconds}-second timeout. The address or port may be wrong, a firewall may be blocking the port, or the server may only be reachable through a VPN or SSH tunnel."
+      },
+      "connect_auth_plugin_unsupported": {
+        "location": "Connection editor → Test Connection, and the connection error shown when connecting to a MySQL or MariaDB server: message shown when the account uses a sign-in plugin SQLLY cannot use; {user} is the account name and {plugin} is the plugin name reported by the server. Keep SQL statements, server setting names, plugin names and product names as they are; the quoted TLS option names must match the TLS dropdown in the connection editor.",
+        "value": "Authentication failed: the account {user} signs in with the \"{plugin}\" authentication plugin, which SQLLY does not support. On the server, change the account to mysql_native_password (or caching_sha2_password on MySQL), or connect with a different account."
+      },
       "cleartext_guidance": {
         "location": "Connection Editor → MySQL Cleartext Authentication: guidance shown when PAM or LDAP requires cleartext password support and TLS must be enabled.",
         "value": "This MySQL account signs in with a cleartext password (PAM or LDAP authentication). SQLLY only sends it over an encrypted connection with a verified server certificate: set TLS to Verify CA or Verify full in the connection editor."
