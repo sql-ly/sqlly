@@ -1,0 +1,9 @@
+--- statement 1 [0..10]
+SELECT 1;
+
+--- statement 2 [10..20]
+SELECT 2;
+
+--- statement 3 [20..29]
+SELECT 3
+

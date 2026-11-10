@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Backup and restore</title>
+  <desc id="desc">Database backup and restore movement with checksum and recovery direction.</desc>
+  <style>
+    .ink{stroke:oklch(30% 0.06 252);stroke-width:8;stroke-linecap:round;stroke-linejoin:round}.thin{stroke:oklch(55% 0.06 252);stroke-width:5;stroke-linecap:round;stroke-linejoin:round}.panel{fill:oklch(94% 0.018 245);stroke:oklch(66% 0.05 245);stroke-width:6}.soft{fill:oklch(88% 0.04 250)}.accent{fill:oklch(62% 0.16 250)}.accent2{fill:oklch(68% 0.14 178)}.accent3{fill:oklch(74% 0.16 65)}
+  </style>
+  <ellipse class="accent" cx="78" cy="66" rx="42" ry="16"/>
+  <path class="ink" fill="none" d="M36 66v76c0 10 19 18 42 18s42-8 42-18V66"/>
+  <path class="thin" fill="none" d="M36 104c0 10 19 18 42 18s42-8 42-18"/>
+  <rect class="panel" x="150" y="68" width="62" height="84" rx="14"/>
+  <path class="accent2" d="M150 68h62v26h-62z"/>
+  <path class="ink" fill="none" d="M124 92h42M150 76l16 16-16 16M166 174h-42M140 158l-16 16 16 16"/>
+  <circle class="soft" cx="182" cy="196" r="28"/>
+  <path class="thin" d="M168 196l11 11 21-24"/>
+</svg>

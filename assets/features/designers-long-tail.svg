@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Designers and long-tail parity</title>
+  <desc id="desc">Table designer, index and relationship design, diagrams, and advanced admin surfaces.</desc>
+  <style>
+    .ink{stroke:oklch(30% 0.06 252);stroke-width:8;stroke-linecap:round;stroke-linejoin:round}.thin{stroke:oklch(55% 0.06 252);stroke-width:5;stroke-linecap:round;stroke-linejoin:round}.panel{fill:oklch(94% 0.018 245);stroke:oklch(66% 0.05 245);stroke-width:6}.soft{fill:oklch(88% 0.04 250)}.accent{fill:oklch(62% 0.16 250)}.accent2{fill:oklch(68% 0.14 178)}.accent3{fill:oklch(74% 0.16 65)}
+  </style>
+  <rect class="panel" x="28" y="52" width="84" height="116" rx="14"/>
+  <rect class="panel" x="144" y="80" width="84" height="116" rx="14"/>
+  <path class="accent" d="M28 66a14 14 0 0 1 14-14h56a14 14 0 0 1 14 14v22H28z"/>
+  <path class="accent2" d="M144 94a14 14 0 0 1 14-14h56a14 14 0 0 1 14 14v22h-84z"/>
+  <path class="thin" d="M46 110h48M46 132h36M46 154h44M162 138h48M162 160h36M162 182h44"/>
+  <path class="ink" fill="none" d="M112 116h32M128 116v-34M128 82h16M112 144h32M128 144v38M128 182h16"/>
+  <circle class="accent3" cx="70" cy="206" r="22"/>
+  <path fill="oklch(96% 0.012 245)" d="M60 202h20v8H60z"/>
+  <path fill="oklch(96% 0.012 245)" d="M66 196h8v20h-8z"/>
+</svg>

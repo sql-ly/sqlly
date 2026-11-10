@@ -1,0 +1,1 @@
+SELECT c.name, TYPE_NAME(c.user_type_id) AS type_name, c.max_length, c.precision, c.scale, c.is_nullable FROM sys.table_types tt JOIN sys.columns c ON c.object_id = tt.type_table_object_id JOIN sys.schemas s ON s.schema_id = tt.schema_id WHERE s.name = N'odd schema' AND tt.name = N'My]Rows' ORDER BY c.column_id

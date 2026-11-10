@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Query Store and events</title>
+  <desc id="desc">Query Store history, plan regressions, and Extended Events streams.</desc>
+  <style>
+    .ink{stroke:oklch(30% 0.06 252);stroke-width:8;stroke-linecap:round;stroke-linejoin:round}.thin{stroke:oklch(55% 0.06 252);stroke-width:5;stroke-linecap:round;stroke-linejoin:round}.panel{fill:oklch(94% 0.018 245);stroke:oklch(66% 0.05 245);stroke-width:6}.soft{fill:oklch(88% 0.04 250)}.accent{fill:oklch(62% 0.16 250)}.accent2{fill:oklch(68% 0.14 178)}.accent3{fill:oklch(74% 0.16 65)}.danger{fill:oklch(64% 0.16 18)}
+  </style>
+  <rect class="panel" x="34" y="44" width="188" height="156" rx="18"/>
+  <path class="thin" d="M56 158h154M62 78v96"/>
+  <path class="ink" fill="none" d="M62 142c26-38 44 8 66-28s38-12 76-54"/>
+  <circle class="accent" cx="100" cy="126" r="10"/>
+  <circle class="accent2" cx="144" cy="102" r="10"/>
+  <circle class="danger" cx="188" cy="66" r="10"/>
+  <path class="soft" d="M58 212h142a14 14 0 0 1 0 28H58a14 14 0 0 1 0-28z"/>
+  <path class="thin" d="M72 226h20M112 226h20M152 226h20"/>
+  <path class="accent3" d="M200 212h20a14 14 0 0 1 0 28h-20z"/>
+</svg>

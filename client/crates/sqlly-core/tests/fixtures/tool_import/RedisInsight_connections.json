@@ -1,0 +1,130 @@
+[
+  {
+    "id": "0e1b8f1c-5c4e-4d5a-9a1c-1f2e3d4c5b6a",
+    "host": "127.0.0.1",
+    "port": 6379,
+    "name": "Local cache",
+    "db": 0,
+    "username": null,
+    "password": null,
+    "connectionType": "STANDALONE",
+    "nameFromProvider": null,
+    "provider": "LOCALHOST",
+    "lastConnection": "2026-10-18T09:12:44.000Z",
+    "modules": [],
+    "tls": false,
+    "tlsServername": null,
+    "verifyServerCert": null,
+    "ssh": false,
+    "compressor": "NONE",
+    "forceStandalone": false,
+    "tags": []
+  },
+  {
+    "id": "6a2d9f4e-1f0b-4c7d-8e2a-3b4c5d6e7f80",
+    "host": "redis-12345.c1.us-east-1-2.ec2.redns.redis-cloud.com",
+    "port": 12345,
+    "name": "Prod sessions",
+    "db": 3,
+    "username": "app",
+    "password": "pr0d-s3cret",
+    "connectionType": "STANDALONE",
+    "provider": "RE_CLOUD",
+    "modules": [{"name": "ReJSON", "version": 20609, "semanticVersion": "2.6.9"}],
+    "tls": true,
+    "tlsServername": "redis-12345.c1.us-east-1-2.ec2.redns.redis-cloud.com",
+    "verifyServerCert": true,
+    "caCert": {
+      "id": "c0a1b2c3-0000-4000-8000-000000000001",
+      "name": "redis-cloud-ca",
+      "certificate": "-----BEGIN CERTIFICATE-----\nMIIBszCCAVmgAwIBAgIUWSKCA\n-----END CERTIFICATE-----\n"
+    },
+    "clientCert": {
+      "id": "c0a1b2c3-0000-4000-8000-000000000002",
+      "name": "app-client",
+      "certificate": "-----BEGIN CERTIFICATE-----\nMIIBtjCCAVygAwIBAgIUZZ\n-----END CERTIFICATE-----\n",
+      "key": "-----BEGIN PRIVATE KEY-----\nMIGHAgEAMBMGByqGSM49\n-----END PRIVATE KEY-----\n"
+    },
+    "ssh": false,
+    "compressor": "GZIP",
+    "tags": [{"key": "env", "value": "production"}]
+  },
+  {
+    "id": "7b3e0a5f-2a1c-4d8e-9f3b-4c5d6e7f8091",
+    "host": "10.0.4.12",
+    "port": 6380,
+    "name": "Staging via bastion",
+    "db": 1,
+    "username": "default",
+    "password": "st4ging",
+    "connectionType": "STANDALONE",
+    "tls": true,
+    "verifyServerCert": false,
+    "ssh": true,
+    "sshOptions": {
+      "id": "d1e2f3a4-0000-4000-8000-000000000003",
+      "host": "bastion.example.com",
+      "port": 2222,
+      "username": "ops",
+      "password": null,
+      "privateKey": "-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAA\n-----END OPENSSH PRIVATE KEY-----\n",
+      "passphrase": "k3y-phrase"
+    }
+  },
+  {
+    "id": "8c4f1b60-3b2d-4e9f-a04c-5d6e7f8091a2",
+    "host": "cluster-node-1.internal",
+    "port": 7000,
+    "name": "Orders cluster",
+    "connectionType": "CLUSTER",
+    "tls": false,
+    "ssh": false
+  },
+  {
+    "id": "9d502c71-4c3e-4fa0-b15d-6e7f8091a2b3",
+    "host": "sentinel-1.internal",
+    "port": 26379,
+    "name": "HA via Sentinel",
+    "username": "sentinel-admin",
+    "password": "s3ntinel",
+    "connectionType": "SENTINEL",
+    "sentinelMaster": {"name": "mymaster", "username": "app", "password": "m4ster"},
+    "nodes": [{"host": "sentinel-1.internal", "port": 26379}],
+    "tls": false
+  },
+  {
+    "id": "ae613d82-5d4f-40b1-826e-7f8091a2b3c4",
+    "host": "contoso.eastus.redis.azure.net",
+    "port": 10000,
+    "name": "Azure Managed Redis",
+    "connectionType": "STANDALONE",
+    "provider": "AZURE",
+    "providerDetails": {"provider": "azure", "authType": "entraId", "tenantId": "72f988bf-0000-0000-0000-2d7cd011db47"},
+    "tls": true,
+    "verifyServerCert": true
+  },
+  {
+    "host": "10.1.0.5",
+    "port": 26379,
+    "name": "Legacy sentinel",
+    "type": "sentinel",
+    "sentinelOptions": {"masterName": "cachegroup", "nodePassword": "node-pass"},
+    "tls": false
+  },
+  {
+    "host": "10.1.0.9",
+    "port": 7001,
+    "name": "Legacy cluster flag",
+    "cluster": true,
+    "tls": false
+  },
+  {
+    "id": "bf724e93-6e50-41c2-937f-8091a2b3c4d5",
+    "host": "cluster-node-2.internal",
+    "port": 7001,
+    "name": "Pinned cluster node",
+    "connectionType": "CLUSTER",
+    "forceStandalone": true,
+    "tls": false
+  }
+]

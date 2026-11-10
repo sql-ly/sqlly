@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 180" role="img" aria-labelledby="title desc">
+  <title id="title">Empty results</title>
+  <desc id="desc">A quiet result grid waiting for a query to run.</desc>
+  <rect x="40" y="34" width="138" height="96" rx="14" fill="#eef5ff" stroke="#8fb0d8" stroke-width="4"/>
+  <path d="M40 60h138M40 86h138M40 112h138M74 34v96M110 34v96M146 34v96" stroke="#b8cce5" stroke-width="3"/>
+  <circle cx="172" cy="121" r="28" fill="#f8fbff" stroke="#3b82f6" stroke-width="7"/>
+  <path d="m192 142 22 22" stroke="#3b82f6" stroke-width="8" stroke-linecap="round"/>
+  <path d="M67 151h60M72 163h36" stroke="#9aa8bd" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="72" cy="73" r="4" fill="#60a5fa"/>
+  <circle cx="108" cy="99" r="4" fill="#34d399"/>
+  <circle cx="145" cy="73" r="4" fill="#fbbf24"/>
+</svg>

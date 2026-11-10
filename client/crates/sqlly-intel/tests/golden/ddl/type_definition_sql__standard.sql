@@ -1,0 +1,1 @@
+SELECT t.name, TYPE_NAME(t.system_type_id) AS base_type_name, t.max_length, t.precision, t.scale, t.is_nullable, t.is_table_type, t.is_assembly_type FROM sys.types t JOIN sys.schemas s ON s.schema_id = t.schema_id WHERE t.is_user_defined = 1 AND s.name = N'dbo' AND t.name = N'OrderId'

@@ -1,0 +1,47 @@
+[package]
+name = "sqlly-remote"
+version = "1.8.0"
+edition.workspace = true
+license.workspace = true
+publish = false
+
+# `engine_protocol` (the codec + `EngineClient`) is pure and compiles for
+# wasm32, where the browser build drives it over a WebSocket transport. The
+# Noise handshake and the TLS/relay transport are native-only.
+[features]
+# Set by the GPUI app's `app-store` feature: the Mac App Store edition keeps
+# its keychain items under its own service names, apart from the direct
+# download's.
+mac-app-store = []
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+async-trait = { workspace = true }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+sqlly-wire = { workspace = true }
+bytes = { workspace = true }
+uuid = { workspace = true }
+tokio = { workspace = true }
+reqwest = { workspace = true }
+tokio-rustls = { workspace = true }
+rustls = { workspace = true }
+rand = { workspace = true }
+webpki-roots = "1.0"
+keyring = { workspace = true }
+snow = "0.10"
+x25519-dalek = { version = "3", features = ["static_secrets"] }
+blake2 = "0.11"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+# `select!`/`pin!` for the client; no runtime, no I/O.
+tokio = { version = "1", default-features = false, features = ["sync", "macros"] }
+
+[dev-dependencies]
+tokio = { workspace = true }
+tokio-test = "0.4"
+bytes = { workspace = true }
+uuid = { workspace = true }

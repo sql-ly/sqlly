@@ -1,0 +1,78 @@
+{
+    // Editor settings first, as in a real settings.json
+    "editor.fontSize": 13,
+    "workbench.colorTheme": "Default Dark+", /* trailing block comment */
+    "datasource.connectionGroups": [
+        { "name": "ROOT", "id": "C777F06B-202E-4480-B475-FA416154D458" },
+        { "name": "Acme", "id": "G-ACME", "parentId": "C777F06B-202E-4480-B475-FA416154D458", "color": "#A1634D" },
+    ],
+    "datasource.connections": [
+        {
+            "options": {
+                "connectionName": "Sales DW",
+                "server": "sql01.acme.internal,14330",
+                "database": "SalesDW",
+                "authenticationType": "SqlLogin",
+                "user": "sales_reader",
+                "password": "hunter2",
+                "savePassword": true,
+                "encrypt": "Mandatory",
+                "trustServerCertificate": true,
+                "applicationName": "azdata"
+            },
+            "groupId": "G-ACME",
+            "providerName": "MSSQL",
+            "savePassword": true,
+            "id": "1"
+        },
+        {
+            "options": {
+                "server": "WORKSTATION\\SQLEXPRESS",
+                "database": "master",
+                "authenticationType": "Integrated",
+                "user": "",
+                "password": ""
+            },
+            "groupId": "C777F06B-202E-4480-B475-FA416154D458",
+            "providerName": "MSSQL",
+            "id": "2"
+        },
+        {
+            "options": {
+                "connectionName": "Analytics PG",
+                "host": "pg.acme.internal",
+                "port": 5432,
+                "dbname": "analytics",
+                "user": "analyst",
+                "sslmode": "require"
+            },
+            "groupId": "G-ACME",
+            "providerName": "PGSQL",
+            "id": "3"
+        },
+        {
+            "options": { "connectionName": "Kusto cluster", "server": "help.kusto.windows.net" },
+            "providerName": "KUSTO",
+            "id": "4"
+        },
+    ],
+    "mssql.connections": [
+        {
+            "profileName": "Sales DW (VS Code copy)",
+            "server": "sql01.acme.internal,14330",
+            "database": "SalesDW",
+            "authenticationType": "SqlLogin",
+            "user": "sales_reader",
+            "savePassword": false
+        },
+        {
+            "profileName": "Local dev",
+            "server": "localhost",
+            "database": "devdb",
+            "authenticationType": "SqlLogin",
+            "user": "sa",
+            "password": "",
+            "encrypt": "Optional"
+        }
+    ]
+}

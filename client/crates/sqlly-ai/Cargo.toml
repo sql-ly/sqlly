@@ -1,0 +1,47 @@
+[package]
+name = "sqlly-ai"
+version = "1.9.0"
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+sqlly-lang = { workspace = true }
+tracing = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+rusqlite = { workspace = true }
+parking_lot = { workspace = true }
+sha2 = { workspace = true }
+async-trait = { workspace = true }
+futures = { workspace = true }
+
+# The hosted-model providers speak HTTP to a local daemon (Ollama) or an
+# on-device runtime (MLX); neither exists in the browser, and their modules
+# are gated to match.
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+anyhow = { workspace = true }
+reqwest = { workspace = true }
+rustls = { workspace = true }
+tokio = { workspace = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+# chrono's clock reads via JS on wasm (Utc::now panics otherwise).
+chrono = { workspace = true, features = ["wasmbind"] }
+# std::time::Instant/SystemTime panic on wasm32; web-time is the drop-in
+# replacement backed by performance.now().
+web-time = "1"
+
+[dev-dependencies]
+criterion = { workspace = true }
+tempfile = "3"
+tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread", "net", "io-util", "time"] }
+serde_json = { workspace = true }
+sqlly-testkit = { workspace = true }
+
+[[bench]]
+name = "search"
+harness = false

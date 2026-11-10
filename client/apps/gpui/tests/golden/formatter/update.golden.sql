@@ -1,0 +1,1 @@
+UPDATE dbo.Orders SET status = 'shipped' WHERE id = 7

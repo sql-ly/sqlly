@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Connections Ver="1.4">
+  <Connection ConnectionName="mysql-local" ProjectUUID="" ConnType="MYSQL" ServiceProvider="Default"
+    Host="127.0.0.1" Port="3306" Database="" UserName="root" Password="E00641F75A8FFC2E7AF00CC29732DB6E"
+    SavePassword="true" DatabaseFileName="" MSSQLAuthenMode="" MSSQLAuthenWindowsDomain=""
+    SSL="false" SSL_Authen="false" SSL_PGSSLMode="" SSL_CACert="" SSL_WeakCertValidation="false"
+    SSH="false" SSH_Host="" SSH_Port="22" SSH_UserName="" SSH_AuthenMethod="PASSWORD" SSH_Password=""
+    SSH_PrivateKey="" SSH_Passphrase="" HTTP="false" HTTP_URL=""/>
+  <Connection ConnectionName="pg-prod" ProjectUUID="Acme/Prod" ConnType="PGSQL" ServiceProvider="Default"
+    Host="db.acme.internal" Port="5433" Database="appdb" UserName="app" Password=""
+    SavePassword="false" DatabaseFileName="" MSSQLAuthenMode="" MSSQLAuthenWindowsDomain=""
+    SSL="true" SSL_Authen="false" SSL_PGSSLMode="REQUIRE" SSL_CACert="" SSL_WeakCertValidation="true"
+    SSH="true" SSH_Host="bastion.acme.internal" SSH_Port="2222" SSH_UserName="ubuntu" SSH_AuthenMethod="PUBLICKEY" SSH_Password=""
+    SSH_PrivateKey="/Users/me/.ssh/id_ed25519" SSH_Passphrase="" HTTP="false" HTTP_URL=""/>
+  <Connection ConnectionName="mssql-win" ProjectUUID="" ConnType="SQLSERVER" ServiceProvider="Default"
+    Host="db01\SQL2022" Port="1433" Database="Sales" UserName="" Password=""
+    SavePassword="false" DatabaseFileName="" MSSQLAuthenMode="Windows" MSSQLAuthenWindowsDomain=""
+    SSL="false" SSL_Authen="false" SSL_PGSSLMode="" SSL_CACert="" SSL_WeakCertValidation="false"
+    SSH="false" SSH_Host="" SSH_Port="22" SSH_UserName="" SSH_AuthenMethod="PASSWORD" SSH_Password=""
+    SSH_PrivateKey="" SSH_Passphrase="" HTTP="false" HTTP_URL=""/>
+  <Connection ConnectionName="sqlite-file" ProjectUUID="" ConnType="SQLITE" ServiceProvider="Default"
+    Host="" Port="" Database="" UserName="" Password=""
+    SavePassword="false" DatabaseFileName="/Users/me/data/app.sqlite" MSSQLAuthenMode="" MSSQLAuthenWindowsDomain=""
+    SSL="false" SSL_Authen="false" SSL_PGSSLMode="" SSL_CACert="" SSL_WeakCertValidation="false"
+    SSH="false" SSH_Host="" SSH_Port="22" SSH_UserName="" SSH_AuthenMethod="PASSWORD" SSH_Password=""
+    SSH_PrivateKey="" SSH_Passphrase="" HTTP="false" HTTP_URL=""/>
+  <Connection ConnectionName="ora-skip" ProjectUUID="" ConnType="ORACLE" ServiceProvider="Default"
+    Host="ora" Port="1521" Database="" UserName="" Password=""
+    SavePassword="false" DatabaseFileName="" MSSQLAuthenMode="" MSSQLAuthenWindowsDomain=""
+    SSL="false" SSL_Authen="false" SSL_PGSSLMode="" SSL_CACert="" SSL_WeakCertValidation="false"
+    SSH="false" SSH_Host="" SSH_Port="22" SSH_UserName="" SSH_AuthenMethod="PASSWORD" SSH_Password=""
+    SSH_PrivateKey="" SSH_Passphrase="" HTTP="false" HTTP_URL=""/>
+</Connections>

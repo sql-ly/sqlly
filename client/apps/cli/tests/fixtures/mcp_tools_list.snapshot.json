@@ -1,0 +1,241 @@
+{
+  "id": 2,
+  "jsonrpc": "2.0",
+  "result": {
+    "tools": [
+      {
+        "annotations": {
+          "readOnlyHint": true
+        },
+        "description": "Columns, types, and nullability for one table.",
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "properties": {
+            "connection": {
+              "type": "string"
+            },
+            "database": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "table": {
+              "description": "`schema.table` or bare table name.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "connection",
+            "table"
+          ],
+          "type": "object"
+        },
+        "name": "describe_table"
+      },
+      {
+        "annotations": {
+          "readOnlyHint": true
+        },
+        "description": "Status of a proposal: pending | opened | executed | rejected | expired.",
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "properties": {
+            "id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "name": "get_proposal_status"
+      },
+      {
+        "annotations": {
+          "readOnlyHint": true
+        },
+        "description": "Token-budgeted schema summary for prompting.",
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "properties": {
+            "budget": {
+              "description": "Approximate token budget, 256..=8000 (default 2000).",
+              "format": "uint",
+              "minimum": 0,
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "connection": {
+              "type": "string"
+            },
+            "database": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "connection"
+          ],
+          "type": "object"
+        },
+        "name": "get_schema_context"
+      },
+      {
+        "annotations": {
+          "readOnlyHint": true
+        },
+        "description": "List the database connections SQLLY exposes to this agent (name, engine, database, environment). Production connections are listed but refused for every other tool.",
+        "inputSchema": {
+          "properties": {},
+          "type": "object"
+        },
+        "name": "list_connections"
+      },
+      {
+        "annotations": {
+          "readOnlyHint": true
+        },
+        "description": "List tables (schema.name) in a connection/database.",
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "properties": {
+            "connection": {
+              "description": "Connection name or id from list_connections.",
+              "type": "string"
+            },
+            "database": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "connection"
+          ],
+          "type": "object"
+        },
+        "name": "list_tables"
+      },
+      {
+        "description": "Open a query tab in the SQLLY app for this connection, optionally pre-filled with SQL. Nothing executes.",
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "properties": {
+            "connection": {
+              "type": "string"
+            },
+            "database": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "sql": {
+              "description": "Optional SQL to place in the new query tab.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "connection"
+          ],
+          "type": "object"
+        },
+        "name": "open_in_app"
+      },
+      {
+        "annotations": {
+          "destructiveHint": true
+        },
+        "description": "Propose a data-changing statement. It is never executed by this server: SQLLY shows the exact SQL to the user, who confirms or declines. Returns a proposal id; poll get_proposal_status.",
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "properties": {
+            "connection": {
+              "type": "string"
+            },
+            "database": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "sql": {
+              "description": "Exact SQL to propose. It is NOT executed here; SQLLY shows it to the user for confirmation.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "connection",
+            "sql"
+          ],
+          "type": "object"
+        },
+        "name": "propose_write"
+      },
+      {
+        "annotations": {
+          "readOnlyHint": true
+        },
+        "description": "Run ONE SELECT and return up to `limit` rows as a text table. Non-SELECT SQL is refused without executing, and the database runs the SELECT in a read-only transaction that is always rolled back.",
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "properties": {
+            "cell_char_limit": {
+              "description": "Max characters per cell, ≤ 2000.",
+              "format": "uint",
+              "minimum": 0,
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "connection": {
+              "type": "string"
+            },
+            "database": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "limit": {
+              "description": "Max rows, ≤ 100 (policy may lower it).",
+              "format": "uint",
+              "minimum": 0,
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "sql": {
+              "description": "A single SELECT (or WITH … SELECT). Anything else is refused without executing.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "connection",
+            "sql"
+          ],
+          "type": "object"
+        },
+        "name": "run_readonly_query"
+      }
+    ]
+  }
+}

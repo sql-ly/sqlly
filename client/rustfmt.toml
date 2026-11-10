@@ -1,0 +1,1 @@
+# Intentionally default rustfmt config — frozen so future rustfmt default changes don't break the fmt CI/release gate.

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Import and export</title>
+  <desc id="desc">CSV import and export movement between files and database storage.</desc>
+  <style>
+    .ink{stroke:oklch(30% 0.06 252);stroke-width:8;stroke-linecap:round;stroke-linejoin:round}.thin{stroke:oklch(55% 0.06 252);stroke-width:5;stroke-linecap:round;stroke-linejoin:round}.panel{fill:oklch(94% 0.018 245);stroke:oklch(66% 0.05 245);stroke-width:6}.soft{fill:oklch(88% 0.04 250)}.accent{fill:oklch(62% 0.16 250)}.accent2{fill:oklch(68% 0.14 178)}.accent3{fill:oklch(74% 0.16 65)}
+  </style>
+  <path class="panel" d="M38 48h78l24 24v94H38z"/>
+  <path class="soft" d="M116 48v24h24z"/>
+  <path class="thin" d="M58 92h62M58 116h62M58 140h42"/>
+  <ellipse class="accent" cx="186" cy="82" rx="34" ry="14"/>
+  <path class="ink" fill="none" d="M152 82v82c0 8 15 14 34 14s34-6 34-14V82"/>
+  <path class="ink" fill="none" d="M132 108h48M164 92l16 16-16 16M180 148h-48M148 132l-16 16 16 16"/>
+  <circle class="accent2" cx="72" cy="202" r="20"/>
+  <path fill="oklch(96% 0.012 245)" d="M60 198h24v8H60z"/>
+</svg>

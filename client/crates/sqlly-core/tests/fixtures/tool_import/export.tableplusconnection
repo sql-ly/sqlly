@@ -1,0 +1,43 @@
+[
+  {
+    "ConnectionName": "pg-local",
+    "Driver": "PostgreSQL",
+    "DatabaseHost": "localhost",
+    "DatabasePort": 5432,
+    "DatabaseUser": "postgres",
+    "DatabaseName": "appdb",
+    "GroupID": "G1",
+    "Enviroment": "local",
+    "tLSMode": 2
+  },
+  {
+    "ConnectionName": "mysql-ssh",
+    "Driver": "MySQL",
+    "DatabaseHost": "db.acme.internal",
+    "DatabasePort": 3306,
+    "DatabaseUser": "app",
+    "DatabaseName": "appdb",
+    "SocketType": 1,
+    "ServerAddress": "bastion.acme.internal",
+    "ServerPort": 22,
+    "ServerUser": "ubuntu",
+    "usePrivateKey": true,
+    "ServerPrivateKeyName": "~/.ssh/id_rsa",
+    "Enviroment": "production"
+  },
+  {
+    "ConnectionName": "mssql",
+    "Driver": "MicrosoftSQLServer",
+    "DatabaseHost": "db01.acme.internal",
+    "DatabasePort": 1433,
+    "DatabaseUser": "sa",
+    "DatabaseName": "Sales",
+    "Enviroment": "staging"
+  },
+  {
+    "ConnectionName": "redis-skip",
+    "Driver": "Redis",
+    "DatabaseHost": "localhost",
+    "DatabasePort": 6379
+  }
+]

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Native app shell</title>
+  <desc id="desc">A macOS-style workspace with tabs, toolbar, side panel, editor, and results pane.</desc>
+  <style>
+    .ink{stroke:oklch(30% 0.06 252);stroke-width:8;stroke-linecap:round;stroke-linejoin:round}.thin{stroke:oklch(55% 0.06 252);stroke-width:5;stroke-linecap:round;stroke-linejoin:round}.panel{fill:oklch(94% 0.018 245);stroke:oklch(66% 0.05 245);stroke-width:6}.soft{fill:oklch(88% 0.04 250)}.accent{fill:oklch(62% 0.16 250)}.accent2{fill:oklch(68% 0.14 178)}.accent3{fill:oklch(74% 0.16 65)}
+  </style>
+  <rect class="panel" x="22" y="34" width="212" height="178" rx="18"/>
+  <path class="soft" d="M28 66h200v18H28z"/>
+  <circle class="accent3" cx="47" cy="51" r="6"/>
+  <circle class="accent2" cx="67" cy="51" r="6"/>
+  <circle class="accent" cx="87" cy="51" r="6"/>
+  <path class="thin" d="M42 104h52M42 126h42M42 148h50M42 170h36"/>
+  <path class="thin" d="M108 100h82M108 122h68M108 144h92M108 166h58"/>
+  <path class="ink" fill="none" d="M96 84v128M24 84h210M106 184h124"/>
+  <path class="accent" d="M120 52h48a8 8 0 0 1 8 8v6h-64v-6a8 8 0 0 1 8-8z"/>
+</svg>

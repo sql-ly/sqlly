@@ -1,0 +1,225 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/sqlly-ai",
+    "crates/sqlly-engines",
+    "crates/sqlly-intel",
+    "crates/sqlly-i18n",
+    "crates/sqlly-lang",
+    "crates/sqlly-core",
+    "crates/sqlly-testkit",
+    "crates/sqlly-services",
+    "crates/sqlly-lsp",
+    "crates/sqlly-wire",
+    "crates/sqlly-keyring",
+    "crates/sqlly-remote",
+    "apps/cli",
+    "apps/gpui",
+    "apps/browser",
+    "apps/sqlformat-wasm",
+    "apps/planview-wasm",
+]
+
+[workspace.package]
+version = "1.33.1"
+edition = "2024"
+license = "PolyForm-Small-Business-1.0.0 OR LicenseRef-SQLly-Commercial"
+rust-version = "1.96"
+
+[workspace.dependencies]
+# TCP keepalive on database sockets (already in the tree through tokio).
+socket2 = { version = "0.6", features = ["all"] }
+tokio = { version = "1", features = ["full"] }
+tokio-util = { version = "0.7", features = ["compat"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+plist = "1"
+thiserror = "2"
+anyhow = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+uuid = { version = "1", features = ["v4", "v5", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+# IANA time-zone database for the "Always in time zone" display preference.
+# Pure Rust (works on wasm); MIT/Apache-2.0.
+chrono-tz = "0.10"
+indexmap = "2"
+bitflags = "2"
+smallvec = "1"
+bytes = "1"
+futures = "0.3"
+async-trait = "0.1"
+parking_lot = "0.13"
+dashmap = "6"
+tiberius = { version = "0.13", default-features = false, features = ["tds73", "rustls", "chrono"] }
+# `serialize` exposes Connection::serialize/deserialize — the browser build
+# loads user-provided .db files into memory with it; harmless extra API on
+# native. On wasm32 rusqlite's default `ffi-sqlite-wasm-rs` backend compiles
+# SQLite to wasm (see tools/zig-wasm-cc.bat for the C toolchain shim).
+rusqlite = { version = "0.41", features = ["bundled", "serialize"] }
+# DuckDB, in-process like SQLite. Native-only: only `sqlly-engines` depends on
+# it, and it picks the features per OS there — `bundled` (compile the C++
+# library into the binary) everywhere but Windows, which links DuckDB's
+# official prebuilt duckdb.dll instead.
+duckdb = { version = "~1.20000.1" }
+# Oracle Database through ODPI-C. The crate compiles without any Oracle
+# software and dlopens the free Oracle Instant Client (libclntsh / oci.dll)
+# at connect time, so the driver reports a clear "install Instant Client"
+# error instead of failing to build. Native-only: only `sqlly-engines`
+# depends on it.
+oracle = "0.6"
+sha2 = "0.11"
+# IntelliSense feedback submissions: Brotli-compress the captured context and
+# sign the request with the baked-in ECDSA P-256 app key.
+brotli = "9"
+p256 = { version = "0.14", features = ["ecdsa", "sha256"] }
+criterion = "0.8.2"
+proptest = "1"
+reqwest = { version = "0.13", default-features = false, features = ["json", "rustls-no-provider"] }
+# rand 0.10 draws its OS entropy from getrandom 0.4 (0.2 is no longer reachable
+# anywhere in the graph). On wasm32 that backend is selected by the
+# `getrandom_backend="wasm_js"` rustflag in `.cargo/config.toml` plus the
+# `wasm_js` feature apps/browser enables on the shared getrandom 0.4 — both are
+# required, and dropping either is a silent wasm build-break.
+# `thread_rng` is what gates `rand::rng()` in 0.10; the ergonomic `random*`
+# helpers moved from `Rng` to the `RngExt` trait in the same release.
+rand = { version = "0.10", features = ["thread_rng"] }
+tokio-postgres = { version = "0.7", features = ["with-chrono-0_4", "with-uuid-1"] }
+mysql_async = { version = "0.37", default-features = false, features = ["minimal", "rustls-tls", "ring"] }
+# OS credential store. keyring 4 split into keyring-core + per-platform store
+# crates; crates/sqlly-keyring wraps them behind the keyring 3 API the code
+# uses (`keyring::Entry`, `keyring::Error`, `keyring::mock::install`).
+keyring = { package = "sqlly-keyring", path = "crates/sqlly-keyring" }
+russh = { version = "0.65", default-features = false, features = ["ring", "rsa", "flate2"] }
+rmcp = { version = "3.9", default-features = false, features = ["server", "transport-io", "macros", "schemars"] }
+schemars = "1.2"
+
+sqlly-core = { path = "crates/sqlly-core", version = "1.23.0" }
+sqlly-ai = { path = "crates/sqlly-ai", version = "1.9.0" }
+sqlly-engines = { path = "crates/sqlly-engines", version = "1.33.0" }
+sqlly-intel = { path = "crates/sqlly-intel", version = "1.27.0" }
+sqlly-lang = { path = "crates/sqlly-lang", version = "1.17.0" }
+sqlly-testkit = { path = "crates/sqlly-testkit", version = "1.1.0" }
+sqlly-services = { path = "crates/sqlly-services", version = "1.35.0" }
+sqlly-lsp = { path = "crates/sqlly-lsp", version = "1.10.0" }
+sqlly-wire = { path = "crates/sqlly-wire", version = "1.1.0" }
+sqlly-remote = { path = "crates/sqlly-remote", version = "1.8.0" }
+tokio-rustls = { version = "0.26", default-features = false, features = ["ring", "logging", "tls12"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "logging", "std", "tls12"] }
+rustls-pki-types = "1"
+tokio-postgres-rustls = "0.14"
+webpki-roots = "1.0"
+
+# Full optimizations for SHIPPED release builds (the binary users install).
+# Fat LTO + single codegen unit maximize cross-crate inlining for the hot
+# tokenizer and IntelliSense paths; symbol stripping shrinks the shipped binary.
+# panic is left as the default "unwind" so a panicking async task does not abort
+# the whole long-running engine process.
+# Dev/test builds are link-bound, not codegen-bound: `sqlly-services` and the
+# gpui app link a ~550-crate graph (four DB drivers, agent, security, plans, …)
+# into every test binary, and generating + linking full DWARF (`debug = 2`, the
+# default) dominates the incremental relink. `line-tables-only` keeps file:line
+# in panics and test backtraces while dropping variable/type DWARF, roughly
+# halving incremental relink time. It's a profile setting (host/target-agnostic)
+# so it needs nothing installed and is safe when cross-compiling the mac build
+# from Linux CI.
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+strip = "symbols"
+
+# The ONE profile CI builds with — lint, test, app, bridge, relay, and the
+# wasm browser bundle all pass `--profile release-ci`, on every platform. That
+# is deliberate: every step in a job then shares the same compiled dependency
+# artifacts and the same sccache entries, so the workspace is compiled once
+# per run instead of once per profile. Do not add a test-only profile; it
+# would fork the dependency tree and cost more than the cheaper test codegen
+# saves. Tests therefore run with release semantics (no `debug_assert!`,
+# wrapping arithmetic) — that is an accepted trade, not an oversight.
+#
+# Thin LTO + multiple codegen units give ~95% of the runtime perf at a
+# fraction of the compile time (fat LTO forces the whole workspace through one
+# codegen unit, the single biggest build-time killer). `strip = false` keeps
+# symbols so crash reports and test backtraces name functions.
+#
+# NOTE: this profile IS what ships. The release pipeline stages its artifacts
+# straight out of target/<triple>/release-ci/ for Linux, Windows, and the
+# macOS .app. `profile.release` above is only used by local builds that ask
+# for `--release` explicitly.
+[profile.release-ci]
+inherits = "release"
+lto = "thin"
+codegen-units = 8
+strip = false
+
+# The online SQL formatter's WebAssembly bundle (apps/sqlformat-wasm) is a
+# download, so it optimizes for size: about a fifth smaller than `release` and still formats a 1,000-line script
+# in milliseconds. Its crate graph is tiny (sqlly-lang + serde), so the
+# separate dependency tree costs seconds, not a workspace rebuild.
+[profile.wasm-size]
+inherits = "release"
+opt-level = "z"
+
+# Workspace lint policy. `dead_code` is allowed because the gpui app exposes
+# half-implemented feature surfaces (LocalAI install phase variants, WhereOperator
+# comparisons not yet wired to the renderer, vendored Swift port fields, etc.)
+# that callers must continue to type-check against. Set in both the rust and
+# clippy sub-tables — rustc's `dead_code` covers `field X is never read`,
+# `method X is never used`, `enum/struct X is never used/constructed`. Clippy's
+# `dead_code` covers `multiple associated items` and `variant ... never
+# constructed` in enums without `#[allow]`. The other `unused_*` lints stay
+# at their default level so new ones still surface.
+# dead-code is NOT allowed workspace-wide anymore: the six packages that
+# inherit these lints are library/driver crates where dead code is real rot.
+# The gpui app (which owns the half-implemented feature surfaces the old
+# allow existed for) does not inherit workspace lints in the first place.
+[workspace.lints.rust]
+
+# NOTE: clippy has no `dead_code` lint — the rustc lint above covers every
+# `never used/read/constructed` diagnostic. A `[workspace.lints.clippy]
+# dead_code` entry that used to sit here was an unknown-lint no-op that only
+# produced E0602 warnings in crates inheriting workspace lints.
+
+# GPUI Kit migration (2026-09-19, moved to gpui-component 0.9.0 + gpui-pre
+# 0.3.11 on 2026-11-08): the whole gpui graph resolves from crates.io —
+# gpui-component 0.9.x plus `gpui-pre` 0.3.x, the registry
+# publication of the current gpui API (consumed under the name `gpui` via a
+# package rename in each app manifest). The zed/longbridge git patches that
+# used to live here — including the gpui_web workaround for the browser
+# build — are gone: gpui-pre-platform 0.3.x ships the split platform layer
+# (gpui-pre-{macos,linux,windows,web}) as registry crates, so the old
+# git-rev pinning problem is moot. Icon SVGs
+# come from gpui-kit-assets (the retired gpui-component-assets stopped at
+# 0.5.1).
+[patch.crates-io]
+# gpui's macOS backend, vendored so the Mac App Store build can compile out
+# the private AppKit selectors App Review rejects (SQLLY_APP_STORE=1, set by
+# apps/gpui/scripts/app-store/build-app-store.sh). Identical to the registry
+# 0.3.11 release otherwise; see vendor/README.md before bumping gpui-pre.
+# gpui-component 0.9.x pins gpui-pre with an exact `=0.3.x`, so a
+# gpui-component bump always drags a gpui-pre bump and a re-vendor with it.
+gpui-pre-macos = { path = "vendor/gpui-pre-macos" }
+# tiberius 0.13.0, vendored so a SQL Server query stream can hand PRINT /
+# RAISERROR (severity <= 10) INFO messages and DONE row counts to the caller
+# (opt-in; the registry release drops both). Identical to the registry
+# release otherwise; see vendor/README.md before bumping tiberius.
+tiberius = { path = "vendor/tiberius" }
+# sqlly-datatable's registry release is not published past the git tags; pin
+# the matching git-API port by its immutable release tag so builds remain
+# reproducible without depending on a maintainer-specific sibling checkout.
+# Bump the version requirement in apps/gpui/Cargo.toml together with this
+# pin.
+# v6.0.0 is the GPUI Kit migration (gpui-pre 0.3.5 + gpui-component 0.6.4);
+# v8.0.0 moves it to gpui-pre 0.3.9 + gpui-component 0.7.3;
+# v8.1.0 ends cut-off cells and headers with an ellipsis.
+# v8.2.0 adds submenus to the grid context menu.
+# v8.3.0 adds formula-reference highlights; v8.4.0 adds exact decimals.
+# v9.1.0 adds host-colored text runs in cells (syntax-colored JSON/XML).
+# v10.0.0 moves it to gpui-pre 0.3.11 + gpui-component 0.9.0;
+# v10.1.0 bounds and caches cell text shaping for cheaper scrolling;
+# tag v10.1.0 in sqlly-datatable before releasing the app.
+sqlly-datatable = { git = "https://github.com/sql-ly/sqlly-datatable.git", tag = "v10.1.0" }

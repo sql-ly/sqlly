@@ -1,0 +1,7 @@
+--- statement 1 [0..21]
+-- leading
+SELECT 1;
+
+--- statement 2 [21..43]
+/* block */ SELECT 2;
+

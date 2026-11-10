@@ -1,0 +1,4 @@
+# Build output staged by scripts/build-app.sh: the binary plus the
+# generated .desktop entry and hicolor icons. Regenerated on every build,
+# and the binary is ~62MB — nothing a clone needs.
+dist/

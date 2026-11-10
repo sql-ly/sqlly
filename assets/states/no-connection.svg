@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 180" role="img" aria-labelledby="title desc">
+  <title id="title">No connection</title>
+  <desc id="desc">A database server and unplugged cable showing no active connection.</desc>
+  <ellipse cx="88" cy="48" rx="46" ry="17" fill="#eff6ff" stroke="#7aa2cf" stroke-width="4"/>
+  <path d="M42 48v72c0 9 21 17 46 17s46-8 46-17V48" fill="#e7f0fb" stroke="#7aa2cf" stroke-width="4"/>
+  <path d="M42 84c0 9 21 17 46 17s46-8 46-17" fill="none" stroke="#aac1da" stroke-width="4"/>
+  <path d="M142 91h24M190 91h18" stroke="#64748b" stroke-width="7" stroke-linecap="round"/>
+  <path d="M166 79v24M190 79v24" stroke="#64748b" stroke-width="5" stroke-linecap="round"/>
+  <path d="M158 125 208 75" stroke="#ef4444" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="76" cy="116" r="5" fill="#34d399"/>
+  <circle cx="96" cy="116" r="5" fill="#93c5fd"/>
+</svg>

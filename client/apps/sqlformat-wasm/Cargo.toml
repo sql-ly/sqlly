@@ -1,0 +1,25 @@
+[package]
+name = "sqlly-sqlformat-wasm"
+version = "1.1.0"
+edition.workspace = true
+license.workspace = true
+publish = false
+description = "SQLly's SQL formatter compiled to WebAssembly for the free online formatter at sqlly.app/tools/sql-formatter. A thin wasm-bindgen shell over sqlly-lang's sqlformat module: the same formatter the desktop app and the LSP run, not a fork."
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# Only sqlly-lang (serde + web-time on wasm): no native-only deps, so this
+# builds for wasm32-unknown-unknown on the stable toolchain with no C compiler.
+sqlly-lang = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# The JS bindings exist only on wasm; on native targets the crate is a plain
+# rlib so `cargo test` / clippy cover the option handling everywhere.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+
+[lints]
+workspace = true

@@ -1,0 +1,2 @@
+# Golden fixtures are compared against generator output; keep LF on every platform.
+* text eol=lf

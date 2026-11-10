@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-labelledby="title desc">
+  <title id="title">Query error</title>
+  <desc id="desc">Query panel with a warning triangle.</desc>
+  <rect x="26" y="25" width="92" height="106" rx="12" fill="#fff7ed" stroke="#f59e0b" stroke-width="4"/>
+  <path d="M43 55h50M43 76h38M43 97h49" stroke="#9a6b2f" stroke-width="6" stroke-linecap="round"/>
+  <path d="m103 64 38 66H65z" fill="#fee2e2" stroke="#ef4444" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M103 85v24" stroke="#ef4444" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="103" cy="121" r="4.5" fill="#ef4444"/>
+</svg>

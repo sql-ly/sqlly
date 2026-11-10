@@ -1,0 +1,6 @@
+--- statement 1 [0..37]
+SELECT ';' FROM t WHERE x IN (1, 2);
+
+--- statement 2 [37..47]
+SELECT 9;
+

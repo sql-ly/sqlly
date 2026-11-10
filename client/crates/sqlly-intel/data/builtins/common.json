@@ -1,0 +1,397 @@
+{
+  "about": "Vocabulary shared by every supported SQL dialect. Dialect files add to it and may replace an entry by repeating its name.",
+  "functions": [
+    {
+      "name": "COUNT",
+      "category": "Aggregate",
+      "summary": "Counts rows, or the non-NULL values of an expression, in each group.",
+      "example": "SELECT COUNT(*) FROM orders",
+      "signatures": [
+        { "returns": "integer", "params": [ { "name": "expression", "type": "any", "doc": "The value to count; NULLs are skipped. Use * to count every row, or DISTINCT expression to count unique values." } ] }
+      ]
+    },
+    {
+      "name": "SUM",
+      "category": "Aggregate",
+      "summary": "Adds up the non-NULL values of a numeric expression in each group. Returns NULL when there are no non-NULL values.",
+      "example": "SELECT customer_id, SUM(amount) FROM orders GROUP BY customer_id",
+      "signatures": [
+        { "returns": "numeric (same family as the input, possibly widened)", "params": [ { "name": "expression", "type": "numeric", "doc": "The numeric value to total; NULLs are ignored. Prefix with DISTINCT to add each distinct value once." } ] }
+      ]
+    },
+    {
+      "name": "AVG",
+      "category": "Aggregate",
+      "summary": "Returns the average of the non-NULL values of a numeric expression in each group. With integer input some engines return an integer; cast to a decimal type for a fractional result.",
+      "example": "SELECT AVG(CAST(price AS DECIMAL(10, 2))) FROM products",
+      "signatures": [
+        { "returns": "numeric", "params": [ { "name": "expression", "type": "numeric", "doc": "The numeric value to average; NULLs are ignored. Prefix with DISTINCT to average only distinct values." } ] }
+      ]
+    },
+    {
+      "name": "MIN",
+      "category": "Aggregate",
+      "summary": "Returns the smallest non-NULL value of an expression in each group. Works on numbers, text and dates.",
+      "example": "SELECT MIN(order_date) FROM orders",
+      "signatures": [
+        { "returns": "same type as expression", "params": [ { "name": "expression", "type": "any", "doc": "The value to compare; NULLs are ignored." } ] }
+      ]
+    },
+    {
+      "name": "MAX",
+      "category": "Aggregate",
+      "summary": "Returns the largest non-NULL value of an expression in each group. Works on numbers, text and dates.",
+      "example": "SELECT MAX(order_date) FROM orders",
+      "signatures": [
+        { "returns": "same type as expression", "params": [ { "name": "expression", "type": "any", "doc": "The value to compare; NULLs are ignored." } ] }
+      ]
+    },
+    {
+      "name": "COALESCE",
+      "category": "Conditional",
+      "summary": "Returns the first of its arguments that is not NULL, or NULL if all of them are NULL. Arguments are evaluated left to right.",
+      "example": "SELECT COALESCE(nickname, first_name, 'unknown') FROM people",
+      "signatures": [
+        {
+          "returns": "type of the arguments",
+          "variadic": true,
+          "params": [
+            { "name": "value1", "type": "any", "doc": "The first value to try." },
+            { "name": "value2", "type": "any", "doc": "The next value to try if the earlier ones are NULL; repeat for more fallbacks." }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "NULLIF",
+      "category": "Conditional",
+      "summary": "Returns NULL when the two arguments are equal, otherwise the first argument. Often used to avoid division by zero.",
+      "example": "SELECT total / NULLIF(quantity, 0) FROM order_lines",
+      "signatures": [
+        {
+          "returns": "type of value1",
+          "params": [
+            { "name": "value1", "type": "any", "doc": "The value returned when the two arguments differ." },
+            { "name": "value2", "type": "any", "doc": "The value that, when equal to value1, makes the result NULL." }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "CAST",
+      "category": "Conversion",
+      "summary": "Converts a value to another data type. Raises an error when the value cannot be converted.",
+      "example": "CAST(order_total AS DECIMAL(10, 2))",
+      "signatures": [
+        { "returns": "data_type", "params": [ { "name": "expression AS data_type", "type": "any AS type", "doc": "The value to convert, the keyword AS, then the target data type, including any length or precision." } ] }
+      ]
+    },
+    {
+      "name": "UPPER",
+      "category": "String",
+      "summary": "Returns a string with its letters converted to uppercase.",
+      "example": "UPPER(last_name)",
+      "signatures": [
+        { "returns": "string", "params": [ { "name": "string", "type": "string", "doc": "The text to convert." } ] }
+      ]
+    },
+    {
+      "name": "LOWER",
+      "category": "String",
+      "summary": "Returns a string with its letters converted to lowercase.",
+      "example": "LOWER(email)",
+      "signatures": [
+        { "returns": "string", "params": [ { "name": "string", "type": "string", "doc": "The text to convert." } ] }
+      ]
+    },
+    {
+      "name": "ABS",
+      "category": "Math",
+      "summary": "Returns the absolute (non-negative) value of a number.",
+      "example": "ABS(balance)",
+      "signatures": [
+        { "returns": "same type as number", "params": [ { "name": "number", "type": "numeric", "doc": "The number whose sign is removed." } ] }
+      ]
+    },
+    {
+      "name": "ROUND",
+      "category": "Math",
+      "summary": "Rounds a number to a given number of decimal places, or to a whole number when the places are left out.",
+      "example": "ROUND(price * 1.08, 2)",
+      "signatures": [
+        {
+          "returns": "numeric",
+          "params": [
+            { "name": "number", "type": "numeric", "doc": "The number to round." },
+            { "name": "decimals", "type": "integer", "doc": "Decimal places to keep; a negative value rounds to the left of the decimal point. Defaults to 0 where it may be omitted; some engines require it.", "optional": true }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "REPLACE",
+      "category": "String",
+      "summary": "Returns a string with every occurrence of a search string replaced by another string.",
+      "example": "REPLACE(phone, '-', '')",
+      "signatures": [
+        {
+          "returns": "string",
+          "params": [
+            { "name": "string", "type": "string", "doc": "The text to search in." },
+            { "name": "search", "type": "string", "doc": "The substring to find." },
+            { "name": "replacement", "type": "string", "doc": "The text to put in place of each occurrence; an empty string deletes them." }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "TRIM",
+      "category": "String",
+      "summary": "Returns a string with leading and trailing spaces removed.",
+      "example": "TRIM(customer_name)",
+      "signatures": [
+        { "returns": "string", "params": [ { "name": "string", "type": "string", "doc": "The text to trim." } ] }
+      ]
+    },
+    {
+      "name": "LTRIM",
+      "category": "String",
+      "summary": "Returns a string with leading spaces removed.",
+      "example": "LTRIM(code)",
+      "signatures": [
+        {
+          "returns": "string",
+          "params": [
+            { "name": "string", "type": "string", "doc": "The text to trim." },
+            { "name": "characters", "type": "string", "doc": "The set of characters to strip instead of spaces; not accepted by every engine.", "optional": true }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "RTRIM",
+      "category": "String",
+      "summary": "Returns a string with trailing spaces removed.",
+      "example": "RTRIM(code)",
+      "signatures": [
+        {
+          "returns": "string",
+          "params": [
+            { "name": "string", "type": "string", "doc": "The text to trim." },
+            { "name": "characters", "type": "string", "doc": "The set of characters to strip instead of spaces; not accepted by every engine.", "optional": true }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "CURRENT_TIMESTAMP",
+      "category": "Date and time",
+      "summary": "Returns the current date and time, written without parentheses. The exact type, precision and time zone handling depend on the engine.",
+      "example": "SELECT CURRENT_TIMESTAMP",
+      "niladic": true,
+      "signatures": [
+        { "returns": "timestamp", "params": [] }
+      ]
+    },
+    {
+      "name": "ROW_NUMBER",
+      "category": "Window",
+      "summary": "Numbers the rows of each window partition 1, 2, 3, … in the window's ORDER BY order, with no ties.",
+      "example": "ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY order_date)",
+      "signatures": [
+        { "returns": "integer", "params": [] }
+      ]
+    },
+    {
+      "name": "RANK",
+      "category": "Window",
+      "summary": "Ranks the rows of each window partition by the window's ORDER BY; tied rows share a rank and the next rank skips ahead (1, 1, 3).",
+      "example": "RANK() OVER (ORDER BY score DESC)",
+      "signatures": [
+        { "returns": "integer", "params": [] }
+      ]
+    },
+    {
+      "name": "DENSE_RANK",
+      "category": "Window",
+      "summary": "Ranks the rows of each window partition by the window's ORDER BY; tied rows share a rank and no ranks are skipped (1, 1, 2).",
+      "example": "DENSE_RANK() OVER (ORDER BY score DESC)",
+      "signatures": [
+        { "returns": "integer", "params": [] }
+      ]
+    },
+    {
+      "name": "NTILE",
+      "category": "Window",
+      "summary": "Splits the ordered rows of each window partition into a number of groups as equal in size as possible and returns each row's group number, starting at 1.",
+      "example": "NTILE(4) OVER (ORDER BY revenue DESC)",
+      "signatures": [
+        { "returns": "integer", "params": [ { "name": "buckets", "type": "integer", "doc": "How many groups to split the rows into; must be a positive integer." } ] }
+      ]
+    },
+    {
+      "name": "LAG",
+      "category": "Window",
+      "summary": "Returns a value from a row that comes a given number of rows before the current row in the window's order, or a default when there is no such row.",
+      "example": "LAG(amount, 1, 0) OVER (ORDER BY order_date)",
+      "signatures": [
+        {
+          "returns": "same type as expression",
+          "params": [
+            { "name": "expression", "type": "any", "doc": "The value to read from the earlier row." },
+            { "name": "offset", "type": "integer", "doc": "How many rows back to look; defaults to 1.", "optional": true },
+            { "name": "default", "type": "any", "doc": "The value returned when the offset row falls outside the partition; defaults to NULL.", "optional": true }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "LEAD",
+      "category": "Window",
+      "summary": "Returns a value from a row that comes a given number of rows after the current row in the window's order, or a default when there is no such row.",
+      "example": "LEAD(amount, 1, 0) OVER (ORDER BY order_date)",
+      "signatures": [
+        {
+          "returns": "same type as expression",
+          "params": [
+            { "name": "expression", "type": "any", "doc": "The value to read from the later row." },
+            { "name": "offset", "type": "integer", "doc": "How many rows ahead to look; defaults to 1.", "optional": true },
+            { "name": "default", "type": "any", "doc": "The value returned when the offset row falls outside the partition; defaults to NULL.", "optional": true }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "FIRST_VALUE",
+      "category": "Window",
+      "summary": "Returns the value of an expression at the first row of the current window frame.",
+      "example": "FIRST_VALUE(price) OVER (PARTITION BY product_id ORDER BY valid_from)",
+      "signatures": [
+        { "returns": "same type as expression", "params": [ { "name": "expression", "type": "any", "doc": "The value to read from the frame's first row." } ] }
+      ]
+    },
+    {
+      "name": "LAST_VALUE",
+      "category": "Window",
+      "summary": "Returns the value of an expression at the last row of the current window frame. The default frame ends at the current row, so add ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING to get the partition's last row.",
+      "example": "LAST_VALUE(price) OVER (PARTITION BY product_id ORDER BY valid_from ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)",
+      "signatures": [
+        { "returns": "same type as expression", "params": [ { "name": "expression", "type": "any", "doc": "The value to read from the frame's last row." } ] }
+      ]
+    },
+    {
+      "name": "PERCENT_RANK",
+      "category": "Window",
+      "summary": "Returns the relative rank of each row in its window partition as (rank - 1) / (rows - 1), a value from 0 to 1.",
+      "example": "PERCENT_RANK() OVER (ORDER BY score)",
+      "signatures": [
+        { "returns": "floating point", "params": [] }
+      ]
+    },
+    {
+      "name": "CUME_DIST",
+      "category": "Window",
+      "summary": "Returns the cumulative distribution of each row in its window partition: the fraction of rows ordered at or before it, greater than 0 and at most 1.",
+      "example": "CUME_DIST() OVER (ORDER BY score)",
+      "signatures": [
+        { "returns": "floating point", "params": [] }
+      ]
+    }
+  ],
+  "keywords": [
+    { "name": "SELECT", "doc": "Starts a query that returns rows.", "syntax": "SELECT [DISTINCT] expression [AS alias], … FROM source" },
+    { "name": "FROM", "doc": "Names the tables, views, subqueries or joins a statement reads rows from.", "syntax": "FROM table [AS alias] [JOIN …]" },
+    { "name": "WHERE", "doc": "Filters rows before grouping; only rows for which the condition is true are kept (false and unknown are dropped).", "syntax": "WHERE condition" },
+    { "name": "GROUP BY", "doc": "Groups rows that share values so aggregates are computed per group.", "syntax": "GROUP BY expression [, …]" },
+    { "name": "HAVING", "doc": "Filters groups after GROUP BY; the condition may use aggregates such as COUNT(*) > 1.", "syntax": "HAVING condition" },
+    { "name": "ORDER BY", "doc": "Sorts the result rows, or the rows of a window, by one or more expressions. Without it, row order is not guaranteed.", "syntax": "ORDER BY expression [ASC | DESC] [, …]" },
+    { "name": "ASC", "doc": "Sorts in ascending order (smallest first). This is the default." },
+    { "name": "DESC", "doc": "Sorts in descending order (largest first)." },
+    { "name": "DISTINCT", "doc": "Removes duplicate rows from a query's result, or duplicate values from an aggregate's input.", "syntax": "SELECT DISTINCT column, … | COUNT(DISTINCT expression)" },
+    { "name": "ALL", "doc": "Keeps duplicates (the default for SELECT and aggregates; UNION ALL keeps duplicate rows), or, after a comparison operator, requires the comparison to hold for every row of a subquery.", "syntax": "expression operator ALL (subquery)" },
+    { "name": "AS", "doc": "Gives a column, table or subquery an alias; also separates the value from the target type in CAST.", "syntax": "expression AS alias" },
+    { "name": "JOIN", "doc": "Combines rows from two tables using a join condition. A plain JOIN is an inner join.", "syntax": "table1 JOIN table2 ON condition" },
+    { "name": "INNER JOIN", "doc": "Returns only the pairs of rows from both tables that satisfy the join condition.", "syntax": "table1 INNER JOIN table2 ON condition" },
+    { "name": "LEFT JOIN", "doc": "Returns every row of the left table, with matching right-table rows or NULLs where there is no match. Same as LEFT OUTER JOIN.", "syntax": "table1 LEFT [OUTER] JOIN table2 ON condition" },
+    { "name": "RIGHT JOIN", "doc": "Returns every row of the right table, with matching left-table rows or NULLs where there is no match. Same as RIGHT OUTER JOIN.", "syntax": "table1 RIGHT [OUTER] JOIN table2 ON condition" },
+    { "name": "FULL JOIN", "doc": "Returns every row of both tables, matched where the condition holds and padded with NULLs where it does not. Same as FULL OUTER JOIN; not supported by every engine.", "syntax": "table1 FULL [OUTER] JOIN table2 ON condition" },
+    { "name": "CROSS JOIN", "doc": "Returns every combination of a row from the first table with a row from the second (the Cartesian product). Takes no join condition.", "syntax": "table1 CROSS JOIN table2" },
+    { "name": "INNER", "doc": "Marks an inner join, which keeps only matching rows from both sides.", "syntax": "INNER JOIN" },
+    { "name": "LEFT", "doc": "Marks a left outer join, which keeps every row of the left table.", "syntax": "LEFT [OUTER] JOIN" },
+    { "name": "RIGHT", "doc": "Marks a right outer join, which keeps every row of the right table.", "syntax": "RIGHT [OUTER] JOIN" },
+    { "name": "FULL", "doc": "Marks a full outer join, which keeps every row of both tables.", "syntax": "FULL [OUTER] JOIN" },
+    { "name": "OUTER", "doc": "Optional word in LEFT, RIGHT and FULL joins; unmatched rows are kept and padded with NULLs.", "syntax": "LEFT | RIGHT | FULL OUTER JOIN" },
+    { "name": "CROSS", "doc": "Marks a cross join, which pairs every row of one table with every row of the other.", "syntax": "CROSS JOIN" },
+    { "name": "ON", "doc": "Introduces a join condition; also names the table in statements such as CREATE INDEX and CREATE TRIGGER.", "syntax": "JOIN table ON condition" },
+    { "name": "USING", "doc": "Joins on columns that have the same name in both tables, listing them once instead of writing an ON condition. Not supported by every engine; some also use USING in other statements.", "syntax": "JOIN table USING (column [, …])" },
+    { "name": "UNION", "doc": "Combines the rows of two queries with matching column lists and removes duplicates. Use UNION ALL to keep them.", "syntax": "query1 UNION [ALL] query2" },
+    { "name": "UNION ALL", "doc": "Combines the rows of two queries with matching column lists, keeping duplicates. Faster than UNION because no duplicate removal is needed.", "syntax": "query1 UNION ALL query2" },
+    { "name": "INTERSECT", "doc": "Returns the distinct rows that appear in the results of both queries.", "syntax": "query1 INTERSECT query2" },
+    { "name": "EXCEPT", "doc": "Returns the distinct rows of the first query that do not appear in the second.", "syntax": "query1 EXCEPT query2" },
+    { "name": "INSERT", "doc": "Adds new rows to a table, from a VALUES list or a query.", "syntax": "INSERT INTO table [(column, …)] VALUES (value, …) | query" },
+    { "name": "INSERT INTO", "doc": "Adds new rows to the named table, from a VALUES list or a query. Columns left out of the list get their defaults.", "syntax": "INSERT INTO table [(column, …)] VALUES (value, …) [, …] | query" },
+    { "name": "INTO", "doc": "Names the target table of an INSERT; some engines also use it to send query results into a new table or variables.", "syntax": "INSERT INTO table …" },
+    { "name": "VALUES", "doc": "Supplies literal rows, for an INSERT or as an inline row source.", "syntax": "VALUES (value, …) [, (value, …) …]" },
+    { "name": "UPDATE", "doc": "Changes column values in existing rows. Without a WHERE clause every row of the table is changed.", "syntax": "UPDATE table SET column = value [, …] [WHERE condition]" },
+    { "name": "SET", "doc": "Lists the column assignments of an UPDATE; also starts statements that change session or engine settings.", "syntax": "SET column = value [, …]" },
+    { "name": "DELETE", "doc": "Removes rows from a table. Without a WHERE clause every row is removed.", "syntax": "DELETE FROM table [WHERE condition]" },
+    { "name": "CREATE", "doc": "Creates a database object such as a table, view, index or trigger.", "syntax": "CREATE TABLE | VIEW | INDEX | TRIGGER name …" },
+    { "name": "ALTER", "doc": "Changes the definition of an existing database object, such as adding a column to a table.", "syntax": "ALTER TABLE table ADD column type" },
+    { "name": "DROP", "doc": "Permanently removes a database object and, for a table, all of its data.", "syntax": "DROP TABLE | VIEW | INDEX | TRIGGER name" },
+    { "name": "TABLE", "doc": "Names a table as the object of CREATE, ALTER, DROP and similar statements.", "syntax": "CREATE TABLE name (column type [constraint], …)" },
+    { "name": "VIEW", "doc": "A stored query that can be selected from like a table.", "syntax": "CREATE VIEW name AS query" },
+    { "name": "INDEX", "doc": "A structure that speeds up lookups and sorting on one or more columns of a table.", "syntax": "CREATE [UNIQUE] INDEX name ON table (column [, …])" },
+    { "name": "UNIQUE", "doc": "A constraint or index option requiring that no two rows share the same values in the listed columns.", "syntax": "UNIQUE (column [, …])" },
+    { "name": "PRIMARY KEY", "doc": "The constraint that identifies each row of a table: its columns must be unique and not NULL. A table has at most one.", "syntax": "PRIMARY KEY (column [, …])" },
+    { "name": "PRIMARY", "doc": "Part of PRIMARY KEY, the constraint that uniquely identifies each row of a table.", "syntax": "PRIMARY KEY (column [, …])" },
+    { "name": "FOREIGN KEY", "doc": "A constraint requiring that values in the listed columns match a key in another table (or be NULL).", "syntax": "FOREIGN KEY (column [, …]) REFERENCES table (column [, …])" },
+    { "name": "FOREIGN", "doc": "Part of FOREIGN KEY, a constraint that links columns to a key in another table.", "syntax": "FOREIGN KEY (column [, …]) REFERENCES table (column [, …])" },
+    { "name": "KEY", "doc": "Part of PRIMARY KEY and FOREIGN KEY constraint definitions.", "syntax": "PRIMARY KEY | FOREIGN KEY (column [, …])" },
+    { "name": "REFERENCES", "doc": "Names the table and columns a foreign key points to.", "syntax": "REFERENCES table (column [, …])" },
+    { "name": "CHECK", "doc": "A constraint that rejects rows for which the condition is false.", "syntax": "CHECK (condition)" },
+    { "name": "DEFAULT", "doc": "The value a column gets when an INSERT does not supply one; also usable in VALUES and SET to request that value.", "syntax": "column type DEFAULT value" },
+    { "name": "CONSTRAINT", "doc": "Gives a constraint a name so it can be referenced later, for example to drop it.", "syntax": "CONSTRAINT name PRIMARY KEY | FOREIGN KEY | UNIQUE | CHECK …" },
+    { "name": "NOT", "doc": "Negates a condition. NOT of an unknown (NULL) condition is still unknown.", "syntax": "NOT condition | NOT IN | NOT EXISTS | NOT BETWEEN | NOT LIKE" },
+    { "name": "AND", "doc": "True when both conditions are true. Also separates the bounds of BETWEEN.", "syntax": "condition AND condition" },
+    { "name": "OR", "doc": "True when either condition is true. AND binds tighter than OR, so use parentheses when mixing them.", "syntax": "condition OR condition" },
+    { "name": "IN", "doc": "True when a value equals any value in a list or subquery result. NOT IN with a NULL in the list is never true.", "syntax": "expression [NOT] IN (value, … | subquery)" },
+    { "name": "EXISTS", "doc": "True when the subquery returns at least one row.", "syntax": "[NOT] EXISTS (subquery)" },
+    { "name": "BETWEEN", "doc": "True when a value lies within a range, including both bounds.", "syntax": "expression [NOT] BETWEEN low AND high" },
+    { "name": "LIKE", "doc": "Matches text against a pattern where % matches any run of characters and _ matches one character. Case sensitivity depends on the engine and collation.", "syntax": "expression [NOT] LIKE pattern [ESCAPE char]" },
+    { "name": "IS", "doc": "Tests for NULL: IS NULL and IS NOT NULL are the correct way to check for missing values, since = NULL is never true.", "syntax": "expression IS [NOT] NULL" },
+    { "name": "CASE", "doc": "Returns the result of the first WHEN branch that matches, else the ELSE value, else NULL.", "syntax": "CASE [expression] WHEN value_or_condition THEN result […] [ELSE result] END" },
+    { "name": "WHEN", "doc": "Starts a branch of a CASE expression with the value or condition to test.", "syntax": "WHEN condition THEN result" },
+    { "name": "THEN", "doc": "Gives the result of a CASE branch when its WHEN matches.", "syntax": "WHEN condition THEN result" },
+    { "name": "ELSE", "doc": "Gives the result of a CASE expression when no WHEN branch matches; without it the result is NULL.", "syntax": "ELSE result END" },
+    { "name": "END", "doc": "Closes a CASE expression or a BEGIN … END block.", "syntax": "CASE … END" },
+    { "name": "WITH", "doc": "Defines named subqueries (common table expressions) that the following statement can reference like tables.", "syntax": "WITH name [(column, …)] AS (query) [, …] statement" },
+    { "name": "OVER", "doc": "Turns a function into a window function, computed over a set of rows related to the current row without collapsing them.", "syntax": "function(…) OVER ([PARTITION BY …] [ORDER BY …] [frame])" },
+    { "name": "PARTITION BY", "doc": "Splits the rows of a window into groups; the window function restarts for each group.", "syntax": "OVER (PARTITION BY expression [, …] [ORDER BY …])" },
+    { "name": "PARTITION", "doc": "Part of PARTITION BY in a window definition; some engines also use it for table partitioning.", "syntax": "PARTITION BY expression [, …]" },
+    { "name": "BY", "doc": "Part of GROUP BY, ORDER BY and PARTITION BY.", "syntax": "GROUP BY | ORDER BY | PARTITION BY expression" },
+    { "name": "ROWS", "doc": "Defines a window frame by a count of physical rows before or after the current row.", "syntax": "ROWS BETWEEN frame_start AND frame_end" },
+    { "name": "RANGE", "doc": "Defines a window frame by value relative to the current row's ORDER BY value, so peer rows with equal values are included together.", "syntax": "RANGE BETWEEN frame_start AND frame_end" },
+    { "name": "PRECEDING", "doc": "A window frame bound a number of rows (or a value range) before the current row.", "syntax": "n PRECEDING | UNBOUNDED PRECEDING" },
+    { "name": "FOLLOWING", "doc": "A window frame bound a number of rows (or a value range) after the current row.", "syntax": "n FOLLOWING | UNBOUNDED FOLLOWING" },
+    { "name": "CURRENT ROW", "doc": "A window frame bound at the current row (with RANGE, at the current row's peers).", "syntax": "ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW" },
+    { "name": "CURRENT", "doc": "Part of CURRENT ROW in a window frame bound.", "syntax": "CURRENT ROW" },
+    { "name": "ROW", "doc": "Part of CURRENT ROW in a window frame bound; also used in trigger and row-value syntax.", "syntax": "CURRENT ROW" },
+    { "name": "UNBOUNDED", "doc": "A window frame bound at the first (PRECEDING) or last (FOLLOWING) row of the partition.", "syntax": "UNBOUNDED PRECEDING | UNBOUNDED FOLLOWING" },
+    { "name": "BEGIN", "doc": "Starts a transaction, or opens a block of statements closed by END. The exact form varies by engine.", "syntax": "BEGIN [TRANSACTION] | BEGIN … END" },
+    { "name": "COMMIT", "doc": "Makes the changes of the current transaction permanent.", "syntax": "COMMIT" },
+    { "name": "ROLLBACK", "doc": "Undoes the changes of the current transaction, or only those made after a savepoint.", "syntax": "ROLLBACK [TO savepoint]" },
+    { "name": "TRANSACTION", "doc": "A unit of work whose changes are committed or rolled back together. How one is started varies by engine.", "syntax": "BEGIN TRANSACTION … COMMIT | ROLLBACK" },
+    { "name": "SAVEPOINT", "doc": "Marks a point inside a transaction that can later be rolled back to without undoing the whole transaction. Some engines use a different statement for this.", "syntax": "SAVEPOINT name … ROLLBACK TO name" },
+    { "name": "TRIGGER", "doc": "Code that runs automatically when rows of a table are inserted, updated or deleted.", "syntax": "CREATE TRIGGER name {BEFORE | AFTER} {INSERT | UPDATE | DELETE} ON table …" },
+    { "name": "ADD", "doc": "Adds a column or constraint to an existing table in ALTER TABLE.", "syntax": "ALTER TABLE table ADD [COLUMN] column type" },
+    { "name": "COLUMN", "doc": "Names a column in ALTER TABLE statements; optional in some engines.", "syntax": "ALTER TABLE table ADD | DROP [COLUMN] column" },
+    { "name": "ANY", "doc": "After a comparison operator, true when the comparison holds for at least one row of a subquery. Same as SOME; not supported by every engine.", "syntax": "expression operator ANY (subquery)" },
+    { "name": "SOME", "doc": "After a comparison operator, true when the comparison holds for at least one row of a subquery. Same as ANY; not supported by every engine.", "syntax": "expression operator SOME (subquery)" },
+    { "name": "ESCAPE", "doc": "Names the character that makes a following % or _ in a LIKE pattern match literally.", "syntax": "expression LIKE pattern ESCAPE 'char'" },
+    { "name": "COLLATE", "doc": "Applies a collation, which sets how text is compared and sorted (case and accent sensitivity, language rules).", "syntax": "expression COLLATE collation_name" },
+    { "name": "NATURAL", "doc": "Makes a join match on every column name the two tables share. Fragile if columns are added later; not supported by every engine.", "syntax": "table1 NATURAL [LEFT | RIGHT | INNER] JOIN table2" }
+  ],
+  "constants": [
+    { "name": "NULL", "doc": "The absence of a value. Compare with IS NULL / IS NOT NULL; = NULL is never true." }
+  ]
+}

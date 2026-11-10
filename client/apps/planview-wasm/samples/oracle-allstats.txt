@@ -1,0 +1,31 @@
+SQL_ID  9ruaw8agctzdw, child number 1
+-------------------------------------
+SELECT /*+ GATHER_PLAN_STATISTICS */ c.country, COUNT(*) AS orders,
+SUM(o.total) AS revenue FROM orders o JOIN customers c ON c.id =
+o.customer_id WHERE o.status = 'refunded' AND o.total > 1200 GROUP BY
+c.country ORDER BY revenue DESC
+
+Plan hash value: 2958302572
+
+-----------------------------------------------------------------------------------------------------------------------
+| Id  | Operation            | Name      | Starts | E-Rows | A-Rows |   A-Time   | Buffers |  OMem |  1Mem | Used-Mem |
+-----------------------------------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT     |           |      1 |        |      5 |00:00:00.01 |    3142 |       |       |          |
+|   1 |  SORT ORDER BY       |           |      1 |      5 |      5 |00:00:00.01 |    3142 |  2048 |  2048 | 2048  (0)|
+|   2 |   HASH GROUP BY      |           |      1 |      5 |      5 |00:00:00.01 |    3142 |  1116K|  1116K|          |
+|*  3 |    HASH JOIN         |           |      1 |   5422 |   5409 |00:00:00.01 |    3142 |  1744K|  1744K| 1684K (0)|
+|*  4 |     TABLE ACCESS FULL| ORDERS    |      1 |   5422 |   5409 |00:00:00.01 |    2895 |       |       |          |
+|   5 |     TABLE ACCESS FULL| CUSTOMERS |      1 |  50000 |  50000 |00:00:00.01 |     247 |       |       |          |
+-----------------------------------------------------------------------------------------------------------------------
+
+Predicate Information (identified by operation id):
+---------------------------------------------------
+
+   3 - access("C"."ID"="O"."CUSTOMER_ID")
+   4 - filter(("O"."TOTAL">1200 AND "O"."STATUS"='refunded'))
+
+Note
+-----
+   - statistics feedback used for this statement
+   - this is an adaptive plan
+

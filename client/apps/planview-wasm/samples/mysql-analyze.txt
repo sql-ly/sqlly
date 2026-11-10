@@ -1,0 +1,8 @@
+-> Sort: revenue DESC  (actual time=84.3..84.3 rows=5 loops=1)
+    -> Table scan on <temporary>  (actual time=84.3..84.3 rows=5 loops=1)
+        -> Aggregate using temporary table  (actual time=84.3..84.3 rows=5 loops=1)
+            -> Nested loop inner join  (cost=67278 rows=19954) (actual time=0.27..83.1 rows=5409 loops=1)
+                -> Filter: ((o.`status` = 'refunded') and (o.total > 1200.00))  (cost=60294 rows=19954) (actual time=0.262..80.1 rows=5409 loops=1)
+                    -> Table scan on o  (cost=60294 rows=598688) (actual time=0.0888..53.9 rows=600000 loops=1)
+                -> Single-row index lookup on c using PRIMARY (id=o.customer_id)  (cost=0.25 rows=1) (actual time=463e-6..479e-6 rows=1 loops=5409)
+

@@ -1,0 +1,60 @@
+[package]
+name = "sqlly-cli"
+version = "1.21.0"
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+rustls = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+chrono = { workspace = true }
+clap = { version = "4", features = ["derive"] }
+comfy-table = { version = "8", default-features = false }
+csv = "1"
+futures = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+sqlly-core = { workspace = true }
+sqlly-lang = { workspace = true }
+sqlly-intel = { workspace = true }
+sqlly-engines = { workspace = true }
+sqlly-ai = { workspace = true }
+sqlly-services = { workspace = true }
+sqlly-remote = { workspace = true }
+tokio = { workspace = true }
+uuid = { workspace = true }
+dirs = "7"
+keyring = { workspace = true }
+rmcp = { workspace = true }
+schemars = { workspace = true }
+parking_lot = { workspace = true }
+
+[[bin]]
+name = "sqlly-cli"
+path = "src/main.rs"
+
+[[test]]
+name = "engine_io"
+path = "tests/engine_io.rs"
+
+[[test]]
+name = "agent_cli"
+path = "tests/agent_cli.rs"
+
+[[test]]
+name = "mcp_stdio"
+path = "tests/mcp_stdio.rs"
+
+[dev-dependencies]
+sqlly-testkit = { workspace = true }
+async-trait = { workspace = true }
+rusqlite = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+tempfile = "3"
+# POSIX word splitting for the copied-CLI-line contract test.
+shlex = "2.0"

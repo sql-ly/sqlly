@@ -1,0 +1,123 @@
+# cargo-deny configuration — run in CI as `cargo deny check` (fails the build).
+#
+# Schema: cargo-deny 0.18+ (the removed `[licenses] unlicensed` /
+# `[advisories] unsound` keys from older examples are defaults now: an
+# unlicensed crate and any advisory are always errors unless ignored).
+
+# Audit the dependency graph for every platform/architecture SQLLY ships, so an
+# advisory (or a banned/duplicate crate) that only reaches one target still
+# fails the build. cargo-deny unions the dependencies applicable to any listed
+# target, so a single `cargo deny check` covers all of them at once; a failure's
+# inclusion graph names the target that pulls the offending crate. Keep this list
+# in lock-step with the release build matrix
+# and the wasm browser build.
+[graph]
+targets = [
+    "aarch64-apple-darwin",       # macOS (arm64-only per AGENTS.md)
+    "x86_64-unknown-linux-gnu",   # Linux amd64
+    "aarch64-unknown-linux-gnu",  # Linux arm64
+    "x86_64-pc-windows-msvc",     # Windows amd64
+    "aarch64-pc-windows-msvc",    # Windows arm64
+    "wasm32-unknown-unknown",     # browser app (sqlly-web)
+]
+
+[licenses]
+confidence-threshold = 0.8
+
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "0BSD",
+    "ISC",
+    "CC0-1.0",
+    "Unicode-3.0",
+    "Zlib",
+    # Weak file-level copyleft; fine for unmodified library use (cbindgen,
+    # dwrote, option-ext).
+    "MPL-2.0",
+    # Permissive data license used by the Mozilla CA bundle (webpki-roots).
+    "CDLA-Permissive-2.0",
+    # Boost Software License: OSI-approved permissive (xxhash-rust, via the
+    # redis driver).
+    "BSL-1.0",
+]
+
+# No license exceptions. The GPL-3.0-or-later exceptions for zed's `zlog` /
+# `ztracing` / `ztracing_macro` were dropped on 2026-10-14: gpui now comes from
+# the registry `gpui-pre-*` publications, whose logging/tracing crates are
+# Apache-2.0 (and gpui-pre 0.3.9 no longer links a zlog crate at all), so the
+# exceptions matched nothing.
+
+# Our own workspace crates are `publish = false` and carry SQLly's dual license
+# (PolyForm Small Business OR commercial); the allowlist above is for
+# dependencies, so skip unpublished crates.
+[licenses.private]
+ignore = true
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+# Workspace crates reference each other by path without a version; that is
+# fine for private packages and not the wildcard footgun this check exists for.
+allow-wildcard-paths = true
+
+deny = [
+    { crate = "failure", use-instead = "anyhow or thiserror", reason = "The failure crate is deprecated." },
+]
+
+[advisories]
+# Only flag unmaintained crates we depend on directly.
+unmaintained = "workspace"
+yanked = "warn"
+
+ignore = [
+    # RUSTSEC-2026-0194/0195 (quick-xml < 0.41) were ignored here while xcb and
+    # zbus_xml pinned 0.30/0.39. The lockfile now carries only 0.41 and 0.42, so
+    # the advisories no longer match and the ignores were dropped.
+    # RUSTSEC-2026-0098/0099/0104 (rustls 0.21 name-constraint/CRL issues)
+    # were ignored here while tiberius 0.12 pinned tokio-rustls 0.24. tiberius
+    # 0.13 (2026-10-14) moved to rustls 0.23, so rustls 0.21 left the graph
+    # and the ignores were dropped.
+    # Marvin Attack: RSA timing sidechannel in the pure-Rust `rsa` crate. Pulled
+    # in only transitively by jsonwebtoken 11's `rust_crypto` feature bundle
+    # (relay/bridge), which offers no per-algorithm opt-out. SQLLY mints and
+    # validates HS256 (HMAC) tokens exclusively (in the relay's auth module), so
+    # the RSA signing/verification path the sidechannel affects is never invoked.
+    # Shedding the crate would mean switching jsonwebtoken to the aws_lc_rs
+    # backend, reintroducing the C/CMake toolchain across the arm64/windows/wasm
+    # cross-compile matrix that `rust_crypto` was chosen to avoid. Unpatched
+    # upstream (constant-time rewrite in progress). Re-evaluate by 2026-11-29.
+    { id = "RUSTSEC-2023-0071", reason = "rsa is a transitive dep of jsonwebtoken 11's rust_crypto feature; SQLLY only uses HS256 (HMAC), so the RSA timing sidechannel is unreachable. No patch upstream. Re-evaluate by 2026-11-29." },
+    # crypto-bigint 0.5 timing variability (fixed only in 0.7.6). The 0.5.5 copy
+    # is reached solely through jsonwebtoken 11's p256/p384 0.13 →
+    # elliptic-curve 0.13; jsonwebtoken 11.1.0 (latest) has no release on the
+    # 0.14 curves, and our own p256 dependency is already 0.14 / crypto-bigint
+    # 0.7. The only EC path SQLLY runs through jsonwebtoken is ES384
+    # *verification* of embedded license grants (in the relay)
+    # — public key, public token, public signature — so there is no secret for a
+    # timing sidechannel to leak; grants are signed server-side in .NET. Drop
+    # this once jsonwebtoken moves to elliptic-curve 0.14. Re-evaluate by 2026-11-29.
+    { id = "RUSTSEC-2026-0387", reason = "crypto-bigint 0.5 only via jsonwebtoken 11's p256/p384 0.13 (no upgrade upstream); SQLLY only verifies ES384 grants there, which handles no secrets. Re-evaluate by 2026-11-29." },
+]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+
+allow-registry = [
+    "https://github.com/rust-lang/crates.io-index",
+]
+
+# Minimum git specifier for declared git deps. Since the GPUI Kit migration
+# (2026-09-19) the entire gpui graph resolves from crates.io, and
+# sqlly-datatable is consumed through a [patch.crates-io] path to a sibling
+# checkout the release pipeline materializes at the crate-matched tag (see
+# AGENTS.md). The lockfile carries no git sources at all, so allow-git is
+# empty: any git dep that sneaks back in fails `unknown-git = "deny"` and has
+# to be added here deliberately, with at least a tag.
+required-git-spec = "tag"
+
+allow-git = []

@@ -1,0 +1,1 @@
+EXEC sp_helptext N'odd schema.My]Table'

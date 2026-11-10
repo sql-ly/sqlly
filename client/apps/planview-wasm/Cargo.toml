@@ -1,0 +1,28 @@
+[package]
+name = "sqlly-planview-wasm"
+version = "1.0.0"
+edition.workspace = true
+license.workspace = true
+publish = false
+description = "SQLly's execution-plan reader compiled to WebAssembly for the free online query plan viewer at sqlly.app/tools/query-plan-viewer. A thin wasm-bindgen shell over sqlly-intel's plans module: the same parser and findings engine the desktop app's plan pane runs, not a fork."
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# sqlly-intel builds for wasm32 without a C compiler (its native-only modules
+# and rusqlite are gated off on wasm), so the stable toolchain builds this.
+sqlly-intel = { workspace = true }
+serde_json = { workspace = true }
+
+# The JS bindings exist only on wasm; on native targets the crate is a plain
+# rlib so `cargo test` / clippy cover the JSON contract everywhere.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+# sqlly-core (under sqlly-intel) mints v4 uuids; on wasm the randomness comes
+# from Crypto.getRandomValues. .cargo/config.toml selects getrandom's JS
+# backend for wasm32.
+uuid = { workspace = true, features = ["js"] }
+
+[lints]
+workspace = true

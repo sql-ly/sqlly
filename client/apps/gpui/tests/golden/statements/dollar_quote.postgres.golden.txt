@@ -1,0 +1,6 @@
+--- statement 1 [0..80]
+CREATE FUNCTION f() RETURNS int AS $$ BEGIN RETURN 1; END; $$ LANGUAGE plpgsql;
+
+--- statement 2 [80..92]
+SELECT f();
+

@@ -1,0 +1,24 @@
+{
+  "folders": { "Acme": {}, "Acme/Prod": { "parent": "Acme" } },
+  "connections": {
+    "postgres-jdbc-1": {
+      "provider": "postgresql", "driver": "postgres-jdbc", "name": "pg-prod", "folder": "Acme/Prod",
+      "save-password": true, "read-only": true,
+      "configuration": { "host": "db.acme.internal", "port": "5433", "database": "appdb", "configurationType": "MANUAL", "type": "prod", "auth-model": "native", "user": "app", "password": "dropped-on-import", "handlers": { "ssh_tunnel": { "type": "tunnel", "enabled": true, "host": "bastion.acme.internal", "port": "22", "user": "ubuntu", "authType": "PASSWORD" } } }
+    },
+    "mysql-2": {
+      "provider": "mysql", "driver": "mysql8", "name": "mysql-url", "configurationType": "URL",
+      "configuration": { "url": "jdbc:mysql://[2001:db8::1]:3306/shop", "configurationType": "URL", "type": "dev" }
+    },
+    "sqlite-3": {
+      "provider": "sqlite", "driver": "sqlite_jdbc", "name": "local-sqlite",
+      "configuration": { "database": "/tmp/app.db", "configurationType": "MANUAL", "type": "dev" }
+    },
+    "pg-dup": {
+      "provider": "postgresql", "driver": "postgres-jdbc", "name": "pg-prod-copy",
+      "configuration": { "host": "DB.ACME.INTERNAL", "port": "5433", "database": "AppDb", "configurationType": "MANUAL", "type": "prod" }
+    },
+    "oracle-4": { "provider": "oracle", "driver": "oracle_thin", "name": "ora", "configuration": { "host": "ora", "port": "1521" } }
+  },
+  "connection-types": {}
+}

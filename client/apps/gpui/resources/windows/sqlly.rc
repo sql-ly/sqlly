@@ -1,0 +1,5 @@
+// Application icon: resource ID 1 is what GPUI's Windows platform loads for
+// the window class (LoadImageW(module, MAKEINTRESOURCE(1), IMAGE_ICON, ...)),
+// so this single entry provides the Explorer/exe icon, the window icon, and
+// the taskbar icon.
+1 ICON "sqlly.ico"

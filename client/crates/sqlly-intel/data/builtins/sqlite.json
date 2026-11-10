@@ -1,0 +1,3385 @@
+{
+  "about": "SQLite 3.46+ (also libSQL/Turso) built-ins, merged over common.json. Math functions need a build with SQLITE_ENABLE_MATH_FUNCTIONS (on by default in the standard amalgamation).",
+  "functions": [
+    {
+      "name": "changes",
+      "category": "System",
+      "summary": "Returns the number of rows inserted, updated or deleted by the most recently completed INSERT, UPDATE or DELETE on this connection.",
+      "example": "SELECT changes()",
+      "signatures": [
+        {
+          "returns": "integer",
+          "params": []
+        }
+      ]
+    },
+    {
+      "name": "char",
+      "category": "String",
+      "summary": "Returns a string made of the characters whose Unicode code points are given as arguments.",
+      "example": "char(72, 105)",
+      "signatures": [
+        {
+          "returns": "text",
+          "params": [
+            {
+              "name": "code_point",
+              "type": "integer",
+              "doc": "A Unicode code point; add more arguments for more characters."
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "concat",
+      "category": "String",
+      "summary": "Concatenates the text form of every non-NULL argument; NULL arguments are skipped and all-NULL input gives an empty string (3.44+).",
+      "example": "concat(first_name, ' ', last_name)",
+      "signatures": [
+        {
+          "returns": "text",
+          "params": [
+            {
+              "name": "value",
+              "type": "any",
+              "doc": "A value to append; add more arguments to append more."
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "concat_ws",
+      "category": "String",
+      "summary": "Concatenates the non-NULL arguments after the first, placing the separator between them; returns NULL if the separator is NULL (3.44+).",
+      "example": "concat_ws(', ', city, region, country)",
+      "signatures": [
+        {
+          "returns": "text",
+          "params": [
+            {
+              "name": "separator",
+              "type": "text",
+              "doc": "Text placed between each pair of values."
+            },
+            {
+              "name": "value",
+              "type": "any",
+              "doc": "A value to join; NULL values are skipped. Add more arguments for more values."
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "format",
+      "category": "String",
+      "summary": "Builds a string from a printf-style format and arguments; an alias of printf (3.38+).",
+      "example": "format('%s has %d rows', name, n)",
+      "signatures": [
+        {
+          "returns": "text",
+          "params": [
+            {
+              "name": "format",
+              "type": "text",
+              "doc": "Format string with %d, %f, %s, %q, %Q, %w, %x, %c and similar substitutions; %% writes a percent sign."
+            },
+            {
+              "name": "argument",
+              "type": "any",
+              "doc": "Value for the next substitution in the format.",
+              "optional": true
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "glob",
+      "category": "String",
+      "summary": "Tests whether a string matches a case-sensitive Unix-style glob pattern; glob(pattern, string) is the same as string GLOB pattern. Note the pattern comes first.",
+      "example": "glob('*.txt', file_name)",
+      "signatures": [
+        {
+          "returns": "integer (1 or 0)",
+          "params": [
+            {
+              "name": "pattern",
+              "type": "text",
+              "doc": "Pattern where * matches any run of characters, ? matches one character and [...] matches a character set."
+            },
+            {
+              "name": "string",
+              "type": "text",
+              "doc": "The value to test."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "hex",
+      "category": "String",
+      "summary": "Returns the upper-case hexadecimal rendering of the bytes of a value, treating it as a BLOB (text uses its bytes in the database encoding).",
+      "example": "hex(randomblob(4))",
+      "signatures": [
+        {
+          "returns": "text",
+          "params": [
+            {
+              "name": "value",
+              "type": "any",
+              "doc": "The value whose bytes to render."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ifnull",
+      "category": "Conditional",
+      "summary": "Returns the first argument if it is not NULL, otherwise the second. Same as coalesce with two arguments.",
+      "example": "ifnull(nickname, first_name)",
+      "signatures": [
+        {
+          "returns": "type of the chosen argument",
+          "params": [
+            {
+              "name": "value",
+              "type": "any",
+              "doc": "The value to return when it is not NULL."
+            },
+            {
+              "name": "fallback",
+              "type": "any",
+              "doc": "The value to return when the first is NULL."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "iif",
+      "category": "Conditional",
+      "summary": "Returns the second argument if the condition is true, otherwise the third; shorthand for CASE WHEN condition THEN a ELSE b END (3.32+).",
+      "example": "iif(qty > 0, 'in stock', 'sold out')",
+      "signatures": [
+        {
+          "returns": "type of the chosen argument",
+          "params": [
+            {
+              "name": "condition",
+              "type": "boolean",
+              "doc": "The expression to test; true means non-zero and not NULL."
+            },
+            {
+              "name": "true_value",
+              "type": "any",
+              "doc": "Returned when the condition is true."
+            },
+            {
+              "name": "false_value",
+              "type": "any",
+              "doc": "Returned when the condition is false or NULL."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "instr",
+      "category": "String",
+      "summary": "Returns the 1-based position of the first occurrence of a substring in a string, or 0 if it is not found. For BLOBs the position counts bytes.",
+      "example": "instr(email, '@')",
+      "signatures": [
+        {
+          "returns": "integer",
+          "params": [
+            {
+              "name": "string",
+              "type": "text",
+              "doc": "The string to search in."
+            },
+            {
+              "name": "substring",
+              "type": "text",
+              "doc": "The string to look for."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "last_insert_rowid",
+      "category": "System",
+      "summary": "Returns the rowid of the most recent successful INSERT into a rowid table on this connection.",
+      "example": "SELECT last_insert_rowid()",
+      "signatures": [
+        {
+          "returns": "integer",
+          "params": []
+        }
+      ]
+    },
+    {
+      "name": "length",
+      "category": "String",
+      "summary": "Returns the number of characters in a string (before any NUL), the number of bytes in a BLOB, the length of a number's text form, or NULL for NULL.",
+      "example": "length(name)",
+      "signatures": [
+        {
+          "returns": "integer",
+          "params": [
+            {
+              "name": "value",
+              "type": "any",
+              "doc": "The string, BLOB or number to measure."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "like",
+      "category": "String",
+      "summary": "Tests a string against a LIKE pattern; like(pattern, string) is the same as string LIKE pattern. Case-insensitive for ASCII letters by default.",
+      "example": "like('abc%', code)",
+      "signatures": [
+        {
+          "returns": "integer (1 or 0)",
+          "params": [
+            {
+              "name": "pattern",
+              "type": "text",
+              "doc": "Pattern where % matches any run of characters and _ matches one character."
+            },
+            {
+              "name": "string",
+              "type": "text",
+              "doc": "The value to test."
+            },
+            {
+              "name": "escape",
+              "type": "text",
+              "doc": "A single character that makes the next % or _ in the pattern literal.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "likelihood",
+      "category": "System",
+      "summary": "Returns its first argument unchanged while telling the query planner how likely it is to be true.",
+      "example": "WHERE likelihood(status = 'open', 0.05)",
+      "signatures": [
+        {
+          "returns": "same as value",
+          "params": [
+            {
+              "name": "value",
+              "type": "boolean",
+              "doc": "The condition to pass through."
+            },
+            {
+              "name": "probability",
+              "type": "real",
+              "doc": "Estimated chance the value is true, a constant from 0.0 to 1.0."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "likely",
+      "category": "System",
+      "summary": "Returns its argument unchanged while telling the query planner it is usually true; same as likelihood(value, 0.9375).",
+      "example": "WHERE likely(active)",
+      "signatures": [
+        {
+          "returns": "same as value",
+          "params": [
+            {
+              "name": "value",
+              "type": "boolean",
+              "doc": "The condition to pass through."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "load_extension",
+      "category": "System",
+      "summary": "Loads an SQLite extension from a shared library file. Only works when extension loading is enabled on the connection.",
+      "example": "SELECT load_extension('./libmyext')",
+      "signatures": [
+        {
+          "returns": "NULL",
+          "params": [
+            {
+              "name": "file",
+              "type": "text",
+              "doc": "Path of the shared library; the platform suffix may be left out."
+            },
+            {
+              "name": "entry_point",
+              "type": "text",
+              "doc": "Name of the initialization function; derived from the file name when left out.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "lower",
+      "category": "String",
+      "summary": "Returns a copy of a string with ASCII letters converted to lowercase. Non-ASCII letters are unchanged unless the ICU extension is loaded.",
+      "example": "lower(email)",
+      "signatures": [
+        {
+          "returns": "text",
+          "params": [
+            {
+              "name": "string",
+              "type": "text",
+              "doc": "The string to convert."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ltrim",
+      "category": "String",
+      "summary": "Returns a string with any of the given characters removed from its start; spaces when no characters are given.",
+      "example": "ltrim(code, '0')",
+      "signatures": [
+        {
+          "returns": "text",
+          "params": [
+            {
+              "name": "string",
+              "type": "text",
+              "doc": "The string to trim."
+            },
+            {
+              "name": "characters",
+              "type": "text",
+              "doc": "Every character in this string is stripped from the left end; defaults to a space.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "max",
+      "category": "Aggregate",
+      "summary": "With one argument, an aggregate returning the largest non-NULL value in the group. With two or more, a scalar returning the largest argument, or NULL if any argument is NULL.",
+      "example": "max(price) or max(a, b, c)",
+      "signatures": [
+        {
+          "returns": "same type as expression",
+          "params": [
+            {
+              "name": "expression",
+              "type": "any",
+              "doc": "The value to compare across the rows of each group; NULLs are ignored."
+            }
+          ]
+        },
+        {
+          "returns": "type of the largest argument",
+          "params": [
+            {
+              "name": "value1",
+              "type": "any",
+              "doc": "The first value to compare."
+            },
+            {
+              "name": "value2",
+              "type": "any",
+              "doc": "The next value to compare; add more arguments to compare more. Any NULL makes the result NULL."
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "min",
+      "category": "Aggregate",
+      "summary": "With one argument, an aggregate returning the smallest non-NULL value in the group. With two or more, a scalar returning the smallest argument, or NULL if any argument is NULL.",
+      "example": "min(price) or min(a, b, c)",
+      "signatures": [
+        {
+          "returns": "same type as expression",
+          "params": [
+            {
+              "name": "expression",
+              "type": "any",
+              "doc": "The value to compare across the rows of each group; NULLs are ignored."
+            }
+          ]
+        },
+        {
+          "returns": "type of the smallest argument",
+          "params": [
+            {
+              "name": "value1",
+              "type": "any",
+              "doc": "The first value to compare."
+            },
+            {
+              "name": "value2",
+              "type": "any",
+              "doc": "The next value to compare; add more arguments to compare more. Any NULL makes the result NULL."
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "octet_length",
+      "category": "String",
+      "summary": "Returns the number of bytes in the text form of a value in the database encoding, or the number of bytes of a BLOB (3.43+).",
+      "example": "octet_length(name)",
+      "signatures": [
+        {
+          "returns": "integer",
+          "params": [
+            {
+              "name": "value",
+              "type": "any",
+              "doc": "The value to measure."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "printf",
+      "category": "String",
+      "summary": "Builds a string from a C printf-style format and arguments.",
+      "example": "printf('%05.2f', amount)",
+      "signatures": [
+        {
+          "returns": "text",
+          "params": [
+            {
+              "name": "format",
+              "type": "text",
+              "doc": "Format string with %d, %f, %s, %q, %Q, %w, %x, %c and similar substitutions; %% writes a percent sign."
+            },
+            {
+              "name": "argument",
+              "type": "any",
+              "doc": "Value for the next substitution in the format.",
+              "optional": true
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "quote",
+      "category": "String",
+      "summary": "Returns the SQL literal text for a value: strings in single quotes with quotes doubled, BLOBs as X'...' hex, NULL as the word NULL.",
+      "example": "quote(name)",
+      "signatures": [
+        {
+          "returns": "text",
+          "params": [
+            {
+              "name": "value",
+              "type": "any",
+              "doc": "The value to quote."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "random",
+      "category": "Math",
+      "summary": "Returns a pseudo-random 64-bit signed integer.",
+      "example": "abs(random()) % 100",
+      "signatures": [
+        {
+          "returns": "integer",
+          "params": []
+        }
+      ]
+    },
+    {
+      "name": "randomblob",
+      "category": "String",
+      "summary": "Returns a BLOB of the given number of pseudo-random bytes; sizes below 1 give a 1-byte BLOB.",
+      "example": "hex(randomblob(16))",
+      "signatures": [
+        {
+          "returns": "blob",
+          "params": [
+            {
+              "name": "size",
+              "type": "integer",
+              "doc": "Number of random bytes to generate."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "round",
+      "category": "Math",
+      "summary": "Rounds a number to a number of digits after the decimal point, returning a floating-point value. Negative or missing digits mean 0.",
+      "example": "round(price * 1.08, 2)",
+      "signatures": [
+        {
+          "returns": "real",
+          "params": [
+            {
+              "name": "number",
+              "type": "real",
+              "doc": "The value to round."
+            },
+            {
+              "name": "digits",
+              "type": "integer",
+              "doc": "Digits to keep after the decimal point; 0 when left out or negative.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "rtrim",
+      "category": "String",
+      "summary": "Returns a string with any of the given characters removed from its end; spaces when no characters are given.",
+      "example": "rtrim(path, '/')",
+      "signatures": [
+        {
+          "returns": "text",
+          "params": [
+            {
+              "name": "string",
+              "type": "text",
+              "doc": "The string to trim."
+            },
+            {
+              "name": "characters",
+              "type": "text",
+              "doc": "Every character in this string is stripped from the right end; defaults to a space.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "sign",
+      "category": "Math",
+      "summary": "Returns -1, 0 or +1 for a negative, zero or positive number, or NULL if the argument is NULL or not a number (3.35+).",
+      "example": "sign(balance)",
+      "signatures": [
+        {
+          "returns": "integer",
+          "params": [
+            {
+              "name": "number",
+              "type": "numeric",
+              "doc": "The value to test."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "soundex",
+      "category": "String",
+      "summary": "Returns the 4-character Soundex encoding of a string, or ?000 for NULL or letterless input. Only available when SQLite is built with SQLITE_SOUNDEX.",
+      "example": "soundex(last_name)",
+      "signatures": [
+        {
+          "returns": "text",
+          "params": [
+            {
+              "name": "string",
+              "type": "text",
+              "doc": "The string to encode."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "sqlite_compileoption_get",
+      "category": "System",
+      "summary": "Returns the N-th compile-time option used to build SQLite, or NULL when N is past the end.",
+      "example": "sqlite_compileoption_get(0)",
+      "signatures": [
+        {
+          "returns": "text",
+          "params": [
+            {
+              "name": "n",
+              "type": "integer",
+              "doc": "Zero-based index of the option."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "sqlite_compileoption_used",
+      "category": "System",
+      "summary": "Returns 1 if SQLite was built with the named compile-time option, otherwise 0.",
+      "example": "sqlite_compileoption_used('ENABLE_FTS5')",
+      "signatures": [
+        {
+          "returns": "integer (1 or 0)",
+          "params": [
+            {
+              "name": "option",
+              "type": "text",
+              "doc": "Option name, with or without the SQLITE_ prefix."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "sqlite_offset",
+      "category": "System",
+      "summary": "Returns the byte offset in the database file of the record holding a column value. Only available when built with SQLITE_ENABLE_OFFSET_SQL_FUNC.",
+      "example": "sqlite_offset(name)",
+      "signatures": [
+        {
+          "returns": "integer",
+          "params": [
+            {
+              "name": "column",
+              "type": "any",
+              "doc": "A column reference in the query."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "sqlite_source_id",
+      "category": "System",
+      "summary": "Returns the check-in identifier and date of the SQLite source code this library was built from.",
+      "example": "SELECT sqlite_source_id()",
+      "signatures": [
+        {
+          "returns": "text",
+          "params": []
+        }
+      ]
+    },
+    {
+      "name": "sqlite_version",
+      "category": "System",
+      "summary": "Returns the version of the SQLite library, such as 3.46.1.",
+      "example": "SELECT sqlite_version()",
+      "signatures": [
+        {
+          "returns": "text",
+          "params": []
+        }
+      ]
+    },
+    {
+      "name": "substr",
+      "category": "String",
+      "summary": "Returns part of a string starting at a 1-based position; a negative start counts from the end. For BLOBs positions count bytes.",
+      "example": "substr(phone, 1, 3)",
+      "signatures": [
+        {
+          "returns": "same type as string",
+          "params": [
+            {
+              "name": "string",
+              "type": "text",
+              "doc": "The string or BLOB to take part of."
+            },
+            {
+              "name": "start",
+              "type": "integer",
+              "doc": "1-based starting position; negative counts back from the end."
+            },
+            {
+              "name": "length",
+              "type": "integer",
+              "doc": "How many characters to return; to the end when left out. Negative returns the characters before start.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "substring",
+      "category": "String",
+      "summary": "Alias of substr: returns part of a string starting at a 1-based position (3.34+). Uses commas, not FROM/FOR.",
+      "example": "substring(phone, 1, 3)",
+      "signatures": [
+        {
+          "returns": "same type as string",
+          "params": [
+            {
+              "name": "string",
+              "type": "text",
+              "doc": "The string or BLOB to take part of."
+            },
+            {
+              "name": "start",
+              "type": "integer",
+              "doc": "1-based starting position; negative counts back from the end."
+            },
+            {
+              "name": "length",
+              "type": "integer",
+              "doc": "How many characters to return; to the end when left out. Negative returns the characters before start.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "total_changes",
+      "category": "System",
+      "summary": "Returns the total number of rows inserted, updated or deleted by INSERT, UPDATE and DELETE statements since the connection was opened.",
+      "example": "SELECT total_changes()",
+      "signatures": [
+        {
+          "returns": "integer",
+          "params": []
+        }
+      ]
+    },
+    {
+      "name": "trim",
+      "category": "String",
+      "summary": "Returns a string with any of the given characters removed from both ends; spaces when no characters are given. SQLite uses trim(string, characters), not TRIM(BOTH ... FROM ...).",
+      "example": "trim(code, ' -')",
+      "signatures": [
+        {
+          "returns": "text",
+          "params": [
+            {
+              "name": "string",
+              "type": "text",
+              "doc": "The string to trim."
+            },
+            {
+              "name": "characters",
+              "type": "text",
+              "doc": "Every character in this string is stripped from both ends; defaults to a space.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "typeof",
+      "category": "System",
+      "summary": "Returns the storage class of a value: 'null', 'integer', 'real', 'text' or 'blob'.",
+      "example": "typeof(amount)",
+      "signatures": [
+        {
+          "returns": "text",
+          "params": [
+            {
+              "name": "value",
+              "type": "any",
+              "doc": "The value to inspect."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "unhex",
+      "category": "String",
+      "summary": "Decodes a hexadecimal string into a BLOB; returns NULL if it has characters that are neither hex digits nor ignorable, or an odd number of digits (3.41+).",
+      "example": "unhex('48656C6C6F')",
+      "signatures": [
+        {
+          "returns": "blob",
+          "params": [
+            {
+              "name": "hex",
+              "type": "text",
+              "doc": "Hex digits in pairs, upper or lower case."
+            },
+            {
+              "name": "ignore",
+              "type": "text",
+              "doc": "Characters allowed between digit pairs and skipped, such as spaces or dashes.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "unicode",
+      "category": "String",
+      "summary": "Returns the Unicode code point of the first character of a string.",
+      "example": "unicode('A')",
+      "signatures": [
+        {
+          "returns": "integer",
+          "params": [
+            {
+              "name": "string",
+              "type": "text",
+              "doc": "The string whose first character to read."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "unlikely",
+      "category": "System",
+      "summary": "Returns its argument unchanged while telling the query planner it is usually false; same as likelihood(value, 0.0625).",
+      "example": "WHERE unlikely(deleted)",
+      "signatures": [
+        {
+          "returns": "same as value",
+          "params": [
+            {
+              "name": "value",
+              "type": "boolean",
+              "doc": "The condition to pass through."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "upper",
+      "category": "String",
+      "summary": "Returns a copy of a string with ASCII letters converted to uppercase. Non-ASCII letters are unchanged unless the ICU extension is loaded.",
+      "example": "upper(code)",
+      "signatures": [
+        {
+          "returns": "text",
+          "params": [
+            {
+              "name": "string",
+              "type": "text",
+              "doc": "The string to convert."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "zeroblob",
+      "category": "String",
+      "summary": "Returns a BLOB of the given number of zero bytes; often used to reserve space for incremental BLOB I/O.",
+      "example": "INSERT INTO files(data) VALUES (zeroblob(1024))",
+      "signatures": [
+        {
+          "returns": "blob",
+          "params": [
+            {
+              "name": "size",
+              "type": "integer",
+              "doc": "Number of zero bytes."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "CAST",
+      "category": "Conversion",
+      "summary": "Converts a value using the affinity of the named type: INTEGER, REAL, TEXT, BLOB or NUMERIC. Unconvertible text becomes 0 rather than raising an error.",
+      "example": "CAST(price AS INTEGER)",
+      "signatures": [
+        {
+          "returns": "value with the target affinity",
+          "params": [
+            {
+              "name": "expression AS type_name",
+              "type": "any",
+              "doc": "The value to convert and the type whose affinity to apply, such as INTEGER, REAL, TEXT, BLOB or NUMERIC."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "avg",
+      "category": "Aggregate",
+      "summary": "Returns the average of the non-NULL values in the group as a floating-point number, or NULL when there are none. Text that does not look like a number counts as 0.",
+      "example": "avg(price)",
+      "signatures": [
+        {
+          "returns": "real",
+          "params": [
+            {
+              "name": "expression",
+              "type": "numeric",
+              "doc": "The value to average; prefix with DISTINCT to average unique values only."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "group_concat",
+      "category": "Aggregate",
+      "summary": "Concatenates the non-NULL values in the group into one string, separated by a comma or the given separator. Add ORDER BY inside the call to order them (3.44+).",
+      "example": "group_concat(name, ', ' ORDER BY name)",
+      "signatures": [
+        {
+          "returns": "text",
+          "params": [
+            {
+              "name": "expression",
+              "type": "any",
+              "doc": "The value to concatenate; prefix with DISTINCT for unique values."
+            },
+            {
+              "name": "separator",
+              "type": "text",
+              "doc": "Text placed between values; defaults to a comma.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "string_agg",
+      "category": "Aggregate",
+      "summary": "Concatenates the non-NULL values in the group, separated by the given separator; the SQL-standard spelling of group_concat (3.44+).",
+      "example": "string_agg(name, ', ' ORDER BY name)",
+      "signatures": [
+        {
+          "returns": "text",
+          "params": [
+            {
+              "name": "expression",
+              "type": "any",
+              "doc": "The value to concatenate."
+            },
+            {
+              "name": "separator",
+              "type": "text",
+              "doc": "Text placed between values."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "sum",
+      "category": "Aggregate",
+      "summary": "Adds up the non-NULL values in the group. Returns an integer when every value is an integer, NULL when there are no values, and raises an error on integer overflow.",
+      "example": "sum(quantity)",
+      "signatures": [
+        {
+          "returns": "integer or real",
+          "params": [
+            {
+              "name": "expression",
+              "type": "numeric",
+              "doc": "The value to add up; prefix with DISTINCT to add unique values only."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "total",
+      "category": "Aggregate",
+      "summary": "Adds up the non-NULL values in the group, always returning a floating-point number: 0.0 when there are no values, and never an overflow error.",
+      "example": "total(quantity)",
+      "signatures": [
+        {
+          "returns": "real",
+          "params": [
+            {
+              "name": "expression",
+              "type": "numeric",
+              "doc": "The value to add up."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "json_group_array",
+      "category": "JSON",
+      "summary": "Aggregate that returns a JSON array containing every value in the group, NULLs included as null.",
+      "example": "json_group_array(name)",
+      "signatures": [
+        {
+          "returns": "text (JSON)",
+          "params": [
+            {
+              "name": "value",
+              "type": "any",
+              "doc": "The value to add to the array."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "json_group_object",
+      "category": "JSON",
+      "summary": "Aggregate that returns a JSON object built from the label/value pairs of the group.",
+      "example": "json_group_object(key, value)",
+      "signatures": [
+        {
+          "returns": "text (JSON)",
+          "params": [
+            {
+              "name": "label",
+              "type": "text",
+              "doc": "The object key for this row."
+            },
+            {
+              "name": "value",
+              "type": "any",
+              "doc": "The value stored under the key."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "jsonb_group_array",
+      "category": "JSON",
+      "summary": "Aggregate like json_group_array, but returns the array in the binary JSONB format (3.45+).",
+      "example": "jsonb_group_array(name)",
+      "signatures": [
+        {
+          "returns": "blob (JSONB)",
+          "params": [
+            {
+              "name": "value",
+              "type": "any",
+              "doc": "The value to add to the array."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "jsonb_group_object",
+      "category": "JSON",
+      "summary": "Aggregate like json_group_object, but returns the object in the binary JSONB format (3.45+).",
+      "example": "jsonb_group_object(key, value)",
+      "signatures": [
+        {
+          "returns": "blob (JSONB)",
+          "params": [
+            {
+              "name": "label",
+              "type": "text",
+              "doc": "The object key for this row."
+            },
+            {
+              "name": "value",
+              "type": "any",
+              "doc": "The value stored under the key."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "nth_value",
+      "category": "Window",
+      "summary": "Returns the value of an expression at the N-th row of the current window frame, or NULL when the frame has fewer rows.",
+      "example": "nth_value(name, 2) OVER (ORDER BY score DESC)",
+      "signatures": [
+        {
+          "returns": "same type as expression",
+          "params": [
+            {
+              "name": "expression",
+              "type": "any",
+              "doc": "The value to read."
+            },
+            {
+              "name": "n",
+              "type": "integer",
+              "doc": "1-based row number within the frame."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "date",
+      "category": "Date and time",
+      "summary": "Returns a date as text in the form YYYY-MM-DD, after applying any modifiers.",
+      "example": "date('now', 'start of month', '+1 month', '-1 day')",
+      "signatures": [
+        {
+          "returns": "text",
+          "params": [
+            {
+              "name": "time_value",
+              "type": "text or number",
+              "doc": "A date/time string such as 'YYYY-MM-DD HH:MM:SS', 'now', or a number (Julian day, or Unix time with 'unixepoch'); 'now' when left out.",
+              "optional": true
+            },
+            {
+              "name": "modifier",
+              "type": "text",
+              "doc": "Applied left to right: '+7 days', '-3 hours', '+1 months', 'start of month', 'start of year', 'start of day', 'weekday N', 'unixepoch', 'julianday', 'auto', 'localtime', 'utc', 'subsec', 'ceiling', 'floor'.",
+              "optional": true
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "time",
+      "category": "Date and time",
+      "summary": "Returns a time as text in the form HH:MM:SS (HH:MM:SS.SSS with the subsec modifier), after applying any modifiers.",
+      "example": "time('now', 'localtime')",
+      "signatures": [
+        {
+          "returns": "text",
+          "params": [
+            {
+              "name": "time_value",
+              "type": "text or number",
+              "doc": "A date/time string such as 'YYYY-MM-DD HH:MM:SS', 'now', or a number (Julian day, or Unix time with 'unixepoch'); 'now' when left out.",
+              "optional": true
+            },
+            {
+              "name": "modifier",
+              "type": "text",
+              "doc": "Applied left to right: '+7 days', '-3 hours', '+1 months', 'start of month', 'start of year', 'start of day', 'weekday N', 'unixepoch', 'julianday', 'auto', 'localtime', 'utc', 'subsec', 'ceiling', 'floor'.",
+              "optional": true
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "datetime",
+      "category": "Date and time",
+      "summary": "Returns a date and time as text in the form YYYY-MM-DD HH:MM:SS, after applying any modifiers.",
+      "example": "datetime(created_at, 'unixepoch', 'localtime')",
+      "signatures": [
+        {
+          "returns": "text",
+          "params": [
+            {
+              "name": "time_value",
+              "type": "text or number",
+              "doc": "A date/time string such as 'YYYY-MM-DD HH:MM:SS', 'now', or a number (Julian day, or Unix time with 'unixepoch'); 'now' when left out.",
+              "optional": true
+            },
+            {
+              "name": "modifier",
+              "type": "text",
+              "doc": "Applied left to right: '+7 days', '-3 hours', '+1 months', 'start of month', 'start of year', 'start of day', 'weekday N', 'unixepoch', 'julianday', 'auto', 'localtime', 'utc', 'subsec', 'ceiling', 'floor'.",
+              "optional": true
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "julianday",
+      "category": "Date and time",
+      "summary": "Returns the Julian day number (fractional days since noon in Greenwich on November 24, 4714 B.C.) for a date and time.",
+      "example": "julianday('now') - julianday(created)",
+      "signatures": [
+        {
+          "returns": "real",
+          "params": [
+            {
+              "name": "time_value",
+              "type": "text or number",
+              "doc": "A date/time string such as 'YYYY-MM-DD HH:MM:SS', 'now', or a number (Julian day, or Unix time with 'unixepoch'); 'now' when left out.",
+              "optional": true
+            },
+            {
+              "name": "modifier",
+              "type": "text",
+              "doc": "Applied left to right: '+7 days', '-3 hours', '+1 months', 'start of month', 'start of year', 'start of day', 'weekday N', 'unixepoch', 'julianday', 'auto', 'localtime', 'utc', 'subsec', 'ceiling', 'floor'.",
+              "optional": true
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "unixepoch",
+      "category": "Date and time",
+      "summary": "Returns the Unix timestamp (seconds since 1970-01-01 00:00:00 UTC) for a date and time; an integer, or real with the subsec modifier (3.38+).",
+      "example": "unixepoch('now', '-1 day')",
+      "signatures": [
+        {
+          "returns": "integer",
+          "params": [
+            {
+              "name": "time_value",
+              "type": "text or number",
+              "doc": "A date/time string such as 'YYYY-MM-DD HH:MM:SS', 'now', or a number (Julian day, or Unix time with 'unixepoch'); 'now' when left out.",
+              "optional": true
+            },
+            {
+              "name": "modifier",
+              "type": "text",
+              "doc": "Applied left to right: '+7 days', '-3 hours', '+1 months', 'start of month', 'start of year', 'start of day', 'weekday N', 'unixepoch', 'julianday', 'auto', 'localtime', 'utc', 'subsec', 'ceiling', 'floor'.",
+              "optional": true
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "strftime",
+      "category": "Date and time",
+      "summary": "Formats a date and time as text using a format string, after applying any modifiers.",
+      "example": "strftime('%Y-%m', order_date)",
+      "signatures": [
+        {
+          "returns": "text",
+          "params": [
+            {
+              "name": "format",
+              "type": "text",
+              "doc": "Substitutions: %Y year, %m month, %d day, %H hour, %M minute, %S seconds, %f fractional seconds, %s Unix time, %j day of year, %w weekday 0-6, %W week, %J Julian day, %F date, %T time, %% percent."
+            },
+            {
+              "name": "time_value",
+              "type": "text or number",
+              "doc": "A date/time string such as 'YYYY-MM-DD HH:MM:SS', 'now', or a number (Julian day, or Unix time with 'unixepoch'); 'now' when left out.",
+              "optional": true
+            },
+            {
+              "name": "modifier",
+              "type": "text",
+              "doc": "Applied left to right: '+7 days', '-3 hours', '+1 months', 'start of month', 'start of year', 'start of day', 'weekday N', 'unixepoch', 'julianday', 'auto', 'localtime', 'utc', 'subsec', 'ceiling', 'floor'.",
+              "optional": true
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "timediff",
+      "category": "Date and time",
+      "summary": "Returns the time from the second date/time to the first as text of the form +YYYY-MM-DD HH:MM:SS.SSS, suitable as a modifier (3.43+).",
+      "example": "timediff('2025-03-01', '2025-01-15')",
+      "signatures": [
+        {
+          "returns": "text",
+          "params": [
+            {
+              "name": "time_value_a",
+              "type": "text or number",
+              "doc": "The later (or end) date/time."
+            },
+            {
+              "name": "time_value_b",
+              "type": "text or number",
+              "doc": "The date/time to subtract."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "CURRENT_DATE",
+      "category": "Date and time",
+      "summary": "Returns the current UTC date as text in the form YYYY-MM-DD. Written without parentheses.",
+      "example": "DEFAULT CURRENT_DATE",
+      "niladic": true,
+      "signatures": [
+        {
+          "returns": "text",
+          "params": []
+        }
+      ]
+    },
+    {
+      "name": "CURRENT_TIME",
+      "category": "Date and time",
+      "summary": "Returns the current UTC time as text in the form HH:MM:SS. Written without parentheses.",
+      "example": "DEFAULT CURRENT_TIME",
+      "niladic": true,
+      "signatures": [
+        {
+          "returns": "text",
+          "params": []
+        }
+      ]
+    },
+    {
+      "name": "CURRENT_TIMESTAMP",
+      "category": "Date and time",
+      "summary": "Returns the current UTC date and time as text in the form YYYY-MM-DD HH:MM:SS. Written without parentheses; use datetime('now', 'localtime') for local time.",
+      "example": "created_at TEXT DEFAULT CURRENT_TIMESTAMP",
+      "niladic": true,
+      "signatures": [
+        {
+          "returns": "text",
+          "params": []
+        }
+      ]
+    },
+    {
+      "name": "acos",
+      "category": "Math",
+      "summary": "Returns the arc cosine of a number, in radians. Built-in math function (3.35+, when compiled with math functions).",
+      "example": "acos(0.5)",
+      "signatures": [
+        {
+          "returns": "real",
+          "params": [
+            {
+              "name": "x",
+              "type": "numeric",
+              "doc": "A value from -1 to 1."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "acosh",
+      "category": "Math",
+      "summary": "Returns the inverse hyperbolic cosine of a number. Built-in math function (3.35+, when compiled with math functions).",
+      "example": "acosh(2)",
+      "signatures": [
+        {
+          "returns": "real",
+          "params": [
+            {
+              "name": "x",
+              "type": "numeric",
+              "doc": "A value of 1 or more."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "asin",
+      "category": "Math",
+      "summary": "Returns the arc sine of a number, in radians. Built-in math function (3.35+, when compiled with math functions).",
+      "example": "asin(0.5)",
+      "signatures": [
+        {
+          "returns": "real",
+          "params": [
+            {
+              "name": "x",
+              "type": "numeric",
+              "doc": "A value from -1 to 1."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "asinh",
+      "category": "Math",
+      "summary": "Returns the inverse hyperbolic sine of a number. Built-in math function (3.35+, when compiled with math functions).",
+      "example": "asinh(1)",
+      "signatures": [
+        {
+          "returns": "real",
+          "params": [
+            {
+              "name": "x",
+              "type": "numeric",
+              "doc": "The input value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "atan",
+      "category": "Math",
+      "summary": "Returns the arc tangent of a number, in radians. Built-in math function (3.35+, when compiled with math functions).",
+      "example": "atan(1)",
+      "signatures": [
+        {
+          "returns": "real",
+          "params": [
+            {
+              "name": "x",
+              "type": "numeric",
+              "doc": "The input value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "atan2",
+      "category": "Math",
+      "summary": "Returns the arc tangent of y/x in radians, using the signs of both to pick the quadrant. Built-in math function (3.35+, when compiled with math functions).",
+      "example": "atan2(dy, dx)",
+      "signatures": [
+        {
+          "returns": "real",
+          "params": [
+            {
+              "name": "y",
+              "type": "numeric",
+              "doc": "The y coordinate (numerator)."
+            },
+            {
+              "name": "x",
+              "type": "numeric",
+              "doc": "The x coordinate (denominator)."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "atanh",
+      "category": "Math",
+      "summary": "Returns the inverse hyperbolic tangent of a number. Built-in math function (3.35+, when compiled with math functions).",
+      "example": "atanh(0.5)",
+      "signatures": [
+        {
+          "returns": "real",
+          "params": [
+            {
+              "name": "x",
+              "type": "numeric",
+              "doc": "A value between -1 and 1."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ceil",
+      "category": "Math",
+      "summary": "Returns the smallest integer value not less than the argument; integers are returned unchanged. Built-in math function (3.35+, when compiled with math functions).",
+      "example": "ceil(4.2)",
+      "signatures": [
+        {
+          "returns": "same type as x",
+          "params": [
+            {
+              "name": "x",
+              "type": "numeric",
+              "doc": "The input value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ceiling",
+      "category": "Math",
+      "summary": "Alias of ceil: returns the smallest integer value not less than the argument. Built-in math function (3.35+, when compiled with math functions).",
+      "example": "ceiling(4.2)",
+      "signatures": [
+        {
+          "returns": "same type as x",
+          "params": [
+            {
+              "name": "x",
+              "type": "numeric",
+              "doc": "The input value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "cos",
+      "category": "Math",
+      "summary": "Returns the cosine of an angle given in radians. Built-in math function (3.35+, when compiled with math functions).",
+      "example": "cos(pi())",
+      "signatures": [
+        {
+          "returns": "real",
+          "params": [
+            {
+              "name": "x",
+              "type": "numeric",
+              "doc": "Angle in radians."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "cosh",
+      "category": "Math",
+      "summary": "Returns the hyperbolic cosine of a number. Built-in math function (3.35+, when compiled with math functions).",
+      "example": "cosh(1)",
+      "signatures": [
+        {
+          "returns": "real",
+          "params": [
+            {
+              "name": "x",
+              "type": "numeric",
+              "doc": "The input value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "degrees",
+      "category": "Math",
+      "summary": "Converts an angle from radians to degrees. Built-in math function (3.35+, when compiled with math functions).",
+      "example": "degrees(pi())",
+      "signatures": [
+        {
+          "returns": "real",
+          "params": [
+            {
+              "name": "x",
+              "type": "numeric",
+              "doc": "Angle in radians."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "exp",
+      "category": "Math",
+      "summary": "Returns e raised to the given power. Built-in math function (3.35+, when compiled with math functions).",
+      "example": "exp(1)",
+      "signatures": [
+        {
+          "returns": "real",
+          "params": [
+            {
+              "name": "x",
+              "type": "numeric",
+              "doc": "The exponent."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "floor",
+      "category": "Math",
+      "summary": "Returns the largest integer value not greater than the argument; integers are returned unchanged. Built-in math function (3.35+, when compiled with math functions).",
+      "example": "floor(4.8)",
+      "signatures": [
+        {
+          "returns": "same type as x",
+          "params": [
+            {
+              "name": "x",
+              "type": "numeric",
+              "doc": "The input value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ln",
+      "category": "Math",
+      "summary": "Returns the natural (base-e) logarithm of a number. Built-in math function (3.35+, when compiled with math functions).",
+      "example": "ln(10)",
+      "signatures": [
+        {
+          "returns": "real",
+          "params": [
+            {
+              "name": "x",
+              "type": "numeric",
+              "doc": "A positive value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "log",
+      "category": "Math",
+      "summary": "With one argument, returns the base-10 logarithm (not the natural log; use ln for that). With two, returns the logarithm of x in the given base. Built-in math function (3.35+, when compiled with math functions).",
+      "example": "log(1000) or log(2, 64)",
+      "signatures": [
+        {
+          "returns": "real",
+          "params": [
+            {
+              "name": "x",
+              "type": "numeric",
+              "doc": "A positive value."
+            }
+          ]
+        },
+        {
+          "returns": "real",
+          "params": [
+            {
+              "name": "base",
+              "type": "numeric",
+              "doc": "The logarithm base; comes first."
+            },
+            {
+              "name": "x",
+              "type": "numeric",
+              "doc": "A positive value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "log10",
+      "category": "Math",
+      "summary": "Returns the base-10 logarithm of a number. Built-in math function (3.35+, when compiled with math functions).",
+      "example": "log10(1000)",
+      "signatures": [
+        {
+          "returns": "real",
+          "params": [
+            {
+              "name": "x",
+              "type": "numeric",
+              "doc": "A positive value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "log2",
+      "category": "Math",
+      "summary": "Returns the base-2 logarithm of a number. Built-in math function (3.35+, when compiled with math functions).",
+      "example": "log2(64)",
+      "signatures": [
+        {
+          "returns": "real",
+          "params": [
+            {
+              "name": "x",
+              "type": "numeric",
+              "doc": "A positive value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "mod",
+      "category": "Math",
+      "summary": "Returns the remainder of dividing x by y; like the % operator but also works on non-integer values. Built-in math function (3.35+, when compiled with math functions).",
+      "example": "mod(7.5, 2)",
+      "signatures": [
+        {
+          "returns": "real",
+          "params": [
+            {
+              "name": "x",
+              "type": "numeric",
+              "doc": "The dividend."
+            },
+            {
+              "name": "y",
+              "type": "numeric",
+              "doc": "The divisor."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "pi",
+      "category": "Math",
+      "summary": "Returns an approximation of pi. Built-in math function (3.35+, when compiled with math functions).",
+      "example": "pi() * r * r",
+      "signatures": [
+        {
+          "returns": "real",
+          "params": []
+        }
+      ]
+    },
+    {
+      "name": "pow",
+      "category": "Math",
+      "summary": "Returns x raised to the power y. Built-in math function (3.35+, when compiled with math functions).",
+      "example": "pow(2, 10)",
+      "signatures": [
+        {
+          "returns": "real",
+          "params": [
+            {
+              "name": "x",
+              "type": "numeric",
+              "doc": "The base."
+            },
+            {
+              "name": "y",
+              "type": "numeric",
+              "doc": "The exponent."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "power",
+      "category": "Math",
+      "summary": "Alias of pow: returns x raised to the power y. Built-in math function (3.35+, when compiled with math functions).",
+      "example": "power(2, 10)",
+      "signatures": [
+        {
+          "returns": "real",
+          "params": [
+            {
+              "name": "x",
+              "type": "numeric",
+              "doc": "The base."
+            },
+            {
+              "name": "y",
+              "type": "numeric",
+              "doc": "The exponent."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "radians",
+      "category": "Math",
+      "summary": "Converts an angle from degrees to radians. Built-in math function (3.35+, when compiled with math functions).",
+      "example": "radians(180)",
+      "signatures": [
+        {
+          "returns": "real",
+          "params": [
+            {
+              "name": "x",
+              "type": "numeric",
+              "doc": "Angle in degrees."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "sin",
+      "category": "Math",
+      "summary": "Returns the sine of an angle given in radians. Built-in math function (3.35+, when compiled with math functions).",
+      "example": "sin(pi() / 2)",
+      "signatures": [
+        {
+          "returns": "real",
+          "params": [
+            {
+              "name": "x",
+              "type": "numeric",
+              "doc": "Angle in radians."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "sinh",
+      "category": "Math",
+      "summary": "Returns the hyperbolic sine of a number. Built-in math function (3.35+, when compiled with math functions).",
+      "example": "sinh(1)",
+      "signatures": [
+        {
+          "returns": "real",
+          "params": [
+            {
+              "name": "x",
+              "type": "numeric",
+              "doc": "The input value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "sqrt",
+      "category": "Math",
+      "summary": "Returns the square root of a number, or NULL for a negative number. Built-in math function (3.35+, when compiled with math functions).",
+      "example": "sqrt(2)",
+      "signatures": [
+        {
+          "returns": "real",
+          "params": [
+            {
+              "name": "x",
+              "type": "numeric",
+              "doc": "A non-negative value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "tan",
+      "category": "Math",
+      "summary": "Returns the tangent of an angle given in radians. Built-in math function (3.35+, when compiled with math functions).",
+      "example": "tan(pi() / 4)",
+      "signatures": [
+        {
+          "returns": "real",
+          "params": [
+            {
+              "name": "x",
+              "type": "numeric",
+              "doc": "Angle in radians."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "tanh",
+      "category": "Math",
+      "summary": "Returns the hyperbolic tangent of a number. Built-in math function (3.35+, when compiled with math functions).",
+      "example": "tanh(1)",
+      "signatures": [
+        {
+          "returns": "real",
+          "params": [
+            {
+              "name": "x",
+              "type": "numeric",
+              "doc": "The input value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "trunc",
+      "category": "Math",
+      "summary": "Returns the integer part of a number, rounding toward zero; integers are returned unchanged. Built-in math function (3.35+, when compiled with math functions).",
+      "example": "trunc(-4.7)",
+      "signatures": [
+        {
+          "returns": "same type as x",
+          "params": [
+            {
+              "name": "x",
+              "type": "numeric",
+              "doc": "The input value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "json",
+      "category": "JSON",
+      "summary": "Validates JSON (or JSONB) input and returns it as minified canonical JSON text; raises an error if it is not well-formed.",
+      "example": "json(' { \"a\" : 1 } ')",
+      "signatures": [
+        {
+          "returns": "text (JSON)",
+          "params": [
+            {
+              "name": "json",
+              "type": "text or blob",
+              "doc": "JSON text or a JSONB BLOB."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "jsonb",
+      "category": "JSON",
+      "summary": "Converts JSON text (or JSONB) into the binary JSONB format; raises an error if it is not well-formed (3.45+).",
+      "example": "jsonb('{\"a\":1}')",
+      "signatures": [
+        {
+          "returns": "blob (JSONB)",
+          "params": [
+            {
+              "name": "json",
+              "type": "text or blob",
+              "doc": "JSON text or a JSONB BLOB."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "json_array",
+      "category": "JSON",
+      "summary": "Returns a JSON array built from its arguments; text arguments become JSON strings unless they come from another JSON function.",
+      "example": "json_array(1, 'two', json('[3]'))",
+      "signatures": [
+        {
+          "returns": "text (JSON)",
+          "params": [
+            {
+              "name": "value",
+              "type": "any",
+              "doc": "An element of the array; add more arguments for more elements.",
+              "optional": true
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "jsonb_array",
+      "category": "JSON",
+      "summary": "Like json_array, but returns the array in the binary JSONB format (3.45+).",
+      "example": "jsonb_array(1, 2, 3)",
+      "signatures": [
+        {
+          "returns": "blob (JSONB)",
+          "params": [
+            {
+              "name": "value",
+              "type": "any",
+              "doc": "An element of the array; add more arguments for more elements.",
+              "optional": true
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "json_array_length",
+      "category": "JSON",
+      "summary": "Returns the number of elements in a JSON array, 0 if the value is not an array, or NULL if the path does not exist.",
+      "example": "json_array_length(tags)",
+      "signatures": [
+        {
+          "returns": "integer",
+          "params": [
+            {
+              "name": "json",
+              "type": "text or blob",
+              "doc": "JSON text or a JSONB BLOB."
+            },
+            {
+              "name": "path",
+              "type": "text",
+              "doc": "A JSON path such as '$.items'; the whole document when left out.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "json_error_position",
+      "category": "JSON",
+      "summary": "Returns 0 if the input is well-formed JSON or JSONB, otherwise the 1-based character (or byte) position of the first syntax error (3.42+).",
+      "example": "json_error_position(payload)",
+      "signatures": [
+        {
+          "returns": "integer",
+          "params": [
+            {
+              "name": "json",
+              "type": "text or blob",
+              "doc": "JSON text or a JSONB BLOB."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "json_extract",
+      "category": "JSON",
+      "summary": "Extracts the value at a path as an SQL value (text, number or NULL; objects and arrays as JSON text). With several paths, returns a JSON array of the results.",
+      "example": "json_extract(data, '$.user.name')",
+      "signatures": [
+        {
+          "returns": "any",
+          "params": [
+            {
+              "name": "json",
+              "type": "text or blob",
+              "doc": "JSON text or a JSONB BLOB."
+            },
+            {
+              "name": "path",
+              "type": "text",
+              "doc": "A JSON path such as '$.a.b[0]'; add more paths to get a JSON array of results."
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "jsonb_extract",
+      "category": "JSON",
+      "summary": "Like json_extract, but returns objects and arrays in the binary JSONB format (3.45+).",
+      "example": "jsonb_extract(data, '$.items')",
+      "signatures": [
+        {
+          "returns": "any",
+          "params": [
+            {
+              "name": "json",
+              "type": "text or blob",
+              "doc": "JSON text or a JSONB BLOB."
+            },
+            {
+              "name": "path",
+              "type": "text",
+              "doc": "A JSON path such as '$.a.b[0]'; add more paths to get an array of results."
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "json_insert",
+      "category": "JSON",
+      "summary": "Returns the JSON with values added at paths that do not already exist; existing values are left alone.",
+      "example": "json_insert(data, '$.created', date('now'))",
+      "signatures": [
+        {
+          "returns": "text (JSON)",
+          "params": [
+            {
+              "name": "json",
+              "type": "text or blob",
+              "doc": "JSON text or a JSONB BLOB."
+            },
+            {
+              "name": "path",
+              "type": "text",
+              "doc": "A JSON path such as '$.a.b[0]'; '$' is the whole document and [#-1] is the last array element."
+            },
+            {
+              "name": "value",
+              "type": "any",
+              "doc": "The value to write at the path; further path, value pairs may follow."
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "jsonb_insert",
+      "category": "JSON",
+      "summary": "Like json_insert, but returns the result in the binary JSONB format (3.45+).",
+      "example": "jsonb_insert(data, '$.tags[#]', 'new')",
+      "signatures": [
+        {
+          "returns": "blob (JSONB)",
+          "params": [
+            {
+              "name": "json",
+              "type": "text or blob",
+              "doc": "JSON text or a JSONB BLOB."
+            },
+            {
+              "name": "path",
+              "type": "text",
+              "doc": "A JSON path such as '$.a.b[0]'; '$' is the whole document and [#-1] is the last array element."
+            },
+            {
+              "name": "value",
+              "type": "any",
+              "doc": "The value to write at the path; further path, value pairs may follow."
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "json_object",
+      "category": "JSON",
+      "summary": "Returns a JSON object built from label/value argument pairs.",
+      "example": "json_object('id', id, 'name', name)",
+      "signatures": [
+        {
+          "returns": "text (JSON)",
+          "params": [
+            {
+              "name": "label",
+              "type": "text",
+              "doc": "An object key.",
+              "optional": true
+            },
+            {
+              "name": "value",
+              "type": "any",
+              "doc": "The value for the preceding key; further label, value pairs may follow.",
+              "optional": true
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "jsonb_object",
+      "category": "JSON",
+      "summary": "Like json_object, but returns the object in the binary JSONB format (3.45+).",
+      "example": "jsonb_object('id', id)",
+      "signatures": [
+        {
+          "returns": "blob (JSONB)",
+          "params": [
+            {
+              "name": "label",
+              "type": "text",
+              "doc": "An object key.",
+              "optional": true
+            },
+            {
+              "name": "value",
+              "type": "any",
+              "doc": "The value for the preceding key; further label, value pairs may follow.",
+              "optional": true
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "json_patch",
+      "category": "JSON",
+      "summary": "Applies an RFC 7396 MergePatch to a JSON document and returns the result; null values in the patch remove keys.",
+      "example": "json_patch(settings, '{\"theme\":\"dark\"}')",
+      "signatures": [
+        {
+          "returns": "text (JSON)",
+          "params": [
+            {
+              "name": "target",
+              "type": "text or blob",
+              "doc": "The document to patch."
+            },
+            {
+              "name": "patch",
+              "type": "text or blob",
+              "doc": "The MergePatch to apply."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "jsonb_patch",
+      "category": "JSON",
+      "summary": "Like json_patch, but returns the result in the binary JSONB format (3.45+).",
+      "example": "jsonb_patch(settings, '{\"theme\":\"dark\"}')",
+      "signatures": [
+        {
+          "returns": "blob (JSONB)",
+          "params": [
+            {
+              "name": "target",
+              "type": "text or blob",
+              "doc": "The document to patch."
+            },
+            {
+              "name": "patch",
+              "type": "text or blob",
+              "doc": "The MergePatch to apply."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "json_pretty",
+      "category": "JSON",
+      "summary": "Returns JSON text formatted across lines with indentation for readability (3.46+).",
+      "example": "json_pretty(data)",
+      "signatures": [
+        {
+          "returns": "text (JSON)",
+          "params": [
+            {
+              "name": "json",
+              "type": "text or blob",
+              "doc": "JSON text or a JSONB BLOB."
+            },
+            {
+              "name": "indent",
+              "type": "text",
+              "doc": "Text used for each level of indentation; four spaces when left out.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "json_remove",
+      "category": "JSON",
+      "summary": "Returns the JSON with the elements at the given paths removed; paths that do not exist are ignored.",
+      "example": "json_remove(data, '$.password')",
+      "signatures": [
+        {
+          "returns": "text (JSON)",
+          "params": [
+            {
+              "name": "json",
+              "type": "text or blob",
+              "doc": "JSON text or a JSONB BLOB."
+            },
+            {
+              "name": "path",
+              "type": "text",
+              "doc": "A path to remove; add more paths to remove more.",
+              "optional": true
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "jsonb_remove",
+      "category": "JSON",
+      "summary": "Like json_remove, but returns the result in the binary JSONB format (3.45+).",
+      "example": "jsonb_remove(data, '$.password')",
+      "signatures": [
+        {
+          "returns": "blob (JSONB)",
+          "params": [
+            {
+              "name": "json",
+              "type": "text or blob",
+              "doc": "JSON text or a JSONB BLOB."
+            },
+            {
+              "name": "path",
+              "type": "text",
+              "doc": "A path to remove; add more paths to remove more.",
+              "optional": true
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "json_replace",
+      "category": "JSON",
+      "summary": "Returns the JSON with values overwritten at paths that already exist; paths that do not exist are ignored.",
+      "example": "json_replace(data, '$.status', 'closed')",
+      "signatures": [
+        {
+          "returns": "text (JSON)",
+          "params": [
+            {
+              "name": "json",
+              "type": "text or blob",
+              "doc": "JSON text or a JSONB BLOB."
+            },
+            {
+              "name": "path",
+              "type": "text",
+              "doc": "A JSON path such as '$.a.b[0]'; '$' is the whole document and [#-1] is the last array element."
+            },
+            {
+              "name": "value",
+              "type": "any",
+              "doc": "The value to write at the path; further path, value pairs may follow."
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "jsonb_replace",
+      "category": "JSON",
+      "summary": "Like json_replace, but returns the result in the binary JSONB format (3.45+).",
+      "example": "jsonb_replace(data, '$.status', 'closed')",
+      "signatures": [
+        {
+          "returns": "blob (JSONB)",
+          "params": [
+            {
+              "name": "json",
+              "type": "text or blob",
+              "doc": "JSON text or a JSONB BLOB."
+            },
+            {
+              "name": "path",
+              "type": "text",
+              "doc": "A JSON path such as '$.a.b[0]'; '$' is the whole document and [#-1] is the last array element."
+            },
+            {
+              "name": "value",
+              "type": "any",
+              "doc": "The value to write at the path; further path, value pairs may follow."
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "json_set",
+      "category": "JSON",
+      "summary": "Returns the JSON with values written at the given paths, overwriting existing values and creating missing ones.",
+      "example": "json_set(data, '$.status', 'closed')",
+      "signatures": [
+        {
+          "returns": "text (JSON)",
+          "params": [
+            {
+              "name": "json",
+              "type": "text or blob",
+              "doc": "JSON text or a JSONB BLOB."
+            },
+            {
+              "name": "path",
+              "type": "text",
+              "doc": "A JSON path such as '$.a.b[0]'; '$' is the whole document and [#-1] is the last array element."
+            },
+            {
+              "name": "value",
+              "type": "any",
+              "doc": "The value to write at the path; further path, value pairs may follow."
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "jsonb_set",
+      "category": "JSON",
+      "summary": "Like json_set, but returns the result in the binary JSONB format (3.45+).",
+      "example": "jsonb_set(data, '$.status', 'closed')",
+      "signatures": [
+        {
+          "returns": "blob (JSONB)",
+          "params": [
+            {
+              "name": "json",
+              "type": "text or blob",
+              "doc": "JSON text or a JSONB BLOB."
+            },
+            {
+              "name": "path",
+              "type": "text",
+              "doc": "A JSON path such as '$.a.b[0]'; '$' is the whole document and [#-1] is the last array element."
+            },
+            {
+              "name": "value",
+              "type": "any",
+              "doc": "The value to write at the path; further path, value pairs may follow."
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "json_type",
+      "category": "JSON",
+      "summary": "Returns the JSON type of the document or of the element at a path: 'null', 'true', 'false', 'integer', 'real', 'text', 'array' or 'object'; NULL if the path does not exist.",
+      "example": "json_type(data, '$.items')",
+      "signatures": [
+        {
+          "returns": "text",
+          "params": [
+            {
+              "name": "json",
+              "type": "text or blob",
+              "doc": "JSON text or a JSONB BLOB."
+            },
+            {
+              "name": "path",
+              "type": "text",
+              "doc": "A JSON path such as '$.items'; the whole document when left out.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "json_valid",
+      "category": "JSON",
+      "summary": "Returns 1 if the argument is well-formed JSON of the kinds allowed by the flags, otherwise 0.",
+      "example": "json_valid(payload)",
+      "signatures": [
+        {
+          "returns": "integer (1 or 0)",
+          "params": [
+            {
+              "name": "value",
+              "type": "text or blob",
+              "doc": "The value to check."
+            },
+            {
+              "name": "flags",
+              "type": "integer",
+              "doc": "Bitmask of accepted forms: 1 RFC 8259 JSON text, 2 JSON5 text, 4 JSONB (quick check), 8 JSONB (strict check); defaults to 1 (3.45+).",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "json_quote",
+      "category": "JSON",
+      "summary": "Converts an SQL value to its JSON representation: numbers stay numbers, text becomes a quoted JSON string.",
+      "example": "json_quote('say \"hi\"')",
+      "signatures": [
+        {
+          "returns": "text (JSON)",
+          "params": [
+            {
+              "name": "value",
+              "type": "any",
+              "doc": "The value to convert."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "json_each",
+      "category": "JSON",
+      "summary": "Table-valued function that returns one row per element of a JSON array or member of an object, at the top level or at a path. Columns: key, value, type, atom, id, parent, fullkey, path.",
+      "example": "SELECT value FROM json_each(t.tags)",
+      "signatures": [
+        {
+          "returns": "table (key, value, type, atom, id, parent, fullkey, path)",
+          "params": [
+            {
+              "name": "json",
+              "type": "text or blob",
+              "doc": "JSON text or a JSONB BLOB."
+            },
+            {
+              "name": "path",
+              "type": "text",
+              "doc": "A JSON path such as '$.items'; the whole document when left out.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "jsonb_each",
+      "category": "JSON",
+      "summary": "Like json_each, but the value column returns arrays and objects in the binary JSONB format (3.45+).",
+      "example": "SELECT key, value FROM jsonb_each(t.data)",
+      "signatures": [
+        {
+          "returns": "table (key, value, type, atom, id, parent, fullkey, path)",
+          "params": [
+            {
+              "name": "json",
+              "type": "text or blob",
+              "doc": "JSON text or a JSONB BLOB."
+            },
+            {
+              "name": "path",
+              "type": "text",
+              "doc": "A JSON path such as '$.items'; the whole document when left out.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "json_tree",
+      "category": "JSON",
+      "summary": "Table-valued function that walks a JSON document recursively, returning one row for every element at every level. Columns: key, value, type, atom, id, parent, fullkey, path.",
+      "example": "SELECT fullkey, atom FROM json_tree(t.data)",
+      "signatures": [
+        {
+          "returns": "table (key, value, type, atom, id, parent, fullkey, path)",
+          "params": [
+            {
+              "name": "json",
+              "type": "text or blob",
+              "doc": "JSON text or a JSONB BLOB."
+            },
+            {
+              "name": "path",
+              "type": "text",
+              "doc": "A JSON path such as '$.items'; the whole document when left out.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "jsonb_tree",
+      "category": "JSON",
+      "summary": "Like json_tree, but the value column returns arrays and objects in the binary JSONB format (3.45+).",
+      "example": "SELECT fullkey FROM jsonb_tree(t.data)",
+      "signatures": [
+        {
+          "returns": "table (key, value, type, atom, id, parent, fullkey, path)",
+          "params": [
+            {
+              "name": "json",
+              "type": "text or blob",
+              "doc": "JSON text or a JSONB BLOB."
+            },
+            {
+              "name": "path",
+              "type": "text",
+              "doc": "A JSON path such as '$.items'; the whole document when left out.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "pragma_table_info",
+      "category": "Metadata",
+      "summary": "Table-valued form of PRAGMA table_info: one row per column of a table or view (cid, name, type, notnull, dflt_value, pk).",
+      "example": "SELECT name, type FROM pragma_table_info('orders')",
+      "signatures": [
+        {
+          "returns": "table (cid, name, type, notnull, dflt_value, pk)",
+          "params": [
+            {
+              "name": "table_name",
+              "type": "text",
+              "doc": "The table or view to describe."
+            },
+            {
+              "name": "schema",
+              "type": "text",
+              "doc": "The attached database to look in, such as 'main' or 'temp'.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "pragma_table_xinfo",
+      "category": "Metadata",
+      "summary": "Like pragma_table_info, but also lists hidden and generated columns, with a hidden column telling which.",
+      "example": "SELECT name, hidden FROM pragma_table_xinfo('orders')",
+      "signatures": [
+        {
+          "returns": "table (cid, name, type, notnull, dflt_value, pk, hidden)",
+          "params": [
+            {
+              "name": "table_name",
+              "type": "text",
+              "doc": "The table or view to describe."
+            },
+            {
+              "name": "schema",
+              "type": "text",
+              "doc": "The attached database to look in, such as 'main' or 'temp'.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "pragma_index_list",
+      "category": "Metadata",
+      "summary": "Table-valued form of PRAGMA index_list: one row per index on a table (seq, name, unique, origin, partial).",
+      "example": "SELECT name FROM pragma_index_list('orders')",
+      "signatures": [
+        {
+          "returns": "table (seq, name, unique, origin, partial)",
+          "params": [
+            {
+              "name": "table_name",
+              "type": "text",
+              "doc": "The table whose indexes to list."
+            },
+            {
+              "name": "schema",
+              "type": "text",
+              "doc": "The attached database to look in, such as 'main' or 'temp'.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "pragma_index_info",
+      "category": "Metadata",
+      "summary": "Table-valued form of PRAGMA index_info: one row per key column of an index (seqno, cid, name).",
+      "example": "SELECT name FROM pragma_index_info('idx_orders_date')",
+      "signatures": [
+        {
+          "returns": "table (seqno, cid, name)",
+          "params": [
+            {
+              "name": "index_name",
+              "type": "text",
+              "doc": "The index to describe."
+            },
+            {
+              "name": "schema",
+              "type": "text",
+              "doc": "The attached database to look in, such as 'main' or 'temp'.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "pragma_index_xinfo",
+      "category": "Metadata",
+      "summary": "Like pragma_index_info, but also lists auxiliary columns, with sort order, collation and a key flag.",
+      "example": "SELECT * FROM pragma_index_xinfo('idx_orders_date')",
+      "signatures": [
+        {
+          "returns": "table (seqno, cid, name, desc, coll, key)",
+          "params": [
+            {
+              "name": "index_name",
+              "type": "text",
+              "doc": "The index to describe."
+            },
+            {
+              "name": "schema",
+              "type": "text",
+              "doc": "The attached database to look in, such as 'main' or 'temp'.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "pragma_foreign_key_list",
+      "category": "Metadata",
+      "summary": "Table-valued form of PRAGMA foreign_key_list: one row per column of each foreign key on a table.",
+      "example": "SELECT \"table\", \"from\", \"to\" FROM pragma_foreign_key_list('orders')",
+      "signatures": [
+        {
+          "returns": "table (id, seq, table, from, to, on_update, on_delete, match)",
+          "params": [
+            {
+              "name": "table_name",
+              "type": "text",
+              "doc": "The table whose foreign keys to list."
+            },
+            {
+              "name": "schema",
+              "type": "text",
+              "doc": "The attached database to look in, such as 'main' or 'temp'.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "bm25",
+      "category": "Full-text",
+      "summary": "FTS5 auxiliary function returning the BM25 relevance of the current match; smaller (more negative) is better, so ORDER BY bm25(t) puts the best first.",
+      "example": "SELECT * FROM docs WHERE docs MATCH 'sqlite' ORDER BY bm25(docs)",
+      "signatures": [
+        {
+          "returns": "real",
+          "params": [
+            {
+              "name": "fts_table",
+              "type": "table",
+              "doc": "The FTS5 table named in the MATCH."
+            },
+            {
+              "name": "weight",
+              "type": "real",
+              "doc": "Weight for each column in order; add one argument per column. Columns default to 1.0.",
+              "optional": true
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "highlight",
+      "category": "Full-text",
+      "summary": "FTS5 auxiliary function returning the full text of a column with each matched phrase wrapped in the given markers.",
+      "example": "highlight(docs, 0, '<b>', '</b>')",
+      "signatures": [
+        {
+          "returns": "text",
+          "params": [
+            {
+              "name": "fts_table",
+              "type": "table",
+              "doc": "The FTS5 table named in the MATCH."
+            },
+            {
+              "name": "column",
+              "type": "integer",
+              "doc": "0-based index of the column to return."
+            },
+            {
+              "name": "open_text",
+              "type": "text",
+              "doc": "Text inserted before each match."
+            },
+            {
+              "name": "close_text",
+              "type": "text",
+              "doc": "Text inserted after each match."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "snippet",
+      "category": "Full-text",
+      "summary": "FTS5 auxiliary function returning a short fragment of a column around the matches, with matches wrapped in markers and trimmed text marked by an ellipsis.",
+      "example": "snippet(docs, 1, '[', ']', '...', 16)",
+      "signatures": [
+        {
+          "returns": "text",
+          "params": [
+            {
+              "name": "fts_table",
+              "type": "table",
+              "doc": "The FTS5 table named in the MATCH."
+            },
+            {
+              "name": "column",
+              "type": "integer",
+              "doc": "0-based index of the column to take the fragment from; -1 picks the best column."
+            },
+            {
+              "name": "open_text",
+              "type": "text",
+              "doc": "Text inserted before each match."
+            },
+            {
+              "name": "close_text",
+              "type": "text",
+              "doc": "Text inserted after each match."
+            },
+            {
+              "name": "ellipsis",
+              "type": "text",
+              "doc": "Text added where the fragment is cut off."
+            },
+            {
+              "name": "max_tokens",
+              "type": "integer",
+              "doc": "Maximum number of tokens in the fragment, from 1 to 64."
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "keywords": [
+    {
+      "name": "LIMIT",
+      "doc": "Caps the number of rows a query returns; an optional OFFSET skips rows first. LIMIT -1 means no limit.",
+      "syntax": "LIMIT count [OFFSET skip] | LIMIT skip, count"
+    },
+    {
+      "name": "OFFSET",
+      "doc": "Skips the given number of rows before LIMIT starts counting.",
+      "syntax": "LIMIT count OFFSET skip"
+    },
+    {
+      "name": "IF",
+      "doc": "Begins an IF EXISTS or IF NOT EXISTS guard on CREATE or DROP statements.",
+      "syntax": "CREATE TABLE IF NOT EXISTS name (…)"
+    },
+    {
+      "name": "IF EXISTS",
+      "doc": "Makes a DROP statement do nothing, instead of failing, when the object does not exist.",
+      "syntax": "DROP TABLE IF EXISTS name"
+    },
+    {
+      "name": "IF NOT EXISTS",
+      "doc": "Makes a CREATE statement do nothing, instead of failing, when an object with that name already exists.",
+      "syntax": "CREATE TABLE IF NOT EXISTS name (…)"
+    },
+    {
+      "name": "TEMP",
+      "doc": "Creates a table, view or trigger in the temp database, private to the connection and dropped when it closes. Same as TEMPORARY.",
+      "syntax": "CREATE TEMP TABLE name (…)"
+    },
+    {
+      "name": "TEMPORARY",
+      "doc": "Creates a table, view or trigger in the temp database, private to the connection and dropped when it closes.",
+      "syntax": "CREATE TEMPORARY TABLE name (…)"
+    },
+    {
+      "name": "AUTOINCREMENT",
+      "doc": "On an INTEGER PRIMARY KEY, prevents rowids of deleted rows from being reused, tracking the highest value in sqlite_sequence. Usually unnecessary.",
+      "syntax": "id INTEGER PRIMARY KEY AUTOINCREMENT"
+    },
+    {
+      "name": "WITHOUT ROWID",
+      "doc": "Creates a table stored as a clustered index on its PRIMARY KEY, with no hidden rowid column. The table must declare a PRIMARY KEY.",
+      "syntax": "CREATE TABLE name (…, PRIMARY KEY (a, b)) WITHOUT ROWID"
+    },
+    {
+      "name": "ROWID",
+      "doc": "The hidden 64-bit integer key of every ordinary table, also reachable as _rowid_ or oid. A column declared INTEGER PRIMARY KEY is an alias for it.",
+      "syntax": "SELECT rowid, * FROM name"
+    },
+    {
+      "name": "STRICT",
+      "doc": "Table option that enforces declared column types: values must match INT, INTEGER, REAL, TEXT, BLOB or ANY, or the insert fails (3.37+).",
+      "syntax": "CREATE TABLE name (…) STRICT"
+    },
+    {
+      "name": "PRAGMA",
+      "doc": "Reads or changes an SQLite setting or queries internal metadata, such as foreign_keys, journal_mode or table_info.",
+      "syntax": "PRAGMA [schema.]name [= value | (argument)]"
+    },
+    {
+      "name": "ATTACH",
+      "doc": "Opens another database file on this connection under a schema name, so its tables can be queried as schema.table.",
+      "syntax": "ATTACH [DATABASE] 'file.db' AS schema_name"
+    },
+    {
+      "name": "DETACH",
+      "doc": "Closes a database previously added with ATTACH.",
+      "syntax": "DETACH [DATABASE] schema_name"
+    },
+    {
+      "name": "DATABASE",
+      "doc": "Optional word in ATTACH DATABASE and DETACH DATABASE.",
+      "syntax": "ATTACH DATABASE 'file.db' AS schema_name"
+    },
+    {
+      "name": "VACUUM",
+      "doc": "Rebuilds the database file to reclaim free space and defragment it; VACUUM INTO writes a compacted copy to a new file instead.",
+      "syntax": "VACUUM [schema] [INTO 'file.db']"
+    },
+    {
+      "name": "ANALYZE",
+      "doc": "Gathers statistics about tables and indexes into sqlite_stat tables so the query planner can choose better plans.",
+      "syntax": "ANALYZE [schema | table | index]"
+    },
+    {
+      "name": "REINDEX",
+      "doc": "Deletes and rebuilds indexes, for example after a collation's definition changes.",
+      "syntax": "REINDEX [collation | [schema.]table | [schema.]index]"
+    },
+    {
+      "name": "EXPLAIN",
+      "doc": "Shows the virtual machine bytecode a statement compiles to instead of running it.",
+      "syntax": "EXPLAIN statement"
+    },
+    {
+      "name": "EXPLAIN QUERY PLAN",
+      "doc": "Shows the high-level strategy SQLite will use for a statement: which tables are scanned, which indexes are used, and in what order.",
+      "syntax": "EXPLAIN QUERY PLAN statement"
+    },
+    {
+      "name": "GLOB",
+      "doc": "Case-sensitive pattern match using Unix wildcards: * any run of characters, ? one character, [...] a character set.",
+      "syntax": "expression [NOT] GLOB pattern"
+    },
+    {
+      "name": "REGEXP",
+      "doc": "Regular-expression match operator. It calls a user function named regexp(), which is not built in; it errors unless the application or an extension provides one.",
+      "syntax": "expression [NOT] REGEXP pattern"
+    },
+    {
+      "name": "MATCH",
+      "doc": "Full-text search operator for FTS3/FTS4/FTS5 virtual tables; ordinary tables have no MATCH implementation.",
+      "syntax": "fts_table MATCH 'query'"
+    },
+    {
+      "name": "ISNULL",
+      "doc": "Postfix operator that is true when the expression is NULL; same as IS NULL.",
+      "syntax": "expression ISNULL"
+    },
+    {
+      "name": "NOTNULL",
+      "doc": "Postfix operator that is true when the expression is not NULL; same as IS NOT NULL.",
+      "syntax": "expression NOTNULL"
+    },
+    {
+      "name": "CONFLICT",
+      "doc": "Names the conflict-resolution algorithm of a constraint (ON CONFLICT ROLLBACK | ABORT | FAIL | IGNORE | REPLACE) or starts an upsert clause.",
+      "syntax": "ON CONFLICT algorithm"
+    },
+    {
+      "name": "ON CONFLICT",
+      "doc": "In a constraint, sets how violations are resolved. After INSERT … VALUES, starts an upsert: DO NOTHING, or DO UPDATE SET using the excluded row.",
+      "syntax": "INSERT … ON CONFLICT [(column, …)] DO NOTHING | DO UPDATE SET column = excluded.column"
+    },
+    {
+      "name": "OR REPLACE",
+      "doc": "On INSERT or UPDATE, deletes the existing rows that would violate a UNIQUE or PRIMARY KEY constraint, then proceeds.",
+      "syntax": "INSERT OR REPLACE INTO table …"
+    },
+    {
+      "name": "OR IGNORE",
+      "doc": "On INSERT or UPDATE, silently skips any row that would violate a constraint and continues with the rest.",
+      "syntax": "INSERT OR IGNORE INTO table …"
+    },
+    {
+      "name": "OR ABORT",
+      "doc": "On INSERT or UPDATE, stops the statement and undoes its changes on a constraint violation, keeping the transaction. The default.",
+      "syntax": "INSERT OR ABORT INTO table …"
+    },
+    {
+      "name": "OR FAIL",
+      "doc": "On INSERT or UPDATE, stops the statement on a constraint violation but keeps the changes it had already made.",
+      "syntax": "INSERT OR FAIL INTO table …"
+    },
+    {
+      "name": "OR ROLLBACK",
+      "doc": "On INSERT or UPDATE, rolls back the whole transaction on a constraint violation.",
+      "syntax": "INSERT OR ROLLBACK INTO table …"
+    },
+    {
+      "name": "REPLACE INTO",
+      "doc": "Shorthand for INSERT OR REPLACE INTO: rows that would violate a UNIQUE or PRIMARY KEY constraint are deleted before the insert.",
+      "syntax": "REPLACE INTO table (column, …) VALUES (…)"
+    },
+    {
+      "name": "ABORT",
+      "doc": "Conflict algorithm that aborts the current statement and reverts its changes; also a RAISE action in triggers.",
+      "syntax": "ON CONFLICT ABORT | RAISE(ABORT, 'message')"
+    },
+    {
+      "name": "FAIL",
+      "doc": "Conflict algorithm that stops the current statement but keeps its earlier changes; also a RAISE action in triggers.",
+      "syntax": "ON CONFLICT FAIL | RAISE(FAIL, 'message')"
+    },
+    {
+      "name": "IGNORE",
+      "doc": "Conflict algorithm that skips the offending row; in a trigger, RAISE(IGNORE) abandons the current row silently.",
+      "syntax": "ON CONFLICT IGNORE | RAISE(IGNORE)"
+    },
+    {
+      "name": "RETURNING",
+      "doc": "Makes INSERT, UPDATE or DELETE return the affected rows, like a SELECT on the changed data (3.35+).",
+      "syntax": "INSERT … RETURNING column, … | *"
+    },
+    {
+      "name": "DO UPDATE",
+      "doc": "Upsert action: when the insert conflicts, updates the existing row instead. The proposed row is available as excluded.",
+      "syntax": "ON CONFLICT (column) DO UPDATE SET column = excluded.column [WHERE …]"
+    },
+    {
+      "name": "DO NOTHING",
+      "doc": "Upsert action: when the insert conflicts, skips the row.",
+      "syntax": "ON CONFLICT [(column)] DO NOTHING"
+    },
+    {
+      "name": "EXCLUDED",
+      "doc": "In an upsert's DO UPDATE clause, the table-name qualifier for the row that was proposed for insertion.",
+      "syntax": "DO UPDATE SET qty = excluded.qty"
+    },
+    {
+      "name": "DEFAULT VALUES",
+      "doc": "Inserts one row with every column set to its default value.",
+      "syntax": "INSERT INTO table DEFAULT VALUES"
+    },
+    {
+      "name": "DEFERRABLE",
+      "doc": "Marks a foreign key so that, with INITIALLY DEFERRED, it is checked at COMMIT instead of after each statement.",
+      "syntax": "REFERENCES parent (id) DEFERRABLE INITIALLY DEFERRED"
+    },
+    {
+      "name": "NOT DEFERRABLE",
+      "doc": "Marks a foreign key as checked immediately after each statement. The default.",
+      "syntax": "REFERENCES parent (id) NOT DEFERRABLE"
+    },
+    {
+      "name": "INITIALLY DEFERRED",
+      "doc": "With DEFERRABLE, defers foreign key checks to COMMIT. PRAGMA defer_foreign_keys can do the same per transaction.",
+      "syntax": "DEFERRABLE INITIALLY DEFERRED"
+    },
+    {
+      "name": "INITIALLY IMMEDIATE",
+      "doc": "With DEFERRABLE, checks the foreign key after each statement. The default.",
+      "syntax": "DEFERRABLE INITIALLY IMMEDIATE"
+    },
+    {
+      "name": "DEFERRED",
+      "doc": "Transaction mode that takes no locks until the database is first read or written. The default for BEGIN.",
+      "syntax": "BEGIN DEFERRED [TRANSACTION]"
+    },
+    {
+      "name": "IMMEDIATE",
+      "doc": "Transaction mode that starts a write transaction at once, so other writers wait or get SQLITE_BUSY.",
+      "syntax": "BEGIN IMMEDIATE [TRANSACTION]"
+    },
+    {
+      "name": "EXCLUSIVE",
+      "doc": "Transaction mode that starts a write transaction at once and, outside WAL mode, also blocks other readers.",
+      "syntax": "BEGIN EXCLUSIVE [TRANSACTION]"
+    },
+    {
+      "name": "RELEASE",
+      "doc": "Commits a savepoint and every savepoint started after it, removing them from the transaction stack.",
+      "syntax": "RELEASE [SAVEPOINT] name"
+    },
+    {
+      "name": "TO",
+      "doc": "Used in ROLLBACK TO savepoint and RENAME TO.",
+      "syntax": "ROLLBACK [TRANSACTION] TO [SAVEPOINT] name"
+    },
+    {
+      "name": "RAISE",
+      "doc": "In a trigger body, raises an error or abandons the row: RAISE(IGNORE), or RAISE(ROLLBACK | ABORT | FAIL, 'message').",
+      "syntax": "RAISE(IGNORE | ROLLBACK, msg | ABORT, msg | FAIL, msg)"
+    },
+    {
+      "name": "INSTEAD OF",
+      "doc": "Trigger timing for views: the trigger body runs in place of the INSERT, UPDATE or DELETE on the view.",
+      "syntax": "CREATE TRIGGER name INSTEAD OF INSERT ON view BEGIN … END"
+    },
+    {
+      "name": "BEFORE",
+      "doc": "Trigger timing: the body runs before the row is changed.",
+      "syntax": "CREATE TRIGGER name BEFORE INSERT ON table BEGIN … END"
+    },
+    {
+      "name": "AFTER",
+      "doc": "Trigger timing: the body runs after the row is changed. The default.",
+      "syntax": "CREATE TRIGGER name AFTER UPDATE ON table BEGIN … END"
+    },
+    {
+      "name": "FOR EACH ROW",
+      "doc": "Trigger granularity; SQLite only supports row triggers, so this is implied when left out.",
+      "syntax": "CREATE TRIGGER name AFTER INSERT ON table FOR EACH ROW BEGIN … END"
+    },
+    {
+      "name": "OF",
+      "doc": "Limits an UPDATE trigger to changes of the listed columns.",
+      "syntax": "CREATE TRIGGER name AFTER UPDATE OF column, … ON table …"
+    },
+    {
+      "name": "NEW",
+      "doc": "In a trigger body, the row as it will be (INSERT/UPDATE).",
+      "syntax": "NEW.column"
+    },
+    {
+      "name": "OLD",
+      "doc": "In a trigger body, the row as it was (UPDATE/DELETE).",
+      "syntax": "OLD.column"
+    },
+    {
+      "name": "VIRTUAL",
+      "doc": "CREATE VIRTUAL TABLE makes a table backed by a module such as fts5 or rtree; in a generated column, VIRTUAL computes the value on read (the default).",
+      "syntax": "CREATE VIRTUAL TABLE name USING fts5(column, …)"
+    },
+    {
+      "name": "GENERATED ALWAYS",
+      "doc": "Declares a generated column computed from other columns of the row, either VIRTUAL (computed on read) or STORED (3.31+).",
+      "syntax": "column type GENERATED ALWAYS AS (expression) [VIRTUAL | STORED]"
+    },
+    {
+      "name": "STORED",
+      "doc": "Generated column that is computed on write and saved in the table.",
+      "syntax": "column type AS (expression) STORED"
+    },
+    {
+      "name": "WINDOW",
+      "doc": "Names a window definition once so several window functions can share it with OVER name.",
+      "syntax": "WINDOW name AS (PARTITION BY … ORDER BY …)"
+    },
+    {
+      "name": "FILTER",
+      "doc": "Limits the rows an aggregate or aggregate window function sees.",
+      "syntax": "count(*) FILTER (WHERE condition)"
+    },
+    {
+      "name": "GROUPS",
+      "doc": "Window frame unit that counts peer groups (rows with equal ORDER BY values) rather than rows or values.",
+      "syntax": "GROUPS BETWEEN 1 PRECEDING AND CURRENT ROW"
+    },
+    {
+      "name": "EXCLUDE",
+      "doc": "Removes rows from a window frame: EXCLUDE NO OTHERS (default), EXCLUDE CURRENT ROW, EXCLUDE GROUP or EXCLUDE TIES.",
+      "syntax": "ROWS BETWEEN … AND … EXCLUDE CURRENT ROW | GROUP | TIES | NO OTHERS"
+    },
+    {
+      "name": "NULLS FIRST",
+      "doc": "Sorts NULLs before other values; the default for ascending order in SQLite (3.30+).",
+      "syntax": "ORDER BY expression [ASC | DESC] NULLS FIRST"
+    },
+    {
+      "name": "NULLS LAST",
+      "doc": "Sorts NULLs after other values; the default for descending order in SQLite (3.30+).",
+      "syntax": "ORDER BY expression [ASC | DESC] NULLS LAST"
+    },
+    {
+      "name": "RECURSIVE",
+      "doc": "Allows a common table expression to refer to itself, for walking trees and generating series.",
+      "syntax": "WITH RECURSIVE name(column) AS (initial UNION ALL SELECT … FROM name …) SELECT …"
+    },
+    {
+      "name": "MATERIALIZED",
+      "doc": "Forces a common table expression to be computed once into a temporary table.",
+      "syntax": "WITH name AS MATERIALIZED (SELECT …)"
+    },
+    {
+      "name": "NOT MATERIALIZED",
+      "doc": "Asks the planner to inline a common table expression into the query like a subquery.",
+      "syntax": "WITH name AS NOT MATERIALIZED (SELECT …)"
+    },
+    {
+      "name": "INDEXED BY",
+      "doc": "Requires the query to use the named index on that table; the statement fails if it cannot.",
+      "syntax": "FROM table INDEXED BY index_name"
+    },
+    {
+      "name": "NOT INDEXED",
+      "doc": "Prevents the query from using any index on that table (the rowid or primary key may still be used).",
+      "syntax": "FROM table NOT INDEXED"
+    },
+    {
+      "name": "RENAME",
+      "doc": "ALTER TABLE action that renames a table or a column.",
+      "syntax": "ALTER TABLE name RENAME [COLUMN] old TO new"
+    },
+    {
+      "name": "RENAME TO",
+      "doc": "Renames a table.",
+      "syntax": "ALTER TABLE name RENAME TO new_name"
+    },
+    {
+      "name": "RENAME COLUMN",
+      "doc": "Renames a column; references in indexes, triggers and views are updated (3.25+).",
+      "syntax": "ALTER TABLE name RENAME COLUMN old TO new"
+    },
+    {
+      "name": "DROP COLUMN",
+      "doc": "Removes a column from a table; fails if the column is indexed, in a key or constraint, or referenced elsewhere (3.35+).",
+      "syntax": "ALTER TABLE name DROP COLUMN column"
+    },
+    {
+      "name": "IS DISTINCT FROM",
+      "doc": "Null-safe inequality: true when the values differ, treating two NULLs as equal. Same as IS NOT (3.39+).",
+      "syntax": "a IS DISTINCT FROM b"
+    },
+    {
+      "name": "IS NOT DISTINCT FROM",
+      "doc": "Null-safe equality: true when the values are equal or both NULL. Same as IS (3.39+).",
+      "syntax": "a IS NOT DISTINCT FROM b"
+    },
+    {
+      "name": "ON DELETE",
+      "doc": "Foreign key action taken when the parent row is deleted: NO ACTION (default), RESTRICT, SET NULL, SET DEFAULT or CASCADE.",
+      "syntax": "REFERENCES parent (id) ON DELETE CASCADE"
+    },
+    {
+      "name": "ON UPDATE",
+      "doc": "Foreign key action taken when the parent key changes: NO ACTION (default), RESTRICT, SET NULL, SET DEFAULT or CASCADE.",
+      "syntax": "REFERENCES parent (id) ON UPDATE CASCADE"
+    },
+    {
+      "name": "CASCADE",
+      "doc": "Foreign key action that deletes or updates the child rows along with the parent row.",
+      "syntax": "ON DELETE CASCADE"
+    },
+    {
+      "name": "RESTRICT",
+      "doc": "Foreign key action that forbids deleting or changing a parent key while child rows reference it, checked immediately.",
+      "syntax": "ON DELETE RESTRICT"
+    },
+    {
+      "name": "NO ACTION",
+      "doc": "Foreign key action that does nothing special; the constraint is simply checked at the end of the statement. The default.",
+      "syntax": "ON DELETE NO ACTION"
+    },
+    {
+      "name": "SET DEFAULT",
+      "doc": "Foreign key action that sets the child's key columns to their default values.",
+      "syntax": "ON DELETE SET DEFAULT"
+    },
+    {
+      "name": "NOCASE",
+      "doc": "Built-in collation that compares text ignoring the case of ASCII letters.",
+      "syntax": "column TEXT COLLATE NOCASE"
+    },
+    {
+      "name": "BINARY",
+      "doc": "Built-in collation that compares text byte by byte with memcmp. The default.",
+      "syntax": "column TEXT COLLATE BINARY"
+    }
+  ],
+  "constants": [
+    {
+      "name": "TRUE",
+      "doc": "The integer 1. SQLite has no separate boolean type; TRUE is an alias for 1 (3.23+)."
+    },
+    {
+      "name": "FALSE",
+      "doc": "The integer 0. SQLite has no separate boolean type; FALSE is an alias for 0 (3.23+)."
+    }
+  ],
+  "types": [
+    {
+      "name": "INTEGER",
+      "doc": "INTEGER affinity; values are stored as signed integers of up to 8 bytes. A column declared exactly INTEGER PRIMARY KEY becomes an alias for the rowid. Allowed in STRICT tables.",
+      "syntax": "INTEGER"
+    },
+    {
+      "name": "INT",
+      "doc": "INTEGER affinity (any type name containing INT). Signed integers up to 8 bytes. Unlike INTEGER, INT PRIMARY KEY does not alias the rowid. Allowed in STRICT tables.",
+      "syntax": "INT"
+    },
+    {
+      "name": "TINYINT",
+      "doc": "INTEGER affinity; the size is not enforced, so any 64-bit integer fits.",
+      "syntax": "TINYINT"
+    },
+    {
+      "name": "SMALLINT",
+      "doc": "INTEGER affinity; the size is not enforced, so any 64-bit integer fits.",
+      "syntax": "SMALLINT"
+    },
+    {
+      "name": "MEDIUMINT",
+      "doc": "INTEGER affinity; the size is not enforced, so any 64-bit integer fits.",
+      "syntax": "MEDIUMINT"
+    },
+    {
+      "name": "BIGINT",
+      "doc": "INTEGER affinity; signed integers up to 8 bytes.",
+      "syntax": "BIGINT"
+    },
+    {
+      "name": "REAL",
+      "doc": "REAL affinity; values are stored as 8-byte IEEE floating-point numbers. Allowed in STRICT tables.",
+      "syntax": "REAL"
+    },
+    {
+      "name": "DOUBLE",
+      "doc": "REAL affinity (any type name containing DOUB); 8-byte IEEE floating point. DOUBLE PRECISION is the same.",
+      "syntax": "DOUBLE [PRECISION]"
+    },
+    {
+      "name": "FLOAT",
+      "doc": "REAL affinity (any type name containing FLOA); 8-byte IEEE floating point regardless of precision.",
+      "syntax": "FLOAT"
+    },
+    {
+      "name": "NUMERIC",
+      "doc": "NUMERIC affinity: text that looks like a number is stored as INTEGER or REAL; other values are kept as they are. Precision and scale are ignored.",
+      "syntax": "NUMERIC[(p, s)]"
+    },
+    {
+      "name": "DECIMAL",
+      "doc": "NUMERIC affinity; precision and scale are ignored and values are stored as INTEGER or REAL, not exact decimals.",
+      "syntax": "DECIMAL(p, s)"
+    },
+    {
+      "name": "BOOLEAN",
+      "doc": "NUMERIC affinity; there is no boolean storage class, so values are stored as the integers 1 (TRUE) and 0 (FALSE).",
+      "syntax": "BOOLEAN"
+    },
+    {
+      "name": "DATE",
+      "doc": "NUMERIC affinity; there is no date storage class. Store dates as ISO-8601 text, Julian day REAL or Unix-time INTEGER and use the date functions.",
+      "syntax": "DATE"
+    },
+    {
+      "name": "DATETIME",
+      "doc": "NUMERIC affinity; there is no date/time storage class. Store values as ISO-8601 text ('YYYY-MM-DD HH:MM:SS'), Julian day REAL or Unix-time INTEGER.",
+      "syntax": "DATETIME"
+    },
+    {
+      "name": "TEXT",
+      "doc": "TEXT affinity; values are stored as strings in the database encoding (UTF-8 or UTF-16), and numbers inserted are converted to text. Allowed in STRICT tables.",
+      "syntax": "TEXT"
+    },
+    {
+      "name": "VARCHAR",
+      "doc": "TEXT affinity (contains CHAR); the length is not enforced.",
+      "syntax": "VARCHAR(n)"
+    },
+    {
+      "name": "CHAR",
+      "doc": "TEXT affinity; the length is not enforced and values are not padded.",
+      "syntax": "CHAR(n)"
+    },
+    {
+      "name": "NCHAR",
+      "doc": "TEXT affinity (contains CHAR); the length is not enforced.",
+      "syntax": "NCHAR(n)"
+    },
+    {
+      "name": "NVARCHAR",
+      "doc": "TEXT affinity (contains CHAR); the length is not enforced.",
+      "syntax": "NVARCHAR(n)"
+    },
+    {
+      "name": "CLOB",
+      "doc": "TEXT affinity (contains CLOB); no size limit beyond SQLite's maximum string length.",
+      "syntax": "CLOB"
+    },
+    {
+      "name": "BLOB",
+      "doc": "BLOB affinity: values are stored exactly as given, with no conversion. A column with no declared type has the same affinity. Allowed in STRICT tables.",
+      "syntax": "BLOB"
+    },
+    {
+      "name": "ANY",
+      "doc": "In a STRICT table, accepts any value and stores it unchanged. In an ordinary table, ANY gets NUMERIC affinity, so numeric-looking text is converted.",
+      "syntax": "ANY"
+    }
+  ]
+}

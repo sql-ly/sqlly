@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Connection profiles</title>
+  <desc id="desc">A secured database connection with profile card, key, and TLS shield.</desc>
+  <style>
+    .ink{stroke:oklch(30% 0.06 252);stroke-width:8;stroke-linecap:round;stroke-linejoin:round}.thin{stroke:oklch(55% 0.06 252);stroke-width:5;stroke-linecap:round;stroke-linejoin:round}.panel{fill:oklch(94% 0.018 245);stroke:oklch(66% 0.05 245);stroke-width:6}.soft{fill:oklch(88% 0.04 250)}.accent{fill:oklch(62% 0.16 250)}.accent2{fill:oklch(68% 0.14 178)}.accent3{fill:oklch(74% 0.16 65)}
+  </style>
+  <rect class="panel" x="32" y="54" width="122" height="152" rx="18"/>
+  <ellipse class="accent" cx="93" cy="76" rx="40" ry="16"/>
+  <path class="thin" fill="none" d="M53 76v54c0 9 18 16 40 16s40-7 40-16V76M53 104c0 9 18 16 40 16s40-7 40-16"/>
+  <path class="ink" fill="none" d="M176 84l34 14v34c0 28-16 45-34 57-18-12-34-29-34-57V98l34-14z"/>
+  <path class="accent2" d="M176 104l18 8v22c0 13-7 23-18 31-11-8-18-18-18-31v-22l18-8z"/>
+  <circle class="panel" cx="83" cy="176" r="18"/>
+  <path class="ink" fill="none" d="M97 176h45l10-10 12 12 10-10"/>
+  <path class="thin" d="M59 167h-7M59 187h-7"/>
+</svg>

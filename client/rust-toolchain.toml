@@ -1,0 +1,14 @@
+[toolchain]
+# sqlly-datatable 4.1.2 (and smol_str 0.3.6) require rustc ≥1.96; pin the
+# current stable so local `cargo` matches CI.
+channel = "1.98"
+components = ["rustfmt", "clippy"]
+# Every target the release pipeline compiles for. Listing them here makes
+# rustup install the matching std when it provisions the pinned toolchain, so
+# a cross leg (e.g. Linux arm64) never fails with "can't find crate for `core`"
+# just because a `rustup target add` ran against a different toolchain/CWD.
+targets = [
+    "wasm32-unknown-unknown",
+    "aarch64-unknown-linux-gnu",
+    "aarch64-pc-windows-msvc",
+]

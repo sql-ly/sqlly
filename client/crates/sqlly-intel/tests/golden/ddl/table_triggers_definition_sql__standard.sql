@@ -1,0 +1,1 @@
+SELECT tr.name, OBJECT_DEFINITION(tr.object_id) AS definition FROM sys.triggers tr WHERE tr.parent_id = OBJECT_ID(N'dbo.Orders') AND tr.is_ms_shipped = 0 ORDER BY tr.name

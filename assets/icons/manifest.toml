@@ -1,0 +1,462 @@
+# =============================================================================
+# SQLLY icon manifest — the single source of truth for every icon in every app.
+#
+# Every icon the gpui desktop app, the wasm browser build, and the native macOS
+# app draw is declared here exactly once. Hugeicons glyphs are used under the MIT
+# License (see assets/icons/hugeicons/LICENSE) and credited in each app's About /
+# Acknowledgments screen. `tools/icons/generate.mjs` reads this file and
+# regenerates, deterministically:
+#
+#   - assets/icons/hugeicons/<key>.svg     (currentColor-normalized SVG bytes)
+#   - client/apps/gpui/src/icon_catalog.rs (Rust enum + embedded byte registry)
+#   - the native macOS app's IconCatalog.generated.swift (Swift enum)
+#
+# NEVER edit those generated files by hand — edit this manifest and rerun the
+# generator (`node tools/icons/generate.mjs`). `tools/icons/check.mjs` is the CI
+# guard that fails the build if the generated artifacts drift from this file.
+#
+# ---------------------------------------------------------------------------
+# [icons.<key>] fields (all optional except that at least one must be present):
+#   gpui        SVG source the desktop + browser apps render for this key:
+#                 "hugeicons:<ExportName>"  a Hugeicons free-set glyph, vendored
+#                                           to assets/icons/hugeicons/<key>.svg
+#                 "glyph:<file-stem>"       a hand-drawn SQLLY glyph already in
+#                                           assets/glyphs/<file-stem>.svg
+#   sf_symbol   macOS-native SF Symbol name. On macOS this is the PRIMARY
+#               affordance (rec 5: native symbols where they genuinely win); the
+#               SVG is only the fallback when the symbol is missing on the OS.
+#   macos_asset Existing bundled macOS feature SVG (Resources/Icons/<name>.svg)
+#               used as the macOS SVG fallback for this key.
+#   mono        false = full-colour illustration (state art, brand logos); the
+#               default true means the glyph tints with the surrounding text.
+#   stroke_width  override the Hugeicons default stroke (1.5) for one glyph, to
+#               make it read bolder at small sizes (only affects hugeicons:).
+#
+# [kinds]     object-explorer node kind (lowercased) -> icon key
+# [sql_types] SQL Server base data type (lowercased) -> icon key
+# These generate the macOS `Icon(kind:)` / `Icon(sqlDataType:)` mappers that
+# replace IconLoader's hand-written switch statements.
+# =============================================================================
+
+# --- Object-explorer / schema-tree concepts -------------------------------
+# gpui renders the Hugeicons glyph here; macOS prefers SF Symbols and keeps a
+# feature-SVG fallback. Same semantic key, per-platform resolution.
+
+[icons.server]
+gpui = "hugeicons:ServerStack01"
+sf_symbol = "network"
+macos_asset = "app-shell"
+
+[icons.database]
+gpui = "hugeicons:Database02"
+sf_symbol = "cylinder"
+macos_asset = "object-explorer"
+
+[icons.table]
+gpui = "hugeicons:LayoutTable01"
+sf_symbol = "tablecells"
+macos_asset = "table-editing"
+
+[icons.view]
+gpui = "hugeicons:Eye"
+sf_symbol = "eye"
+macos_asset = "results-grid"
+
+[icons.column]
+gpui = "hugeicons:TableColumnsSplit"
+sf_symbol = "rectangle.split.3x1"
+
+[icons.index]
+gpui = "hugeicons:LeftToRightListNumber"
+sf_symbol = "list.number"
+macos_asset = "designers-long-tail"
+
+[icons.schema]
+sf_symbol = "folder"
+macos_asset = "object-explorer"
+
+[icons.procedure]
+gpui = "hugeicons:FileBraces"
+sf_symbol = "curlybraces"
+macos_asset = "scripting-engine"
+
+[icons.function]
+gpui = "hugeicons:FunctionOfX"
+sf_symbol = "function"
+macos_asset = "scripting-engine"
+
+[icons.type_object]
+sf_symbol = "square.dashed"
+
+[icons.key]
+sf_symbol = "key"
+
+[icons.constraint]
+gpui = "hugeicons:Lock"
+sf_symbol = "lock"
+
+[icons.trigger]
+gpui = "hugeicons:Flash"
+sf_symbol = "bolt"
+
+[icons.sequence]
+gpui = "hugeicons:SortingAZ01"
+sf_symbol = "arrow.up.arrow.down.circle"
+
+[icons.synonym]
+gpui = "hugeicons:Link"
+sf_symbol = "link"
+
+[icons.extension]
+gpui = "hugeicons:Puzzle"
+sf_symbol = "puzzlepiece.extension"
+
+[icons.event]
+gpui = "hugeicons:Calendar01"
+sf_symbol = "calendar.badge.clock"
+
+[icons.materialized_view]
+gpui = "hugeicons:Layers01"
+sf_symbol = "square.stack.3d.up"
+
+[icons.statistic]
+sf_symbol = "chart.bar"
+
+[icons.parameter]
+sf_symbol = "tag"
+
+[icons.security]
+gpui = "hugeicons:Shield01"
+sf_symbol = "shield"
+macos_asset = "security-management"
+
+[icons.notification]
+gpui = "hugeicons:Notification01"
+sf_symbol = "bell"
+
+[icons.login_user]
+sf_symbol = "person.crop.circle"
+macos_asset = "security-management"
+
+[icons.role]
+sf_symbol = "person.2"
+macos_asset = "security-management"
+
+[icons.agent_job]
+sf_symbol = "clock.arrow.2.circlepath"
+macos_asset = "sql-agent"
+
+[icons.subscription]
+sf_symbol = "rectangle.stack"
+
+[icons.connection]
+sf_symbol = "point.3.connected.trianglepath.dotted"
+macos_asset = "connection-profiles"
+
+[icons.message]
+sf_symbol = "info.circle"
+
+[icons.object_explorer]
+sf_symbol = "square.grid.2x2"
+macos_asset = "object-explorer"
+
+# --- SQL data-type column glyphs (macOS explorer rows) --------------------
+
+[icons.type_integer]
+sf_symbol = "number"
+
+[icons.type_decimal]
+sf_symbol = "dollarsign.circle"
+
+[icons.type_float]
+sf_symbol = "function"
+
+[icons.type_bit]
+sf_symbol = "switch.2"
+
+[icons.type_string]
+sf_symbol = "text.alignleft"
+
+[icons.type_date]
+sf_symbol = "calendar"
+
+[icons.type_time]
+sf_symbol = "clock"
+
+[icons.type_binary]
+sf_symbol = "doc.fill"
+
+[icons.type_uuid]
+sf_symbol = "barcode"
+
+[icons.type_xml]
+sf_symbol = "chevron.left.slash.chevron.right"
+
+[icons.type_column]
+sf_symbol = "rectangle.split.3x1"
+
+# --- Toolbar / query concepts: Hugeicons replace the Lucide set (gpui) -----
+# These 20 keys are what the desktop app used gpui-component's bundled Lucide
+# icons for; they now resolve to vendored Hugeicons glyphs, so our call sites
+# no longer depend on the Lucide vocabulary.
+
+[icons.ai_assistant]
+gpui = "hugeicons:Bot"
+
+[icons.organization]
+gpui = "hugeicons:Building02"
+
+[icons.statistics]
+gpui = "hugeicons:PieChart01"
+
+[icons.account_user]
+gpui = "hugeicons:UserCircle"
+
+[icons.close]
+gpui = "hugeicons:Cancel01"
+
+[icons.frame]
+gpui = "hugeicons:Frame"
+
+[icons.globe]
+gpui = "hugeicons:Globe"
+
+[icons.inbox]
+gpui = "hugeicons:Inbox"
+
+[icons.info]
+gpui = "hugeicons:InformationCircle"
+
+[icons.inspect]
+gpui = "hugeicons:InspectCode"
+
+[icons.loading]
+gpui = "hugeicons:Loading03"
+
+[icons.plan_map]
+gpui = "hugeicons:Maps"
+
+[icons.menu]
+gpui = "hugeicons:Menu01"
+
+[icons.more_vertical]
+gpui = "hugeicons:MoreVertical"
+
+[icons.more_horizontal]
+gpui = "hugeicons:MoreHorizontal"
+
+[icons.appearance]
+gpui = "hugeicons:PaintBoard"
+
+[icons.theme_light]
+gpui = "hugeicons:Sun03"
+
+[icons.theme_dark]
+gpui = "hugeicons:Moon02"
+
+[icons.theme_system]
+gpui = "hugeicons:Computer"
+
+[icons.play]
+gpui = "hugeicons:Play"
+# The Run button's glyph reads thin at small sizes — bump its stroke.
+stroke_width = 2.0
+
+[icons.add]
+gpui = "hugeicons:PlusSign"
+
+[icons.minus]
+gpui = "hugeicons:MinusSign"
+
+[icons.search]
+gpui = "hugeicons:Search01"
+
+[icons.settings]
+gpui = "hugeicons:Settings02"
+
+[icons.command]
+gpui = "hugeicons:Command"
+
+[icons.chevron_down]
+gpui = "hugeicons:ChevronDown"
+
+[icons.chevron_right]
+gpui = "hugeicons:ChevronRight"
+
+[icons.chevron_up]
+gpui = "hugeicons:ChevronUp"
+
+[icons.chevron_left]
+gpui = "hugeicons:ChevronLeft"
+
+[icons.terminal]
+gpui = "hugeicons:Terminal"
+
+[icons.resume]
+gpui = "hugeicons:Replay"
+
+# --- SQLLY toolbar / status concepts (Hugeicons) ---------------------------
+
+[icons.show_actual_plan]
+gpui = "hugeicons:Flowchart01"
+
+[icons.show_query_plan]
+gpui = "hugeicons:GitFork"
+
+[icons.track_difference]
+gpui = "hugeicons:GitCompare"
+
+[icons.diff_results]
+gpui = "hugeicons:GitCompareArrows"
+
+[icons.procedure_mode]
+gpui = "hugeicons:SourceCodeCircle"
+
+[icons.stored_procedure_mode]
+gpui = "hugeicons:SourceCodeSquare"
+
+[icons.history]
+gpui = "hugeicons:Clock01"
+
+[icons.refresh_schema]
+gpui = "hugeicons:DatabaseSync01"
+
+[icons.results_stacked]
+gpui = "hugeicons:LeftToRightListBullet"
+
+[icons.results_in_tabs]
+gpui = "hugeicons:DashboardSquare01"
+
+[icons.stack_results]
+gpui = "hugeicons:MenuSquare"
+
+[icons.results_tabs_glyph]
+gpui = "hugeicons:LayoutTable01"
+
+[icons.run_query]
+gpui = "hugeicons:PlayCircle"
+
+[icons.route_direct]
+gpui = "hugeicons:PlugSocket"
+
+[icons.route_relay]
+gpui = "hugeicons:Satellite01"
+
+# Shown in the status circle when there is no working connection (red bg): a
+# loose, unplugged plug that pairs with the plugged-in socket a live direct
+# session shows.
+[icons.route_disconnected]
+gpui = "hugeicons:Plug01"
+
+[icons.save]
+gpui = "hugeicons:FloppyDisk"
+
+[icons.format_sql]
+gpui = "hugeicons:SourceCode"
+
+[icons.sidebar_left]
+gpui = "hugeicons:SidebarLeft"
+
+[icons.sidebar_right]
+gpui = "hugeicons:SidebarRight"
+
+[icons.layout_bottom]
+gpui = "hugeicons:LayoutBottom"
+
+[icons.send]
+gpui = "hugeicons:Sent"
+
+[icons.heart]
+gpui = "hugeicons:Favourite"
+
+[icons.diagnostics]
+gpui = "hugeicons:Activity01"
+sf_symbol = "waveform.path.ecg"
+
+# --- Node-kind -> icon key (generates macOS Icon(kind:)) -------------------
+
+[kinds]
+server = "server"
+instance = "server"
+storedserver = "server"
+azureserver = "server"
+database = "database"
+storeddatabase = "database"
+azuredatabase = "database"
+filesystemdatabase = "database"
+table = "table"
+filesystemtable = "table"
+view = "view"
+filesystemview = "view"
+schema = "schema"
+filesystemschema = "schema"
+folder = "schema"
+section = "schema"
+procedure = "procedure"
+storedprocedure = "procedure"
+filesystemprocedure = "procedure"
+programmability = "function"
+function = "function"
+filesystemfunction = "function"
+scalarfunction = "function"
+tablefunction = "function"
+type = "type_object"
+filesystemtype = "type_object"
+column = "column"
+filesystemcolumn = "column"
+key = "key"
+constraint = "constraint"
+trigger = "trigger"
+sequence = "sequence"
+synonym = "synonym"
+extension = "extension"
+event = "event"
+materializedview = "materialized_view"
+index = "index"
+statistic = "statistic"
+statistics = "statistic"
+parameter = "parameter"
+security = "security"
+login = "login_user"
+user = "login_user"
+account = "login_user"
+entraaccount = "login_user"
+role = "role"
+agent = "agent_job"
+job = "agent_job"
+subscription = "subscription"
+azuresubscription = "subscription"
+connection = "connection"
+message = "message"
+
+# --- SQL base type -> icon key (generates macOS Icon(sqlDataType:)) ---------
+
+[sql_types]
+tinyint = "type_integer"
+smallint = "type_integer"
+int = "type_integer"
+bigint = "type_integer"
+decimal = "type_decimal"
+numeric = "type_decimal"
+money = "type_decimal"
+smallmoney = "type_decimal"
+float = "type_float"
+real = "type_float"
+bit = "type_bit"
+char = "type_string"
+varchar = "type_string"
+text = "type_string"
+nchar = "type_string"
+nvarchar = "type_string"
+ntext = "type_string"
+date = "type_date"
+time = "type_time"
+smalldatetime = "type_time"
+datetime = "type_time"
+datetime2 = "type_time"
+datetimeoffset = "type_time"
+binary = "type_binary"
+varbinary = "type_binary"
+image = "type_binary"
+uniqueidentifier = "type_uuid"
+xml = "type_xml"

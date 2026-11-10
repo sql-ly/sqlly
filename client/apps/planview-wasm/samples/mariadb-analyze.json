@@ -1,0 +1,66 @@
+{
+  "query_optimization": {
+    "r_total_time_ms": 0.060780065
+  },
+  "query_block": {
+    "select_id": 1,
+    "cost": 634.7232639,
+    "r_loops": 1,
+    "r_total_time_ms": 54.29028985,
+    "filesort": {
+      "sort_key": "sum(o.total) desc",
+      "r_loops": 1,
+      "r_total_time_ms": 0.006804362,
+      "r_used_priority_queue": false,
+      "r_output_rows": 5,
+      "r_buffer_size": "496",
+      "r_sort_mode": "sort_key,rowid",
+      "temporary_table": {
+        "nested_loop": [
+          {
+            "table": {
+              "table_name": "o",
+              "access_type": "ALL",
+              "loops": 1,
+              "r_loops": 1,
+              "rows": 598688,
+              "r_rows": 600000,
+              "cost": 99.0484492,
+              "r_table_time_ms": 35.1439016,
+              "r_other_time_ms": 15.96628844,
+              "r_engine_stats": {
+                "pages_accessed": 1698
+              },
+              "filtered": 100,
+              "r_filtered": 0.9015,
+              "attached_condition": "o.`status` = 'refunded' and o.total > 1200"
+            }
+          },
+          {
+            "table": {
+              "table_name": "c",
+              "access_type": "eq_ref",
+              "possible_keys": ["PRIMARY"],
+              "key": "PRIMARY",
+              "key_length": "4",
+              "used_key_parts": ["id"],
+              "ref": ["shop.o.customer_id"],
+              "loops": 598688,
+              "r_loops": 5409,
+              "rows": 1,
+              "r_rows": 1,
+              "cost": 535.6748147,
+              "r_table_time_ms": 2.144208802,
+              "r_other_time_ms": 1.014893495,
+              "r_engine_stats": {
+                "pages_accessed": 10856
+              },
+              "filtered": 100,
+              "r_filtered": 100
+            }
+          }
+        ]
+      }
+    }
+  }
+}

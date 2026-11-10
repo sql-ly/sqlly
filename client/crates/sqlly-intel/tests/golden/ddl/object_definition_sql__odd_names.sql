@@ -1,0 +1,1 @@
+SELECT OBJECT_DEFINITION(OBJECT_ID(N'odd schema.My]Table')) AS definition

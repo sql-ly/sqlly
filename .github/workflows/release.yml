@@ -1,0 +1,212 @@
+# Builds the standalone edition of SQLly (the `standalone` cargo feature: no
+# account, license checks, feedback, update checks or Cloud Relay, so the app
+# never contacts sqlly.app) for every release tag, and attaches the builds to
+# that tag's GitHub release.
+#
+# Release tags arrive from SQLly's export after each official release, so this
+# runs once per version. Run it by hand (Actions -> Release -> Run workflow) to
+# rebuild a tag; existing assets on its release are replaced.
+#
+# These builds are unsigned. Official, signed builds are at
+# https://sqlly.app/download.
+
+name: Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to build (vX.Y.Z)
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  TAG: ${{ github.event.inputs.tag || github.ref_name }}
+
+jobs:
+  build:
+    name: Build ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux amd64
+            runner: ubuntu-22.04
+            os: linux
+            arch: amd64
+          - name: macOS arm64
+            runner: macos-15
+            os: macos
+            arch: arm64
+          - name: Windows amd64
+            runner: windows-2022
+            os: windows
+            arch: amd64
+    steps:
+      - name: Check the tag
+        shell: bash
+        run: |
+          if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::'$TAG' is not a release tag (vX.Y.Z)"
+            exit 1
+          fi
+          echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: refs/tags/${{ env.TAG }}
+          persist-credentials: false
+
+      - name: Install the Rust toolchain
+        shell: bash
+        working-directory: client
+        # With no arguments, rustup installs what client/rust-toolchain.toml pins.
+        run: rustup toolchain install
+
+      - name: Free disk space
+        if: matrix.os == 'linux'
+        # A release build with DuckDB compiled from source needs more room than
+        # the runner leaves free.
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+
+      - name: Install Linux build dependencies
+        if: matrix.os == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libxcb1-dev libxkbcommon-dev libxkbcommon-x11-dev
+          # fontconfig is loaded at run time instead of linked.
+          echo "RUST_FONTCONFIG_DLOPEN=1" >> "$GITHUB_ENV"
+
+      - name: Download prebuilt DuckDB
+        if: matrix.os == 'windows'
+        shell: bash
+        run: bash client/apps/gpui/scripts/windows-duckdb.sh amd64
+
+      - name: Build
+        if: matrix.os != 'macos'
+        shell: bash
+        working-directory: client
+        run: cargo build -p sqlly-gpui --profile release-ci --features standalone --locked
+
+      - name: Build the app bundle
+        if: matrix.os == 'macos'
+        shell: bash
+        env:
+          CARGO_FEATURES: standalone
+          CARGO_PROFILE_FLAG: --profile release-ci
+          CODESIGN_APP: "1"
+          DIST_DIR: ${{ runner.temp }}/dist
+        run: bash client/apps/gpui/scripts/build-app.sh
+
+      - name: Package for Linux
+        if: matrix.os == 'linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          staging="$RUNNER_TEMP/SQLLY"
+          mkdir -p "$staging"
+          cp client/target/release-ci/SQLLY "$staging/SQLLY"
+          chmod +x "$staging/SQLLY"
+          # Must match about::APP_ID: the desktop finds the window's icon by it.
+          app_id="io.zebrasoft.sqlly"
+          cat > "$staging/$app_id.desktop" <<DESKTOP
+          [Desktop Entry]
+          Type=Application
+          Name=SQLLY
+          Comment=SQLLY database client
+          Exec=SQLLY %u
+          Icon=$app_id
+          Categories=Development;Database;
+          MimeType=x-scheme-handler/sqlly;application/vnd.sqlite3;application/x-sqlite3;
+          Terminal=false
+          DESKTOP
+          for size in 16 32 48 64 128 256 512; do
+            dir="$staging/icons/hicolor/${size}x${size}/apps"
+            mkdir -p "$dir"
+            cp "client/apps/gpui/resources/icons/app-icon-${size}.png" "$dir/$app_id.png"
+          done
+          cp client/apps/gpui/scripts/linux-install.sh "$staging/install.sh"
+          chmod +x "$staging/install.sh"
+          mkdir -p dist
+          tar -czf "dist/SQLLY-standalone-linux-${{ matrix.arch }}-$VERSION.tar.gz" -C "$RUNNER_TEMP" SQLLY
+
+      - name: Package for macOS
+        if: matrix.os == 'macos'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cp "$RUNNER_TEMP/dist/SQLLY.dmg" "dist/SQLLY-standalone-macos-arm64-$VERSION.dmg"
+
+      - name: Package for Windows
+        if: matrix.os == 'windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          staging="$RUNNER_TEMP/SQLLY"
+          mkdir -p "$staging" dist
+          cp client/target/release-ci/SQLLY.exe "$staging/SQLLY.exe"
+          # SQLLY.exe loads DuckDB's DLL from its own folder.
+          cp "$(cygpath -u "$DUCKDB_DLL")" "$staging/duckdb.dll"
+          printf '%s\r\n' \
+            "SQLLY standalone for Windows (amd64), $TAG." \
+            "" \
+            "Run SQLLY.exe. Keep duckdb.dll in the same folder." \
+            "This build is unsigned, so Windows may warn the first time you open it." \
+            > "$staging/README.txt"
+          pwsh -NoProfile -Command "Compress-Archive -Path '$(cygpath -w "$staging")\*' -DestinationPath 'dist\SQLLY-standalone-windows-amd64-$VERSION.zip' -Force"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sqlly-${{ matrix.os }}-${{ matrix.arch }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    name: Attach to the GitHub release
+    needs: build
+    # Publish whatever built: one failed platform shouldn't hold back the rest.
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Write checksums
+        working-directory: dist
+        run: sha256sum * > "SHA256SUMS-$TAG.txt" && cat "SHA256SUMS-$TAG.txt"
+
+      - name: Create or update the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            cat > "$RUNNER_TEMP/notes.md" <<NOTES
+          Standalone builds of SQLly $TAG, built from this source with the \`standalone\` feature: no account, license checks, feedback, update checks or Cloud Relay, so the app never contacts sqlly.app.
+
+          These builds are unsigned. On macOS, right-click SQLLY.app and choose Open the first time, or run \`xattr -dr com.apple.quarantine /Applications/SQLLY.app\`. Windows SmartScreen may warn on first run.
+
+          Signed official builds: https://sqlly.app/download. Release notes: https://sqlly.app/changelog
+          NOTES
+            gh release create "$TAG" --verify-tag --title "SQLly $TAG" --notes-file "$RUNNER_TEMP/notes.md"
+          fi
+          gh release upload "$TAG" dist/* --clobber

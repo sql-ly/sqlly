@@ -1,0 +1,11 @@
+# getrandom 0.4 is pulled in transitively on wasm via p256 0.14's RustCrypto
+# 0.7 stack (crypto-bigint 0.7 / crypto-common 0.2 depend on getrandom 0.4).
+# Unlike getrandom 0.2 (kept on `js`), 0.3/0.4 refuse to build for
+# wasm32-unknown-unknown unless the JS backend is explicitly selected with this
+# cfg. The matching `wasm_js` feature is enabled by apps/browser/Cargo.toml so
+# feature unification turns it on for the shared getrandom 0.4 in the graph.
+# Neither build-browser.sh nor osx-build-browser.sh sets RUSTFLAGS, so these
+# rustflags are not clobbered by an env override. See client/Cargo.toml's
+# getrandom note and https://docs.rs/getrandom/0.4/#webassembly-support.
+[target.wasm32-unknown-unknown]
+rustflags = ['--cfg', 'getrandom_backend="wasm_js"']

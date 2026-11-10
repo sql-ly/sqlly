@@ -1,0 +1,3 @@
+# Raw RESP wire captures: the CRLF framing is the protocol, never normalize it.
+*.resp2 binary
+*.resp3 binary

@@ -1,0 +1,6085 @@
+{
+  "about": "Oracle Database 23ai SQL and PL/SQL vocabulary, merged over common.json. Also used for Db2, Teradata, Informix and SAP HANA connections.",
+  "functions": [
+    {
+      "name": "LISTAGG",
+      "category": "Aggregate",
+      "summary": "Concatenates the values of a column into one string, separated by a delimiter and ordered by WITHIN GROUP (ORDER BY ...). Also usable as an analytic function with OVER.",
+      "example": "LISTAGG(last_name, ', ') WITHIN GROUP (ORDER BY last_name)",
+      "signatures": [
+        {
+          "returns": "VARCHAR2",
+          "params": [
+            {
+              "name": "[ALL | DISTINCT] measure_expr",
+              "type": "any",
+              "doc": "The value to concatenate; NULLs are skipped. DISTINCT removes duplicate values first."
+            },
+            {
+              "name": "delimiter [ON OVERFLOW ...]",
+              "type": "string",
+              "doc": "Text placed between values (none by default). Follow with ON OVERFLOW TRUNCATE ['...'] [WITH | WITHOUT COUNT] or ON OVERFLOW ERROR to control over-long results.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "COLLECT",
+      "category": "Aggregate",
+      "summary": "Gathers the values of a column into a nested table. Usually wrapped in CAST to a named collection type.",
+      "example": "CAST(COLLECT(phone_number) AS phone_book_t)",
+      "signatures": [
+        {
+          "returns": "nested table",
+          "params": [
+            {
+              "name": "[DISTINCT | UNIQUE] column [ORDER BY expr]",
+              "type": "any",
+              "doc": "The value to collect; DISTINCT drops duplicates and ORDER BY sets the element order."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "MEDIAN",
+      "category": "Aggregate",
+      "summary": "Returns the middle value (interpolated between the two middle values when needed) of a numeric or datetime expression, ignoring NULLs.",
+      "example": "SELECT department_id, MEDIAN(salary) FROM employees GROUP BY department_id",
+      "signatures": [
+        {
+          "returns": "NUMBER or datetime",
+          "params": [
+            {
+              "name": "expr",
+              "type": "number or datetime",
+              "doc": "The value whose median is computed."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "STDDEV",
+      "category": "Aggregate",
+      "summary": "Returns the sample standard deviation of an expression. Unlike STDDEV_SAMP it returns 0, not NULL, for a single row.",
+      "example": "SELECT STDDEV(salary) FROM employees",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "[DISTINCT | ALL] expr",
+              "type": "number",
+              "doc": "The numeric value; DISTINCT considers each value once."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "STDDEV_POP",
+      "category": "Aggregate",
+      "summary": "Returns the population standard deviation of an expression (the square root of VAR_POP).",
+      "example": "SELECT STDDEV_POP(salary) FROM employees",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "expr",
+              "type": "number",
+              "doc": "The numeric value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "STDDEV_SAMP",
+      "category": "Aggregate",
+      "summary": "Returns the cumulative sample standard deviation of an expression (the square root of VAR_SAMP). Returns NULL for a single row.",
+      "example": "SELECT STDDEV_SAMP(salary) FROM employees",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "expr",
+              "type": "number",
+              "doc": "The numeric value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "VARIANCE",
+      "category": "Aggregate",
+      "summary": "Returns the sample variance of an expression. Unlike VAR_SAMP it returns 0, not NULL, for a single row.",
+      "example": "SELECT VARIANCE(salary) FROM employees",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "[DISTINCT | ALL] expr",
+              "type": "number",
+              "doc": "The numeric value; DISTINCT considers each value once."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "VAR_POP",
+      "category": "Aggregate",
+      "summary": "Returns the population variance of a set of numbers after discarding NULLs.",
+      "example": "SELECT VAR_POP(salary) FROM employees",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "expr",
+              "type": "number",
+              "doc": "The numeric value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "VAR_SAMP",
+      "category": "Aggregate",
+      "summary": "Returns the sample variance of a set of numbers after discarding NULLs. Returns NULL for a single row.",
+      "example": "SELECT VAR_SAMP(salary) FROM employees",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "expr",
+              "type": "number",
+              "doc": "The numeric value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "CORR",
+      "category": "Aggregate",
+      "summary": "Returns the Pearson correlation coefficient of a set of number pairs, ignoring pairs where either value is NULL.",
+      "example": "SELECT CORR(list_price, min_price) FROM products",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "expr1",
+              "type": "number",
+              "doc": "The first numeric value of each pair."
+            },
+            {
+              "name": "expr2",
+              "type": "number",
+              "doc": "The second numeric value of each pair."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "CORR_S",
+      "category": "Aggregate",
+      "summary": "Returns Spearman's rho rank correlation coefficient of a set of number pairs.",
+      "example": "SELECT CORR_S(income, credit_limit) FROM customers",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "expr1",
+              "type": "number",
+              "doc": "The first numeric value of each pair."
+            },
+            {
+              "name": "expr2",
+              "type": "number",
+              "doc": "The second numeric value of each pair."
+            },
+            {
+              "name": "return_value",
+              "type": "string",
+              "doc": "What to return: 'COEFFICIENT' (default), 'ONE_SIDED_SIG', 'ONE_SIDED_SIG_POS', 'ONE_SIDED_SIG_NEG' or 'TWO_SIDED_SIG'.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "CORR_K",
+      "category": "Aggregate",
+      "summary": "Returns Kendall's tau-b rank correlation coefficient of a set of number pairs.",
+      "example": "SELECT CORR_K(income, credit_limit) FROM customers",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "expr1",
+              "type": "number",
+              "doc": "The first numeric value of each pair."
+            },
+            {
+              "name": "expr2",
+              "type": "number",
+              "doc": "The second numeric value of each pair."
+            },
+            {
+              "name": "return_value",
+              "type": "string",
+              "doc": "What to return: 'COEFFICIENT' (default), 'ONE_SIDED_SIG', 'ONE_SIDED_SIG_POS', 'ONE_SIDED_SIG_NEG' or 'TWO_SIDED_SIG'.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "COVAR_POP",
+      "category": "Aggregate",
+      "summary": "Returns the population covariance of a set of number pairs.",
+      "example": "SELECT COVAR_POP(list_price, min_price) FROM products",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "expr1",
+              "type": "number",
+              "doc": "The first numeric value of each pair."
+            },
+            {
+              "name": "expr2",
+              "type": "number",
+              "doc": "The second numeric value of each pair."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "COVAR_SAMP",
+      "category": "Aggregate",
+      "summary": "Returns the sample covariance of a set of number pairs.",
+      "example": "SELECT COVAR_SAMP(list_price, min_price) FROM products",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "expr1",
+              "type": "number",
+              "doc": "The first numeric value of each pair."
+            },
+            {
+              "name": "expr2",
+              "type": "number",
+              "doc": "The second numeric value of each pair."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "REGR_SLOPE",
+      "category": "Aggregate",
+      "summary": "Returns the slope of the least-squares regression line fitted to non-NULL (y, x) pairs.",
+      "example": "SELECT REGR_SLOPE(salary, commission_pct) FROM employees",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "expr1",
+              "type": "number",
+              "doc": "The dependent (y) value."
+            },
+            {
+              "name": "expr2",
+              "type": "number",
+              "doc": "The independent (x) value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "REGR_INTERCEPT",
+      "category": "Aggregate",
+      "summary": "Returns the y-intercept of the least-squares regression line fitted to non-NULL (y, x) pairs.",
+      "example": "SELECT REGR_INTERCEPT(salary, commission_pct) FROM employees",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "expr1",
+              "type": "number",
+              "doc": "The dependent (y) value."
+            },
+            {
+              "name": "expr2",
+              "type": "number",
+              "doc": "The independent (x) value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "REGR_COUNT",
+      "category": "Aggregate",
+      "summary": "Returns the number of non-NULL (y, x) pairs used to fit the regression line.",
+      "example": "SELECT REGR_COUNT(salary, commission_pct) FROM employees",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "expr1",
+              "type": "number",
+              "doc": "The dependent (y) value."
+            },
+            {
+              "name": "expr2",
+              "type": "number",
+              "doc": "The independent (x) value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "REGR_R2",
+      "category": "Aggregate",
+      "summary": "Returns the coefficient of determination (R squared) of the regression line.",
+      "example": "SELECT REGR_R2(salary, commission_pct) FROM employees",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "expr1",
+              "type": "number",
+              "doc": "The dependent (y) value."
+            },
+            {
+              "name": "expr2",
+              "type": "number",
+              "doc": "The independent (x) value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "REGR_AVGX",
+      "category": "Aggregate",
+      "summary": "Returns the average of the independent variable x over non-NULL (y, x) pairs.",
+      "example": "SELECT REGR_AVGX(salary, commission_pct) FROM employees",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "expr1",
+              "type": "number",
+              "doc": "The dependent (y) value."
+            },
+            {
+              "name": "expr2",
+              "type": "number",
+              "doc": "The independent (x) value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "REGR_AVGY",
+      "category": "Aggregate",
+      "summary": "Returns the average of the dependent variable y over non-NULL (y, x) pairs.",
+      "example": "SELECT REGR_AVGY(salary, commission_pct) FROM employees",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "expr1",
+              "type": "number",
+              "doc": "The dependent (y) value."
+            },
+            {
+              "name": "expr2",
+              "type": "number",
+              "doc": "The independent (x) value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "REGR_SXX",
+      "category": "Aggregate",
+      "summary": "Returns REGR_COUNT * VAR_POP(x), an auxiliary regression statistic.",
+      "example": "SELECT REGR_SXX(salary, commission_pct) FROM employees",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "expr1",
+              "type": "number",
+              "doc": "The dependent (y) value."
+            },
+            {
+              "name": "expr2",
+              "type": "number",
+              "doc": "The independent (x) value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "REGR_SYY",
+      "category": "Aggregate",
+      "summary": "Returns REGR_COUNT * VAR_POP(y), an auxiliary regression statistic.",
+      "example": "SELECT REGR_SYY(salary, commission_pct) FROM employees",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "expr1",
+              "type": "number",
+              "doc": "The dependent (y) value."
+            },
+            {
+              "name": "expr2",
+              "type": "number",
+              "doc": "The independent (x) value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "REGR_SXY",
+      "category": "Aggregate",
+      "summary": "Returns REGR_COUNT * COVAR_POP(y, x), an auxiliary regression statistic.",
+      "example": "SELECT REGR_SXY(salary, commission_pct) FROM employees",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "expr1",
+              "type": "number",
+              "doc": "The dependent (y) value."
+            },
+            {
+              "name": "expr2",
+              "type": "number",
+              "doc": "The independent (x) value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "APPROX_COUNT_DISTINCT",
+      "category": "Aggregate",
+      "summary": "Returns an approximate count of distinct non-NULL values, much faster than COUNT(DISTINCT expr) on large data.",
+      "example": "SELECT APPROX_COUNT_DISTINCT(customer_id) FROM orders",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "expr",
+              "type": "any",
+              "doc": "The value whose distinct count is estimated."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "APPROX_MEDIAN",
+      "category": "Aggregate",
+      "summary": "Returns an approximate median of a numeric or datetime expression, or its error rate or confidence.",
+      "example": "SELECT APPROX_MEDIAN(salary) FROM employees",
+      "signatures": [
+        {
+          "returns": "NUMBER or datetime",
+          "params": [
+            {
+              "name": "expr [DETERMINISTIC]",
+              "type": "number or datetime",
+              "doc": "The value whose median is estimated; DETERMINISTIC gives repeatable results."
+            },
+            {
+              "name": "info",
+              "type": "string",
+              "doc": "'ERROR_RATE' or 'CONFIDENCE' to return that statistic instead of the median.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "APPROX_PERCENTILE",
+      "category": "Aggregate",
+      "summary": "Returns an approximate percentile of the ordered values, like a faster PERCENTILE_DISC.",
+      "example": "APPROX_PERCENTILE(0.9) WITHIN GROUP (ORDER BY salary)",
+      "signatures": [
+        {
+          "returns": "NUMBER or datetime",
+          "params": [
+            {
+              "name": "percentile [DETERMINISTIC]",
+              "type": "number",
+              "doc": "A percentile between 0 and 1; DETERMINISTIC gives repeatable results."
+            },
+            {
+              "name": "info",
+              "type": "string",
+              "doc": "'ERROR_RATE' or 'CONFIDENCE' to return that statistic instead.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "APPROX_COUNT",
+      "category": "Aggregate",
+      "summary": "Returns an approximate count of an expression; used with APPROX_RANK to find top-N groups quickly.",
+      "example": "SELECT job_id, APPROX_COUNT(*) FROM employees GROUP BY job_id",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "expr",
+              "type": "any",
+              "doc": "The value to count, or *."
+            },
+            {
+              "name": "'MAX_ERROR'",
+              "type": "string",
+              "doc": "Pass 'MAX_ERROR' to return the maximum error instead of the count.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "APPROX_SUM",
+      "category": "Aggregate",
+      "summary": "Returns an approximate sum of an expression; used with APPROX_RANK to find top-N groups quickly.",
+      "example": "SELECT job_id, APPROX_SUM(salary) FROM employees GROUP BY job_id",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "expr",
+              "type": "number",
+              "doc": "The numeric value to sum."
+            },
+            {
+              "name": "'MAX_ERROR'",
+              "type": "string",
+              "doc": "Pass 'MAX_ERROR' to return the maximum error instead of the sum.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "PERCENTILE_CONT",
+      "category": "Aggregate",
+      "summary": "Returns the value at a percentile of the ordered values, interpolating between neighbours (continuous distribution). Also usable with OVER.",
+      "example": "PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY salary)",
+      "signatures": [
+        {
+          "returns": "NUMBER or datetime",
+          "params": [
+            {
+              "name": "percentile",
+              "type": "number",
+              "doc": "A percentile between 0 and 1. The values come from WITHIN GROUP (ORDER BY expr)."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "PERCENTILE_DISC",
+      "category": "Aggregate",
+      "summary": "Returns the first value whose cumulative distribution reaches a percentile of the ordered values (discrete distribution). Also usable with OVER.",
+      "example": "PERCENTILE_DISC(0.5) WITHIN GROUP (ORDER BY salary)",
+      "signatures": [
+        {
+          "returns": "NUMBER or datetime",
+          "params": [
+            {
+              "name": "percentile",
+              "type": "number",
+              "doc": "A percentile between 0 and 1. The values come from WITHIN GROUP (ORDER BY expr)."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "JSON_ARRAYAGG",
+      "category": "JSON",
+      "summary": "Aggregates values into a JSON array, one element per row.",
+      "example": "SELECT JSON_ARRAYAGG(last_name ORDER BY last_name) FROM employees",
+      "signatures": [
+        {
+          "returns": "JSON array (type set by RETURNING)",
+          "params": [
+            {
+              "name": "expr [FORMAT JSON] [ORDER BY ...] [NULL | ABSENT ON NULL] [RETURNING data_type] [STRICT]",
+              "type": "any",
+              "doc": "The element value, optionally ordered; NULLs are omitted unless NULL ON NULL is given."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "JSON_OBJECTAGG",
+      "category": "JSON",
+      "summary": "Aggregates key/value pairs from each row into one JSON object.",
+      "example": "SELECT JSON_OBJECTAGG(KEY department_name VALUE department_id) FROM departments",
+      "signatures": [
+        {
+          "returns": "JSON object (type set by RETURNING)",
+          "params": [
+            {
+              "name": "[KEY] key_expr VALUE value_expr [NULL | ABSENT ON NULL] [RETURNING data_type] [WITH UNIQUE KEYS]",
+              "type": "string and any",
+              "doc": "The member name and value for each row; the name must be a string. A colon may replace VALUE."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "JSON_DATAGUIDE",
+      "category": "JSON",
+      "summary": "Aggregates JSON documents into a data guide describing their structure (paths and types).",
+      "example": "SELECT JSON_DATAGUIDE(po_document) FROM j_purchaseorder",
+      "signatures": [
+        {
+          "returns": "CLOB",
+          "params": [
+            {
+              "name": "expr",
+              "type": "JSON",
+              "doc": "The JSON documents to analyze."
+            },
+            {
+              "name": "format",
+              "type": "number",
+              "doc": "DBMS_JSON.FORMAT_FLAT (default) or DBMS_JSON.FORMAT_HIERARCHICAL.",
+              "optional": true
+            },
+            {
+              "name": "flag",
+              "type": "number",
+              "doc": "Options such as DBMS_JSON.PRETTY or DBMS_JSON.GEOJSON.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "XMLAGG",
+      "category": "XML",
+      "summary": "Aggregates XML fragments from each row into one XML value.",
+      "example": "SELECT XMLAGG(XMLELEMENT(\"name\", last_name) ORDER BY last_name) FROM employees",
+      "signatures": [
+        {
+          "returns": "XMLTYPE",
+          "params": [
+            {
+              "name": "XMLType_instance [ORDER BY ...]",
+              "type": "XMLTYPE",
+              "doc": "The XML fragment to aggregate; NULLs are dropped. ORDER BY sets the fragment order."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ANY_VALUE",
+      "category": "Aggregate",
+      "summary": "Returns a single non-deterministic value of an expression from each group, avoiding GROUP BY on columns that are constant per group.",
+      "example": "SELECT department_id, ANY_VALUE(department_name) FROM employees JOIN departments USING (department_id) GROUP BY department_id",
+      "signatures": [
+        {
+          "returns": "same type as expr",
+          "params": [
+            {
+              "name": "[DISTINCT | ALL] expr",
+              "type": "any",
+              "doc": "The value to return; DISTINCT and ALL are accepted but have no effect."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "GROUPING",
+      "category": "Aggregate",
+      "summary": "Returns 1 when a row is a superaggregate row produced by ROLLUP, CUBE or GROUPING SETS for that column, else 0.",
+      "example": "SELECT department_id, GROUPING(department_id), SUM(salary) FROM employees GROUP BY ROLLUP(department_id)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "expr",
+              "type": "any",
+              "doc": "An expression from the GROUP BY clause."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "GROUPING_ID",
+      "category": "Aggregate",
+      "summary": "Returns a number whose bits are the GROUPING values of the listed columns, identifying the grouping level of each row.",
+      "example": "GROUPING_ID(region, country)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "expr",
+              "type": "any",
+              "doc": "An expression from the GROUP BY clause; one bit per expression."
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "GROUP_ID",
+      "category": "Aggregate",
+      "summary": "Distinguishes duplicate groups produced by a GROUP BY: returns 0 for the first copy and n for the nth duplicate.",
+      "example": "SELECT GROUP_ID(), SUM(amount) FROM sales GROUP BY ROLLUP(region, region)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": []
+        }
+      ]
+    },
+    {
+      "name": "STATS_MODE",
+      "category": "Aggregate",
+      "summary": "Returns the value that occurs most often in a set; when several tie, one of them is returned.",
+      "example": "SELECT STATS_MODE(salary) FROM employees",
+      "signatures": [
+        {
+          "returns": "same type as expr",
+          "params": [
+            {
+              "name": "expr",
+              "type": "any",
+              "doc": "The value whose mode is found."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "BIT_AND_AGG",
+      "category": "Aggregate",
+      "summary": "Returns the bitwise AND of all non-NULL integer values in each group. (Oracle 21c+)",
+      "example": "SELECT BIT_AND_AGG(flags) FROM t",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "[DISTINCT | ALL | UNIQUE] expr",
+              "type": "integer",
+              "doc": "The integer value to combine."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "BIT_OR_AGG",
+      "category": "Aggregate",
+      "summary": "Returns the bitwise OR of all non-NULL integer values in each group. (Oracle 21c+)",
+      "example": "SELECT BIT_OR_AGG(flags) FROM t",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "[DISTINCT | ALL | UNIQUE] expr",
+              "type": "integer",
+              "doc": "The integer value to combine."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "BIT_XOR_AGG",
+      "category": "Aggregate",
+      "summary": "Returns the bitwise XOR of all non-NULL integer values in each group. (Oracle 21c+)",
+      "example": "SELECT BIT_XOR_AGG(flags) FROM t",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "[DISTINCT | ALL | UNIQUE] expr",
+              "type": "integer",
+              "doc": "The integer value to combine."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "CHECKSUM",
+      "category": "Aggregate",
+      "summary": "Computes an order-independent checksum over the values of an expression, useful to detect changes in a table. (Oracle 21c+)",
+      "example": "SELECT CHECKSUM(salary) FROM employees",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "[DISTINCT | ALL | UNIQUE] expr",
+              "type": "any",
+              "doc": "The value to checksum."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "KURTOSIS_POP",
+      "category": "Aggregate",
+      "summary": "Returns the population kurtosis (peakedness) of a set of numbers. (Oracle 21c+)",
+      "example": "SELECT KURTOSIS_POP(salary) FROM employees",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "[DISTINCT | ALL | UNIQUE] expr",
+              "type": "number",
+              "doc": "The numeric value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "KURTOSIS_SAMP",
+      "category": "Aggregate",
+      "summary": "Returns the sample kurtosis (peakedness) of a set of numbers. (Oracle 21c+)",
+      "example": "SELECT KURTOSIS_SAMP(salary) FROM employees",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "[DISTINCT | ALL | UNIQUE] expr",
+              "type": "number",
+              "doc": "The numeric value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "SKEWNESS_POP",
+      "category": "Aggregate",
+      "summary": "Returns the population skewness (asymmetry) of a set of numbers. (Oracle 21c+)",
+      "example": "SELECT SKEWNESS_POP(salary) FROM employees",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "[DISTINCT | ALL | UNIQUE] expr",
+              "type": "number",
+              "doc": "The numeric value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "SKEWNESS_SAMP",
+      "category": "Aggregate",
+      "summary": "Returns the sample skewness (asymmetry) of a set of numbers. (Oracle 21c+)",
+      "example": "SELECT SKEWNESS_SAMP(salary) FROM employees",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "[DISTINCT | ALL | UNIQUE] expr",
+              "type": "number",
+              "doc": "The numeric value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "BOOLEAN_AND_AGG",
+      "category": "Aggregate",
+      "summary": "Returns TRUE when every non-NULL BOOLEAN value in the group is TRUE, else FALSE. (Oracle 23ai+)",
+      "example": "SELECT BOOLEAN_AND_AGG(is_active) FROM accounts",
+      "signatures": [
+        {
+          "returns": "BOOLEAN",
+          "params": [
+            {
+              "name": "expr",
+              "type": "BOOLEAN",
+              "doc": "The boolean value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "BOOLEAN_OR_AGG",
+      "category": "Aggregate",
+      "summary": "Returns TRUE when any non-NULL BOOLEAN value in the group is TRUE, else FALSE. (Oracle 23ai+)",
+      "example": "SELECT BOOLEAN_OR_AGG(is_overdue) FROM invoices",
+      "signatures": [
+        {
+          "returns": "BOOLEAN",
+          "params": [
+            {
+              "name": "expr",
+              "type": "BOOLEAN",
+              "doc": "The boolean value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "RANK",
+      "category": "Window",
+      "summary": "Analytic: ranks each row within its partition, leaving gaps after ties. Aggregate: returns the rank a hypothetical row would have, with WITHIN GROUP (ORDER BY ...).",
+      "example": "RANK() OVER (PARTITION BY department_id ORDER BY salary DESC)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": []
+        },
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "expr",
+              "type": "any",
+              "doc": "A hypothetical value; each matches one ORDER BY expression in WITHIN GROUP."
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "DENSE_RANK",
+      "category": "Window",
+      "summary": "Analytic: ranks each row within its partition with no gaps after ties. Aggregate: returns the dense rank of a hypothetical row, with WITHIN GROUP (ORDER BY ...).",
+      "example": "DENSE_RANK() OVER (ORDER BY salary DESC)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": []
+        },
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "expr",
+              "type": "any",
+              "doc": "A hypothetical value; each matches one ORDER BY expression in WITHIN GROUP."
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "PERCENT_RANK",
+      "category": "Window",
+      "summary": "Analytic: returns (rank - 1) / (rows in partition - 1), from 0 to 1. Aggregate: the percent rank of a hypothetical row, with WITHIN GROUP (ORDER BY ...).",
+      "example": "PERCENT_RANK() OVER (PARTITION BY department_id ORDER BY salary)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": []
+        },
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "expr",
+              "type": "any",
+              "doc": "A hypothetical value; each matches one ORDER BY expression in WITHIN GROUP."
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "CUME_DIST",
+      "category": "Window",
+      "summary": "Analytic: returns the fraction of rows in the partition ordered at or before the current row (0 to 1]. Aggregate: the cumulative distribution of a hypothetical row.",
+      "example": "CUME_DIST() OVER (PARTITION BY job_id ORDER BY salary)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": []
+        },
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "expr",
+              "type": "any",
+              "doc": "A hypothetical value; each matches one ORDER BY expression in WITHIN GROUP."
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "NTH_VALUE",
+      "category": "Window",
+      "summary": "Returns the value of an expression at the nth row of the window frame. Add FROM FIRST or FROM LAST and RESPECT or IGNORE NULLS after the parentheses.",
+      "example": "NTH_VALUE(salary, 2) FROM FIRST IGNORE NULLS OVER (ORDER BY salary DESC)",
+      "signatures": [
+        {
+          "returns": "same type as measure_expr",
+          "params": [
+            {
+              "name": "measure_expr",
+              "type": "any",
+              "doc": "The value to return."
+            },
+            {
+              "name": "n",
+              "type": "integer",
+              "doc": "Which row of the frame, counting from 1."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "RATIO_TO_REPORT",
+      "category": "Window",
+      "summary": "Returns the ratio of a value to the sum of that value over the partition.",
+      "example": "RATIO_TO_REPORT(salary) OVER (PARTITION BY department_id)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "expr",
+              "type": "number",
+              "doc": "The numeric value; NULL yields NULL."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "LENGTH",
+      "category": "String",
+      "summary": "Returns the length of a string in characters. An empty string is NULL in Oracle, so LENGTH('') is NULL.",
+      "example": "LENGTH('Oracle')",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "char",
+              "type": "string",
+              "doc": "The string or LOB to measure."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "LENGTHB",
+      "category": "String",
+      "summary": "Returns the length of a string in bytes.",
+      "example": "LENGTHB('Oracle')",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "char",
+              "type": "string",
+              "doc": "The string to measure."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "LENGTHC",
+      "category": "String",
+      "summary": "Returns the length of a string in Unicode complete characters.",
+      "example": "LENGTHC(name)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "char",
+              "type": "string",
+              "doc": "The string to measure."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "SUBSTR",
+      "category": "String",
+      "summary": "Returns part of a string, starting at a character position. A negative position counts back from the end; 0 is treated as 1.",
+      "example": "SUBSTR('ABCDEFG', 3, 4)",
+      "signatures": [
+        {
+          "returns": "VARCHAR2",
+          "params": [
+            {
+              "name": "char",
+              "type": "string",
+              "doc": "The source string."
+            },
+            {
+              "name": "position",
+              "type": "integer",
+              "doc": "Starting character position; negative counts from the end."
+            },
+            {
+              "name": "substring_length",
+              "type": "integer",
+              "doc": "Number of characters to return; omitted means to the end.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "SUBSTRB",
+      "category": "String",
+      "summary": "Like SUBSTR, but positions and length are measured in bytes.",
+      "example": "SUBSTRB('ABCDEFG', 5, 4)",
+      "signatures": [
+        {
+          "returns": "VARCHAR2",
+          "params": [
+            {
+              "name": "char",
+              "type": "string",
+              "doc": "The source string."
+            },
+            {
+              "name": "position",
+              "type": "integer",
+              "doc": "Starting byte position; negative counts from the end."
+            },
+            {
+              "name": "substring_length",
+              "type": "integer",
+              "doc": "Number of bytes to return; omitted means to the end.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "INSTR",
+      "category": "String",
+      "summary": "Returns the character position of a substring within a string, or 0 when it is not found.",
+      "example": "INSTR('CORPORATE FLOOR', 'OR', 3, 2)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "string",
+              "type": "string",
+              "doc": "The string to search."
+            },
+            {
+              "name": "substring",
+              "type": "string",
+              "doc": "The string to look for."
+            },
+            {
+              "name": "position",
+              "type": "integer",
+              "doc": "Character position to start at (default 1); negative searches backward from the end.",
+              "optional": true
+            },
+            {
+              "name": "occurrence",
+              "type": "integer",
+              "doc": "Which occurrence to find (default 1).",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "INSTRB",
+      "category": "String",
+      "summary": "Like INSTR, but positions are measured in bytes.",
+      "example": "INSTRB('CORPORATE FLOOR', 'OR', 5, 2)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "string",
+              "type": "string",
+              "doc": "The string to search."
+            },
+            {
+              "name": "substring",
+              "type": "string",
+              "doc": "The string to look for."
+            },
+            {
+              "name": "position",
+              "type": "integer",
+              "doc": "Byte position to start at (default 1); negative searches backward from the end.",
+              "optional": true
+            },
+            {
+              "name": "occurrence",
+              "type": "integer",
+              "doc": "Which occurrence to find (default 1).",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "CONCAT",
+      "category": "String",
+      "summary": "Concatenates exactly two strings. Nest calls or use the || operator for more. NULL arguments are treated as empty strings.",
+      "example": "CONCAT(first_name, last_name)",
+      "signatures": [
+        {
+          "returns": "VARCHAR2",
+          "params": [
+            {
+              "name": "char1",
+              "type": "string",
+              "doc": "The first string."
+            },
+            {
+              "name": "char2",
+              "type": "string",
+              "doc": "The string appended to it."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "LPAD",
+      "category": "String",
+      "summary": "Pads a string on the left to a given length with a set of characters, or truncates it to that length.",
+      "example": "LPAD('Page 1', 15, '*.')",
+      "signatures": [
+        {
+          "returns": "VARCHAR2",
+          "params": [
+            {
+              "name": "expr1",
+              "type": "string",
+              "doc": "The string to pad."
+            },
+            {
+              "name": "n",
+              "type": "integer",
+              "doc": "The display length of the result."
+            },
+            {
+              "name": "expr2",
+              "type": "string",
+              "doc": "The padding characters (default a single blank).",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "RPAD",
+      "category": "String",
+      "summary": "Pads a string on the right to a given length with a set of characters, or truncates it to that length.",
+      "example": "RPAD(last_name, 12, '.')",
+      "signatures": [
+        {
+          "returns": "VARCHAR2",
+          "params": [
+            {
+              "name": "expr1",
+              "type": "string",
+              "doc": "The string to pad."
+            },
+            {
+              "name": "n",
+              "type": "integer",
+              "doc": "The display length of the result."
+            },
+            {
+              "name": "expr2",
+              "type": "string",
+              "doc": "The padding characters (default a single blank).",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "LTRIM",
+      "category": "String",
+      "summary": "Removes from the left of a string every character that appears in a set (blanks by default).",
+      "example": "LTRIM('<=====>BROWNING<=====>', '<>=')",
+      "signatures": [
+        {
+          "returns": "VARCHAR2",
+          "params": [
+            {
+              "name": "char",
+              "type": "string",
+              "doc": "The string to trim."
+            },
+            {
+              "name": "set",
+              "type": "string",
+              "doc": "The characters to remove; default is a single blank.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "RTRIM",
+      "category": "String",
+      "summary": "Removes from the right of a string every character that appears in a set (blanks by default).",
+      "example": "RTRIM('BROWNING: ./=./=', '/=.')",
+      "signatures": [
+        {
+          "returns": "VARCHAR2",
+          "params": [
+            {
+              "name": "char",
+              "type": "string",
+              "doc": "The string to trim."
+            },
+            {
+              "name": "set",
+              "type": "string",
+              "doc": "The characters to remove; default is a single blank.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "TRIM",
+      "category": "String",
+      "summary": "Removes leading, trailing or both leading and trailing occurrences of one character (blank by default) from a string.",
+      "example": "TRIM(LEADING '0' FROM '000123')",
+      "signatures": [
+        {
+          "returns": "VARCHAR2",
+          "params": [
+            {
+              "name": "[LEADING | TRAILING | BOTH] [trim_character FROM] trim_source",
+              "type": "string",
+              "doc": "Which end to trim (BOTH by default), the single character to remove, then FROM and the string.",
+              "values": [
+                "LEADING",
+                "TRAILING",
+                "BOTH"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "INITCAP",
+      "category": "String",
+      "summary": "Returns a string with the first letter of each word in uppercase and the rest in lowercase.",
+      "example": "INITCAP('the soap')",
+      "signatures": [
+        {
+          "returns": "VARCHAR2",
+          "params": [
+            {
+              "name": "char",
+              "type": "string",
+              "doc": "The string to convert."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "REPLACE",
+      "category": "String",
+      "summary": "Replaces every occurrence of a search string with a replacement string. With no replacement, the occurrences are removed.",
+      "example": "REPLACE('JACK and JUE', 'J', 'BL')",
+      "signatures": [
+        {
+          "returns": "VARCHAR2",
+          "params": [
+            {
+              "name": "char",
+              "type": "string",
+              "doc": "The source string."
+            },
+            {
+              "name": "search_string",
+              "type": "string",
+              "doc": "The text to find."
+            },
+            {
+              "name": "replacement_string",
+              "type": "string",
+              "doc": "The text to put in its place; omitted or NULL removes the matches.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "TRANSLATE",
+      "category": "String",
+      "summary": "Replaces each character in from_string with the character at the same position in to_string; characters with no counterpart are removed. TRANSLATE ... USING converts between database and national character sets.",
+      "example": "TRANSLATE('SQL*Plus User''s Guide', ' */''', '___')",
+      "signatures": [
+        {
+          "returns": "VARCHAR2",
+          "params": [
+            {
+              "name": "expr",
+              "type": "string",
+              "doc": "The source string."
+            },
+            {
+              "name": "from_string",
+              "type": "string",
+              "doc": "The characters to replace."
+            },
+            {
+              "name": "to_string",
+              "type": "string",
+              "doc": "The replacement characters, matched by position."
+            }
+          ]
+        },
+        {
+          "returns": "VARCHAR2 or NVARCHAR2",
+          "params": [
+            {
+              "name": "char USING CHAR_CS | NCHAR_CS",
+              "type": "string",
+              "doc": "The text to convert, then USING and the target character set.",
+              "values": [
+                "CHAR_CS",
+                "NCHAR_CS"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "REVERSE",
+      "category": "String",
+      "summary": "Returns a string with its characters in reverse order. Works in SQL but is undocumented by Oracle; byte-based, so avoid it with multibyte data.",
+      "example": "REVERSE('abc')",
+      "signatures": [
+        {
+          "returns": "VARCHAR2",
+          "params": [
+            {
+              "name": "char",
+              "type": "string",
+              "doc": "The string to reverse."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ASCII",
+      "category": "String",
+      "summary": "Returns the decimal code in the database character set of the first character of a string.",
+      "example": "ASCII('A')",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "char",
+              "type": "string",
+              "doc": "The string whose first character is examined."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "CHR",
+      "category": "String",
+      "summary": "Returns the character with the given code in the database character set, or in the national character set with USING NCHAR_CS.",
+      "example": "CHR(65)",
+      "signatures": [
+        {
+          "returns": "VARCHAR2",
+          "params": [
+            {
+              "name": "n [USING NCHAR_CS]",
+              "type": "integer",
+              "doc": "The character code; USING NCHAR_CS selects the national character set."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "NCHR",
+      "category": "String",
+      "summary": "Returns the character with the given code in the national character set.",
+      "example": "NCHR(187)",
+      "signatures": [
+        {
+          "returns": "NVARCHAR2",
+          "params": [
+            {
+              "name": "number",
+              "type": "integer",
+              "doc": "The character code."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "SOUNDEX",
+      "category": "String",
+      "summary": "Returns a four-character phonetic code of an English string, so similar-sounding words compare equal.",
+      "example": "SOUNDEX(last_name) = SOUNDEX('SMYTHE')",
+      "signatures": [
+        {
+          "returns": "VARCHAR2",
+          "params": [
+            {
+              "name": "char",
+              "type": "string",
+              "doc": "The string to encode."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "REGEXP_LIKE",
+      "category": "Conditional",
+      "summary": "Condition that is true when a string matches a regular expression. Use in WHERE, or as a BOOLEAN value in 23ai.",
+      "example": "WHERE REGEXP_LIKE(first_name, '^Ste(v|ph)en$')",
+      "signatures": [
+        {
+          "returns": "BOOLEAN",
+          "params": [
+            {
+              "name": "source_char",
+              "type": "string",
+              "doc": "The string to search."
+            },
+            {
+              "name": "pattern",
+              "type": "string",
+              "doc": "The POSIX regular expression."
+            },
+            {
+              "name": "match_param",
+              "type": "string",
+              "doc": "Matching options: 'i' case-insensitive, 'c' case-sensitive, 'n' dot matches newline, 'm' multiline, 'x' ignore whitespace.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "REGEXP_REPLACE",
+      "category": "String",
+      "summary": "Replaces matches of a regular expression with a replacement string; \\1 to \\9 refer to captured groups.",
+      "example": "REGEXP_REPLACE(phone, '([0-9]{3})\\.([0-9]{3})\\.([0-9]{4})', '(\\1) \\2-\\3')",
+      "signatures": [
+        {
+          "returns": "VARCHAR2",
+          "params": [
+            {
+              "name": "source_char",
+              "type": "string",
+              "doc": "The string to search."
+            },
+            {
+              "name": "pattern",
+              "type": "string",
+              "doc": "The POSIX regular expression."
+            },
+            {
+              "name": "replace_string",
+              "type": "string",
+              "doc": "The replacement text; omitted removes the matches.",
+              "optional": true
+            },
+            {
+              "name": "position",
+              "type": "integer",
+              "doc": "Character position to start searching (default 1).",
+              "optional": true
+            },
+            {
+              "name": "occurrence",
+              "type": "integer",
+              "doc": "Which match to replace; 0 (default) replaces all.",
+              "optional": true
+            },
+            {
+              "name": "match_param",
+              "type": "string",
+              "doc": "Matching options: 'i' case-insensitive, 'c' case-sensitive, 'n' dot matches newline, 'm' multiline, 'x' ignore whitespace.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "REGEXP_SUBSTR",
+      "category": "String",
+      "summary": "Returns the substring that matches a regular expression, or NULL when nothing matches.",
+      "example": "REGEXP_SUBSTR('500 Oracle Parkway', '[^ ]+', 1, 2)",
+      "signatures": [
+        {
+          "returns": "VARCHAR2",
+          "params": [
+            {
+              "name": "source_char",
+              "type": "string",
+              "doc": "The string to search."
+            },
+            {
+              "name": "pattern",
+              "type": "string",
+              "doc": "The POSIX regular expression."
+            },
+            {
+              "name": "position",
+              "type": "integer",
+              "doc": "Character position to start searching (default 1).",
+              "optional": true
+            },
+            {
+              "name": "occurrence",
+              "type": "integer",
+              "doc": "Which match to return (default 1).",
+              "optional": true
+            },
+            {
+              "name": "match_param",
+              "type": "string",
+              "doc": "Matching options: 'i' case-insensitive, 'c' case-sensitive, 'n' dot matches newline, 'm' multiline, 'x' ignore whitespace.",
+              "optional": true
+            },
+            {
+              "name": "subexpr",
+              "type": "integer",
+              "doc": "Capture group to return, 1 to 9; 0 (default) returns the whole match.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "REGEXP_INSTR",
+      "category": "String",
+      "summary": "Returns the position of a regular expression match in a string, or 0 when nothing matches.",
+      "example": "REGEXP_INSTR('500 Oracle Parkway', '[^ ]+', 1, 3)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "source_char",
+              "type": "string",
+              "doc": "The string to search."
+            },
+            {
+              "name": "pattern",
+              "type": "string",
+              "doc": "The POSIX regular expression."
+            },
+            {
+              "name": "position",
+              "type": "integer",
+              "doc": "Character position to start searching (default 1).",
+              "optional": true
+            },
+            {
+              "name": "occurrence",
+              "type": "integer",
+              "doc": "Which match to locate (default 1).",
+              "optional": true
+            },
+            {
+              "name": "return_opt",
+              "type": "integer",
+              "doc": "0 (default) returns the match start; 1 returns the position after the match.",
+              "optional": true
+            },
+            {
+              "name": "match_param",
+              "type": "string",
+              "doc": "Matching options: 'i' case-insensitive, 'c' case-sensitive, 'n' dot matches newline, 'm' multiline, 'x' ignore whitespace.",
+              "optional": true
+            },
+            {
+              "name": "subexpr",
+              "type": "integer",
+              "doc": "Capture group whose position is returned; 0 (default) means the whole match.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "REGEXP_COUNT",
+      "category": "String",
+      "summary": "Returns how many times a regular expression matches in a string.",
+      "example": "REGEXP_COUNT('123123123', '123')",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "source_char",
+              "type": "string",
+              "doc": "The string to search."
+            },
+            {
+              "name": "pattern",
+              "type": "string",
+              "doc": "The POSIX regular expression."
+            },
+            {
+              "name": "position",
+              "type": "integer",
+              "doc": "Character position to start searching (default 1).",
+              "optional": true
+            },
+            {
+              "name": "match_param",
+              "type": "string",
+              "doc": "Matching options: 'i' case-insensitive, 'c' case-sensitive, 'n' dot matches newline, 'm' multiline, 'x' ignore whitespace.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "DUMP",
+      "category": "System",
+      "summary": "Returns the internal representation of a value: its type code, length in bytes and each byte.",
+      "example": "DUMP('abc', 16)",
+      "signatures": [
+        {
+          "returns": "VARCHAR2",
+          "params": [
+            {
+              "name": "expr",
+              "type": "any",
+              "doc": "The value to inspect."
+            },
+            {
+              "name": "return_fmt",
+              "type": "integer",
+              "doc": "8 octal, 10 decimal (default), 16 hex, 17 characters; add 1000 to include the character set name.",
+              "optional": true
+            },
+            {
+              "name": "start_position",
+              "type": "integer",
+              "doc": "First byte to show.",
+              "optional": true
+            },
+            {
+              "name": "length",
+              "type": "integer",
+              "doc": "Number of bytes to show.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ASCIISTR",
+      "category": "String",
+      "summary": "Returns an ASCII version of a string, with non-ASCII characters written as \\xxxx UTF-16 escapes.",
+      "example": "ASCIISTR('ABÄCDE')",
+      "signatures": [
+        {
+          "returns": "VARCHAR2",
+          "params": [
+            {
+              "name": "char",
+              "type": "string",
+              "doc": "The string to convert."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "UNISTR",
+      "category": "String",
+      "summary": "Converts a string containing \\xxxx Unicode escapes into national character set text.",
+      "example": "UNISTR('abc\\00e5\\00f1\\00f6')",
+      "signatures": [
+        {
+          "returns": "NVARCHAR2",
+          "params": [
+            {
+              "name": "string",
+              "type": "string",
+              "doc": "Text that may contain \\xxxx escapes."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "COMPOSE",
+      "category": "String",
+      "summary": "Returns a string in Unicode NFC (fully normalized, composed) form.",
+      "example": "COMPOSE('o' || UNISTR('\\0308'))",
+      "signatures": [
+        {
+          "returns": "NVARCHAR2",
+          "params": [
+            {
+              "name": "char",
+              "type": "string",
+              "doc": "The string to normalize."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "DECOMPOSE",
+      "category": "String",
+      "summary": "Returns a Unicode string decomposed into base characters and combining marks.",
+      "example": "DECOMPOSE('Châteaux')",
+      "signatures": [
+        {
+          "returns": "NVARCHAR2",
+          "params": [
+            {
+              "name": "string",
+              "type": "string",
+              "doc": "The string to decompose."
+            },
+            {
+              "name": "mode",
+              "type": "string",
+              "doc": "'CANONICAL' (default) or 'COMPATIBILITY'.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "NLS_UPPER",
+      "category": "String",
+      "summary": "Converts a string to uppercase using linguistic rules.",
+      "example": "NLS_UPPER('große', 'NLS_SORT = XGerman')",
+      "signatures": [
+        {
+          "returns": "VARCHAR2",
+          "params": [
+            {
+              "name": "char",
+              "type": "string",
+              "doc": "The string to convert."
+            },
+            {
+              "name": "nlsparam",
+              "type": "string",
+              "doc": "Linguistic sort to use, such as 'NLS_SORT = XGerman'.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "NLS_LOWER",
+      "category": "String",
+      "summary": "Converts a string to lowercase using linguistic rules.",
+      "example": "NLS_LOWER('NOKTASINDA', 'NLS_SORT = XTurkish')",
+      "signatures": [
+        {
+          "returns": "VARCHAR2",
+          "params": [
+            {
+              "name": "char",
+              "type": "string",
+              "doc": "The string to convert."
+            },
+            {
+              "name": "nlsparam",
+              "type": "string",
+              "doc": "Linguistic sort to use, such as 'NLS_SORT = XGerman'.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "NLS_INITCAP",
+      "category": "String",
+      "summary": "Capitalizes the first letter of each word using linguistic rules.",
+      "example": "NLS_INITCAP('ijsland', 'NLS_SORT = XDutch')",
+      "signatures": [
+        {
+          "returns": "VARCHAR2",
+          "params": [
+            {
+              "name": "char",
+              "type": "string",
+              "doc": "The string to convert."
+            },
+            {
+              "name": "nlsparam",
+              "type": "string",
+              "doc": "Linguistic sort to use, such as 'NLS_SORT = XGerman'.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "NLSSORT",
+      "category": "String",
+      "summary": "Returns the collation key of a string for a linguistic sort, for ordering or comparing text linguistically.",
+      "example": "ORDER BY NLSSORT(name, 'NLS_SORT = XDanish')",
+      "signatures": [
+        {
+          "returns": "RAW",
+          "params": [
+            {
+              "name": "char",
+              "type": "string",
+              "doc": "The string."
+            },
+            {
+              "name": "nlsparam",
+              "type": "string",
+              "doc": "Linguistic sort to use, such as 'NLS_SORT = XGerman'.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "CEIL",
+      "category": "Math",
+      "summary": "Returns the smallest integer greater than or equal to a number. In 23ai also rounds a date, timestamp or interval up to a unit.",
+      "example": "CEIL(15.7)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "n",
+              "type": "number",
+              "doc": "The numeric value."
+            }
+          ]
+        },
+        {
+          "returns": "same type as datetime",
+          "params": [
+            {
+              "name": "datetime",
+              "type": "datetime or interval",
+              "doc": "The value to round up. (Oracle 23ai+)"
+            },
+            {
+              "name": "fmt",
+              "type": "string",
+              "doc": "Unit to round up to, such as 'MM' or 'HH' (default 'DD').",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "FLOOR",
+      "category": "Math",
+      "summary": "Returns the largest integer less than or equal to a number. In 23ai also rounds a date, timestamp or interval down to a unit.",
+      "example": "FLOOR(15.7)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "n",
+              "type": "number",
+              "doc": "The numeric value."
+            }
+          ]
+        },
+        {
+          "returns": "same type as datetime",
+          "params": [
+            {
+              "name": "datetime",
+              "type": "datetime or interval",
+              "doc": "The value to round down. (Oracle 23ai+)"
+            },
+            {
+              "name": "fmt",
+              "type": "string",
+              "doc": "Unit to round down to, such as 'MM' or 'HH' (default 'DD').",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ROUND",
+      "category": "Math",
+      "summary": "Rounds a number to a number of decimal places, or a date to the nearest unit given by a format model (the nearest day by default).",
+      "example": "ROUND(15.193, 1)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "n",
+              "type": "number",
+              "doc": "The number to round."
+            },
+            {
+              "name": "integer",
+              "type": "integer",
+              "doc": "Decimal places (default 0); negative rounds to the left of the point.",
+              "optional": true
+            }
+          ]
+        },
+        {
+          "returns": "NUMBER or DATE",
+          "params": [
+            {
+              "name": "date",
+              "type": "date or interval",
+              "doc": "The date, timestamp or (23ai) interval to round."
+            },
+            {
+              "name": "fmt",
+              "type": "string",
+              "doc": "Unit to round to, such as 'YYYY', 'MM', 'DD' or 'HH24' (default 'DD').",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "TRUNC",
+      "category": "Math",
+      "summary": "Truncates a number to a number of decimal places, or a date to the unit given by a format model (midnight by default).",
+      "example": "TRUNC(SYSDATE, 'MM')",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "n1",
+              "type": "number",
+              "doc": "The number to truncate."
+            },
+            {
+              "name": "n2",
+              "type": "integer",
+              "doc": "Decimal places to keep (default 0); negative zeroes digits left of the point.",
+              "optional": true
+            }
+          ]
+        },
+        {
+          "returns": "DATE",
+          "params": [
+            {
+              "name": "date",
+              "type": "date or interval",
+              "doc": "The date, timestamp or (23ai) interval to truncate."
+            },
+            {
+              "name": "fmt",
+              "type": "string",
+              "doc": "Unit to truncate to, such as 'YYYY', 'Q', 'MM', 'IW' or 'HH24' (default 'DD').",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "MOD",
+      "category": "Math",
+      "summary": "Returns the remainder of n2 divided by n1, using FLOOR semantics for the sign; returns n2 when n1 is 0.",
+      "example": "MOD(11, 4)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "n2",
+              "type": "number",
+              "doc": "The dividend."
+            },
+            {
+              "name": "n1",
+              "type": "number",
+              "doc": "The divisor."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "REMAINDER",
+      "category": "Math",
+      "summary": "Returns the remainder of n2 divided by n1, using ROUND instead of FLOOR to compute the quotient.",
+      "example": "REMAINDER(11, 4)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "n2",
+              "type": "number",
+              "doc": "The dividend."
+            },
+            {
+              "name": "n1",
+              "type": "number",
+              "doc": "The divisor."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "POWER",
+      "category": "Math",
+      "summary": "Returns n2 raised to the power n1.",
+      "example": "POWER(3, 2)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "n2",
+              "type": "number",
+              "doc": "The base."
+            },
+            {
+              "name": "n1",
+              "type": "number",
+              "doc": "The exponent; must be an integer when n2 is negative."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "SQRT",
+      "category": "Math",
+      "summary": "Returns the square root of a non-negative number.",
+      "example": "SQRT(26)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "n",
+              "type": "number",
+              "doc": "The numeric value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "EXP",
+      "category": "Math",
+      "summary": "Returns e raised to the nth power.",
+      "example": "EXP(4)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "n",
+              "type": "number",
+              "doc": "The exponent."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "LN",
+      "category": "Math",
+      "summary": "Returns the natural logarithm of a number greater than 0.",
+      "example": "LN(95)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "n",
+              "type": "number",
+              "doc": "The numeric value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "LOG",
+      "category": "Math",
+      "summary": "Returns the logarithm of n1 in base n2. Note the base comes first.",
+      "example": "LOG(10, 100)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "n2",
+              "type": "number",
+              "doc": "The base; positive and not 1."
+            },
+            {
+              "name": "n1",
+              "type": "number",
+              "doc": "The number whose logarithm is returned; positive."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "SIGN",
+      "category": "Math",
+      "summary": "Returns -1, 0 or 1 for a negative, zero or positive number.",
+      "example": "SIGN(-15)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "n",
+              "type": "number",
+              "doc": "The numeric value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "SIN",
+      "category": "Math",
+      "summary": "Returns the sine of an angle in radians.",
+      "example": "SIN(30 * 3.14159265359 / 180)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "n",
+              "type": "number",
+              "doc": "The angle in radians."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "COS",
+      "category": "Math",
+      "summary": "Returns the cosine of an angle in radians.",
+      "example": "COS(30 * 3.14159265359 / 180)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "n",
+              "type": "number",
+              "doc": "The angle in radians."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "TAN",
+      "category": "Math",
+      "summary": "Returns the tangent of an angle in radians.",
+      "example": "TAN(30 * 3.14159265359 / 180)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "n",
+              "type": "number",
+              "doc": "The angle in radians."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "SINH",
+      "category": "Math",
+      "summary": "Returns the hyperbolic sine of a number.",
+      "example": "SINH(1)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "n",
+              "type": "number",
+              "doc": "The numeric value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "COSH",
+      "category": "Math",
+      "summary": "Returns the hyperbolic cosine of a number.",
+      "example": "COSH(1)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "n",
+              "type": "number",
+              "doc": "The numeric value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "TANH",
+      "category": "Math",
+      "summary": "Returns the hyperbolic tangent of a number.",
+      "example": "TANH(1)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "n",
+              "type": "number",
+              "doc": "The numeric value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ASIN",
+      "category": "Math",
+      "summary": "Returns the arc sine of a number, in radians.",
+      "example": "ASIN(.3)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "n",
+              "type": "number",
+              "doc": "A value from -1 to 1."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ACOS",
+      "category": "Math",
+      "summary": "Returns the arc cosine of a number, in radians.",
+      "example": "ACOS(.3)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "n",
+              "type": "number",
+              "doc": "A value from -1 to 1."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ATAN",
+      "category": "Math",
+      "summary": "Returns the arc tangent of a number, in radians.",
+      "example": "ATAN(.3)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "n",
+              "type": "number",
+              "doc": "The numeric value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ATAN2",
+      "category": "Math",
+      "summary": "Returns the arc tangent of n1/n2 in radians, using the signs of both to pick the quadrant.",
+      "example": "ATAN2(.3, .2)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "n1",
+              "type": "number",
+              "doc": "The y coordinate."
+            },
+            {
+              "name": "n2",
+              "type": "number",
+              "doc": "The x coordinate."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "BITAND",
+      "category": "Math",
+      "summary": "Returns the bitwise AND of two integers.",
+      "example": "BITAND(6, 3)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "expr1",
+              "type": "integer",
+              "doc": "The first integer."
+            },
+            {
+              "name": "expr2",
+              "type": "integer",
+              "doc": "The second integer."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "BIN_TO_NUM",
+      "category": "Math",
+      "summary": "Converts a list of bits (0 or 1) into the number they represent.",
+      "example": "BIN_TO_NUM(1, 0, 1, 0)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "bit",
+              "type": "integer",
+              "doc": "A bit, most significant first."
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "WIDTH_BUCKET",
+      "category": "Math",
+      "summary": "Returns which of num_buckets equal-width buckets between min_value and max_value a value falls in; 0 below the range and num_buckets+1 above it.",
+      "example": "WIDTH_BUCKET(credit_limit, 100, 5000, 10)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "expr",
+              "type": "number or datetime",
+              "doc": "The value to place."
+            },
+            {
+              "name": "min_value",
+              "type": "number or datetime",
+              "doc": "Lower bound of the range."
+            },
+            {
+              "name": "max_value",
+              "type": "number or datetime",
+              "doc": "Upper bound of the range."
+            },
+            {
+              "name": "num_buckets",
+              "type": "integer",
+              "doc": "Number of buckets."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "NANVL",
+      "category": "Math",
+      "summary": "Returns n1 when n2 is NaN, otherwise n2. Only meaningful for BINARY_FLOAT and BINARY_DOUBLE values.",
+      "example": "NANVL(bin_double_col, 0)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "n2",
+              "type": "number",
+              "doc": "The value to test for NaN."
+            },
+            {
+              "name": "n1",
+              "type": "number",
+              "doc": "The value to return instead of NaN."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "GREATEST",
+      "category": "Conditional",
+      "summary": "Returns the greatest of a list of expressions, compared using the type of the first. Returns NULL if any argument is NULL.",
+      "example": "GREATEST(1, 3, 2)",
+      "signatures": [
+        {
+          "returns": "type of first expr",
+          "params": [
+            {
+              "name": "expr",
+              "type": "any",
+              "doc": "A value to compare."
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "LEAST",
+      "category": "Conditional",
+      "summary": "Returns the least of a list of expressions, compared using the type of the first. Returns NULL if any argument is NULL.",
+      "example": "LEAST(1, 3, 2)",
+      "signatures": [
+        {
+          "returns": "type of first expr",
+          "params": [
+            {
+              "name": "expr",
+              "type": "any",
+              "doc": "A value to compare."
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "NVL",
+      "category": "Conditional",
+      "summary": "Returns expr2 when expr1 is NULL, otherwise expr1.",
+      "example": "NVL(commission_pct, 0)",
+      "signatures": [
+        {
+          "returns": "type of expr1",
+          "params": [
+            {
+              "name": "expr1",
+              "type": "any",
+              "doc": "The value to test."
+            },
+            {
+              "name": "expr2",
+              "type": "any",
+              "doc": "The value returned when expr1 is NULL."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "NVL2",
+      "category": "Conditional",
+      "summary": "Returns expr2 when expr1 is not NULL, and expr3 when it is NULL.",
+      "example": "NVL2(commission_pct, 'Commission', 'Salary')",
+      "signatures": [
+        {
+          "returns": "type of expr2",
+          "params": [
+            {
+              "name": "expr1",
+              "type": "any",
+              "doc": "The value to test."
+            },
+            {
+              "name": "expr2",
+              "type": "any",
+              "doc": "Returned when expr1 is not NULL."
+            },
+            {
+              "name": "expr3",
+              "type": "any",
+              "doc": "Returned when expr1 is NULL."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "DECODE",
+      "category": "Conditional",
+      "summary": "Compares expr to each search value in turn and returns the matching result; returns the default (or NULL) when none match. Unlike =, DECODE treats two NULLs as equal.",
+      "example": "DECODE(warehouse_id, 1, 'Southlake', 2, 'San Francisco', 'Non domestic')",
+      "signatures": [
+        {
+          "returns": "type of first result",
+          "params": [
+            {
+              "name": "expr",
+              "type": "any",
+              "doc": "The value to compare."
+            },
+            {
+              "name": "search",
+              "type": "any",
+              "doc": "A value to compare expr with."
+            },
+            {
+              "name": "result",
+              "type": "any",
+              "doc": "Returned when expr equals the preceding search."
+            },
+            {
+              "name": "search | result | default",
+              "type": "any",
+              "doc": "More search/result pairs; a final unpaired argument is the default."
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "LNNVL",
+      "category": "Conditional",
+      "summary": "Returns TRUE when a condition is FALSE or UNKNOWN, and FALSE when it is TRUE. Useful for NULL-safe negation in WHERE.",
+      "example": "WHERE LNNVL(commission_pct >= .2)",
+      "signatures": [
+        {
+          "returns": "BOOLEAN",
+          "params": [
+            {
+              "name": "condition",
+              "type": "condition",
+              "doc": "A simple condition on one or two scalar expressions."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "SYSDATE",
+      "category": "Date and time",
+      "summary": "Returns the current date and time of the database server's operating system, as a DATE (no fractional seconds or time zone).",
+      "example": "SELECT SYSDATE FROM DUAL",
+      "niladic": true,
+      "signatures": [
+        {
+          "returns": "DATE",
+          "params": []
+        }
+      ]
+    },
+    {
+      "name": "SYSTIMESTAMP",
+      "category": "Date and time",
+      "summary": "Returns the database server's current date and time with fractional seconds and time zone.",
+      "example": "SELECT SYSTIMESTAMP FROM DUAL",
+      "niladic": true,
+      "signatures": [
+        {
+          "returns": "TIMESTAMP WITH TIME ZONE",
+          "params": []
+        }
+      ]
+    },
+    {
+      "name": "CURRENT_DATE",
+      "category": "Date and time",
+      "summary": "Returns the current date and time in the session time zone, as a DATE.",
+      "example": "SELECT CURRENT_DATE FROM DUAL",
+      "niladic": true,
+      "signatures": [
+        {
+          "returns": "DATE",
+          "params": []
+        }
+      ]
+    },
+    {
+      "name": "CURRENT_TIMESTAMP",
+      "category": "Date and time",
+      "summary": "Returns the current date and time in the session time zone, with fractional seconds and time zone.",
+      "example": "SELECT CURRENT_TIMESTAMP FROM DUAL",
+      "niladic": true,
+      "signatures": [
+        {
+          "returns": "TIMESTAMP WITH TIME ZONE",
+          "params": []
+        },
+        {
+          "returns": "TIMESTAMP WITH TIME ZONE",
+          "params": [
+            {
+              "name": "precision",
+              "type": "integer",
+              "doc": "Fractional-second digits, 0 to 9 (default 6)."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "LOCALTIMESTAMP",
+      "category": "Date and time",
+      "summary": "Returns the current date and time in the session time zone, without time zone information.",
+      "example": "SELECT LOCALTIMESTAMP FROM DUAL",
+      "niladic": true,
+      "signatures": [
+        {
+          "returns": "TIMESTAMP",
+          "params": []
+        },
+        {
+          "returns": "TIMESTAMP",
+          "params": [
+            {
+              "name": "precision",
+              "type": "integer",
+              "doc": "Fractional-second digits, 0 to 9 (default 6)."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "SESSIONTIMEZONE",
+      "category": "Date and time",
+      "summary": "Returns the session time zone, as an offset such as '-05:00' or a region name.",
+      "example": "SELECT SESSIONTIMEZONE FROM DUAL",
+      "niladic": true,
+      "signatures": [
+        {
+          "returns": "VARCHAR2",
+          "params": []
+        }
+      ]
+    },
+    {
+      "name": "DBTIMEZONE",
+      "category": "Date and time",
+      "summary": "Returns the database time zone, as an offset such as '+00:00' or a region name.",
+      "example": "SELECT DBTIMEZONE FROM DUAL",
+      "niladic": true,
+      "signatures": [
+        {
+          "returns": "VARCHAR2",
+          "params": []
+        }
+      ]
+    },
+    {
+      "name": "ADD_MONTHS",
+      "category": "Date and time",
+      "summary": "Adds a number of months to a date. If the date is the last day of its month, or the result month is shorter, the result is the last day of the month.",
+      "example": "ADD_MONTHS(hire_date, 1)",
+      "signatures": [
+        {
+          "returns": "DATE",
+          "params": [
+            {
+              "name": "date",
+              "type": "date",
+              "doc": "The starting date."
+            },
+            {
+              "name": "integer",
+              "type": "integer",
+              "doc": "Months to add; negative subtracts."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "MONTHS_BETWEEN",
+      "category": "Date and time",
+      "summary": "Returns the number of months between date1 and date2, positive when date1 is later. Fractional parts are based on a 31-day month.",
+      "example": "MONTHS_BETWEEN(SYSDATE, hire_date)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "date1",
+              "type": "date",
+              "doc": "The later date for a positive result."
+            },
+            {
+              "name": "date2",
+              "type": "date",
+              "doc": "The earlier date."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "LAST_DAY",
+      "category": "Date and time",
+      "summary": "Returns the date of the last day of the month that contains a date, keeping its time of day.",
+      "example": "LAST_DAY(SYSDATE)",
+      "signatures": [
+        {
+          "returns": "DATE",
+          "params": [
+            {
+              "name": "date",
+              "type": "date",
+              "doc": "Any date in the month."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "NEXT_DAY",
+      "category": "Date and time",
+      "summary": "Returns the date of the first named weekday that is later than a date.",
+      "example": "NEXT_DAY(SYSDATE, 'MONDAY')",
+      "signatures": [
+        {
+          "returns": "DATE",
+          "params": [
+            {
+              "name": "date",
+              "type": "date",
+              "doc": "The starting date."
+            },
+            {
+              "name": "char",
+              "type": "string",
+              "doc": "A day name or abbreviation in the session date language, such as 'MONDAY' or 'MON'."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "EXTRACT",
+      "category": "Date and time",
+      "summary": "Returns one field, such as the year or hour, from a datetime or interval value.",
+      "example": "EXTRACT(YEAR FROM hire_date)",
+      "signatures": [
+        {
+          "returns": "NUMBER or VARCHAR2",
+          "params": [
+            {
+              "name": "field FROM source",
+              "type": "datetime or interval",
+              "doc": "The field to extract, then FROM and the value. TIMEZONE_REGION and TIMEZONE_ABBR return strings.",
+              "values": [
+                "YEAR",
+                "MONTH",
+                "DAY",
+                "HOUR",
+                "MINUTE",
+                "SECOND",
+                "TIMEZONE_HOUR",
+                "TIMEZONE_MINUTE",
+                "TIMEZONE_REGION",
+                "TIMEZONE_ABBR"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "TO_DATE",
+      "category": "Conversion",
+      "summary": "Converts text to a DATE using a format model.",
+      "example": "TO_DATE('2026-09-28', 'YYYY-MM-DD')",
+      "signatures": [
+        {
+          "returns": "DATE",
+          "params": [
+            {
+              "name": "char [DEFAULT return_value ON CONVERSION ERROR]",
+              "type": "string",
+              "doc": "The text to convert to a date. Add DEFAULT value ON CONVERSION ERROR to return that value instead of raising an error when conversion fails."
+            },
+            {
+              "name": "fmt",
+              "type": "string",
+              "doc": "Format model describing the text, such as 'YYYY-MM-DD HH24:MI:SS'.",
+              "optional": true
+            },
+            {
+              "name": "nlsparam",
+              "type": "string",
+              "doc": "NLS settings for this call only, such as 'NLS_DATE_LANGUAGE = French'.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "TO_TIMESTAMP",
+      "category": "Conversion",
+      "summary": "Converts text to a TIMESTAMP using a format model.",
+      "example": "TO_TIMESTAMP('2026-09-28 10:00:00.123', 'YYYY-MM-DD HH24:MI:SS.FF')",
+      "signatures": [
+        {
+          "returns": "TIMESTAMP",
+          "params": [
+            {
+              "name": "char [DEFAULT return_value ON CONVERSION ERROR]",
+              "type": "string",
+              "doc": "The text to convert to a timestamp. Add DEFAULT value ON CONVERSION ERROR to return that value instead of raising an error when conversion fails."
+            },
+            {
+              "name": "fmt",
+              "type": "string",
+              "doc": "Format model describing the text, such as 'YYYY-MM-DD HH24:MI:SS'.",
+              "optional": true
+            },
+            {
+              "name": "nlsparam",
+              "type": "string",
+              "doc": "NLS settings for this call only, such as 'NLS_DATE_LANGUAGE = French'.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "TO_TIMESTAMP_TZ",
+      "category": "Conversion",
+      "summary": "Converts text to a TIMESTAMP WITH TIME ZONE using a format model.",
+      "example": "TO_TIMESTAMP_TZ('2026-09-28 10:00:00 -5:00', 'YYYY-MM-DD HH24:MI:SS TZH:TZM')",
+      "signatures": [
+        {
+          "returns": "TIMESTAMP WITH TIME ZONE",
+          "params": [
+            {
+              "name": "char [DEFAULT return_value ON CONVERSION ERROR]",
+              "type": "string",
+              "doc": "The text to convert to a timestamp with time zone. Add DEFAULT value ON CONVERSION ERROR to return that value instead of raising an error when conversion fails."
+            },
+            {
+              "name": "fmt",
+              "type": "string",
+              "doc": "Format model describing the text, such as 'YYYY-MM-DD HH24:MI:SS'.",
+              "optional": true
+            },
+            {
+              "name": "nlsparam",
+              "type": "string",
+              "doc": "NLS settings for this call only, such as 'NLS_DATE_LANGUAGE = French'.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "TO_CHAR",
+      "category": "Conversion",
+      "summary": "Converts a date, timestamp, interval or number to text using an optional format model, or converts NCHAR/CLOB/NCLOB data to the database character set.",
+      "example": "TO_CHAR(hire_date, 'YYYY-MM-DD')",
+      "signatures": [
+        {
+          "returns": "VARCHAR2",
+          "params": [
+            {
+              "name": "expr",
+              "type": "any",
+              "doc": "The datetime, interval, number or character/LOB value to convert."
+            },
+            {
+              "name": "fmt",
+              "type": "string",
+              "doc": "Format model, such as 'DD-MON-YYYY' for dates or '999,990.00' for numbers.",
+              "optional": true
+            },
+            {
+              "name": "nlsparam",
+              "type": "string",
+              "doc": "NLS settings for this call only, such as 'NLS_DATE_LANGUAGE = French'.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "TO_NUMBER",
+      "category": "Conversion",
+      "summary": "Converts text (or a BINARY_FLOAT/BINARY_DOUBLE) to a NUMBER, optionally using a format model.",
+      "example": "TO_NUMBER('$1,234.50', '$9,999.99')",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "expr [DEFAULT return_value ON CONVERSION ERROR]",
+              "type": "string",
+              "doc": "The value to convert. Add DEFAULT value ON CONVERSION ERROR to return that value instead of raising an error when conversion fails."
+            },
+            {
+              "name": "fmt",
+              "type": "string",
+              "doc": "Number format model, such as '999,990.00'.",
+              "optional": true
+            },
+            {
+              "name": "nlsparam",
+              "type": "string",
+              "doc": "NLS settings for this call only, such as 'NLS_DATE_LANGUAGE = French'.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "TO_BINARY_DOUBLE",
+      "category": "Conversion",
+      "summary": "Converts a number or text to a BINARY_DOUBLE value.",
+      "example": "TO_BINARY_DOUBLE('1.5')",
+      "signatures": [
+        {
+          "returns": "BINARY_DOUBLE",
+          "params": [
+            {
+              "name": "expr [DEFAULT return_value ON CONVERSION ERROR]",
+              "type": "number or string",
+              "doc": "The value to convert. Add DEFAULT value ON CONVERSION ERROR to return that value instead of raising an error when conversion fails."
+            },
+            {
+              "name": "fmt",
+              "type": "string",
+              "doc": "Number format model for text input.",
+              "optional": true
+            },
+            {
+              "name": "nlsparam",
+              "type": "string",
+              "doc": "NLS settings for this call only, such as 'NLS_DATE_LANGUAGE = French'.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "TO_BINARY_FLOAT",
+      "category": "Conversion",
+      "summary": "Converts a number or text to a BINARY_FLOAT value.",
+      "example": "TO_BINARY_FLOAT('1.5')",
+      "signatures": [
+        {
+          "returns": "BINARY_FLOAT",
+          "params": [
+            {
+              "name": "expr [DEFAULT return_value ON CONVERSION ERROR]",
+              "type": "number or string",
+              "doc": "The value to convert. Add DEFAULT value ON CONVERSION ERROR to return that value instead of raising an error when conversion fails."
+            },
+            {
+              "name": "fmt",
+              "type": "string",
+              "doc": "Number format model for text input.",
+              "optional": true
+            },
+            {
+              "name": "nlsparam",
+              "type": "string",
+              "doc": "NLS settings for this call only, such as 'NLS_DATE_LANGUAGE = French'.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "TO_DSINTERVAL",
+      "category": "Conversion",
+      "summary": "Converts text to an INTERVAL DAY TO SECOND value.",
+      "example": "TO_DSINTERVAL('10 12:30:00')",
+      "signatures": [
+        {
+          "returns": "INTERVAL DAY TO SECOND",
+          "params": [
+            {
+              "name": "char [DEFAULT return_value ON CONVERSION ERROR]",
+              "type": "string",
+              "doc": "Text in SQL format 'D HH:MI:SS[.FF]' or ISO format such as 'P10DT12H30M'. Add DEFAULT value ON CONVERSION ERROR to return that value instead of raising an error when conversion fails."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "TO_YMINTERVAL",
+      "category": "Conversion",
+      "summary": "Converts text to an INTERVAL YEAR TO MONTH value.",
+      "example": "TO_YMINTERVAL('01-02')",
+      "signatures": [
+        {
+          "returns": "INTERVAL YEAR TO MONTH",
+          "params": [
+            {
+              "name": "char [DEFAULT return_value ON CONVERSION ERROR]",
+              "type": "string",
+              "doc": "Text in SQL format 'Y-M' or ISO format such as 'P1Y2M'. Add DEFAULT value ON CONVERSION ERROR to return that value instead of raising an error when conversion fails."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "NUMTODSINTERVAL",
+      "category": "Conversion",
+      "summary": "Converts a number of days, hours, minutes or seconds to an INTERVAL DAY TO SECOND.",
+      "example": "NUMTODSINTERVAL(90, 'MINUTE')",
+      "signatures": [
+        {
+          "returns": "INTERVAL DAY TO SECOND",
+          "params": [
+            {
+              "name": "n",
+              "type": "number",
+              "doc": "The amount."
+            },
+            {
+              "name": "interval_unit",
+              "type": "string",
+              "doc": "'DAY', 'HOUR', 'MINUTE' or 'SECOND'."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "NUMTOYMINTERVAL",
+      "category": "Conversion",
+      "summary": "Converts a number of years or months to an INTERVAL YEAR TO MONTH.",
+      "example": "NUMTOYMINTERVAL(18, 'MONTH')",
+      "signatures": [
+        {
+          "returns": "INTERVAL YEAR TO MONTH",
+          "params": [
+            {
+              "name": "n",
+              "type": "number",
+              "doc": "The amount."
+            },
+            {
+              "name": "interval_unit",
+              "type": "string",
+              "doc": "'YEAR' or 'MONTH'."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "FROM_TZ",
+      "category": "Date and time",
+      "summary": "Attaches a time zone to a TIMESTAMP, returning a TIMESTAMP WITH TIME ZONE.",
+      "example": "FROM_TZ(TIMESTAMP '2026-09-28 08:00:00', 'America/New_York')",
+      "signatures": [
+        {
+          "returns": "TIMESTAMP WITH TIME ZONE",
+          "params": [
+            {
+              "name": "timestamp_value",
+              "type": "timestamp",
+              "doc": "The timestamp without time zone."
+            },
+            {
+              "name": "time_zone_value",
+              "type": "string",
+              "doc": "A region name such as 'Europe/London' or an offset such as '-05:00'."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "NEW_TIME",
+      "category": "Date and time",
+      "summary": "Converts a DATE from one time zone to another using legacy three-letter zone abbreviations (such as 'EST', 'PST', 'GMT').",
+      "example": "NEW_TIME(SYSDATE, 'EST', 'PST')",
+      "signatures": [
+        {
+          "returns": "DATE",
+          "params": [
+            {
+              "name": "date",
+              "type": "date",
+              "doc": "The date to convert."
+            },
+            {
+              "name": "timezone1",
+              "type": "string",
+              "doc": "The zone the date is in."
+            },
+            {
+              "name": "timezone2",
+              "type": "string",
+              "doc": "The zone to convert to."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "SYS_EXTRACT_UTC",
+      "category": "Date and time",
+      "summary": "Returns the UTC time of a datetime value that has a time zone offset or region.",
+      "example": "SYS_EXTRACT_UTC(SYSTIMESTAMP)",
+      "signatures": [
+        {
+          "returns": "TIMESTAMP",
+          "params": [
+            {
+              "name": "datetime_with_timezone",
+              "type": "timestamp with time zone",
+              "doc": "The value to convert to UTC."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "TZ_OFFSET",
+      "category": "Date and time",
+      "summary": "Returns the UTC offset, such as '-04:00', of a time zone at the current date.",
+      "example": "TZ_OFFSET('US/Eastern')",
+      "signatures": [
+        {
+          "returns": "VARCHAR2",
+          "params": [
+            {
+              "name": "time_zone",
+              "type": "string",
+              "doc": "A region name, an offset such as '-05:00', or SESSIONTIMEZONE or DBTIMEZONE.",
+              "values": [
+                "SESSIONTIMEZONE",
+                "DBTIMEZONE"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "SCN_TO_TIMESTAMP",
+      "category": "Date and time",
+      "summary": "Returns the approximate timestamp at which a system change number (SCN) was generated.",
+      "example": "SCN_TO_TIMESTAMP(ORA_ROWSCN)",
+      "signatures": [
+        {
+          "returns": "TIMESTAMP",
+          "params": [
+            {
+              "name": "number",
+              "type": "number",
+              "doc": "A system change number."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "TIMESTAMP_TO_SCN",
+      "category": "Date and time",
+      "summary": "Returns the approximate system change number (SCN) in effect at a timestamp.",
+      "example": "TIMESTAMP_TO_SCN(SYSTIMESTAMP - INTERVAL '1' HOUR)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "timestamp",
+              "type": "timestamp",
+              "doc": "The point in time."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "CAST",
+      "category": "Conversion",
+      "summary": "Converts a value to another data type. In Oracle it can return a default on conversion error, take a format model, and cast a MULTISET subquery to a collection type.",
+      "example": "CAST('2026-09-28' AS DATE DEFAULT NULL ON CONVERSION ERROR, 'YYYY-MM-DD')",
+      "signatures": [
+        {
+          "returns": "data_type",
+          "params": [
+            {
+              "name": "expr AS type_name [DEFAULT return_value ON CONVERSION ERROR]",
+              "type": "any",
+              "doc": "The value, AS, and the target type. Add DEFAULT value ON CONVERSION ERROR to return that value instead of raising an error when conversion fails."
+            },
+            {
+              "name": "fmt",
+              "type": "string",
+              "doc": "Format model used when converting text to a number or datetime.",
+              "optional": true
+            },
+            {
+              "name": "nlsparam",
+              "type": "string",
+              "doc": "NLS settings for this call only, such as 'NLS_DATE_LANGUAGE = French'.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "TO_CLOB",
+      "category": "Conversion",
+      "summary": "Converts character data, or a BLOB or BFILE in a given character set, to a CLOB.",
+      "example": "TO_CLOB(description)",
+      "signatures": [
+        {
+          "returns": "CLOB",
+          "params": [
+            {
+              "name": "expr",
+              "type": "string or LOB",
+              "doc": "The character value, NCLOB, BLOB or BFILE to convert."
+            },
+            {
+              "name": "csid",
+              "type": "number",
+              "doc": "Character set ID of BLOB or BFILE input (0 means the database character set).",
+              "optional": true
+            },
+            {
+              "name": "mime_type",
+              "type": "string",
+              "doc": "MIME type to record on the result when converting a BFILE or BLOB.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "TO_BLOB",
+      "category": "Conversion",
+      "summary": "Converts a RAW value or BFILE to a BLOB.",
+      "example": "TO_BLOB(raw_col)",
+      "signatures": [
+        {
+          "returns": "BLOB",
+          "params": [
+            {
+              "name": "expr",
+              "type": "RAW or BFILE",
+              "doc": "The value to convert."
+            },
+            {
+              "name": "mime_type",
+              "type": "string",
+              "doc": "MIME type to record on the result when converting a BFILE.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "TO_NCHAR",
+      "category": "Conversion",
+      "summary": "Converts a character, datetime, interval or number value to the national character set.",
+      "example": "TO_NCHAR(order_date, 'YYYY-MM-DD')",
+      "signatures": [
+        {
+          "returns": "NVARCHAR2",
+          "params": [
+            {
+              "name": "expr",
+              "type": "any",
+              "doc": "The value to convert."
+            },
+            {
+              "name": "fmt",
+              "type": "string",
+              "doc": "Format model for datetime or number input.",
+              "optional": true
+            },
+            {
+              "name": "nlsparam",
+              "type": "string",
+              "doc": "NLS settings for this call only, such as 'NLS_DATE_LANGUAGE = French'.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "TO_NCLOB",
+      "category": "Conversion",
+      "summary": "Converts character data or a LOB to an NCLOB.",
+      "example": "TO_NCLOB(description)",
+      "signatures": [
+        {
+          "returns": "NCLOB",
+          "params": [
+            {
+              "name": "expr",
+              "type": "string or LOB",
+              "doc": "The value to convert."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "CONVERT",
+      "category": "Conversion",
+      "summary": "Converts a string from one character set to another.",
+      "example": "CONVERT('Ä Ê Í', 'US7ASCII', 'WE8ISO8859P1')",
+      "signatures": [
+        {
+          "returns": "VARCHAR2",
+          "params": [
+            {
+              "name": "char",
+              "type": "string",
+              "doc": "The string to convert."
+            },
+            {
+              "name": "dest_char_set",
+              "type": "string",
+              "doc": "Name of the target character set."
+            },
+            {
+              "name": "source_char_set",
+              "type": "string",
+              "doc": "Name of the source character set (default the database character set).",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "HEXTORAW",
+      "category": "Conversion",
+      "summary": "Converts a string of hexadecimal digits to a RAW value.",
+      "example": "HEXTORAW('7D')",
+      "signatures": [
+        {
+          "returns": "RAW",
+          "params": [
+            {
+              "name": "char",
+              "type": "string",
+              "doc": "Hexadecimal text."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "RAWTOHEX",
+      "category": "Conversion",
+      "summary": "Converts a RAW value to a string of hexadecimal digits.",
+      "example": "RAWTOHEX(SYS_GUID())",
+      "signatures": [
+        {
+          "returns": "VARCHAR2",
+          "params": [
+            {
+              "name": "raw",
+              "type": "RAW",
+              "doc": "The binary value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "RAWTONHEX",
+      "category": "Conversion",
+      "summary": "Converts a RAW value to hexadecimal text in the national character set.",
+      "example": "RAWTONHEX(raw_col)",
+      "signatures": [
+        {
+          "returns": "NVARCHAR2",
+          "params": [
+            {
+              "name": "raw",
+              "type": "RAW",
+              "doc": "The binary value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ROWIDTOCHAR",
+      "category": "Conversion",
+      "summary": "Converts a ROWID to its 18-character text form.",
+      "example": "ROWIDTOCHAR(ROWID)",
+      "signatures": [
+        {
+          "returns": "VARCHAR2",
+          "params": [
+            {
+              "name": "rowid",
+              "type": "ROWID",
+              "doc": "The row address."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ROWIDTONCHAR",
+      "category": "Conversion",
+      "summary": "Converts a ROWID to text in the national character set.",
+      "example": "ROWIDTONCHAR(ROWID)",
+      "signatures": [
+        {
+          "returns": "NVARCHAR2",
+          "params": [
+            {
+              "name": "rowid",
+              "type": "ROWID",
+              "doc": "The row address."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "CHARTOROWID",
+      "category": "Conversion",
+      "summary": "Converts text in ROWID format to a ROWID.",
+      "example": "WHERE ROWID = CHARTOROWID('AAAFd1AAFAAAABSAA/')",
+      "signatures": [
+        {
+          "returns": "ROWID",
+          "params": [
+            {
+              "name": "char",
+              "type": "string",
+              "doc": "Text in ROWID format."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "VALIDATE_CONVERSION",
+      "category": "Conversion",
+      "summary": "Returns 1 when a value can be converted to a data type, 0 otherwise. Useful to find bad data before converting.",
+      "example": "VALIDATE_CONVERSION('29-Feb-2026' AS DATE, 'DD-Mon-YYYY')",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "expr AS type_name",
+              "type": "any",
+              "doc": "The value, AS, and the target type (such as NUMBER, DATE or TIMESTAMP)."
+            },
+            {
+              "name": "fmt",
+              "type": "string",
+              "doc": "Format model used for the conversion.",
+              "optional": true
+            },
+            {
+              "name": "nlsparam",
+              "type": "string",
+              "doc": "NLS settings for this call only, such as 'NLS_DATE_LANGUAGE = French'.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "TO_MULTI_BYTE",
+      "category": "Conversion",
+      "summary": "Converts single-byte characters to their multibyte equivalents.",
+      "example": "TO_MULTI_BYTE('A')",
+      "signatures": [
+        {
+          "returns": "VARCHAR2",
+          "params": [
+            {
+              "name": "char",
+              "type": "string",
+              "doc": "The string to convert."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "TO_SINGLE_BYTE",
+      "category": "Conversion",
+      "summary": "Converts multibyte characters to their single-byte equivalents.",
+      "example": "TO_SINGLE_BYTE(CHR(15711393))",
+      "signatures": [
+        {
+          "returns": "VARCHAR2",
+          "params": [
+            {
+              "name": "char",
+              "type": "string",
+              "doc": "The string to convert."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "TO_BOOLEAN",
+      "category": "Conversion",
+      "summary": "Converts a number or a string such as 'true', 'yes', 'on', '1' to a BOOLEAN. (Oracle 23ai+)",
+      "example": "TO_BOOLEAN('yes')",
+      "signatures": [
+        {
+          "returns": "BOOLEAN",
+          "params": [
+            {
+              "name": "expr",
+              "type": "number or string",
+              "doc": "The value to convert; 0 and strings like 'false', 'no', 'off' become FALSE."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "JSON_VALUE",
+      "category": "JSON",
+      "summary": "Returns a scalar value selected from JSON data by a path, as VARCHAR2(4000) unless RETURNING says otherwise.",
+      "example": "JSON_VALUE(po_document, '$.PONumber' RETURNING NUMBER)",
+      "signatures": [
+        {
+          "returns": "VARCHAR2 (or RETURNING type)",
+          "params": [
+            {
+              "name": "expr [FORMAT JSON]",
+              "type": "JSON",
+              "doc": "The JSON data."
+            },
+            {
+              "name": "path [RETURNING data_type] [ERROR | NULL | DEFAULT value ON ERROR] [... ON EMPTY]",
+              "type": "string",
+              "doc": "A SQL/JSON path expression such as '$.items[0].price'. Optionally set the return type and error/empty handling."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "JSON_QUERY",
+      "category": "JSON",
+      "summary": "Returns a JSON object or array (or, with a wrapper, scalars) selected from JSON data by a path.",
+      "example": "JSON_QUERY(po_document, '$.ShippingInstructions' PRETTY)",
+      "signatures": [
+        {
+          "returns": "VARCHAR2 (or RETURNING type)",
+          "params": [
+            {
+              "name": "expr [FORMAT JSON]",
+              "type": "JSON",
+              "doc": "The JSON data."
+            },
+            {
+              "name": "path [RETURNING data_type] [PRETTY] [ASCII] [WITH [CONDITIONAL] WRAPPER] [... ON ERROR] [... ON EMPTY]",
+              "type": "string",
+              "doc": "A SQL/JSON path expression such as '$.items[0].price'. WITH WRAPPER wraps the matches in an array."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "JSON_TABLE",
+      "category": "JSON",
+      "summary": "Projects JSON data as relational rows and columns, for use in the FROM clause.",
+      "example": "SELECT jt.* FROM j_purchaseorder, JSON_TABLE(po_document, '$.LineItems[*]' COLUMNS (item_no NUMBER PATH '$.ItemNumber')) jt",
+      "signatures": [
+        {
+          "returns": "rows",
+          "params": [
+            {
+              "name": "expr [FORMAT JSON]",
+              "type": "JSON",
+              "doc": "The JSON data."
+            },
+            {
+              "name": "path [... ON ERROR] COLUMNS (column_definition, ...)",
+              "type": "string",
+              "doc": "Row path, then the columns: name type PATH 'path', FOR ORDINALITY, or NESTED PATH ... COLUMNS (...)."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "JSON_EXISTS",
+      "category": "JSON",
+      "summary": "Condition that is true when a path selects at least one value in JSON data.",
+      "example": "WHERE JSON_EXISTS(po_document, '$.ShippingInstructions.Address')",
+      "signatures": [
+        {
+          "returns": "BOOLEAN",
+          "params": [
+            {
+              "name": "expr [FORMAT JSON]",
+              "type": "JSON",
+              "doc": "The JSON data."
+            },
+            {
+              "name": "path [PASSING expr AS name, ...] [TRUE | FALSE | ERROR ON ERROR]",
+              "type": "string",
+              "doc": "A SQL/JSON path expression such as '$.items[0].price'. PASSING binds SQL values to $name variables."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "JSON_OBJECT",
+      "category": "JSON",
+      "summary": "Builds a JSON object from key/value pairs; JSON_OBJECT(*) builds one from every column.",
+      "example": "JSON_OBJECT('id' VALUE employee_id, 'name' VALUE last_name)",
+      "signatures": [
+        {
+          "returns": "JSON object (type set by RETURNING)",
+          "params": [
+            {
+              "name": "[KEY] key VALUE value [FORMAT JSON]",
+              "type": "string and any",
+              "doc": "A member name and its value; a colon may replace VALUE. Finish with [NULL | ABSENT ON NULL] [RETURNING data_type] [STRICT] [WITH UNIQUE KEYS]."
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "JSON_ARRAY",
+      "category": "JSON",
+      "summary": "Builds a JSON array from a list of values.",
+      "example": "JSON_ARRAY(1, 'two', JSON_OBJECT('x' VALUE 3))",
+      "signatures": [
+        {
+          "returns": "JSON array (type set by RETURNING)",
+          "params": [
+            {
+              "name": "expr [FORMAT JSON]",
+              "type": "any",
+              "doc": "An element value. Finish the list with [NULL | ABSENT ON NULL] (ABSENT is the default) [RETURNING data_type] [STRICT]."
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "JSON_SERIALIZE",
+      "category": "JSON",
+      "summary": "Converts JSON data (including the binary JSON type) to text, optionally pretty-printed.",
+      "example": "JSON_SERIALIZE(doc RETURNING CLOB PRETTY)",
+      "signatures": [
+        {
+          "returns": "VARCHAR2 (or RETURNING type)",
+          "params": [
+            {
+              "name": "expr [RETURNING data_type] [PRETTY] [ASCII] [ORDERED] [TRUNCATE] [... ON ERROR]",
+              "type": "JSON",
+              "doc": "The JSON data and serialization options."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "JSON_TRANSFORM",
+      "category": "JSON",
+      "summary": "Returns a modified copy of JSON data after applying one or more operations such as SET, REMOVE, INSERT, APPEND or RENAME.",
+      "example": "JSON_TRANSFORM(doc, SET '$.status' = 'shipped', REMOVE '$.draft')",
+      "signatures": [
+        {
+          "returns": "same type as input",
+          "params": [
+            {
+              "name": "expr",
+              "type": "JSON",
+              "doc": "The JSON data to modify."
+            },
+            {
+              "name": "operation",
+              "type": "operation",
+              "doc": "An operation and its path, such as SET '$.a' = value or REMOVE '$.b'. Optionally finish with RETURNING data_type.",
+              "values": [
+                "SET",
+                "INSERT",
+                "APPEND",
+                "PREPEND",
+                "REMOVE",
+                "RENAME",
+                "REPLACE",
+                "KEEP",
+                "SORT",
+                "MERGE",
+                "COPY"
+              ]
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "JSON_SCALAR",
+      "category": "JSON",
+      "summary": "Converts a SQL scalar value to a JSON scalar value. (Oracle 21c+)",
+      "example": "JSON_SCALAR(SYSDATE)",
+      "signatures": [
+        {
+          "returns": "JSON",
+          "params": [
+            {
+              "name": "expr",
+              "type": "any",
+              "doc": "A scalar value such as a number, string, date or BOOLEAN."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "JSON_MERGEPATCH",
+      "category": "JSON",
+      "summary": "Applies a JSON Merge Patch (RFC 7386) document to JSON data and returns the result.",
+      "example": "JSON_MERGEPATCH(doc, '{\"status\":\"shipped\",\"draft\":null}')",
+      "signatures": [
+        {
+          "returns": "same type as target",
+          "params": [
+            {
+              "name": "target_expr",
+              "type": "JSON",
+              "doc": "The JSON data to patch."
+            },
+            {
+              "name": "patch_expr [RETURNING data_type] [PRETTY] [ASCII] [TRUNCATE] [... ON ERROR]",
+              "type": "JSON",
+              "doc": "The merge patch; null members remove fields."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "JSON",
+      "category": "JSON",
+      "summary": "Constructs a value of the JSON data type from JSON text or a scalar. (Oracle 21c+)",
+      "example": "JSON('{\"a\":1}')",
+      "signatures": [
+        {
+          "returns": "JSON",
+          "params": [
+            {
+              "name": "expr",
+              "type": "string or any",
+              "doc": "JSON text, or a scalar to wrap."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "JSON_EQUAL",
+      "category": "JSON",
+      "summary": "Condition that is true when two JSON values are semantically equal, ignoring member order and insignificant whitespace.",
+      "example": "WHERE JSON_EQUAL(doc1, doc2)",
+      "signatures": [
+        {
+          "returns": "BOOLEAN",
+          "params": [
+            {
+              "name": "expr1",
+              "type": "JSON",
+              "doc": "The first JSON value."
+            },
+            {
+              "name": "expr2 [ERROR | FALSE | TRUE ON ERROR]",
+              "type": "JSON",
+              "doc": "The second JSON value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "JSON_TEXTCONTAINS",
+      "category": "JSON",
+      "summary": "Condition that is true when text at a JSON path contains the search terms. Requires a JSON search index.",
+      "example": "WHERE JSON_TEXTCONTAINS(po_document, '$.LineItems.Part.Description', 'Magic')",
+      "signatures": [
+        {
+          "returns": "BOOLEAN",
+          "params": [
+            {
+              "name": "column",
+              "type": "JSON",
+              "doc": "A JSON column with a search index."
+            },
+            {
+              "name": "path",
+              "type": "string",
+              "doc": "A SQL/JSON path expression such as '$.items[0].price'."
+            },
+            {
+              "name": "string",
+              "type": "string",
+              "doc": "The Oracle Text search terms."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "XMLELEMENT",
+      "category": "XML",
+      "summary": "Builds an XML element with a name, optional attributes, and content.",
+      "example": "XMLELEMENT(\"Emp\", XMLATTRIBUTES(employee_id AS \"id\"), last_name)",
+      "signatures": [
+        {
+          "returns": "XMLTYPE",
+          "params": [
+            {
+              "name": "[NAME] identifier",
+              "type": "identifier",
+              "doc": "The element name; quote it to keep its case."
+            },
+            {
+              "name": "XMLATTRIBUTES(...) | value_expr [AS alias]",
+              "type": "any",
+              "doc": "Attributes (first only), then the child content values."
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "XMLFOREST",
+      "category": "XML",
+      "summary": "Builds a forest of XML elements, one per argument, named after the column or alias.",
+      "example": "XMLFOREST(employee_id AS \"id\", last_name)",
+      "signatures": [
+        {
+          "returns": "XMLTYPE",
+          "params": [
+            {
+              "name": "value_expr [AS alias]",
+              "type": "any",
+              "doc": "A value; the element is named by the alias or the column name."
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "XMLQUERY",
+      "category": "XML",
+      "summary": "Evaluates an XQuery expression and returns the result as XML.",
+      "example": "XMLQUERY('/PurchaseOrder/Reference' PASSING po RETURNING CONTENT)",
+      "signatures": [
+        {
+          "returns": "XMLTYPE",
+          "params": [
+            {
+              "name": "XQuery_string [PASSING expr [AS name], ...] RETURNING CONTENT [NULL ON EMPTY]",
+              "type": "string",
+              "doc": "The XQuery, the values bound to it, and RETURNING CONTENT."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "XMLTABLE",
+      "category": "XML",
+      "summary": "Projects the results of an XQuery as relational rows and columns, for use in the FROM clause.",
+      "example": "XMLTABLE('/Emps/Emp' PASSING doc COLUMNS name VARCHAR2(30) PATH 'Name')",
+      "signatures": [
+        {
+          "returns": "rows",
+          "params": [
+            {
+              "name": "[XMLNAMESPACES(...),] XQuery_string [PASSING expr] [COLUMNS column type PATH 'path', ...]",
+              "type": "string",
+              "doc": "Optional namespaces, the row XQuery, its input, and the column definitions."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "XMLTYPE",
+      "category": "XML",
+      "summary": "Constructs an XMLTYPE value from text, a CLOB, a BLOB or a BFILE.",
+      "example": "XMLTYPE('<a>1</a>')",
+      "signatures": [
+        {
+          "returns": "XMLTYPE",
+          "params": [
+            {
+              "name": "xml_data",
+              "type": "string or LOB",
+              "doc": "The XML document text."
+            },
+            {
+              "name": "schema",
+              "type": "string",
+              "doc": "URL of a registered XML schema to associate.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "EXTRACTVALUE",
+      "category": "XML",
+      "summary": "Returns the scalar text of the node selected by an XPath expression. Deprecated; use XMLQUERY or XMLTABLE.",
+      "example": "EXTRACTVALUE(doc, '/Warehouse/Docks')",
+      "signatures": [
+        {
+          "returns": "VARCHAR2",
+          "params": [
+            {
+              "name": "XMLType_instance",
+              "type": "XMLTYPE",
+              "doc": "The XML document."
+            },
+            {
+              "name": "XPath_string",
+              "type": "string",
+              "doc": "An XPath selecting one text or attribute node."
+            },
+            {
+              "name": "namespace_string",
+              "type": "string",
+              "doc": "Namespace prefix mappings used by the XPath.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "XMLCONCAT",
+      "category": "XML",
+      "summary": "Concatenates a list of XML values into one XML fragment.",
+      "example": "XMLCONCAT(XMLELEMENT(\"First\", first_name), XMLELEMENT(\"Last\", last_name))",
+      "signatures": [
+        {
+          "returns": "XMLTYPE",
+          "params": [
+            {
+              "name": "XMLType_instance",
+              "type": "XMLTYPE",
+              "doc": "An XML value; NULLs are dropped."
+            }
+          ],
+          "variadic": true
+        }
+      ]
+    },
+    {
+      "name": "XMLSERIALIZE",
+      "category": "XML",
+      "summary": "Serializes XML data to a string or LOB.",
+      "example": "XMLSERIALIZE(CONTENT doc AS CLOB INDENT)",
+      "signatures": [
+        {
+          "returns": "VARCHAR2, CLOB or BLOB",
+          "params": [
+            {
+              "name": "DOCUMENT | CONTENT value_expr [AS datatype] [ENCODING name] [VERSION ver] [INDENT [SIZE = n] | NO INDENT]",
+              "type": "XMLTYPE",
+              "doc": "Whether the value is a document or content, the value, and output options.",
+              "values": [
+                "DOCUMENT",
+                "CONTENT"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "XMLPARSE",
+      "category": "XML",
+      "summary": "Parses text as an XML document or content and returns an XMLTYPE.",
+      "example": "XMLPARSE(CONTENT '124 <purchaseOrder/>' WELLFORMED)",
+      "signatures": [
+        {
+          "returns": "XMLTYPE",
+          "params": [
+            {
+              "name": "DOCUMENT | CONTENT value_expr [WELLFORMED]",
+              "type": "string",
+              "doc": "Whether the text is a document or content, the text, and WELLFORMED to skip checks.",
+              "values": [
+                "DOCUMENT",
+                "CONTENT"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "XMLCAST",
+      "category": "XML",
+      "summary": "Casts the value of an XML node to a SQL scalar type.",
+      "example": "XMLCAST(XMLQUERY('/a/b' PASSING doc RETURNING CONTENT) AS NUMBER)",
+      "signatures": [
+        {
+          "returns": "data_type",
+          "params": [
+            {
+              "name": "value_expr AS datatype",
+              "type": "XMLTYPE",
+              "doc": "The XML value, AS, and the SQL type."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "XMLEXISTS",
+      "category": "XML",
+      "summary": "Condition that is true when an XQuery expression returns a non-empty sequence.",
+      "example": "WHERE XMLEXISTS('/PurchaseOrder[User=\"SBELL\"]' PASSING doc)",
+      "signatures": [
+        {
+          "returns": "BOOLEAN",
+          "params": [
+            {
+              "name": "XQuery_string [PASSING expr [AS name], ...]",
+              "type": "string",
+              "doc": "The XQuery and the values bound to it."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "XMLCOMMENT",
+      "category": "XML",
+      "summary": "Builds an XML comment from a string.",
+      "example": "XMLCOMMENT('OrderAnalysisComp imported')",
+      "signatures": [
+        {
+          "returns": "XMLTYPE",
+          "params": [
+            {
+              "name": "value_expr",
+              "type": "string",
+              "doc": "The comment text; must not contain two consecutive dashes."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "XMLCDATA",
+      "category": "XML",
+      "summary": "Builds an XML CDATA section from a string.",
+      "example": "XMLCDATA('<raw> & text')",
+      "signatures": [
+        {
+          "returns": "XMLTYPE",
+          "params": [
+            {
+              "name": "value_expr",
+              "type": "string",
+              "doc": "The text; must not contain ]]>."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "XMLPI",
+      "category": "XML",
+      "summary": "Builds an XML processing instruction.",
+      "example": "XMLPI(NAME \"Order analysisComp\", 'imported, reconfigured')",
+      "signatures": [
+        {
+          "returns": "XMLTYPE",
+          "params": [
+            {
+              "name": "[NAME] identifier",
+              "type": "identifier",
+              "doc": "The processing instruction target."
+            },
+            {
+              "name": "value_expr",
+              "type": "string",
+              "doc": "The instruction content.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "XMLROOT",
+      "category": "XML",
+      "summary": "Adds an XML declaration (version and standalone) to an XML value.",
+      "example": "XMLROOT(XMLTYPE('<a/>'), VERSION '1.0', STANDALONE YES)",
+      "signatures": [
+        {
+          "returns": "XMLTYPE",
+          "params": [
+            {
+              "name": "value_expr",
+              "type": "XMLTYPE",
+              "doc": "The XML value."
+            },
+            {
+              "name": "VERSION expr | VERSION NO VALUE",
+              "type": "string",
+              "doc": "The version string for the declaration."
+            },
+            {
+              "name": "STANDALONE YES | NO | NO VALUE",
+              "type": "keyword",
+              "doc": "The standalone property.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "USER",
+      "category": "System",
+      "summary": "Returns the name of the session user (the user who logged on).",
+      "example": "SELECT USER FROM DUAL",
+      "niladic": true,
+      "signatures": [
+        {
+          "returns": "VARCHAR2",
+          "params": []
+        }
+      ]
+    },
+    {
+      "name": "UID",
+      "category": "System",
+      "summary": "Returns the numeric ID of the session user.",
+      "example": "SELECT UID FROM DUAL",
+      "niladic": true,
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": []
+        }
+      ]
+    },
+    {
+      "name": "ORA_INVOKING_USER",
+      "category": "System",
+      "summary": "Returns the name of the database user who invoked the current statement or view, following definer's-rights boundaries.",
+      "example": "SELECT ORA_INVOKING_USER FROM DUAL",
+      "niladic": true,
+      "signatures": [
+        {
+          "returns": "VARCHAR2",
+          "params": []
+        }
+      ]
+    },
+    {
+      "name": "ORA_INVOKING_USERID",
+      "category": "System",
+      "summary": "Returns the ID of the database user who invoked the current statement or view.",
+      "example": "SELECT ORA_INVOKING_USERID FROM DUAL",
+      "niladic": true,
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": []
+        }
+      ]
+    },
+    {
+      "name": "SYS_GUID",
+      "category": "System",
+      "summary": "Generates a globally unique 16-byte identifier.",
+      "example": "SELECT SYS_GUID() FROM DUAL",
+      "signatures": [
+        {
+          "returns": "RAW(16)",
+          "params": []
+        }
+      ]
+    },
+    {
+      "name": "SYS_CONTEXT",
+      "category": "System",
+      "summary": "Returns the value of a parameter in an application context namespace, such as USERENV attributes of the current session.",
+      "example": "SYS_CONTEXT('USERENV', 'SESSION_USER')",
+      "signatures": [
+        {
+          "returns": "VARCHAR2",
+          "params": [
+            {
+              "name": "namespace",
+              "type": "string",
+              "doc": "The context namespace, such as 'USERENV'."
+            },
+            {
+              "name": "parameter",
+              "type": "string",
+              "doc": "The attribute name, such as 'CURRENT_SCHEMA', 'DB_NAME', 'IP_ADDRESS' or 'SID'."
+            },
+            {
+              "name": "length",
+              "type": "integer",
+              "doc": "Maximum length of the result (default 256 bytes, up to 4000).",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "USERENV",
+      "category": "System",
+      "summary": "Returns information about the current session. Kept for compatibility; use SYS_CONTEXT('USERENV', ...) instead.",
+      "example": "USERENV('LANGUAGE')",
+      "signatures": [
+        {
+          "returns": "VARCHAR2",
+          "params": [
+            {
+              "name": "parameter",
+              "type": "string",
+              "doc": "One of 'CLIENT_INFO', 'ENTRYID', 'ISDBA', 'LANG', 'LANGUAGE', 'SESSIONID', 'SID' or 'TERMINAL'."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ORA_HASH",
+      "category": "System",
+      "summary": "Computes a hash value for an expression, useful for sampling rows or spreading them into buckets.",
+      "example": "ORA_HASH(customer_id, 9)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "expr",
+              "type": "any",
+              "doc": "The value to hash (not LONG or LOB)."
+            },
+            {
+              "name": "max_bucket",
+              "type": "integer",
+              "doc": "Highest bucket number returned, 0 to 4294967295 (the default).",
+              "optional": true
+            },
+            {
+              "name": "seed_value",
+              "type": "integer",
+              "doc": "Seed that yields a different hash for the same input (default 0).",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "STANDARD_HASH",
+      "category": "System",
+      "summary": "Computes a cryptographic hash of an expression using a standard algorithm.",
+      "example": "STANDARD_HASH(email, 'SHA256')",
+      "signatures": [
+        {
+          "returns": "RAW",
+          "params": [
+            {
+              "name": "expr",
+              "type": "any",
+              "doc": "The value to hash."
+            },
+            {
+              "name": "method",
+              "type": "string",
+              "doc": "'SHA1' (default), 'SHA256', 'SHA384', 'SHA512' or 'MD5'.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "VSIZE",
+      "category": "System",
+      "summary": "Returns the number of bytes used to store a value internally.",
+      "example": "VSIZE(last_name)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "expr",
+              "type": "any",
+              "doc": "The value to measure."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "EMPTY_BLOB",
+      "category": "System",
+      "summary": "Returns an empty BLOB locator, used to initialize a LOB column before writing to it.",
+      "example": "INSERT INTO docs (id, body) VALUES (1, EMPTY_BLOB())",
+      "signatures": [
+        {
+          "returns": "BLOB",
+          "params": []
+        }
+      ]
+    },
+    {
+      "name": "EMPTY_CLOB",
+      "category": "System",
+      "summary": "Returns an empty CLOB locator, used to initialize a LOB column before writing to it.",
+      "example": "INSERT INTO docs (id, body) VALUES (1, EMPTY_CLOB())",
+      "signatures": [
+        {
+          "returns": "CLOB",
+          "params": []
+        }
+      ]
+    },
+    {
+      "name": "BFILENAME",
+      "category": "System",
+      "summary": "Returns a BFILE locator for an operating-system file in a directory object.",
+      "example": "BFILENAME('MEDIA_DIR', 'photo.jpg')",
+      "signatures": [
+        {
+          "returns": "BFILE",
+          "params": [
+            {
+              "name": "directory",
+              "type": "string",
+              "doc": "Name of a directory object, usually uppercase."
+            },
+            {
+              "name": "filename",
+              "type": "string",
+              "doc": "The file name within that directory."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "SYS_CONNECT_BY_PATH",
+      "category": "Hierarchical",
+      "summary": "In a CONNECT BY query, returns the path of column values from the root to the current row, separated by a character.",
+      "example": "SYS_CONNECT_BY_PATH(last_name, '/')",
+      "signatures": [
+        {
+          "returns": "VARCHAR2",
+          "params": [
+            {
+              "name": "column",
+              "type": "any",
+              "doc": "The value to show for each level."
+            },
+            {
+              "name": "char",
+              "type": "string",
+              "doc": "The separator; must not appear in the values."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "NLS_CHARSET_ID",
+      "category": "System",
+      "summary": "Returns the ID number of a character set name.",
+      "example": "NLS_CHARSET_ID('AL32UTF8')",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "string",
+              "type": "string",
+              "doc": "A character set name, or 'CHAR_CS' / 'NCHAR_CS'."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "NLS_CHARSET_NAME",
+      "category": "System",
+      "summary": "Returns the name of a character set ID.",
+      "example": "NLS_CHARSET_NAME(873)",
+      "signatures": [
+        {
+          "returns": "VARCHAR2",
+          "params": [
+            {
+              "name": "number",
+              "type": "integer",
+              "doc": "A character set ID."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "CARDINALITY",
+      "category": "Collection",
+      "summary": "Returns the number of elements in a nested table, or NULL when it is NULL.",
+      "example": "CARDINALITY(phone_numbers)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "nested_table",
+              "type": "collection",
+              "doc": "The nested table."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "SQLCODE",
+      "category": "PL/SQL",
+      "summary": "In a PL/SQL exception handler, returns the number of the most recent error (0 when none). PL/SQL only; not callable in SQL.",
+      "example": "v_code := SQLCODE;",
+      "niladic": true,
+      "signatures": [
+        {
+          "returns": "PLS_INTEGER",
+          "params": []
+        }
+      ]
+    },
+    {
+      "name": "SQLERRM",
+      "category": "PL/SQL",
+      "summary": "In PL/SQL, returns the error message for the current error, or for a given error number. Not callable in SQL.",
+      "example": "v_msg := SQLERRM;",
+      "niladic": true,
+      "signatures": [
+        {
+          "returns": "VARCHAR2",
+          "params": []
+        },
+        {
+          "returns": "VARCHAR2",
+          "params": [
+            {
+              "name": "error_number",
+              "type": "integer",
+              "doc": "An Oracle error number, such as -1403."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "RAISE_APPLICATION_ERROR",
+      "category": "PL/SQL",
+      "summary": "PL/SQL procedure that raises a user-defined error with a number from -20000 to -20999 and a message.",
+      "example": "RAISE_APPLICATION_ERROR(-20001, 'Salary too low')",
+      "signatures": [
+        {
+          "returns": "none",
+          "params": [
+            {
+              "name": "error_number",
+              "type": "integer",
+              "doc": "An error number from -20000 to -20999."
+            },
+            {
+              "name": "message",
+              "type": "string",
+              "doc": "The error text, up to 2048 bytes."
+            },
+            {
+              "name": "keep_errors",
+              "type": "BOOLEAN",
+              "doc": "TRUE adds the error to the existing error stack; FALSE (default) replaces it.",
+              "optional": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "VECTOR_DISTANCE",
+      "category": "Vector",
+      "summary": "Returns the distance between two vectors using a metric (COSINE by default). (Oracle 23ai+)",
+      "example": "ORDER BY VECTOR_DISTANCE(embedding, :query_vec, COSINE) FETCH FIRST 5 ROWS ONLY",
+      "signatures": [
+        {
+          "returns": "BINARY_DOUBLE",
+          "params": [
+            {
+              "name": "expr1",
+              "type": "VECTOR",
+              "doc": "The first vector."
+            },
+            {
+              "name": "expr2",
+              "type": "VECTOR",
+              "doc": "The second vector."
+            },
+            {
+              "name": "metric",
+              "type": "keyword",
+              "doc": "The distance metric (default COSINE). DOT returns the negated dot product.",
+              "optional": true,
+              "values": [
+                "COSINE",
+                "DOT",
+                "EUCLIDEAN",
+                "EUCLIDEAN_SQUARED",
+                "HAMMING",
+                "MANHATTAN",
+                "JACCARD"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "L1_DISTANCE",
+      "category": "Vector",
+      "summary": "Returns the Manhattan (L1) distance between two vectors. (Oracle 23ai+)",
+      "example": "L1_DISTANCE(v1, v2)",
+      "signatures": [
+        {
+          "returns": "BINARY_DOUBLE",
+          "params": [
+            {
+              "name": "expr1",
+              "type": "VECTOR",
+              "doc": "The first vector."
+            },
+            {
+              "name": "expr2",
+              "type": "VECTOR",
+              "doc": "The second vector."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "L2_DISTANCE",
+      "category": "Vector",
+      "summary": "Returns the Euclidean (L2) distance between two vectors. (Oracle 23ai+)",
+      "example": "L2_DISTANCE(v1, v2)",
+      "signatures": [
+        {
+          "returns": "BINARY_DOUBLE",
+          "params": [
+            {
+              "name": "expr1",
+              "type": "VECTOR",
+              "doc": "The first vector."
+            },
+            {
+              "name": "expr2",
+              "type": "VECTOR",
+              "doc": "The second vector."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "COSINE_DISTANCE",
+      "category": "Vector",
+      "summary": "Returns the cosine distance (1 minus cosine similarity) between two vectors. (Oracle 23ai+)",
+      "example": "COSINE_DISTANCE(v1, v2)",
+      "signatures": [
+        {
+          "returns": "BINARY_DOUBLE",
+          "params": [
+            {
+              "name": "expr1",
+              "type": "VECTOR",
+              "doc": "The first vector."
+            },
+            {
+              "name": "expr2",
+              "type": "VECTOR",
+              "doc": "The second vector."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "INNER_PRODUCT",
+      "category": "Vector",
+      "summary": "Returns the dot product between two vectors. (Oracle 23ai+)",
+      "example": "INNER_PRODUCT(v1, v2)",
+      "signatures": [
+        {
+          "returns": "BINARY_DOUBLE",
+          "params": [
+            {
+              "name": "expr1",
+              "type": "VECTOR",
+              "doc": "The first vector."
+            },
+            {
+              "name": "expr2",
+              "type": "VECTOR",
+              "doc": "The second vector."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "TO_VECTOR",
+      "category": "Vector",
+      "summary": "Converts text (such as '[1.1, 2.2, 3.3]'), a BLOB or a VECTOR to a VECTOR value. (Oracle 23ai+)",
+      "example": "TO_VECTOR('[1.1, 2.2, 3.3]', 3, FLOAT32)",
+      "signatures": [
+        {
+          "returns": "VECTOR",
+          "params": [
+            {
+              "name": "expr",
+              "type": "string, BLOB or VECTOR",
+              "doc": "The vector text or value."
+            },
+            {
+              "name": "number_of_dimensions",
+              "type": "integer",
+              "doc": "Required dimension count, or * for any.",
+              "optional": true
+            },
+            {
+              "name": "format",
+              "type": "keyword",
+              "doc": "Element format, or * for any.",
+              "optional": true,
+              "values": [
+                "INT8",
+                "FLOAT32",
+                "FLOAT64",
+                "BINARY"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "VECTOR",
+      "category": "Vector",
+      "summary": "Constructs a VECTOR value from text or another vector; a synonym of TO_VECTOR. (Oracle 23ai+)",
+      "example": "VECTOR('[1, 2, 3]', 3, INT8)",
+      "signatures": [
+        {
+          "returns": "VECTOR",
+          "params": [
+            {
+              "name": "expr",
+              "type": "string, BLOB or VECTOR",
+              "doc": "The vector text or value."
+            },
+            {
+              "name": "number_of_dimensions",
+              "type": "integer",
+              "doc": "Required dimension count, or * for any.",
+              "optional": true
+            },
+            {
+              "name": "format",
+              "type": "keyword",
+              "doc": "Element format, or * for any.",
+              "optional": true,
+              "values": [
+                "INT8",
+                "FLOAT32",
+                "FLOAT64",
+                "BINARY"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "FROM_VECTOR",
+      "category": "Vector",
+      "summary": "Converts a VECTOR to its text form. (Oracle 23ai+)",
+      "example": "FROM_VECTOR(embedding RETURNING CLOB)",
+      "signatures": [
+        {
+          "returns": "VARCHAR2 or CLOB",
+          "params": [
+            {
+              "name": "expr [RETURNING data_type]",
+              "type": "VECTOR",
+              "doc": "The vector, and optionally VARCHAR2(n) or CLOB as the result type."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "VECTOR_SERIALIZE",
+      "category": "Vector",
+      "summary": "Converts a VECTOR to its text form; a synonym of FROM_VECTOR. (Oracle 23ai+)",
+      "example": "VECTOR_SERIALIZE(embedding)",
+      "signatures": [
+        {
+          "returns": "VARCHAR2 or CLOB",
+          "params": [
+            {
+              "name": "expr [RETURNING data_type]",
+              "type": "VECTOR",
+              "doc": "The vector, and optionally VARCHAR2(n) or CLOB as the result type."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "VECTOR_NORM",
+      "category": "Vector",
+      "summary": "Returns the Euclidean norm (length) of a vector. (Oracle 23ai+)",
+      "example": "VECTOR_NORM(embedding)",
+      "signatures": [
+        {
+          "returns": "BINARY_DOUBLE",
+          "params": [
+            {
+              "name": "expr",
+              "type": "VECTOR",
+              "doc": "The vector."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "VECTOR_DIMENSION_COUNT",
+      "category": "Vector",
+      "summary": "Returns the number of dimensions of a vector. (Oracle 23ai+)",
+      "example": "VECTOR_DIMENSION_COUNT(embedding)",
+      "signatures": [
+        {
+          "returns": "NUMBER",
+          "params": [
+            {
+              "name": "expr",
+              "type": "VECTOR",
+              "doc": "The vector."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "VECTOR_DIMENSION_FORMAT",
+      "category": "Vector",
+      "summary": "Returns the storage format of a vector's elements, such as FLOAT32. (Oracle 23ai+)",
+      "example": "VECTOR_DIMENSION_FORMAT(embedding)",
+      "signatures": [
+        {
+          "returns": "VARCHAR2",
+          "params": [
+            {
+              "name": "expr",
+              "type": "VECTOR",
+              "doc": "The vector."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "VECTOR_EMBEDDING",
+      "category": "Vector",
+      "summary": "Generates a vector embedding for input data with an embedding model loaded into the database. (Oracle 23ai+)",
+      "example": "VECTOR_EMBEDDING(doc_model USING 'hello world' AS data)",
+      "signatures": [
+        {
+          "returns": "VECTOR",
+          "params": [
+            {
+              "name": "model_name USING expr AS data",
+              "type": "string",
+              "doc": "The ONNX model name, USING, the input, and AS data."
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "keywords": [
+    {
+      "name": "MINUS",
+      "doc": "Returns the distinct rows of the first query that are not returned by the second. Oracle's name for EXCEPT (EXCEPT is also accepted from 21c).",
+      "syntax": "query MINUS [ALL] query"
+    },
+    {
+      "name": "FETCH",
+      "doc": "Limits the rows a query returns (row limiting clause), or in PL/SQL reads the next row(s) from a cursor.",
+      "syntax": "FETCH { FIRST | NEXT } [n [PERCENT]] { ROW | ROWS } { ONLY | WITH TIES } | FETCH cursor INTO vars"
+    },
+    {
+      "name": "FETCH FIRST",
+      "doc": "Returns only the first n rows (or n percent) of the ordered result.",
+      "syntax": "[OFFSET n ROWS] FETCH FIRST n ROWS { ONLY | WITH TIES }"
+    },
+    {
+      "name": "FETCH NEXT",
+      "doc": "Same as FETCH FIRST; reads naturally after OFFSET.",
+      "syntax": "OFFSET n ROWS FETCH NEXT n ROWS ONLY"
+    },
+    {
+      "name": "FIRST",
+      "doc": "Used in FETCH FIRST, NULLS FIRST, KEEP (DENSE_RANK FIRST ...) and NTH_VALUE ... FROM FIRST."
+    },
+    {
+      "name": "LAST",
+      "doc": "Used in NULLS LAST, KEEP (DENSE_RANK LAST ...) and NTH_VALUE ... FROM LAST."
+    },
+    {
+      "name": "NEXT",
+      "doc": "Used in FETCH NEXT; synonym of FIRST there."
+    },
+    {
+      "name": "ONLY",
+      "doc": "Ends a row limiting clause so exactly n rows are returned.",
+      "syntax": "FETCH FIRST n ROWS ONLY"
+    },
+    {
+      "name": "ROWS ONLY",
+      "doc": "Ends a row limiting clause so exactly n rows are returned.",
+      "syntax": "FETCH FIRST n ROWS ONLY"
+    },
+    {
+      "name": "WITH TIES",
+      "doc": "Row limiting option that also returns rows tied with the last row on the ORDER BY key.",
+      "syntax": "FETCH FIRST n ROWS WITH TIES"
+    },
+    {
+      "name": "TIES",
+      "doc": "Used in FETCH FIRST n ROWS WITH TIES."
+    },
+    {
+      "name": "PERCENT",
+      "doc": "Makes a row limiting clause count a percentage of rows.",
+      "syntax": "FETCH FIRST 10 PERCENT ROWS ONLY"
+    },
+    {
+      "name": "OFFSET",
+      "doc": "Skips a number of rows before the row limiting clause starts returning rows.",
+      "syntax": "OFFSET n { ROW | ROWS } [FETCH ...]"
+    },
+    {
+      "name": "CONNECT BY",
+      "doc": "Defines the parent/child relationship of a hierarchical query; PRIOR marks the parent side.",
+      "syntax": "[START WITH condition] CONNECT BY [NOCYCLE] PRIOR child_col = parent_col"
+    },
+    {
+      "name": "CONNECT",
+      "doc": "Used in CONNECT BY for hierarchical queries, and in GRANT CONNECT."
+    },
+    {
+      "name": "PRIOR",
+      "doc": "In CONNECT BY, refers to the value in the parent row.",
+      "syntax": "CONNECT BY PRIOR employee_id = manager_id"
+    },
+    {
+      "name": "START WITH",
+      "doc": "Specifies the root rows of a hierarchical query.",
+      "syntax": "START WITH manager_id IS NULL CONNECT BY ..."
+    },
+    {
+      "name": "START",
+      "doc": "Used in START WITH (hierarchical queries) and sequence START WITH."
+    },
+    {
+      "name": "NOCYCLE",
+      "doc": "Lets a CONNECT BY query return rows despite loops in the data; see CONNECT_BY_ISCYCLE.",
+      "syntax": "CONNECT BY NOCYCLE PRIOR ..."
+    },
+    {
+      "name": "LEVEL",
+      "doc": "Pseudocolumn giving the depth of a row in a hierarchical query: 1 for a root, 2 for its children, and so on.",
+      "syntax": "SELECT LEVEL, last_name FROM employees CONNECT BY PRIOR employee_id = manager_id"
+    },
+    {
+      "name": "CONNECT_BY_ROOT",
+      "doc": "Unary operator in a hierarchical query that returns a column's value from the root row of the current row's hierarchy.",
+      "syntax": "CONNECT_BY_ROOT last_name"
+    },
+    {
+      "name": "CONNECT_BY_ISLEAF",
+      "doc": "Pseudocolumn that is 1 when the current row has no children in the hierarchy, else 0."
+    },
+    {
+      "name": "CONNECT_BY_ISCYCLE",
+      "doc": "Pseudocolumn that is 1 when the current row has a child that is also its ancestor. Requires CONNECT BY NOCYCLE."
+    },
+    {
+      "name": "SIBLINGS",
+      "doc": "Used in ORDER SIBLINGS BY to sort rows at each level of a hierarchy without breaking it.",
+      "syntax": "ORDER SIBLINGS BY last_name"
+    },
+    {
+      "name": "ORDER SIBLINGS BY",
+      "doc": "Orders rows that share a parent in a hierarchical query, keeping the hierarchy intact.",
+      "syntax": "ORDER SIBLINGS BY expr [ASC | DESC]"
+    },
+    {
+      "name": "ROWNUM",
+      "doc": "Pseudocolumn numbering rows as they are returned, starting at 1, before ORDER BY is applied. Prefer FETCH FIRST for top-N queries.",
+      "syntax": "WHERE ROWNUM <= 10"
+    },
+    {
+      "name": "ROWID",
+      "doc": "Pseudocolumn holding the physical address of a row; the fastest way to reach a single row.",
+      "syntax": "SELECT ROWID, last_name FROM employees"
+    },
+    {
+      "name": "ORA_ROWSCN",
+      "doc": "Pseudocolumn giving the system change number (SCN) of the most recent change to the row's block (or row, with ROWDEPENDENCIES)."
+    },
+    {
+      "name": "NEXTVAL",
+      "doc": "Sequence pseudocolumn that increments the sequence and returns the new value.",
+      "syntax": "sequence_name.NEXTVAL"
+    },
+    {
+      "name": "CURRVAL",
+      "doc": "Sequence pseudocolumn returning the value most recently given by NEXTVAL in this session.",
+      "syntax": "sequence_name.CURRVAL"
+    },
+    {
+      "name": "DUAL",
+      "doc": "A one-row, one-column table owned by SYS, used to select expressions. From 23ai the FROM clause may be omitted instead.",
+      "syntax": "SELECT SYSDATE FROM DUAL"
+    },
+    {
+      "name": "MERGE",
+      "doc": "Inserts, updates or deletes rows in a target table based on a join with a source (upsert).",
+      "syntax": "MERGE INTO target USING source ON (condition) WHEN MATCHED THEN UPDATE SET ... WHEN NOT MATCHED THEN INSERT ..."
+    },
+    {
+      "name": "MERGE INTO",
+      "doc": "Starts a MERGE statement naming the target table.",
+      "syntax": "MERGE INTO target t USING source s ON (t.id = s.id) ..."
+    },
+    {
+      "name": "MATCHED",
+      "doc": "Used in the WHEN MATCHED and WHEN NOT MATCHED branches of MERGE."
+    },
+    {
+      "name": "WHEN MATCHED",
+      "doc": "MERGE branch for source rows that match a target row; usually UPDATE SET ..., optionally with WHERE and DELETE WHERE.",
+      "syntax": "WHEN MATCHED THEN UPDATE SET col = expr [WHERE ...] [DELETE WHERE ...]"
+    },
+    {
+      "name": "WHEN NOT MATCHED",
+      "doc": "MERGE branch for source rows with no matching target row; usually INSERT.",
+      "syntax": "WHEN NOT MATCHED THEN INSERT (cols) VALUES (exprs) [WHERE ...]"
+    },
+    {
+      "name": "PIVOT",
+      "doc": "Rotates rows into columns, aggregating values for each listed value of a column.",
+      "syntax": "PIVOT (aggregate(expr) FOR column IN (value [AS alias], ...))"
+    },
+    {
+      "name": "UNPIVOT",
+      "doc": "Rotates columns into rows.",
+      "syntax": "UNPIVOT [INCLUDE | EXCLUDE NULLS] (value_col FOR name_col IN (col [AS literal], ...))"
+    },
+    {
+      "name": "MODEL",
+      "doc": "Treats query results as a multidimensional array and computes cells with spreadsheet-like rules.",
+      "syntax": "MODEL [PARTITION BY (...)] DIMENSION BY (...) MEASURES (...) RULES (...)"
+    },
+    {
+      "name": "DIMENSION BY",
+      "doc": "In a MODEL clause, lists the columns that identify a cell within a partition.",
+      "syntax": "DIMENSION BY (col, ...)"
+    },
+    {
+      "name": "MEASURES",
+      "doc": "In a MODEL clause, lists the cell values the rules can read and assign; also used in MATCH_RECOGNIZE.",
+      "syntax": "MEASURES (expr [AS alias], ...)"
+    },
+    {
+      "name": "RULES",
+      "doc": "In a MODEL clause, the cell assignments to compute.",
+      "syntax": "RULES [UPSERT | UPDATE] [AUTOMATIC | SEQUENTIAL ORDER] (cell = expr, ...)"
+    },
+    {
+      "name": "ROLLUP",
+      "doc": "GROUP BY extension that adds subtotal rows for each prefix of the listed columns and a grand total.",
+      "syntax": "GROUP BY ROLLUP (a, b)"
+    },
+    {
+      "name": "CUBE",
+      "doc": "GROUP BY extension that adds subtotal rows for every combination of the listed columns.",
+      "syntax": "GROUP BY CUBE (a, b)"
+    },
+    {
+      "name": "GROUPING SETS",
+      "doc": "GROUP BY extension that computes several groupings in one query.",
+      "syntax": "GROUP BY GROUPING SETS ((a, b), (a), ())"
+    },
+    {
+      "name": "SEQUENCE",
+      "doc": "A schema object that generates unique integers.",
+      "syntax": "CREATE SEQUENCE name [START WITH n] [INCREMENT BY n] [CACHE n | NOCACHE] [CYCLE | NOCYCLE]"
+    },
+    {
+      "name": "INCREMENT BY",
+      "doc": "Sets the step between values of a sequence or identity column.",
+      "syntax": "INCREMENT BY n"
+    },
+    {
+      "name": "SYNONYM",
+      "doc": "An alias for a table, view, sequence, procedure or other object.",
+      "syntax": "CREATE [OR REPLACE] [PUBLIC] SYNONYM name FOR [schema.]object"
+    },
+    {
+      "name": "PUBLIC",
+      "doc": "Makes a synonym or database link available to all users, or grants a privilege to every user."
+    },
+    {
+      "name": "PACKAGE",
+      "doc": "A PL/SQL unit grouping related types, variables, procedures and functions; the specification declares the public interface.",
+      "syntax": "CREATE [OR REPLACE] PACKAGE name {IS | AS} declarations END [name];"
+    },
+    {
+      "name": "PACKAGE BODY",
+      "doc": "The implementation of a package's procedures and functions, plus its private declarations.",
+      "syntax": "CREATE [OR REPLACE] PACKAGE BODY name {IS | AS} ... [BEGIN ...] END [name];"
+    },
+    {
+      "name": "BODY",
+      "doc": "Used in PACKAGE BODY and TYPE BODY."
+    },
+    {
+      "name": "PROCEDURE",
+      "doc": "A named PL/SQL block that performs an action and can take IN, OUT and IN OUT parameters.",
+      "syntax": "CREATE [OR REPLACE] PROCEDURE name [(params)] {IS | AS} declarations BEGIN ... END [name];"
+    },
+    {
+      "name": "FUNCTION",
+      "doc": "A named PL/SQL block that returns a value and can be called from SQL or PL/SQL.",
+      "syntax": "CREATE [OR REPLACE] FUNCTION name [(params)] RETURN type {IS | AS} ... BEGIN ... RETURN expr; END [name];"
+    },
+    {
+      "name": "RETURN",
+      "doc": "Declares a function's return type, or in PL/SQL exits a subprogram, returning a value from a function.",
+      "syntax": "RETURN type | RETURN [expr];"
+    },
+    {
+      "name": "RETURNING",
+      "doc": "Returns values from rows affected by INSERT, UPDATE, DELETE or MERGE into variables; also sets the result type of JSON functions.",
+      "syntax": "... RETURNING expr, ... [BULK COLLECT] INTO variables"
+    },
+    {
+      "name": "DECLARE",
+      "doc": "Starts the declaration section of an anonymous PL/SQL block.",
+      "syntax": "DECLARE declarations BEGIN statements [EXCEPTION handlers] END;"
+    },
+    {
+      "name": "EXCEPTION",
+      "doc": "Starts the exception-handling section of a PL/SQL block, or declares a user-defined exception.",
+      "syntax": "EXCEPTION WHEN exception_name THEN statements | name EXCEPTION;"
+    },
+    {
+      "name": "WHEN OTHERS",
+      "doc": "PL/SQL exception handler that catches every exception not handled earlier in the block.",
+      "syntax": "EXCEPTION WHEN OTHERS THEN statements"
+    },
+    {
+      "name": "OTHERS",
+      "doc": "Used in WHEN OTHERS exception handlers."
+    },
+    {
+      "name": "RAISE",
+      "doc": "Raises a named exception, or re-raises the current one inside an exception handler.",
+      "syntax": "RAISE [exception_name];"
+    },
+    {
+      "name": "PRAGMA",
+      "doc": "A compiler directive in PL/SQL.",
+      "syntax": "PRAGMA AUTONOMOUS_TRANSACTION | EXCEPTION_INIT(name, -n) | SERIALLY_REUSABLE | UDF ...;"
+    },
+    {
+      "name": "AUTONOMOUS_TRANSACTION",
+      "doc": "Pragma that runs a subprogram in its own independent transaction, which it must commit or roll back.",
+      "syntax": "PRAGMA AUTONOMOUS_TRANSACTION;"
+    },
+    {
+      "name": "EXCEPTION_INIT",
+      "doc": "Pragma that associates a user-defined exception with an Oracle error number.",
+      "syntax": "PRAGMA EXCEPTION_INIT(exception_name, -error_number);"
+    },
+    {
+      "name": "LOOP",
+      "doc": "Starts a PL/SQL loop, ended by END LOOP.",
+      "syntax": "[WHILE condition | FOR i IN [REVERSE] a..b] LOOP statements END LOOP;"
+    },
+    {
+      "name": "END LOOP",
+      "doc": "Ends a PL/SQL LOOP, WHILE LOOP or FOR LOOP."
+    },
+    {
+      "name": "END IF",
+      "doc": "Ends a PL/SQL IF statement."
+    },
+    {
+      "name": "FOR",
+      "doc": "Starts a PL/SQL FOR loop; also used in FOR UPDATE, PIVOT ... FOR, and CREATE SYNONYM ... FOR.",
+      "syntax": "FOR i IN [REVERSE] lower..upper LOOP ... END LOOP;"
+    },
+    {
+      "name": "WHILE",
+      "doc": "Starts a PL/SQL loop that runs while a condition is true.",
+      "syntax": "WHILE condition LOOP statements END LOOP;"
+    },
+    {
+      "name": "EXIT",
+      "doc": "Leaves the current PL/SQL loop, optionally only when a condition holds.",
+      "syntax": "EXIT [label] [WHEN condition];"
+    },
+    {
+      "name": "EXIT WHEN",
+      "doc": "Leaves the current PL/SQL loop when a condition is true.",
+      "syntax": "EXIT WHEN cursor%NOTFOUND;"
+    },
+    {
+      "name": "CONTINUE",
+      "doc": "Skips to the next iteration of the current PL/SQL loop.",
+      "syntax": "CONTINUE [label] [WHEN condition];"
+    },
+    {
+      "name": "IF",
+      "doc": "PL/SQL conditional statement. In 23ai DDL, IF EXISTS / IF NOT EXISTS make CREATE and DROP skip silently.",
+      "syntax": "IF condition THEN ... [ELSIF condition THEN ...] [ELSE ...] END IF; | DROP TABLE IF EXISTS t"
+    },
+    {
+      "name": "ELSIF",
+      "doc": "PL/SQL else-if branch of an IF statement (note the spelling).",
+      "syntax": "ELSIF condition THEN statements"
+    },
+    {
+      "name": "GOTO",
+      "doc": "Transfers control in PL/SQL to a labeled statement.",
+      "syntax": "GOTO label;"
+    },
+    {
+      "name": "CURSOR",
+      "doc": "Declares a named PL/SQL cursor for a query; REF CURSOR declares a cursor variable type.",
+      "syntax": "CURSOR name [(params)] IS select_statement;"
+    },
+    {
+      "name": "OPEN",
+      "doc": "Opens a PL/SQL cursor, running its query; OPEN ... FOR opens a cursor variable.",
+      "syntax": "OPEN cursor [(args)]; | OPEN cursor_var FOR query;"
+    },
+    {
+      "name": "CLOSE",
+      "doc": "Closes a PL/SQL cursor and releases its resources.",
+      "syntax": "CLOSE cursor;"
+    },
+    {
+      "name": "BULK COLLECT",
+      "doc": "Fetches many rows at once into PL/SQL collections.",
+      "syntax": "SELECT ... BULK COLLECT INTO collection | FETCH c BULK COLLECT INTO coll [LIMIT n]"
+    },
+    {
+      "name": "BULK",
+      "doc": "Used in BULK COLLECT."
+    },
+    {
+      "name": "FORALL",
+      "doc": "Runs one DML statement for many collection elements in a single round trip.",
+      "syntax": "FORALL i IN coll.FIRST..coll.LAST [SAVE EXCEPTIONS] dml_statement;"
+    },
+    {
+      "name": "TYPE",
+      "doc": "Declares a PL/SQL type (record, collection, REF CURSOR) or a schema object type. %TYPE takes the type of a column or variable.",
+      "syntax": "TYPE name IS RECORD (...) | TABLE OF type [INDEX BY ...] | VARRAY(n) OF type | REF CURSOR"
+    },
+    {
+      "name": "SUBTYPE",
+      "doc": "Declares a PL/SQL subtype of a base type, optionally constrained.",
+      "syntax": "SUBTYPE name IS base_type [(constraint)] [NOT NULL];"
+    },
+    {
+      "name": "RECORD",
+      "doc": "A PL/SQL composite type with named fields.",
+      "syntax": "TYPE name IS RECORD (field type [, ...]);"
+    },
+    {
+      "name": "ROWTYPE",
+      "doc": "Used as %ROWTYPE to declare a record matching a table's or cursor's row.",
+      "syntax": "variable table_name%ROWTYPE;"
+    },
+    {
+      "name": "VARRAY",
+      "doc": "A PL/SQL or schema collection type with a maximum size and ordered elements.",
+      "syntax": "TYPE name IS VARRAY(n) OF element_type;"
+    },
+    {
+      "name": "INDEX BY",
+      "doc": "Makes a PL/SQL TABLE OF type an associative array keyed by integer or string.",
+      "syntax": "TYPE name IS TABLE OF type INDEX BY PLS_INTEGER | VARCHAR2(n);"
+    },
+    {
+      "name": "OBJECT",
+      "doc": "Declares a schema object type with attributes and methods.",
+      "syntax": "CREATE [OR REPLACE] TYPE name AS OBJECT (attr type, ...);"
+    },
+    {
+      "name": "CONSTANT",
+      "doc": "Declares a PL/SQL constant, which must be initialized and cannot change.",
+      "syntax": "name CONSTANT type := value;"
+    },
+    {
+      "name": "EXECUTE",
+      "doc": "Runs dynamic SQL (EXECUTE IMMEDIATE) or grants the right to run a program unit (GRANT EXECUTE)."
+    },
+    {
+      "name": "EXECUTE IMMEDIATE",
+      "doc": "Runs a dynamic SQL statement or anonymous PL/SQL block built at run time.",
+      "syntax": "EXECUTE IMMEDIATE sql_string [INTO vars] [USING binds] [RETURNING INTO vars];"
+    },
+    {
+      "name": "IMMEDIATE",
+      "doc": "Used in EXECUTE IMMEDIATE, and SHUTDOWN or constraint checking options."
+    },
+    {
+      "name": "OR REPLACE",
+      "doc": "Replaces an existing object of the same name instead of failing.",
+      "syntax": "CREATE OR REPLACE { VIEW | PROCEDURE | FUNCTION | PACKAGE | TRIGGER | TYPE | SYNONYM } ..."
+    },
+    {
+      "name": "GRANT",
+      "doc": "Gives system privileges, object privileges or roles to users or roles.",
+      "syntax": "GRANT privilege [, ...] [ON object] TO grantee [WITH GRANT OPTION | WITH ADMIN OPTION]"
+    },
+    {
+      "name": "REVOKE",
+      "doc": "Removes privileges or roles from users or roles.",
+      "syntax": "REVOKE privilege [, ...] [ON object] FROM grantee"
+    },
+    {
+      "name": "TO",
+      "doc": "Used in GRANT ... TO, ROLLBACK TO SAVEPOINT, RENAME ... TO, and interval types such as DAY TO SECOND."
+    },
+    {
+      "name": "TRUNCATE",
+      "doc": "Removes all rows from a table quickly, without firing DELETE triggers; it is DDL and commits implicitly.",
+      "syntax": "TRUNCATE TABLE name [DROP | REUSE STORAGE] [CASCADE]"
+    },
+    {
+      "name": "PURGE",
+      "doc": "Permanently removes a dropped object from the recycle bin, or drops a table without keeping it there.",
+      "syntax": "DROP TABLE name PURGE | PURGE { TABLE name | RECYCLEBIN | DBA_RECYCLEBIN }"
+    },
+    {
+      "name": "FLASHBACK",
+      "doc": "Restores a table to an earlier point in time, or recovers a dropped table from the recycle bin.",
+      "syntax": "FLASHBACK TABLE name TO { TIMESTAMP expr | SCN n | BEFORE DROP [RENAME TO new_name] }"
+    },
+    {
+      "name": "AS OF",
+      "doc": "Flashback query: reads a table as it was at a past time or SCN.",
+      "syntax": "SELECT ... FROM t AS OF TIMESTAMP (SYSTIMESTAMP - INTERVAL '10' MINUTE)"
+    },
+    {
+      "name": "COMMENT",
+      "doc": "Adds a comment to a table, view, materialized view or column in the data dictionary.",
+      "syntax": "COMMENT ON { TABLE t | COLUMN t.c } IS 'text'"
+    },
+    {
+      "name": "RENAME",
+      "doc": "Renames a table, view, sequence or synonym, or (with ALTER TABLE) a column or constraint.",
+      "syntax": "RENAME old_name TO new_name"
+    },
+    {
+      "name": "MODIFY",
+      "doc": "In ALTER TABLE, changes a column's type, default, nullability or visibility, or a constraint's state.",
+      "syntax": "ALTER TABLE t MODIFY (col type [DEFAULT expr])"
+    },
+    {
+      "name": "CASCADE",
+      "doc": "Also drops or affects dependent objects, such as referencing constraints.",
+      "syntax": "DROP TABLE t CASCADE CONSTRAINTS | DROP USER u CASCADE"
+    },
+    {
+      "name": "ENABLE",
+      "doc": "Turns on a constraint, trigger or feature.",
+      "syntax": "ALTER TABLE t ENABLE CONSTRAINT name"
+    },
+    {
+      "name": "DISABLE",
+      "doc": "Turns off a constraint, trigger or feature.",
+      "syntax": "ALTER TABLE t DISABLE CONSTRAINT name"
+    },
+    {
+      "name": "NOCOPY",
+      "doc": "Hint that an OUT or IN OUT parameter should be passed by reference to avoid copying large values.",
+      "syntax": "param IN OUT NOCOPY type"
+    },
+    {
+      "name": "IN OUT",
+      "doc": "PL/SQL parameter mode: the value is passed in and changes are passed back to the caller.",
+      "syntax": "name IN OUT [NOCOPY] type"
+    },
+    {
+      "name": "OUT",
+      "doc": "PL/SQL parameter mode: the subprogram assigns a value that is returned to the caller.",
+      "syntax": "name OUT [NOCOPY] type"
+    },
+    {
+      "name": "AUTHID",
+      "doc": "Sets whether a PL/SQL unit runs with the privileges of its owner (DEFINER, the default) or its caller (CURRENT_USER).",
+      "syntax": "AUTHID { CURRENT_USER | DEFINER }"
+    },
+    {
+      "name": "DEFINER",
+      "doc": "Used in AUTHID DEFINER: the unit runs with its owner's privileges."
+    },
+    {
+      "name": "DETERMINISTIC",
+      "doc": "Declares that a function always returns the same result for the same arguments, allowing caching and use in function-based indexes.",
+      "syntax": "FUNCTION f (...) RETURN type DETERMINISTIC IS ..."
+    },
+    {
+      "name": "PIPELINED",
+      "doc": "Declares a table function that returns rows one at a time with PIPE ROW, for use in FROM TABLE(...).",
+      "syntax": "FUNCTION f RETURN collection_type PIPELINED IS ... PIPE ROW (value); ... RETURN;"
+    },
+    {
+      "name": "PIPE ROW",
+      "doc": "Returns one row from a pipelined table function.",
+      "syntax": "PIPE ROW (value);"
+    },
+    {
+      "name": "PARALLEL_ENABLE",
+      "doc": "Declares that a function can be run safely by parallel query servers.",
+      "syntax": "FUNCTION f (...) RETURN type PARALLEL_ENABLE IS ..."
+    },
+    {
+      "name": "RESULT_CACHE",
+      "doc": "Caches a function's results across sessions, reusing them for the same arguments.",
+      "syntax": "FUNCTION f (...) RETURN type RESULT_CACHE IS ..."
+    },
+    {
+      "name": "NULLS FIRST",
+      "doc": "Sorts NULLs before non-NULL values (the default for DESC).",
+      "syntax": "ORDER BY expr [ASC | DESC] NULLS FIRST"
+    },
+    {
+      "name": "NULLS LAST",
+      "doc": "Sorts NULLs after non-NULL values (the default for ASC).",
+      "syntax": "ORDER BY expr [ASC | DESC] NULLS LAST"
+    },
+    {
+      "name": "NULLS",
+      "doc": "Used in NULLS FIRST, NULLS LAST, IGNORE NULLS, RESPECT NULLS and UNPIVOT INCLUDE NULLS."
+    },
+    {
+      "name": "IGNORE NULLS",
+      "doc": "Makes FIRST_VALUE, LAST_VALUE, NTH_VALUE, LAG or LEAD skip NULL values.",
+      "syntax": "LAG(expr) IGNORE NULLS OVER (...)"
+    },
+    {
+      "name": "RESPECT NULLS",
+      "doc": "Makes analytic functions consider NULL values (the default).",
+      "syntax": "FIRST_VALUE(expr) RESPECT NULLS OVER (...)"
+    },
+    {
+      "name": "WITHIN GROUP",
+      "doc": "Supplies the ordering for LISTAGG, PERCENTILE_CONT, PERCENTILE_DISC and hypothetical-set aggregates.",
+      "syntax": "LISTAGG(expr, ',') WITHIN GROUP (ORDER BY expr)"
+    },
+    {
+      "name": "WITHIN",
+      "doc": "Used in WITHIN GROUP."
+    },
+    {
+      "name": "KEEP",
+      "doc": "With an aggregate, computes it only over the rows that rank first or last by an ordering.",
+      "syntax": "MAX(salary) KEEP (DENSE_RANK FIRST ORDER BY hire_date)"
+    },
+    {
+      "name": "LATERAL",
+      "doc": "Lets an inline view in FROM refer to columns of tables to its left.",
+      "syntax": "FROM t, LATERAL (SELECT ... WHERE x = t.x) v"
+    },
+    {
+      "name": "APPLY",
+      "doc": "Used in CROSS APPLY and OUTER APPLY."
+    },
+    {
+      "name": "CROSS APPLY",
+      "doc": "Joins each left row to the rows produced by a correlated table expression; left rows with no result are dropped.",
+      "syntax": "FROM t CROSS APPLY (SELECT ... WHERE x = t.x) v"
+    },
+    {
+      "name": "OUTER APPLY",
+      "doc": "Like CROSS APPLY, but keeps left rows with no result, filling NULLs.",
+      "syntax": "FROM t OUTER APPLY (SELECT ... WHERE x = t.x) v"
+    },
+    {
+      "name": "FOR UPDATE",
+      "doc": "Locks the selected rows until the transaction ends.",
+      "syntax": "SELECT ... FOR UPDATE [OF col, ...] [NOWAIT | WAIT n | SKIP LOCKED]"
+    },
+    {
+      "name": "NOWAIT",
+      "doc": "Fails immediately instead of waiting when a row or table is already locked.",
+      "syntax": "SELECT ... FOR UPDATE NOWAIT"
+    },
+    {
+      "name": "WAIT",
+      "doc": "Waits up to n seconds for a lock before failing.",
+      "syntax": "SELECT ... FOR UPDATE WAIT n"
+    },
+    {
+      "name": "SKIP LOCKED",
+      "doc": "Skips rows already locked by other sessions instead of waiting, as in job-queue patterns.",
+      "syntax": "SELECT ... FOR UPDATE SKIP LOCKED"
+    },
+    {
+      "name": "LOCK TABLE",
+      "doc": "Locks a table in a given mode until the transaction ends.",
+      "syntax": "LOCK TABLE t IN { SHARE | EXCLUSIVE | ROW EXCLUSIVE ... } MODE [NOWAIT | WAIT n]"
+    },
+    {
+      "name": "GLOBAL TEMPORARY",
+      "doc": "Creates a table whose definition is permanent but whose rows are private to each session or transaction.",
+      "syntax": "CREATE GLOBAL TEMPORARY TABLE t (...) ON COMMIT { DELETE | PRESERVE } ROWS"
+    },
+    {
+      "name": "GLOBAL",
+      "doc": "Used in GLOBAL TEMPORARY tables and global partitioned indexes."
+    },
+    {
+      "name": "PRIVATE TEMPORARY",
+      "doc": "Creates a temporary table (named with the ORA$PTT_ prefix by default) that exists only in memory for the session or transaction. (Oracle 18c+)",
+      "syntax": "CREATE PRIVATE TEMPORARY TABLE ora$ptt_t (...) ON COMMIT { DROP | PRESERVE } DEFINITION"
+    },
+    {
+      "name": "TEMPORARY",
+      "doc": "Used in GLOBAL TEMPORARY and PRIVATE TEMPORARY tables and temporary tablespaces."
+    },
+    {
+      "name": "PRESERVE",
+      "doc": "Keeps temporary table rows (ON COMMIT PRESERVE ROWS) or a private temporary table (ON COMMIT PRESERVE DEFINITION) after commit."
+    },
+    {
+      "name": "IDENTITY",
+      "doc": "An auto-generated numeric column backed by an internal sequence.",
+      "syntax": "col NUMBER GENERATED { ALWAYS | BY DEFAULT [ON NULL] } AS IDENTITY [(START WITH n INCREMENT BY n)]"
+    },
+    {
+      "name": "GENERATED",
+      "doc": "Used in identity columns and virtual columns.",
+      "syntax": "GENERATED ALWAYS AS IDENTITY | GENERATED ALWAYS AS (expr) VIRTUAL"
+    },
+    {
+      "name": "ALWAYS",
+      "doc": "In an identity column, the value is always generated and cannot be supplied.",
+      "syntax": "GENERATED ALWAYS AS IDENTITY"
+    },
+    {
+      "name": "INVISIBLE",
+      "doc": "Hides a column from SELECT * and positional INSERT, or makes an index ignored by the optimizer.",
+      "syntax": "col type INVISIBLE | ALTER INDEX i INVISIBLE"
+    },
+    {
+      "name": "VISIBLE",
+      "doc": "Makes an invisible column or index visible again."
+    },
+    {
+      "name": "VIRTUAL",
+      "doc": "A column whose value is computed from an expression and not stored.",
+      "syntax": "col [type] [GENERATED ALWAYS] AS (expr) [VIRTUAL]"
+    },
+    {
+      "name": "TABLESPACE",
+      "doc": "A logical storage container of data files; tables and indexes are stored in one.",
+      "syntax": "CREATE TABLE t (...) TABLESPACE users"
+    },
+    {
+      "name": "SCHEMA",
+      "doc": "The collection of objects owned by a user; ALTER SESSION SET CURRENT_SCHEMA changes name resolution.",
+      "syntax": "ALTER SESSION SET CURRENT_SCHEMA = name"
+    },
+    {
+      "name": "SESSION",
+      "doc": "Used in ALTER SESSION to change settings for the current session.",
+      "syntax": "ALTER SESSION SET parameter = value"
+    },
+    {
+      "name": "ROLE",
+      "doc": "A named set of privileges that can be granted to users or other roles.",
+      "syntax": "CREATE ROLE name | SET ROLE name"
+    },
+    {
+      "name": "MATERIALIZED VIEW",
+      "doc": "A view whose query result is stored and can be refreshed, fully or incrementally.",
+      "syntax": "CREATE MATERIALIZED VIEW name [BUILD IMMEDIATE] [REFRESH { FAST | COMPLETE | FORCE } ON { COMMIT | DEMAND }] AS query"
+    },
+    {
+      "name": "MATERIALIZED",
+      "doc": "Used in MATERIALIZED VIEW."
+    },
+    {
+      "name": "DOMAIN",
+      "doc": "A reusable data-use definition (type, constraints, display and ordering expressions) applied to columns. (Oracle 23ai+)",
+      "syntax": "CREATE DOMAIN name AS type [CONSTRAINT ...] | col type DOMAIN name"
+    },
+    {
+      "name": "IS JSON",
+      "doc": "Condition that is true when a value is well-formed JSON, optionally of a given kind.",
+      "syntax": "expr IS [NOT] JSON [VALUE | SCALAR | OBJECT | ARRAY] [STRICT | LAX] [WITH UNIQUE KEYS]"
+    },
+    {
+      "name": "ORDINALITY",
+      "doc": "In JSON_TABLE or XMLTABLE, a column that numbers the generated rows.",
+      "syntax": "col FOR ORDINALITY"
+    },
+    {
+      "name": "NESTED PATH",
+      "doc": "In JSON_TABLE, unnests a nested array into additional rows.",
+      "syntax": "NESTED PATH '$.items[*]' COLUMNS (...)"
+    },
+    {
+      "name": "PATH",
+      "doc": "In JSON_TABLE or XMLTABLE, the path that locates a column's value.",
+      "syntax": "col type PATH '$.field'"
+    },
+    {
+      "name": "COLUMNS",
+      "doc": "In JSON_TABLE or XMLTABLE, starts the list of output column definitions."
+    },
+    {
+      "name": "PASSING",
+      "doc": "Binds SQL values to variables in XQuery or SQL/JSON path expressions.",
+      "syntax": "PASSING expr AS \"name\""
+    },
+    {
+      "name": "MATCH_RECOGNIZE",
+      "doc": "Finds patterns of rows (row pattern matching) using a regular-expression-like PATTERN over ordered data.",
+      "syntax": "MATCH_RECOGNIZE (PARTITION BY ... ORDER BY ... MEASURES ... PATTERN (...) DEFINE ...)"
+    },
+    {
+      "name": "SEARCH",
+      "doc": "In a recursive WITH clause, orders rows depth-first or breadth-first.",
+      "syntax": "SEARCH { DEPTH | BREADTH } FIRST BY col SET order_col"
+    },
+    {
+      "name": "CYCLE",
+      "doc": "In a recursive WITH clause marks cycles; in a sequence, restarts after the maximum value.",
+      "syntax": "CYCLE col SET is_cycle TO 'Y' DEFAULT 'N'"
+    },
+    {
+      "name": "NOCACHE",
+      "doc": "Sequence or table option that disables caching of values or blocks."
+    }
+  ],
+  "constants": [
+    {
+      "name": "TRUE",
+      "doc": "The BOOLEAN true value. (BOOLEAN is a SQL type from Oracle 23ai; always available in PL/SQL.)"
+    },
+    {
+      "name": "FALSE",
+      "doc": "The BOOLEAN false value. (BOOLEAN is a SQL type from Oracle 23ai; always available in PL/SQL.)"
+    }
+  ],
+  "types": [
+    {
+      "name": "NUMBER",
+      "doc": "Exact decimal number with up to 38 digits of precision. Without arguments it stores any value in range; NUMBER(p, s) fixes precision and scale.",
+      "syntax": "NUMBER[(p [, s])]"
+    },
+    {
+      "name": "INTEGER",
+      "doc": "ANSI synonym for NUMBER(38), an integer with up to 38 digits.",
+      "syntax": "INTEGER"
+    },
+    {
+      "name": "INT",
+      "doc": "ANSI synonym for NUMBER(38).",
+      "syntax": "INT"
+    },
+    {
+      "name": "SMALLINT",
+      "doc": "ANSI synonym for NUMBER(38); Oracle does not store it in fewer bytes.",
+      "syntax": "SMALLINT"
+    },
+    {
+      "name": "NUMERIC",
+      "doc": "ANSI synonym for NUMBER(p, s).",
+      "syntax": "NUMERIC[(p [, s])]"
+    },
+    {
+      "name": "DECIMAL",
+      "doc": "ANSI synonym for NUMBER(p, s).",
+      "syntax": "DECIMAL[(p [, s])]"
+    },
+    {
+      "name": "DEC",
+      "doc": "ANSI synonym for NUMBER(p, s).",
+      "syntax": "DEC[(p [, s])]"
+    },
+    {
+      "name": "FLOAT",
+      "doc": "A NUMBER subtype with binary precision (1 to 126 bits, default 126); still a decimal type, unlike BINARY_DOUBLE.",
+      "syntax": "FLOAT[(binary_precision)]"
+    },
+    {
+      "name": "REAL",
+      "doc": "ANSI type mapped to FLOAT(63).",
+      "syntax": "REAL"
+    },
+    {
+      "name": "DOUBLE",
+      "doc": "DOUBLE PRECISION is an ANSI type mapped to FLOAT(126).",
+      "syntax": "DOUBLE PRECISION"
+    },
+    {
+      "name": "BINARY_FLOAT",
+      "doc": "32-bit IEEE 754 single-precision floating-point number; supports NaN and infinity.",
+      "syntax": "BINARY_FLOAT"
+    },
+    {
+      "name": "BINARY_DOUBLE",
+      "doc": "64-bit IEEE 754 double-precision floating-point number; supports NaN and infinity.",
+      "syntax": "BINARY_DOUBLE"
+    },
+    {
+      "name": "VARCHAR2",
+      "doc": "Variable-length text in the database character set, up to 4000 bytes, or 32767 with MAX_STRING_SIZE = EXTENDED. Length may be in BYTE or CHAR.",
+      "syntax": "VARCHAR2(size [BYTE | CHAR])"
+    },
+    {
+      "name": "NVARCHAR2",
+      "doc": "Variable-length Unicode text in the national character set, with length in characters.",
+      "syntax": "NVARCHAR2(size)"
+    },
+    {
+      "name": "VARCHAR",
+      "doc": "Currently a synonym of VARCHAR2; Oracle recommends VARCHAR2 because VARCHAR semantics may change.",
+      "syntax": "VARCHAR(size)"
+    },
+    {
+      "name": "CHAR",
+      "doc": "Fixed-length text, blank-padded to its length (default 1), up to 2000 bytes.",
+      "syntax": "CHAR[(size [BYTE | CHAR])]"
+    },
+    {
+      "name": "CHARACTER",
+      "doc": "ANSI synonym for CHAR; CHARACTER VARYING is a synonym for VARCHAR2.",
+      "syntax": "CHARACTER[(size)] | CHARACTER VARYING(size)"
+    },
+    {
+      "name": "NCHAR",
+      "doc": "Fixed-length Unicode text in the national character set, with length in characters.",
+      "syntax": "NCHAR[(size)]"
+    },
+    {
+      "name": "CLOB",
+      "doc": "Character large object for text up to (4 GB - 1) * block size, in the database character set.",
+      "syntax": "CLOB"
+    },
+    {
+      "name": "NCLOB",
+      "doc": "Character large object in the national character set.",
+      "syntax": "NCLOB"
+    },
+    {
+      "name": "BLOB",
+      "doc": "Binary large object for unstructured binary data up to (4 GB - 1) * block size.",
+      "syntax": "BLOB"
+    },
+    {
+      "name": "BFILE",
+      "doc": "Locator for a binary file stored outside the database in an operating-system directory; read-only.",
+      "syntax": "BFILE"
+    },
+    {
+      "name": "LONG",
+      "doc": "Legacy variable-length text up to 2 GB; LONG RAW is its binary form. Deprecated: use CLOB or BLOB.",
+      "syntax": "LONG | LONG RAW"
+    },
+    {
+      "name": "RAW",
+      "doc": "Variable-length binary data up to 2000 bytes, or 32767 with MAX_STRING_SIZE = EXTENDED.",
+      "syntax": "RAW(size)"
+    },
+    {
+      "name": "DATE",
+      "doc": "Date and time to the second (century, year, month, day, hour, minute, second), with no fractional seconds or time zone.",
+      "syntax": "DATE"
+    },
+    {
+      "name": "TIMESTAMP",
+      "doc": "Date and time with fractional seconds (0 to 9 digits, default 6). WITH TIME ZONE stores an offset or region; WITH LOCAL TIME ZONE normalizes to the database zone and shows in the session zone.",
+      "syntax": "TIMESTAMP[(fsp)] [WITH [LOCAL] TIME ZONE]"
+    },
+    {
+      "name": "INTERVAL",
+      "doc": "A span of time: YEAR TO MONTH for years and months, or DAY TO SECOND for days, hours, minutes and seconds.",
+      "syntax": "INTERVAL YEAR[(yp)] TO MONTH | INTERVAL DAY[(dp)] TO SECOND[(fsp)]"
+    },
+    {
+      "name": "BOOLEAN",
+      "doc": "TRUE, FALSE or NULL. A SQL column type from Oracle 23ai; always available in PL/SQL.",
+      "syntax": "BOOLEAN"
+    },
+    {
+      "name": "JSON",
+      "doc": "Native binary JSON (OSON) type for documents, arrays and scalars. (Oracle 21c+)",
+      "syntax": "JSON [(OBJECT | ARRAY | SCALAR ...)]"
+    },
+    {
+      "name": "XMLTYPE",
+      "doc": "Stores XML documents, with methods and SQL/XML functions to query them.",
+      "syntax": "XMLTYPE [STORE AS { BINARY XML | CLOB }]"
+    },
+    {
+      "name": "ROWID",
+      "doc": "The physical address of a row in its base-64 extended format; also the ROWID pseudocolumn.",
+      "syntax": "ROWID"
+    },
+    {
+      "name": "UROWID",
+      "doc": "Universal rowid: the logical or physical address of a row, including rows of index-organized and foreign tables.",
+      "syntax": "UROWID[(size)]"
+    },
+    {
+      "name": "PLS_INTEGER",
+      "doc": "PL/SQL signed 32-bit integer using native machine arithmetic; faster than NUMBER. PL/SQL only.",
+      "syntax": "PLS_INTEGER"
+    },
+    {
+      "name": "BINARY_INTEGER",
+      "doc": "PL/SQL synonym of PLS_INTEGER. PL/SQL only.",
+      "syntax": "BINARY_INTEGER"
+    },
+    {
+      "name": "SIMPLE_INTEGER",
+      "doc": "PL/SQL subtype of PLS_INTEGER that is NOT NULL and wraps on overflow instead of raising an error. PL/SQL only.",
+      "syntax": "SIMPLE_INTEGER"
+    },
+    {
+      "name": "SYS_REFCURSOR",
+      "doc": "Predefined weak REF CURSOR type for passing query result sets between PL/SQL units and to clients.",
+      "syntax": "SYS_REFCURSOR"
+    },
+    {
+      "name": "SDO_GEOMETRY",
+      "doc": "Oracle Spatial object type for points, lines, polygons and collections, with a coordinate system (SRID).",
+      "syntax": "SDO_GEOMETRY(gtype, srid, point, elem_info, ordinates)"
+    },
+    {
+      "name": "VECTOR",
+      "doc": "Vector of numbers for AI similarity search; dimension count and element format (INT8, FLOAT32, FLOAT64, BINARY) may be fixed or * for any. (Oracle 23ai+)",
+      "syntax": "VECTOR[(dimensions | *, format | * [, DENSE | SPARSE])]"
+    }
+  ]
+}

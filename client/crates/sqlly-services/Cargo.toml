@@ -1,0 +1,84 @@
+[package]
+name = "sqlly-services"
+version = "1.35.0"
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+sqlly-core = { workspace = true }
+sqlly-intel = { workspace = true }
+sqlly-ai = { workspace = true }
+sqlly-lang = { workspace = true }
+serde_json = { workspace = true }
+serde = { workspace = true }
+async-trait = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+futures = { workspace = true }
+uuid = { workspace = true }
+base64 = "0.23"
+rand = { workspace = true }
+sha2 = { workspace = true }
+
+# Database sockets, spill-to-disk, the data-dir spill/catalog roots, the
+# cloud-credential providers, and the remote-engine client are all native-only;
+# the browser build swaps in the `browser` module's executors (rusqlite over
+# sqlite-wasm-rs + the `fakedb` module) wired by `Services::new`.
+# The remote-engine client (`remote`) rides sqlly-remote's engine protocol on
+# every target: natively over a relay/bridge session, in the browser over the
+# relay proxy's WebSocket.
+sqlly-remote = { workspace = true }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+chrono = { workspace = true }
+sqlly-engines = { workspace = true }
+sqlly-wire = { workspace = true }
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+bytes = { workspace = true }
+dirs = "7"
+tempfile = "3"
+reqwest = { workspace = true }
+rustls = { workspace = true }
+url = "2"
+aws-config = { version = "1", default-features = false, features = ["behavior-version-latest", "rustls", "sso", "credentials-process"] }
+aws-credential-types = "1"
+aws-sigv4 = "1"
+aws-types = "1"
+aws-runtime = "1"
+gcp_auth = { version = "0.12", default-features = false, features = ["webpki-roots"] }
+# RDS IAM tokens must be signed for the real *.rds.amazonaws.com endpoint, so a
+# CNAME the user typed is followed one hop at a time (the system resolver only
+# reports the last name in the chain, which is an internal EC2 host).
+hickory-resolver = "0.26"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+# chrono's clock reads via JS on wasm (Utc::now panics otherwise).
+chrono = { workspace = true, features = ["wasmbind"] }
+# std::time::Instant/SystemTime panic on wasm32; web-time is the drop-in
+# replacement backed by performance.now().
+web-time = "1"
+tokio = { version = "1", default-features = false, features = ["sync", "macros"] }
+rusqlite = { workspace = true }
+# uuid v4 needs a browser randomness source on wasm (Crypto.getRandomValues).
+uuid = { workspace = true, features = ["js"] }
+# rusqlite's Batch iterator (multi-statement SQL) is a FallibleIterator.
+fallible-iterator = "0.3"
+# The PGlite bridge calls the host page's `globalThis.sqllyPglite` object
+# (a Promise-returning JS API) and awaits it on the browser microtask queue.
+wasm-bindgen = "0.2"
+js-sys = "0.3"
+wasm-bindgen-futures = "0.4"
+# The relay-proxy transport (`browser::proxy`) is a browser WebSocket, and the
+# remote engine's deadlines need a JS timer instead of tokio's.
+web-sys = { version = "0.3", features = ["WebSocket", "MessageEvent", "BinaryType", "CloseEvent", "ErrorEvent", "Event"] }
+gloo-timers = { version = "0.4", features = ["futures"] }
+
+[dev-dependencies]
+sqlly-testkit = { workspace = true }
+sqlly-engines = { workspace = true }
+tempfile = "3"
+filetime = "0.2"
+tokio = { workspace = true }
+uuid = { workspace = true }

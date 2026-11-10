@@ -1,0 +1,56 @@
+# Rust
+target/
+**/*.rs.bk
+*.pdb
+
+# Browser (wasm) build output and the sample databases build-browser.sh
+# downloads; never committed.
+client/apps/browser/dist/
+client/apps/browser/www/northwind.db
+client/apps/browser/www/pglite/
+client/apps/browser/www/chinook_postgres.sql
+
+# macOS app build and packaging artifacts
+*.app
+*.dSYM/
+*.pkg
+*.dmg
+*.xcarchive
+
+# macOS filesystem metadata
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+# `Icon?` (the Finder "Icon\r" file) matches any `icons/` directory on
+# case-insensitive filesystems; keep the real icon directories tracked.
+!/assets/icons/
+!client/apps/browser/assets/icons/
+!client/apps/gpui/resources/icons/
+._*
+
+# Code-signing provisioning profiles
+*.provisionprofile
+*.mobileprovision
+
+# Local environment
+.env
+.env.*
+!.env.example
+
+# Local live SQL Server connection for integration tests (never commit creds)
+.sqlly-local-sql.json
+.osxql-local-sql.json
+!.sqlly-local-sql.example.json
+
+# Editors
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.iml
+
+# Local scratch database files used for manual testing
+test-db/
+*.private.pem

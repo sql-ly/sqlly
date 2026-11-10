@@ -1,0 +1,48 @@
+[package]
+name = "sqlly-core"
+version = "1.23.0"
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[features]
+# Set by the GPUI app's `app-store` feature: the Mac App Store edition keeps
+# its keychain items under its own service names, apart from the direct
+# download's.
+mac-app-store = []
+
+[dependencies]
+sqlly-lang = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+tracing = { workspace = true }
+async-trait = { workspace = true }
+dashmap = { workspace = true }
+futures = { workspace = true }
+bitflags = { workspace = true, features = ["serde"] }
+url = "2"
+percent-encoding = "2"
+base64 = "0.23"
+
+# tokio "full" pulls mio/net, which does not exist on wasm32-unknown-unknown.
+# Core only uses tokio's task-free primitives (sync::broadcast for EventBus,
+# sync::mpsc for RowChannel), so the wasm build trims to those; native keeps
+# the workspace "full" features so nothing changes for the desktop app.
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+tokio = { workspace = true }
+keyring = { workspace = true }
+roxmltree = "0.21"
+plist = { workspace = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+tokio = { version = "1", default-features = false, features = ["sync", "macros"] }
+
+[dev-dependencies]
+sqlly-testkit = { workspace = true }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+keyring = { workspace = true }
+plist = { workspace = true }

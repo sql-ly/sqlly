@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Object Explorer</title>
+  <desc id="desc">A lazy-loaded server tree with database, tables, views, and child nodes.</desc>
+  <style>
+    .ink{stroke:oklch(30% 0.06 252);stroke-width:8;stroke-linecap:round;stroke-linejoin:round}.thin{stroke:oklch(55% 0.06 252);stroke-width:5;stroke-linecap:round;stroke-linejoin:round}.panel{fill:oklch(94% 0.018 245);stroke:oklch(66% 0.05 245);stroke-width:6}.soft{fill:oklch(88% 0.04 250)}.accent{fill:oklch(62% 0.16 250)}.accent2{fill:oklch(68% 0.14 178)}.accent3{fill:oklch(74% 0.16 65)}
+  </style>
+  <rect class="panel" x="28" y="34" width="104" height="184" rx="18"/>
+  <ellipse class="accent" cx="80" cy="67" rx="34" ry="14"/>
+  <path class="thin" fill="none" d="M46 67v30c0 8 15 14 34 14s34-6 34-14V67"/>
+  <path class="ink" fill="none" d="M80 112v30M80 142h46M80 142H54M126 142v32M54 142v32"/>
+  <rect class="soft" x="138" y="66" width="70" height="34" rx="10"/>
+  <rect class="soft" x="138" y="122" width="70" height="34" rx="10"/>
+  <rect class="soft" x="138" y="178" width="70" height="34" rx="10"/>
+  <path class="thin" d="M154 83h30M154 139h36M154 195h28"/>
+  <circle class="accent2" cx="54" cy="174" r="12"/>
+  <circle class="accent3" cx="126" cy="174" r="12"/>
+</svg>

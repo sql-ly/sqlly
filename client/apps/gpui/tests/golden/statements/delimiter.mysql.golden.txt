@@ -1,0 +1,8 @@
+--- statement 1 [0..78]
+DELIMITER //
+CREATE PROCEDURE p() BEGIN SELECT 1; SELECT 2; END//
+DELIMITER ;
+
+--- statement 2 [78..88]
+SELECT 3;
+

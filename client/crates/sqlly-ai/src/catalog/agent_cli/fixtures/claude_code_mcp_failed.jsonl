@@ -1,0 +1,1 @@
+{"type":"system","subtype":"init","session_id":"sess-fail","mcp_servers":[{"name":"sqlly","status":"failed"}],"mcp_server_errors":[{"server":"sqlly","error":"connection refused"}]}

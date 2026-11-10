@@ -1,0 +1,25 @@
+[package]
+name = "sqlly-keyring"
+version = "1.2.0"
+edition.workspace = true
+license.workspace = true
+publish = false
+description = "The OS credential store behind the small keyring API SQLly uses: keyring-core plus the platform store crates."
+
+[lints]
+workspace = true
+
+[dependencies]
+keyring-core = "1.0.1"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+apple-native-keyring-store = { version = "1.0.2", features = ["keychain"] }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-native-keyring-store = "1.1.0"
+
+# The same libdbus-backed Secret Service store keyring 3's `sync-secret-service`
+# + `vendored` features used, so existing items keep resolving. The store
+# requires a session-crypto backend; `crypto-rust` avoids an OpenSSL dependency.
+[target.'cfg(all(unix, not(any(target_os = "macos", target_os = "ios", target_os = "android"))))'.dependencies]
+dbus-secret-service-keyring-store = { version = "1.0.1", features = ["vendored", "crypto-rust"] }

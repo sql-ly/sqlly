@@ -1,0 +1,57 @@
+[package]
+name = "sqlly-intel"
+version = "1.27.0"
+edition.workspace = true
+license.workspace = true
+publish = false
+
+# build.rs gates the heavy per-report IntelliSense regression tests (the
+# `intellisense_verify` module's suite) behind SQLLY_INTELLISENSE_SUITE, so
+# `cargo test --workspace` stays cheap everywhere except the one CI leg that
+# sets it.
+
+[dependencies]
+serde = { workspace = true }
+# The Redis command grammar reads JSON argument lines on every target.
+serde_json = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+sqlly-core = { workspace = true }
+sqlly-lang = { workspace = true }
+# ShowPlan XML for the plan parser (`plans`); pure Rust, so it builds for
+# wasm too (the online plan viewer runs the same parser).
+roxmltree = "0.21"
+
+# The model engine (pooled snapshots, the SQLite reference collector) and the
+# verification suite are native-only: nothing in the browser build reaches
+# them, and their `lib.rs` module declarations are gated to match. Keeping
+# their dependencies here too means the wasm build never has to resolve
+# tokio's full feature set or a native rusqlite.
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+tokio = { workspace = true }
+async-trait = { workspace = true }
+parking_lot = { workspace = true }
+futures = { workspace = true }
+rusqlite = { workspace = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+# std::time::Instant/SystemTime panic on wasm32; web-time is the drop-in
+# replacement backed by performance.now().
+web-time = "1"
+
+[dev-dependencies]
+criterion = { workspace = true }
+rusqlite = { workspace = true }
+tempfile = "3"
+tokio = { workspace = true }
+sqlly-testkit = { workspace = true }
+sqlly-engines = { workspace = true }
+
+[[bench]]
+name = "completion"
+harness = false
+
+[[bench]]
+name = "symbol_completion"
+harness = false

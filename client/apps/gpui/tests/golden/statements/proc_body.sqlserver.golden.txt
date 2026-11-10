@@ -1,0 +1,10 @@
+--- statement 1 [0..60]
+CREATE PROCEDURE dbo.p AS
+BEGIN
+  SELECT 1;
+  SELECT 2;
+END
+
+--- statement 2 [63..73]
+SELECT 3;
+

@@ -1,0 +1,3 @@
+SELECT 1 AS one;
+GO
+SELECT 2 AS two;

@@ -1,0 +1,45 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "Orders (prod)",
+      "Group": "Acme",
+      "Host": "pg1.acme.internal",
+      "Port": 5433,
+      "MaintenanceDB": "orders",
+      "Username": "orders_ro",
+      "PassFile": "/home/me/.pgpass",
+      "Comment": "primary",
+      "BGColor": "#ff0000",
+      "ConnectionParameters": {
+        "sslmode": "verify-full",
+        "sslrootcert": "/etc/ssl/acme-ca.pem",
+        "connect_timeout": 10
+      }
+    },
+    "2": {
+      "Name": "Legacy reporting",
+      "Group": "Servers",
+      "Host": "10.0.0.7",
+      "Port": "5432",
+      "MaintenanceDB": "postgres",
+      "Username": "report",
+      "SSLMode": "require",
+      "UseSSHTunnel": 1,
+      "TunnelHost": "bastion.acme.internal",
+      "TunnelPort": "2222",
+      "TunnelUsername": "jump",
+      "TunnelAuthentication": 1,
+      "TunnelIdentityFile": "/home/me/.ssh/id_ed25519",
+      "TunnelKeepAlive": 30
+    },
+    "3": {
+      "Name": "By service only",
+      "Group": "Servers",
+      "Port": 5432,
+      "MaintenanceDB": "postgres",
+      "Username": "",
+      "Service": "billing",
+      "SSLMode": "prefer"
+    }
+  }
+}

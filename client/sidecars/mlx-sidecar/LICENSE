@@ -1,0 +1,7 @@
+The MLX sidecar is part of SQLly and is licensed under the same terms as the
+rest of the SQLly desktop source: the PolyForm Small Business License 1.0.0 or
+the SQLly commercial license. See LICENSING.md and LICENSE.md at the root of
+this repository.
+
+Its Python dependencies (requirements.txt) are installed from PyPI under their
+own licenses; see THIRD-PARTY-NOTICES.md.

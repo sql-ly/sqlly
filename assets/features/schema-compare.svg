@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Schema compare</title>
+  <desc id="desc">Two schema snapshots compared into added, changed, and removed script differences.</desc>
+  <style>
+    .ink{stroke:oklch(30% 0.06 252);stroke-width:8;stroke-linecap:round;stroke-linejoin:round}.thin{stroke:oklch(55% 0.06 252);stroke-width:5;stroke-linecap:round;stroke-linejoin:round}.panel{fill:oklch(94% 0.018 245);stroke:oklch(66% 0.05 245);stroke-width:6}.soft{fill:oklch(88% 0.04 250)}.accent{fill:oklch(62% 0.16 250)}.accent2{fill:oklch(68% 0.14 178)}.accent3{fill:oklch(74% 0.16 65)}.danger{fill:oklch(64% 0.16 18)}
+  </style>
+  <rect class="panel" x="28" y="52" width="86" height="150" rx="16"/>
+  <rect class="panel" x="142" y="52" width="86" height="150" rx="16"/>
+  <path class="thin" d="M48 88h50M48 116h36M48 144h48M162 88h50M162 116h48M162 144h28M162 172h42"/>
+  <path class="accent2" d="M46 170h44v18H46z"/>
+  <path class="accent3" d="M160 108h54v18h-54z"/>
+  <path class="danger" d="M48 136h44v18H48z"/>
+  <path class="ink" fill="none" d="M118 100h24M130 88v24M118 154h24"/>
+  <circle class="soft" cx="128" cy="216" r="18"/>
+  <path class="thin" d="M119 216h18"/>
+</svg>

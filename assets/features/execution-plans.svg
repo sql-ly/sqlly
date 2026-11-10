@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Execution plans</title>
+  <desc id="desc">A graphical execution plan with connected operators, cost flow, and warning indicator.</desc>
+  <style>
+    .ink{stroke:oklch(30% 0.06 252);stroke-width:8;stroke-linecap:round;stroke-linejoin:round}.thin{stroke:oklch(55% 0.06 252);stroke-width:5;stroke-linecap:round;stroke-linejoin:round}.panel{fill:oklch(94% 0.018 245);stroke:oklch(66% 0.05 245);stroke-width:6}.soft{fill:oklch(88% 0.04 250)}.accent{fill:oklch(62% 0.16 250)}.accent2{fill:oklch(68% 0.14 178)}.accent3{fill:oklch(74% 0.16 65)}.danger{fill:oklch(64% 0.16 18)}
+  </style>
+  <path class="ink" fill="none" d="M70 86h56l44 52M70 156h56l44-18M126 86v70"/>
+  <rect class="panel" x="32" y="58" width="68" height="56" rx="14"/>
+  <rect class="soft" x="32" y="128" width="68" height="56" rx="14"/>
+  <rect class="panel" x="104" y="102" width="68" height="56" rx="14"/>
+  <rect class="soft" x="174" y="112" width="50" height="50" rx="14"/>
+  <path class="thin" d="M50 86h32M50 156h28M122 130h34M188 137h20"/>
+  <path class="accent" d="M62 42l10 18 20 4-14 15 3 20-19-8-18 8 3-20-14-15 20-4z"/>
+  <path class="danger" d="M190 176l28 48h-56z"/>
+  <path fill="oklch(96% 0.012 245)" d="M187 214h10v8h-10zM187 194h10v16h-10z"/>
+</svg>

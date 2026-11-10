@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleDevelopmentRegion</key>
+  <string>en</string>
+  <key>CFBundleDisplayName</key>
+  <string>SQLLY</string>
+  <key>CFBundleExecutable</key>
+  <string>SQLLY</string>
+  <key>CFBundleIconFile</key>
+  <string>AppIcon</string>
+  <key>CFBundleIdentifier</key>
+  <string>app.sqlly</string>
+  <key>CFBundleInfoDictionaryVersion</key>
+  <string>6.0</string>
+  <key>CFBundleName</key>
+  <string>SQLLY</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleURLTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleURLName</key>
+      <string>sqlly auth callback</string>
+      <key>CFBundleURLSchemes</key>
+      <array>
+        <string>sqlly-auth</string>
+      </array>
+    </dict>
+    <dict>
+      <key>CFBundleURLName</key>
+      <string>SQLLY deep link</string>
+      <key>CFBundleURLSchemes</key>
+      <array>
+        <string>sqlly</string>
+      </array>
+    </dict>
+  </array>
+  <key>CFBundleDocumentTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleTypeName</key>
+      <string>SQLite database</string>
+      <key>CFBundleTypeRole</key>
+      <string>Viewer</string>
+      <key>LSHandlerRank</key>
+      <string>Alternate</string>
+      <key>CFBundleTypeExtensions</key>
+      <array>
+        <string>sqlite</string>
+        <string>db</string>
+        <string>sqlite3</string>
+      </array>
+    </dict>
+  </array>
+  <key>CFBundleShortVersionString</key>
+  <string>$VERSION</string>
+  <key>CFBundleVersion</key>
+  <string>1</string>
+  <key>LSMinimumSystemVersion</key>
+  <string>13.0</string>
+  <key>NSLocalNetworkUsageDescription</key>
+  <string>$APP_NAME connects to database servers on your local network, such as virtual machines, containers, and servers on your LAN.</string>
+  <key>NSHighResolutionCapable</key>
+  <true/>
+</dict>
+</plist>

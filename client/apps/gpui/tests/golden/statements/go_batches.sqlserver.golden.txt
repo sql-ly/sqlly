@@ -1,0 +1,6 @@
+--- statement 1 [0..9]
+SELECT 1
+
+--- statement 2 [24..33]
+SELECT 3
+

@@ -1,0 +1,1 @@
+SELECT name FROM fn_helpcollations() ORDER BY name

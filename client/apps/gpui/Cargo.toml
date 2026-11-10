@@ -1,0 +1,195 @@
+[package]
+name = "sqlly-gpui"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[[bin]]
+# The shipped executable is SQLLY / SQLLY.exe (all caps, branding).
+name = "SQLLY"
+path = "src/main.rs"
+
+[features]
+# The Mac App Store edition: sandbox-safe behaviour, StoreKit in-app purchase
+# (links the Swift glue in native/macos via build.rs), the free-tier saved
+# connection limit, and bundled vendor CLI tools. Off for the direct-download
+# build.
+app-store = ["sqlly-core/mac-app-store", "sqlly-remote/mac-app-store"]
+# A fully standalone build that never contacts sqlly.app: no account sign-in,
+# no license checks or nags, no feedback upload, no update checks, no Cloud
+# Relay. Takes precedence over `app-store` if both are enabled. See README.md
+# ("Standalone builds").
+standalone = []
+
+[dependencies]
+async-trait = { workspace = true }
+sqlly-services = { workspace = true }
+sqlly-intel = { workspace = true }
+sqlly-i18n = { path = "../../crates/sqlly-i18n", version = "1.10.0" }
+sqlly-core = { workspace = true }
+sqlly-ai = { workspace = true }
+sqlly-lang = { workspace = true }
+sqlly-lsp = { workspace = true }
+sqlly-datatable = "10.1.0"
+gpui-component = "0.9.0"
+gpui-kit-assets = "0.9.0"
+rust-i18n = "4.2.4"
+# GPUI Kit's gpui line: `gpui-pre` is the registry publication of the current
+# gpui API (the one this source is written against), consumed under the name
+# `gpui` via a package rename so imports stay `gpui::…`.
+gpui = { package = "gpui-pre", version = "0.3.11" }
+# Platform facade (registry publication of the split platform layer):
+# `application()` on native, `single_threaded_web()` on wasm. The
+# x11/wayland/font-kit/runtime_shaders features route to the per-OS backend
+# crates and are no-ops elsewhere.
+gpui_platform = { package = "gpui-pre-platform", version = "0.3.11", features = [
+    "font-kit",
+    "x11",
+    "wayland",
+    "runtime_shaders",
+] }
+parking_lot = { workspace = true }
+uuid = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+unicode-segmentation = "1"
+unicode-normalization = "0.1"
+unicode-width = "0.2"
+chrono = { workspace = true }
+# Named display time zones for date/datetime/epoch columns (pure Rust, wasm-safe).
+chrono-tz = { workspace = true }
+regex = "1"
+base64 = "0.23"
+# MessagePack decoding for the value viewer's MessagePack format (pure Rust
+# serde stack; wasm-safe like the viewer itself).
+rmp-serde = "1"
+# Value viewer codecs (structured_data.rs): gzip/zlib/deflate through flate2's
+# pure-Rust backend (also used for query version history payloads), LZ4 frames
+# through lz4_flex (pure Rust, safe decode only). Both build on wasm.
+flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
+lz4_flex = { version = "0.14", default-features = false, features = ["std", "safe-decode", "safe-encode", "frame", "checked-decode"] }
+# Value viewer YAML tree (structured_data.rs). Pure Rust with a built-in
+# input budget (no billion-laughs expansion); already in the graph via
+# rust-i18n. Deserialize only.
+serde-saphyr = { version = "2.1", default-features = false, features = ["deserialize"] }
+# Pure Rust URL parsing (no networking) for MCP endpoint validation, which
+# runs on wasm too even though the reqwest HTTP client itself is native-only.
+url = "2"
+rand = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+image = { version = "0.25", default-features = false, features = ["png"] }
+# Glyph rasterizer for the IntelliSense-feedback popup facsimile: GPUI has no
+# in-app screenshot API, so we draw the completion popup to a PNG ourselves.
+ab_glyph = "0.2"
+# IntelliSense feedback: Brotli-compress the capture and sign it with the
+# baked-in app key. Pure Rust — used on wasm too (the dialog works there;
+# only the HTTP submit is native-gated in store.rs).
+brotli = { workspace = true }
+p256 = { workspace = true }
+sha2 = { workspace = true }
+
+# Native-only subsystems. Each has a wasm swap or a clearly-labeled
+# "not available in the browser" notice; see src/platform/.
+#  - tokio: reactor for the TDS/network paths (browser services are
+#    synchronous under the hood)
+#  - keyring: OS credential store (browser: sessionStorage)
+#  - dirs: config/data roots (browser: localStorage)
+#  - reqwest: cloud AI + Azure HTTP (browser: AI/Azure disabled)
+#  - rfd: native file dialogs (browser: file features disabled)
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+# reqwest is built with `rustls-no-provider`; sqlly-gpui installs the workspace's
+# one compiled provider (ring) as the process default. The `ring` provider does
+# not build for wasm32 (SystemRandom isn't SecureRandom there), and every
+# `install_default()` call site is already native-gated, so the dependency is
+# native-only. On wasm, reqwest uses the browser fetch backend — no provider.
+rustls = { workspace = true }
+tokio = { workspace = true }
+# The one-shot, awaitable flags behind the in-app update job (self_update.rs).
+tokio-util = { workspace = true }
+keyring = { workspace = true }
+# Via-Relay engine transport (native only — TLS + tokio net). The browser build
+# has no relay client; `remote_session` is cfg'd out on wasm.
+sqlly-remote = { workspace = true }
+sqlly-services = { workspace = true }
+sqlly-wire = { workspace = true }
+sqlly-engines = { workspace = true }
+dirs = "7"
+# Query execution history lives in a local SQLite file (bundled engine,
+# already compiled for the SQLite driver — no new native code).
+rusqlite = { workspace = true }
+reqwest = { workspace = true, default-features = false, features = ["form", "multipart", "rustls-no-provider", "json"] }
+# Value viewer zstd codec: links the reference C library, so native only; the
+# browser build reports zstd as unavailable.
+zstd = { version = "0.14", default-features = false }
+# Custom .proto schemas for Protobuf values (protobuf_schema.rs): a pure-Rust
+# .proto compiler plus reflection-based decoding. Native only — schemas are
+# registered from files on disk, which the browser build cannot read; there
+# Protobuf stays schema-less.
+protox = "0.10"
+prost-reflect = { version = "0.16", features = ["serde"] }
+rfd = "0.18"
+calamine = { version = "0.38", default-features = false, features = ["dates"] }
+chardetng = "1"
+encoding_rs = "0.8"
+tempfile = "3"
+notify = "8"
+notify-debouncer-mini = "0.7"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+winreg = "0.56"
+
+# Send Feedback window capture (src/screenshot.rs): read the NSWindow number
+# behind a gpui window. Both are already in the graph via gpui's macOS backend.
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+raw-window-handle = "0.6"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+# chrono's clock reads via JS on wasm (Utc::now panics otherwise).
+chrono = { workspace = true, features = ["wasmbind"] }
+# std::time::Instant/SystemTime panic on wasm32; web-time is the drop-in
+# replacement backed by performance.now().
+web-time = "1"
+uuid = { workspace = true, features = ["js"] }
+# rand 0.10 draws from getrandom 0.4, whose wasm JS backend is selected by
+# the getrandom_backend cfg in .cargo/config.toml and the `wasm_js` feature
+# apps/browser enables on the shared getrandom 0.4.
+rand = { workspace = true }
+web-sys = { version = "0.3", features = [
+    "Window",
+    "Storage",
+    # File exports download through a Blob + `<a download>` (browser_download.rs).
+    "Document",
+    "Element",
+    "Node",
+    "HtmlElement",
+    "HtmlAnchorElement",
+    "Blob",
+    "BlobPropertyBag",
+    "Url",
+] }
+wasm-bindgen = "0.2"
+js-sys = "0.3"
+# The tokio stand-in (src/wasm_tokio.rs): futures supplies the channels,
+# wasm-bindgen-futures schedules spawned tasks on the browser microtask queue.
+futures = "0.3"
+wasm-bindgen-futures = "0.4"
+
+[build-dependencies]
+# Embeds resources/windows/sqlly.rc (the application icon) into the Windows
+# executable; a no-op on other targets.
+embed-resource = "3"
+# Stamps the UTC build date (SQLLY_BUILD_DATE) the prerelease expiry reads.
+chrono = { workspace = true }
+
+[dev-dependencies]
+gpui = { package = "gpui-pre", version = "0.3.11", features = ["test-support"] }
+proptest = { workspace = true }
+sqlly-testkit = { workspace = true }
+tempfile = "3"

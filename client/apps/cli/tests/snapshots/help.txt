@@ -1,0 +1,23 @@
+SQLLY command line — run SQL, inspect schemas, and export LLM-ready context against saved connections
+
+Usage: sqlly-cli [OPTIONS] <COMMAND>
+
+Commands:
+  query          Run SQL against a saved connection and print the results
+  schema         Inspect schema objects on a saved connection
+  context        Export LLM-ready schema context from the cached catalog
+  connections    List saved connections from the app store
+  doctor         Report CLI health: config paths, keyring, drivers, and saved connections
+  transfer       Copy table rows (and optionally structure) from one saved connection to another
+  run-file       Stream a .sql file to a connection statement by statement (GO batches on SQL Server)
+  dump-database  Write a whole database as a SQL dump: the portable built-in dump, or pg_dump/mysqldump with --native
+  restore-file   Restore a PostgreSQL custom/tar archive through pg_restore. Plain-SQL files (any engine) belong to `run-file` and are refused with a hint
+  mcp            Model Context Protocol server over stdio for external coding agents (Claude Code, Cursor, …). Read-only by default; policy file under Settings ▸ AI ▸ MCP. Never prints secrets; logs go to stderr only
+  help           Print this message or the help of the given subcommand(s)
+
+Options:
+      --json     Force the JSON envelope on stdout for every command
+  -h, --help     Print help
+  -V, --version  Print version
+
+Exit codes: 0 ok, 1 error, 2 usage, 3 policy refused. Pass --json for a machine-readable envelope on stdout.

@@ -1,0 +1,29 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":preserveSemverRanges"],
+  "schedule": ["before 6am on monday"],
+  "packageRules": [
+    {
+      "groupName": "rust non-major",
+      "matchManagers": ["cargo"],
+      "matchUpdateTypes": ["minor", "patch"]
+    },
+    {
+      "groupName": "dotnet non-major",
+      "matchManagers": ["nuget"],
+      "matchUpdateTypes": ["minor", "patch"]
+    },
+    {
+      "matchManagers": ["cargo"],
+      "matchPackageNames": [
+        "gpui",
+        "gpui-component",
+        "gpui-component-assets",
+        "gpui_platform",
+        "psm",
+        "sqlly-datatable"
+      ],
+      "enabled": false
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+[package]
+name = "sqlly-browser"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = "SQLLY in the browser: the real gpui app compiled to WebAssembly via gpui's web platform backend (gpui_web). Native-impossible subsystems (TDS sockets, OS keychain, local AI, Azure sign-in) are swapped for browser equivalents or clearly disabled."
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# The real application: every view and service binding the desktop app runs.
+sqlly-gpui = { path = "../gpui" }
+sqlly-services = { workspace = true }
+gpui = { package = "gpui-pre", version = "0.3.11" }
+gpui-component = "0.9.0"
+gpui-kit-assets = "0.9.0"
+# Same registry facade the native app boots through; on wasm it pulls
+# gpui_web (gpui-pre-web).
+gpui_platform = { package = "gpui-pre-platform", version = "0.3.11" }
+
+# Wasm-only glue: the crate is an empty rlib on native targets so
+# `cargo check`/`cargo test` cover it on every platform.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+# chrono's clock reads via JS on wasm (Utc::now panics otherwise).
+chrono = { workspace = true, features = ["wasmbind"] }
+# getrandom 0.4 arrives transitively via p256 0.14's RustCrypto 0.7 stack
+# (crypto-bigint / crypto-common). On wasm it needs its JS backend: this
+# enables the `wasm_js` feature (unified onto the shared getrandom 0.4);
+# .cargo/config.toml selects it via the getrandom_backend cfg.
+getrandom = { version = "0.4", features = ["wasm_js"] }
+# rusqlite 0.41 pulls sqlite-wasm-rs 0.6 with default features off, which
+# leaves SQLite's wasm host hooks (sleep, randomness, clock, local time) to
+# the embedder; its `wasm-bindgen` feature provides them through JS.
+sqlite-wasm-rs = { version = "0.6", features = ["wasm-bindgen"] }
+wasm-bindgen = "0.2"
+# Folding Mac ⌘ into Ctrl on input events (see `mac_command_key` in lib.rs).
+js-sys = "0.3"
+web-sys = { version = "0.3", features = ["Window", "Navigator", "EventTarget"] }
+console_error_panic_hook = "0.1"
+console_log = "1"
+log = "0.4"
+tracing-wasm = "0.2"
+# gpui-component's icon SVGs are embedded in the wasm binary (see the
+# EmbeddedAssets source in lib.rs) rather than fetched over HTTP, so every
+# icon is available synchronously on first paint — no async-fetch race, no
+# dependency on how/where dist/ is served.
+include_dir = "0.7"
+# Decodes the named arguments boot.js passes to `translation_message`.
+serde_json = { workspace = true }
+
+[lints]
+workspace = true

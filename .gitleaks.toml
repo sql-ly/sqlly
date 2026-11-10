@@ -1,0 +1,16 @@
+# gitleaks rules for this repository: the default rule set, plus the exact
+# values reviewed and confirmed not to be secrets. Allow values, not files,
+# so a real secret added to the same file is still caught. Used by the
+# secret-scan workflow here and by the check that runs before each release
+# is published.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Reviewed false positives (2026-10-30)"
+regexes = [
+  # Navicat-encrypted dummy password in the tool-import test fixture and test.
+  '''E00641F75A8FFC2E7AF00CC29732DB6E''',
+  # Random UUID used as a keychain lookup key in a Redis Sentinel test.
+  '''4b5c0b51-4f5e-4f0b-9b55-7f1d57b8a8a1''',
+]

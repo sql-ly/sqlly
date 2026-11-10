@@ -1,0 +1,6 @@
+--- statement 1 [0..36]
+SELECT $body$ inner ; still $body$;
+
+--- statement 2 [36..46]
+SELECT 2;
+

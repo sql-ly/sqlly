@@ -1,0 +1,46 @@
+[
+  {
+    "Plan": {
+      "Node Type": "Expression",
+      "Node Id": "Expression_8",
+      "Description": "(Project names + Projection)",
+      "Plans": [
+        {
+          "Node Type": "Aggregating",
+          "Node Id": "Aggregating_4",
+          "Plans": [
+            {
+              "Node Type": "Expression",
+              "Node Id": "Expression_3",
+              "Description": "Before GROUP BY",
+              "Plans": [
+                {
+                  "Node Type": "Expression",
+                  "Node Id": "Expression_9",
+                  "Description": "(WHERE + Change column names to column identifiers)",
+                  "Plans": [
+                    {
+                      "Node Type": "ReadFromMergeTree",
+                      "Node Id": "ReadFromMergeTree_0",
+                      "Description": "default.orders",
+                      "Indexes": [
+                        {
+                          "Type": "PrimaryKey",
+                          "Condition": "true",
+                          "Initial Parts": 1,
+                          "Selected Parts": 1,
+                          "Initial Granules": 74,
+                          "Selected Granules": 74
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

@@ -1,0 +1,1 @@
+DELETE FROM dbo.Orders WHERE id = 7

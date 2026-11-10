@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" role="img" aria-labelledby="title desc">
+  <title id="title">Open</title>
+  <desc id="desc">Open folder for loading SQL files.</desc>
+  <path fill="none" stroke="#111827" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M2.4 5.2h5l1.5 1.7h6.7v1.6"/>
+  <path fill="none" stroke="#111827" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M2.4 5.2v9.1h11.8l1.4-6.1H5.1L3.8 14.3"/>
+</svg>

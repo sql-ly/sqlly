@@ -1,0 +1,1 @@
+SELECT collname FROM pg_collation WHERE collnamespace = 'pg_catalog'::regnamespace ORDER BY 1

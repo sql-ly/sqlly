@@ -1,0 +1,6 @@
+--- statement 1 [0..28]
+SELECT `col;name` FROM `t`;
+
+--- statement 2 [28..38]
+SELECT 2;
+

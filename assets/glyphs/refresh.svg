@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" role="img" aria-labelledby="title desc">
+  <title id="title">Refresh</title>
+  <desc id="desc">Circular arrows for refreshing Object Explorer.</desc>
+  <path fill="none" stroke="#111827" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M14.2 6.4A5.4 5.4 0 0 0 4 5.1L2.7 6.6"/>
+  <path fill="none" stroke="#111827" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M4.1 4.9h3.1v3.1M3.8 11.6A5.4 5.4 0 0 0 14 12.9l1.3-1.5"/>
+  <path fill="none" stroke="#111827" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M13.9 13.1h-3.1V10"/>
+</svg>

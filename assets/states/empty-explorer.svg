@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 160" role="img" aria-labelledby="title desc">
+  <title id="title">Empty explorer</title>
+  <desc id="desc">Object tree with no loaded nodes.</desc>
+  <rect x="35" y="24" width="90" height="112" rx="13" fill="#f8fbff" stroke="#8fb0d8" stroke-width="4"/>
+  <path d="M58 51h42M58 80h30M58 109h47" stroke="#9aa8bd" stroke-width="6" stroke-linecap="round"/>
+  <path d="M52 51h-8M52 80h-8M52 109h-8" stroke="#8fb0d8" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="142" cy="91" r="28" fill="#ffffff" stroke="#94a3b8" stroke-width="6"/>
+  <path d="M128 91h28" stroke="#94a3b8" stroke-width="7" stroke-linecap="round"/>
+  <path d="M54 24v112" stroke="#d3e0ef" stroke-width="3"/>
+</svg>

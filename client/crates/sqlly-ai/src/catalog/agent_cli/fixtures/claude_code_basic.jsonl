@@ -1,0 +1,4 @@
+{"type":"system","subtype":"init","session_id":"sess-1","mcp_servers":[{"name":"sqlly","status":"connected"}]}
+{"type":"assistant","message":{"content":[{"type":"tool_use","id":"tu-1","name":"mcp__sqlly__describe_table","input":{"table":"dbo.Orders"}}]}}
+{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"tu-1","content":"id int, amount decimal"}]}}
+{"type":"result","subtype":"success","is_error":false,"result":"The largest table has 1000 rows."}

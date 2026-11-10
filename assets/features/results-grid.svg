@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Results grid</title>
+  <desc id="desc">A paged result table with multiple result sets and export affordance.</desc>
+  <style>
+    .ink{stroke:oklch(30% 0.06 252);stroke-width:8;stroke-linecap:round;stroke-linejoin:round}.thin{stroke:oklch(55% 0.06 252);stroke-width:5;stroke-linecap:round;stroke-linejoin:round}.panel{fill:oklch(94% 0.018 245);stroke:oklch(66% 0.05 245);stroke-width:6}.soft{fill:oklch(88% 0.04 250)}.accent{fill:oklch(62% 0.16 250)}.accent2{fill:oklch(68% 0.14 178)}.accent3{fill:oklch(74% 0.16 65)}
+  </style>
+  <rect class="panel" x="30" y="48" width="190" height="148" rx="16"/>
+  <path class="accent" d="M30 64a16 16 0 0 1 16-16h158a16 16 0 0 1 16 16v22H30z"/>
+  <path class="thin" d="M30 86h190M30 124h190M30 160h132M78 48v148M126 48v148M174 48v82"/>
+  <path class="ink" fill="none" d="M46 213h86M46 229h54"/>
+  <rect class="soft" x="156" y="138" width="58" height="58" rx="12"/>
+  <path class="ink" fill="none" d="M185 128v42M170 155l15 15 15-15"/>
+  <path class="thin" d="M166 186h38"/>
+</svg>

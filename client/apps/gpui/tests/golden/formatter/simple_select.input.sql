@@ -1,0 +1,1 @@
+SELECT id, name FROM dbo.Customers WHERE active = 1
