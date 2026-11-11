@@ -20,6 +20,14 @@ pub enum Language {
     #[default]
     English,
     Spanish,
+    SimplifiedChinese,
+    Japanese,
+    BrazilianPortuguese,
+    Korean,
+    German,
+    Russian,
+    French,
+    TraditionalChinese,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -39,6 +47,46 @@ pub const LANGUAGES: &[LanguageInfo] = &[
         language: Language::Spanish,
         code: "es",
         native_name: "Español",
+    },
+    LanguageInfo {
+        language: Language::SimplifiedChinese,
+        code: "zh-CN",
+        native_name: "简体中文",
+    },
+    LanguageInfo {
+        language: Language::Japanese,
+        code: "ja",
+        native_name: "日本語",
+    },
+    LanguageInfo {
+        language: Language::BrazilianPortuguese,
+        code: "pt-BR",
+        native_name: "Português (Brasil)",
+    },
+    LanguageInfo {
+        language: Language::Korean,
+        code: "ko",
+        native_name: "한국어",
+    },
+    LanguageInfo {
+        language: Language::German,
+        code: "de",
+        native_name: "Deutsch",
+    },
+    LanguageInfo {
+        language: Language::Russian,
+        code: "ru",
+        native_name: "Русский",
+    },
+    LanguageInfo {
+        language: Language::French,
+        code: "fr",
+        native_name: "Français",
+    },
+    LanguageInfo {
+        language: Language::TraditionalChinese,
+        code: "zh-TW",
+        native_name: "繁體中文",
     },
 ];
 
@@ -82,6 +130,14 @@ impl Language {
         match self {
             Self::English => EN,
             Self::Spanish => ES,
+            Self::SimplifiedChinese => ZH_CN,
+            Self::Japanese => JA,
+            Self::BrazilianPortuguese => PT_BR,
+            Self::Korean => KO,
+            Self::German => DE,
+            Self::Russian => RU,
+            Self::French => FR,
+            Self::TraditionalChinese => ZH_TW,
         }
     }
 }
@@ -103,8 +159,17 @@ pub fn set_language(language: Language) {
 }
 
 pub fn set_language_code(code: &str) -> Result<Language, String> {
-    let language = Language::from_code(code)
-        .ok_or_else(|| format!("Unsupported language '{}'. Expected en or es.", code.trim()))?;
+    let language = Language::from_code(code).ok_or_else(|| {
+        let supported = LANGUAGES
+            .iter()
+            .map(|info| info.code)
+            .collect::<Vec<_>>()
+            .join(", ");
+        format!(
+            "Unsupported language '{}'. Expected one of: {supported}.",
+            code.trim()
+        )
+    })?;
     set_language(language);
     Ok(language)
 }
@@ -524,14 +589,35 @@ mod tests {
 
     #[test]
     fn language_registry_uses_native_names_and_stable_codes() {
-        assert_eq!(LANGUAGES.len(), 2);
-        assert_eq!(Language::English.code(), "en");
-        assert_eq!(Language::English.native_name(), "English");
-        assert_eq!(Language::Spanish.code(), "es");
-        assert_eq!(Language::Spanish.native_name(), "Español");
+        let expected = [
+            (Language::English, "en", "English"),
+            (Language::Spanish, "es", "Español"),
+            (Language::SimplifiedChinese, "zh-CN", "简体中文"),
+            (Language::Japanese, "ja", "日本語"),
+            (Language::BrazilianPortuguese, "pt-BR", "Português (Brasil)"),
+            (Language::Korean, "ko", "한국어"),
+            (Language::German, "de", "Deutsch"),
+            (Language::Russian, "ru", "Русский"),
+            (Language::French, "fr", "Français"),
+            (Language::TraditionalChinese, "zh-TW", "繁體中文"),
+        ];
+        assert_eq!(LANGUAGES.len(), expected.len());
+        for (info, (language, code, native_name)) in LANGUAGES.iter().zip(expected) {
+            assert_eq!(info.language, language);
+            assert_eq!(info.code, code);
+            assert_eq!(info.native_name, native_name);
+            assert_eq!(language.code(), code);
+            assert_eq!(language.native_name(), native_name);
+            assert_eq!(Language::from_code(code), Some(language));
+        }
         assert_eq!(Language::from_code(" ES "), Some(Language::Spanish));
-        assert_eq!(Language::from_code("fr"), None);
-        assert!(set_language_code("unsupported").is_err());
+        assert_eq!(
+            Language::from_code(" ZH-cn "),
+            Some(Language::SimplifiedChinese)
+        );
+        assert_eq!(Language::from_code("unsupported"), None);
+        let error = set_language_code("unsupported").unwrap_err();
+        assert!(error.contains("en, es, zh-CN, ja, pt-BR, ko, de, ru, fr, zh-TW"));
     }
 
     #[test]
@@ -599,8 +685,12 @@ mod tests {
         assert!(KEYS.windows(2).all(|pair| pair[0] < pair[1]));
         for (index, key) in KEYS.iter().enumerate() {
             assert_eq!(key_index(key), Some(index));
-            assert_eq!(compiled_value(Language::English, key), Some(EN[index]));
-            assert_eq!(compiled_value(Language::Spanish, key), Some(ES[index]));
+            for info in LANGUAGES {
+                assert_eq!(
+                    compiled_value(info.language, key),
+                    Some(info.language.defaults()[index])
+                );
+            }
         }
     }
 

@@ -13,6 +13,7 @@ const factEl = document.getElementById('fact');
 const TRANSLATION_CHANNEL = 'sqlly.translations.v1';
 const MAX_TRANSLATION_BYTES = 8 * 1024 * 1024;
 const KEY_SEGMENT = /^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/;
+const SUPPORTED_LANGUAGES = ['en', 'es', 'zh-CN', 'ja', 'pt-BR', 'ko', 'de', 'ru', 'fr', 'zh-TW'];
 const utf8 = new TextEncoder();
 let wasmModule = null;
 let wasmReady = false;
@@ -46,8 +47,8 @@ function hasExactFields(value, fields) {
 }
 
 function validateLanguage(language) {
-  if (language !== 'en' && language !== 'es') {
-    throw new Error('Language must be en or es');
+  if (!SUPPORTED_LANGUAGES.includes(language)) {
+    throw new Error(`Language must be one of: ${SUPPORTED_LANGUAGES.join(', ')}`);
   }
 }
 

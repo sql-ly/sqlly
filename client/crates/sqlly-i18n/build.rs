@@ -16,8 +16,13 @@ const PROSE_BRACE_KEYS: &[&str] = &[
 ];
 
 fn main() {
-    println!("cargo:rerun-if-changed=translations/en.json");
-    println!("cargo:rerun-if-changed=translations/es.json");
+    const LANGUAGES: &[&str] = &[
+        "en", "es", "zh-CN", "ja", "pt-BR", "ko", "de", "ru", "fr", "zh-TW",
+    ];
+
+    for language in LANGUAGES {
+        println!("cargo:rerun-if-changed=translations/{language}.json");
+    }
     println!("cargo:rerun-if-changed=src/catalog.rs");
 
     let manifest = env::var("CARGO_MANIFEST_DIR").expect("manifest directory");
@@ -29,7 +34,7 @@ fn main() {
     let mut english: Option<BTreeMap<String, String>> = None;
     let mut values_by_language = Vec::new();
 
-    for language in ["en", "es"] {
+    for &language in LANGUAGES {
         let path = catalog_dir.join(format!("{language}.json"));
         let source = fs::read_to_string(&path)
             .unwrap_or_else(|error| panic!("failed to read {}: {error}", path.display()));
@@ -44,7 +49,7 @@ fn main() {
             let extra = keys.difference(&english_keys).collect::<Vec<_>>();
             assert!(
                 missing.is_empty() && extra.is_empty(),
-                "English and Spanish catalogs must contain exactly the same keys; {language} differs from en: missing={missing:?}, extra={extra:?}"
+                "all translation catalogs must contain exactly the same keys as English; {language} differs from en: missing={missing:?}, extra={extra:?}"
             );
             let mismatched = entries
                 .iter()
@@ -104,7 +109,7 @@ fn main() {
     for (language, values) in values_by_language {
         generated.push_str(&format!(
             "pub(crate) static {}: &[&str; KEY_COUNT] = &[\n",
-            language.to_uppercase()
+            language.replace('-', "_").to_uppercase()
         ));
         for value in values {
             generated.push_str(&format!("    {value:?},\n"));

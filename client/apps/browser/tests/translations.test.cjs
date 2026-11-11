@@ -6,8 +6,9 @@ const vm = require('node:vm');
 
 const ORIGIN = 'https://sqlly.test';
 const CHANNEL = 'sqlly.translations.v1';
+const LANGUAGES = ['en', 'es', 'zh-CN', 'ja', 'pt-BR', 'ko', 'de', 'ru', 'fr', 'zh-TW'];
 const catalogs = Object.fromEntries(
-  ['en', 'es'].map((lang) => [
+  LANGUAGES.map((lang) => [
     lang,
     JSON.parse(
       fs.readFileSync(path.join(__dirname, `../../../crates/sqlly-i18n/translations/${lang}.json`), 'utf8'),
@@ -277,6 +278,15 @@ test('public API applies all commands synchronously without persistence', (t) =>
   harness.api.setLanguage('en');
 });
 
+test('public API accepts every supported application language', () => {
+  for (const language of LANGUAGES) {
+    const harness = createHarness();
+    harness.api.setLanguage(language);
+    assert.equal(harness.document.documentElement.lang, language);
+    assert.deepEqual(harness.calls, [['set_language', language]]);
+  }
+});
+
 test('replacement sends a complete payload rather than merging at the API boundary', () => {
   const harness = createHarness();
   harness.api.replaceOverrides(catalog());
@@ -292,7 +302,7 @@ test('replacement sends a complete payload rather than merging at the API bounda
 
 test('public API rejects invalid languages and catalogs before WASM', () => {
   const harness = createHarness();
-  for (const language of ['EN', 'fr', '', null, 1]) {
+  for (const language of ['EN', 'unsupported', '', null, 1]) {
     assert.throws(() => harness.api.setLanguage(language));
   }
   const invalid = [
@@ -371,7 +381,7 @@ test('bridge accepts all commands and correlates acknowledgements', () => {
 test('bridge rejects malformed commands and oversize messages with correlated errors', () => {
   const harness = createHarness();
   const malformed = [
-    { ...command('set_language'), language: 'fr' },
+    { ...command('set_language'), language: 'unsupported' },
     { ...command('set_language'), language: 'en', extra: true },
     command('set_language'),
     { ...command('replace_overrides'), overrides: { bad: leaf('') } },
@@ -510,7 +520,7 @@ test('queued commands keep set_language ahead of the overrides sent after it', (
 
 test('invalid commands are rejected immediately even before WASM is ready', () => {
   const harness = createHarness({ ready: false });
-  harness.send({ ...command('set_language', 'bad-lang'), language: 'fr' });
+  harness.send({ ...command('set_language', 'bad-lang'), language: 'unsupported' });
   harness.send({ ...command('replace_overrides', 'bad-cat'), overrides: { bad: leaf('') } });
   assert.deepEqual(
     plain(harness.posted.map(({ data }) => [data.requestId, data.ok])),

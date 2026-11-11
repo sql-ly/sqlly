@@ -977,7 +977,7 @@ mod tests {
         activate_host_language("es").unwrap();
         assert_eq!(&*gpui_component::locale(), "es");
         assert_eq!(text("settings.appearance.language.title"), "Idioma");
-        assert!(activate_host_language("fr").is_err());
+        assert!(activate_host_language("unsupported").is_err());
         assert_eq!(sqlly_i18n::current_language(), Language::Spanish);
         activate(Language::English, None).unwrap();
     }

@@ -965,7 +965,21 @@ mod language_tests {
             .iter()
             .map(|info| info.native_name)
             .collect();
-        assert_eq!(names, ["English", "Español"]);
+        assert_eq!(
+            names,
+            [
+                "English",
+                "Español",
+                "简体中文",
+                "日本語",
+                "Português (Brasil)",
+                "한국어",
+                "Deutsch",
+                "Русский",
+                "Français",
+                "繁體中文",
+            ]
+        );
     }
 
     #[test]
