@@ -1,8 +1,9 @@
-//! Per-tab state and rendering for the `-- sqlly param:` strip: a flat band
-//! above the results with one typed input per declared parameter. The pure
-//! grammar lives in [`crate::query_params`]; this module owns the stateful
-//! inputs and the sync-with-buffer discipline (rows are reused by name+type
-//! so typing elsewhere never wipes entered values).
+//! Per-tab state and rendering for the Parameters strip: a flat band above
+//! the results with one input per `-- sqlly param:` declaration and per
+//! `:name` / `?` / `$1` placeholder written in the SQL. The pure grammar
+//! lives in [`crate::query_params`]; this module owns the stateful inputs
+//! and the sync-with-buffer discipline (rows are reused by name+type so
+//! typing elsewhere never wipes entered values).
 
 use crate::tooltip::AppTooltip;
 use gpui::{
@@ -23,7 +24,9 @@ pub(crate) fn param_rows_match_specs(rows: &[ParamRow], specs: &[ParamSpec]) -> 
 }
 
 /// Reconcile declared parameter specs with existing strip rows, preserving
-/// entered values when the name (case-insensitive) and type still match.
+/// entered values when the name (case-insensitive) and type still match. A
+/// value typed for an undeclared placeholder carries over when a directive
+/// later gives it a type.
 pub(crate) fn merge_param_row_specs(
     old_rows: &[ParamRow],
     specs: &[ParamSpec],
@@ -35,7 +38,7 @@ pub(crate) fn merge_param_row_specs(
             if let Some((idx, row)) = old_rows.iter().enumerate().find(|(i, row)| {
                 !consumed[*i]
                     && row.spec.name.eq_ignore_ascii_case(&spec.name)
-                    && row.spec.ty == spec.ty
+                    && (row.spec.ty == spec.ty || row.spec.ty == ParamType::Auto)
             }) {
                 consumed[idx] = true;
                 (spec.clone(), row.value.clone())
@@ -60,6 +63,50 @@ pub struct ParamStripState {
     /// Set when Run blocked on this parameter; the next strip render focuses
     /// its input (renders have the `Window` that event handlers lack).
     pub pending_focus: Option<String>,
+    /// The specs last read from the buffer, keyed by what they were read
+    /// from, so a render that changed nothing skips the scan.
+    spec_cache: Option<SpecCache>,
+}
+
+struct SpecCache {
+    text_hash: u64,
+    text_len: usize,
+    db: sqlly_lang::sqlmodel::DatabaseType,
+    detect_placeholders: bool,
+    specs: Vec<ParamSpec>,
+}
+
+impl ParamStripState {
+    /// The strip's specs for `text` (see [`crate::query_params::strip_specs`]),
+    /// recomputed only when the text, engine, or setting changed.
+    pub(crate) fn specs_for(
+        &mut self,
+        db: sqlly_lang::sqlmodel::DatabaseType,
+        text: &str,
+        detect_placeholders: bool,
+    ) -> Vec<ParamSpec> {
+        use std::hash::{Hash as _, Hasher as _};
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        text.hash(&mut hasher);
+        let text_hash = hasher.finish();
+        if let Some(cache) = &self.spec_cache
+            && cache.text_hash == text_hash
+            && cache.text_len == text.len()
+            && cache.db == db
+            && cache.detect_placeholders == detect_placeholders
+        {
+            return cache.specs.clone();
+        }
+        let specs = crate::query_params::strip_specs(db, text, detect_placeholders);
+        self.spec_cache = Some(SpecCache {
+            text_hash,
+            text_len: text.len(),
+            db,
+            detect_placeholders,
+            specs: specs.clone(),
+        });
+        specs
+    }
 }
 
 impl ParamStripState {
@@ -106,6 +153,7 @@ impl ParamStripState {
                 })
                 .collect(),
             pending_focus: None,
+            spec_cache: None,
         }
     }
 
@@ -173,6 +221,7 @@ fn param_placeholder(ty: ParamType) -> String {
         ParamType::Uuid => return "00000000-0000-0000-0000-000000000000".to_string(),
         ParamType::Json => "query.params_strip.placeholder_json",
         ParamType::Binary => "query.params_strip.placeholder_binary",
+        ParamType::Auto => "query.params_strip.placeholder_auto",
         _ => "query.params_strip.placeholder_value",
     };
     crate::localization::text(key)
@@ -188,7 +237,14 @@ impl crate::app::AppView {
             return;
         };
         let tab_id = tab.id.clone();
-        let specs = crate::query_params::parse_param_directives(tab.editor.read(cx).text());
+        let editor = tab.editor.clone();
+        let detect = self.detect_query_placeholders();
+        let editor = editor.read(cx);
+        let specs = self.tabs[tab_idx].query_params.specs_for(
+            editor.database_type(),
+            editor.text(),
+            detect,
+        );
         let rows = &self.tabs[tab_idx].query_params.rows;
         if param_rows_match_specs(rows, &specs) && rows.iter().all(|row| row.input.is_some()) {
             return;
@@ -342,14 +398,24 @@ impl crate::app::AppView {
                         .text_color(Theme::text())
                         .child(row.spec.name.clone()),
                 )
-                .child(
-                    div()
+                .child({
+                    let label = div()
+                        .id(("param-type", idx))
                         .w(px(s(70.0)))
                         .flex_shrink_0()
                         .text_size(px(Theme::font_size_ratio(0.78)))
                         .text_color(Theme::text_dim())
-                        .child(row.spec.ty.label()),
-                );
+                        .child(row.spec.ty.label());
+                    if row.spec.ty == ParamType::Auto {
+                        label
+                            .app_tooltip_text(crate::localization::text(
+                                "query.params_strip.auto_type_tooltip",
+                            ))
+                            .into_any_element()
+                    } else {
+                        label.into_any_element()
+                    }
+                });
             if let Some(input) = &row.input {
                 row_el = row_el.child(div().flex_1().child(Input::new(input)));
                 let current = row.value.trim();
@@ -642,6 +708,7 @@ mod tests {
                 row("@seeded", ParamType::Int, "7"),
             ],
             pending_focus: None,
+            spec_cache: None,
         };
         let snapshot = cx.update(|_window, cx| state.snapshot(cx));
         assert_eq!(snapshot[0].1, "typed-just-now");

@@ -21791,8 +21791,8 @@
         "value": "Missing parameter value: {names}"
       },
       "name_requires_at": {
-        "location": "SQL editor → Directive diagnostics: reason inserted into the “param directive is ignored” underline message when a “-- sqlly param:” line does not start with an @name. Lowercase fragment.",
-        "value": "the parameter name must start with @"
+        "location": "SQL editor → Directive diagnostics: reason inserted into the “param directive is ignored” underline message when a “-- sqlly param:” line does not start with an @name or :name. Lowercase fragment.",
+        "value": "the parameter name must start with @ or :"
       },
       "named_value_invalid": {
         "location": "Workbench → Status bar: error shown when Run is pressed and a query parameter value fails validation; {name} is the @parameter name and {error} the type error (e.g. “not a valid date”).",
@@ -21871,6 +21871,14 @@
       "placeholder_value": {
         "location": "Query tab → Parameters strip: generic placeholder in the input of a text, number or decimal parameter, saying to type a value or NULL.",
         "value": "value (or NULL)"
+      },
+      "placeholder_auto": {
+        "location": "Query tab → Parameters strip → Parameter row: placeholder text inside the input of a :name or ? placeholder found in the SQL, hinting at how the value is read.",
+        "value": "42, text, NULL or 'quoted text'"
+      },
+      "auto_type_tooltip": {
+        "location": "Query tab → Parameters strip → Parameter row: tooltip over the “auto” type label of a placeholder found in the SQL without a -- sqlly param: declaration.",
+        "value": "Found in the SQL. Numbers, true/false and NULL are used as typed; anything else is quoted as text. Declare -- sqlly param: :name int (or date, text, …) to fix the type."
       },
       "required_status": {
         "location": "Query tab → Parameters strip → Parameter row: red status beside an input that is empty and has no declared default, meaning a value must be entered before Run.",
@@ -32805,6 +32813,10 @@
           "location": "Settings → Editor → General → Selection: checkbox that softly highlights every other occurrence of the currently selected word or phrase in the script.",
           "value": "Highlight occurrences of selection"
         },
+        "detect_query_placeholders": {
+          "location": "Settings → Editor → General → Query parameters: checkbox that makes :name, ? and $1 placeholders in a query ask for values in the Parameters strip before Run.",
+          "value": "Ask for values of :name, ? and $1 placeholders"
+        },
         "hover_info": {
           "location": "Settings → Editor → General → Display: checkbox that turns on the info cards shown when the mouse hovers over table, column, procedure or function names in the editor.",
           "value": "Show hover info for tables, columns, and routines"
@@ -33024,6 +33036,10 @@
         "highlight_occurrences_help": {
           "location": "Settings → Editor → General → Selection: help text under the “Highlight occurrences of selection” checkbox describing the VS Code–style highlight and noting it never changes the text.",
           "value": "Selecting a word or phrase softly highlights every other place it appears in the script, the way VS Code does, so repeated names and values are visible at a glance. The highlight follows the selection and never changes the text."
+        },
+        "detect_query_placeholders_help": {
+          "location": "Settings → Editor → General → Query parameters: help text under the placeholder checkbox explaining that values are entered in the Parameters strip and how they are read.",
+          "value": "A placeholder such as WHERE id = :id gets an input in the Parameters strip above the results, and Run fills in what you type without changing your script. Numbers, true/false and NULL are read as such; anything else is text, and quotes ('42') force text. On SQL Server, an @name the script never DECLAREs works the same way. Placeholders inside strings and comments are ignored."
         },
         "period_ranges_help": {
           "location": "Settings → Editor → IntelliSense → Date & time convenience: help text under “Turn periods into ranges” explaining how each comparison operator uses the period's first or last moment; operators stay unchanged.",
@@ -33348,6 +33364,10 @@
         "selection": {
           "location": "Settings → Editor → General: section heading above the checkbox that softly highlights other occurrences of the selected word or phrase in the editor.",
           "value": "Selection"
+        },
+        "query_parameters": {
+          "location": "Settings → Editor → General: section heading above the checkbox that turns :name, ? and $1 placeholders written in a query into rows of the Parameters strip.",
+          "value": "Query parameters"
         },
         "spacing": {
           "location": "Settings → Editor → General: section heading above the Auto spacing checkbox, which inserts spaces around SQL operators and punctuation as you type.",

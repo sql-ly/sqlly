@@ -525,7 +525,7 @@ impl AppView {
                     let (cursor, anchor) = view.read(cx).caret_state();
                     tab.editor.update(cx, |e, cx| {
                         e.adopt_caret_state(cursor, anchor, cx);
-                        e.request_focus();
+                        e.request_focus(cx);
                     });
                 }
                 self.drop_same_buffer_view(cx);
@@ -555,7 +555,7 @@ impl AppView {
                 self.same_buffer_view.clone()
             };
             if let Some(editor) = target {
-                editor.update(cx, |e, _| e.request_focus());
+                editor.update(cx, |e, cx| e.request_focus(cx));
             }
             self.save_workspace_session(cx);
             cx.notify();
@@ -566,7 +566,7 @@ impl AppView {
         self.sync_toolbar_to_active_tab();
         self.sync_connection_to_active_tab(cx);
         if let Some(tab) = self.tabs.get(new_active) {
-            tab.editor.update(cx, |e, _| e.request_focus());
+            tab.editor.update(cx, |e, cx| e.request_focus(cx));
         }
         self.save_workspace_session(cx);
         cx.notify();

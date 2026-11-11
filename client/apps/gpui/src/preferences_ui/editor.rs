@@ -210,6 +210,19 @@ impl PreferencesWindow {
                 "settings.editor.hint.highlight_occurrences_help",
             )),
             self.section_header(&crate::localization::text(
+                "settings.editor.section_header.query_parameters",
+            )),
+            self.checkbox(
+                "detect_query_placeholders",
+                &crate::localization::text("settings.editor.checkbox.detect_query_placeholders"),
+                e.detect_query_placeholders,
+                cx,
+                Self::toggle_detect_query_placeholders,
+            ),
+            self.hint(&crate::localization::text(
+                "settings.editor.hint.detect_query_placeholders_help",
+            )),
+            self.section_header(&crate::localization::text(
                 "settings.editor.section_header.indentation",
             )),
             self.radio(
@@ -990,6 +1003,12 @@ impl PreferencesWindow {
 
     pub(super) fn toggle_highlight_occurrences(&mut self, cx: &mut Context<Self>) {
         self.set_editor_field(cx, |e| e.highlight_occurrences = !e.highlight_occurrences);
+    }
+
+    pub(super) fn toggle_detect_query_placeholders(&mut self, cx: &mut Context<Self>) {
+        self.set_editor_field(cx, |e| {
+            e.detect_query_placeholders = !e.detect_query_placeholders
+        });
     }
 
     pub(super) fn toggle_vim_mode(&mut self, cx: &mut Context<Self>) {

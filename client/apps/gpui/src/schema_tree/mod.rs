@@ -536,6 +536,11 @@ pub struct SchemaTree {
     /// is up; dropped when the menu closes.
     context_menu_dismiss: Option<Subscription>,
     scroll: ScrollHandle,
+    /// The scroll viewport size and max offset the last render windowed the
+    /// rows and sized the scrollbar from. They come from the previous layout;
+    /// a prepaint probe compares them with the new one and re-renders once
+    /// when they moved (the sidebar is frame-cached, so no other frame would).
+    pub(crate) rendered_scroll_geometry: (gpui::Size<gpui::Pixels>, gpui::Point<gpui::Pixels>),
     /// Favorited objects (persisted), shown in a strip above the tree.
     favorites: Vec<FavoriteObject>,
     /// Collapse state of the Favorites strip.
@@ -609,6 +614,7 @@ impl SchemaTree {
             context_menu_view: None,
             context_menu_dismiss: None,
             scroll: ScrollHandle::new(),
+            rendered_scroll_geometry: Default::default(),
             favorites: {
                 let mut favorites = load_favorites();
                 pin_groups::drop_unknown_groups(&mut favorites, &initial_pin_groups);
@@ -1479,6 +1485,8 @@ impl SchemaTree {
         self.bump_tree_revision();
         let rows = self.visible_rows();
         let Some(index) = rows.iter().position(|r| r.id.as_ref() == target_id) else {
+            // The ancestors were expanded all the same; show that.
+            cx.notify();
             return false;
         };
         self.selected = Some(target_id);

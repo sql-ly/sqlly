@@ -169,7 +169,8 @@ pub const MAX_SAVED_PARAM_VALUE_CHARS: usize = 16 * 1024;
 /// drops just that value instead of failing the whole session.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SavedParamValue {
-    /// Includes the leading `@`.
+    /// Includes the sigil: `@name` / `:name` directives and placeholders,
+    /// `?1` / `$1` positional placeholders.
     pub name: String,
     #[serde(rename = "type")]
     pub ty: String,
@@ -363,8 +364,9 @@ impl WorkspaceSession {
                 MIN_HISTORY_PANEL_WIDTH,
                 MAX_HISTORY_PANEL_WIDTH,
             );
-            tab.query_params
-                .retain(|param| param.name.starts_with('@') && !param.value.is_empty());
+            tab.query_params.retain(|param| {
+                param.name.starts_with(['@', ':', '?', '$']) && !param.value.is_empty()
+            });
             tab.query_params.truncate(MAX_SAVED_PARAMS_PER_TAB);
             for param in &mut tab.query_params {
                 param.name = truncate_chars(&param.name, 128);
@@ -1604,6 +1606,33 @@ mod tests {
             kept.iter()
                 .all(|p| p.value.chars().count() == MAX_SAVED_PARAM_VALUE_CHARS)
         );
+    }
+
+    #[test]
+    fn placeholder_values_survive_sanitizing() {
+        let params = [":id", "?1", "$2", "@n"]
+            .into_iter()
+            .map(|name| SavedParamValue {
+                name: name.into(),
+                ty: "auto".into(),
+                value: "42".into(),
+            })
+            .collect();
+        let s = WorkspaceSession {
+            tabs: vec![TabState {
+                title: "Query 1".into(),
+                query_params: params,
+                ..Default::default()
+            }],
+            ..Default::default()
+        }
+        .sanitized();
+        let names: Vec<&str> = s.tabs[0]
+            .query_params
+            .iter()
+            .map(|p| p.name.as_str())
+            .collect();
+        assert_eq!(names, [":id", "?1", "$2", "@n"]);
     }
 
     #[test]

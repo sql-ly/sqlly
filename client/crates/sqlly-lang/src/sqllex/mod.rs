@@ -279,13 +279,20 @@ impl<'a> StrictLexer<'a> {
         }
         // `:name`: Oracle / SQLite binds, psql variables, and the path steps
         // of Snowflake semi-structured access (`src:customer.name`), Snowflake
-        // being read with the PostgreSQL rules.
+        // being read with the PostgreSQL rules. MySQL and SQL Server have no
+        // `:name` syntax of their own, but it is the named placeholder every
+        // client and driver accepts there; it counts only when the `:` does
+        // not touch a name or another `:` on its left, so a MySQL `lbl:LOOP`
+        // label and a T-SQL `geography::Point` call are left alone.
         if c == b':'
-            && matches!(
-                self.dialect,
-                Dialect::Oracle | Dialect::Sqlite | Dialect::Postgres
-            )
             && self.peek_at(1).map(is_ident_start).unwrap_or(false)
+            && match self.dialect {
+                Dialect::Oracle | Dialect::Sqlite | Dialect::Postgres => true,
+                Dialect::MySql | Dialect::SqlServer => start
+                    .checked_sub(1)
+                    .and_then(|i| self.bytes.get(i))
+                    .is_none_or(|&b| !is_ident_continue(b) && b != b':'),
+            }
         {
             self.pos += 1;
             while self.peek().map(is_ident_continue).unwrap_or(false) {
@@ -303,7 +310,20 @@ impl<'a> StrictLexer<'a> {
             }
             return Some(self.token(TokenKind::ParamMarker(ParamStyle::DollarNum), start));
         }
-        if c == b'?' && matches!(self.dialect, Dialect::MySql | Dialect::Sqlite) {
+        // `?`: the positional placeholder. PostgreSQL reads it as an
+        // operator character (`?|`, `jsonb ? 'key'`), so only the others
+        // take it as a marker, and SQL Server / Oracle (whose own syntax has
+        // no `?`) leave the jsonb `?|` / `?&` spellings unlexed rather than
+        // reflow PostgreSQL text that auto-detection misread.
+        if c == b'?'
+            && match self.dialect {
+                Dialect::Postgres => false,
+                Dialect::MySql | Dialect::Sqlite => true,
+                Dialect::SqlServer | Dialect::Oracle => {
+                    !matches!(self.peek_at(1), Some(b'|' | b'&'))
+                }
+            }
+        {
             self.pos += 1;
             // SQLite's numbered form, `?1`.
             if self.dialect == Dialect::Sqlite {

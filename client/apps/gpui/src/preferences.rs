@@ -1191,6 +1191,11 @@ pub struct EditorPreferences {
     /// buffer (VS Code / Sublime style). On by default.
     #[serde(default = "default_true")]
     pub highlight_occurrences: bool,
+    /// `:name`, `?`, and `$1` placeholders written in the SQL get a row in
+    /// the Parameters strip, and Run fills in the entered values. On by
+    /// default; off, only `-- sqlly param:` directives declare parameters.
+    #[serde(default = "default_true")]
+    pub detect_query_placeholders: bool,
     /// Natural-language dates in date comparisons (Ctrl+Shift+Space after
     /// `OrderDate =`): how phrases are read and what they are written as.
     #[serde(default)]
@@ -1360,6 +1365,7 @@ impl Default for EditorPreferences {
             syntax_bold: SyntaxBoldPreferences::default(),
             camel_hump_word_movement: false,
             highlight_occurrences: true,
+            detect_query_placeholders: true,
             natural_dates: NaturalDatePreferences::default(),
         }
     }
@@ -6631,6 +6637,16 @@ mod tests {
         let off: EditorPreferences =
             serde_json::from_str(r#"{"highlightOccurrences":false}"#).unwrap();
         assert!(!off.highlight_occurrences);
+    }
+
+    #[test]
+    fn editor_preferences_detect_query_placeholders_default_true() {
+        assert!(EditorPreferences::default().detect_query_placeholders);
+        let missing: EditorPreferences = serde_json::from_str("{}").unwrap();
+        assert!(missing.detect_query_placeholders);
+        let off: EditorPreferences =
+            serde_json::from_str(r#"{"detectQueryPlaceholders":false}"#).unwrap();
+        assert!(!off.detect_query_placeholders);
     }
 
     #[test]

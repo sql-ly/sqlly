@@ -214,6 +214,10 @@ pub struct SqlEditor {
     /// allocation per frame.
     last_tab_maps: std::rc::Rc<Vec<crate::tab_map::TabMap>>,
     last_bounds: Option<Bounds<Pixels>>,
+    /// The scroll viewport size and max offset `render` sized the scrollbar
+    /// thumbs from. They come from the previous layout, so prepaint compares
+    /// them with this frame's and asks for one more frame when they moved.
+    scrollbar_geometry: (gpui::Size<Pixels>, gpui::Point<Pixels>),
     scroll_handle: ScrollHandle,
     /// Monotonically incremented on every content mutation so future
     /// optimizations (shaped-line cache, etc.) can detect staleness. Values
@@ -618,6 +622,7 @@ impl SqlEditor {
             last_layout_first_line: 0,
             last_tab_maps: std::rc::Rc::new(Vec::new()),
             last_bounds: None,
+            scrollbar_geometry: Default::default(),
             scroll_handle: ScrollHandle::new(),
             content_revision: 0,
             revision_counter: std::rc::Rc::new(std::cell::Cell::new(0)),
@@ -2475,6 +2480,10 @@ impl SqlEditor {
         self.result_source = None;
         self.clear_hover_ui();
         cx.emit(SqlEditorEvent::Change);
+        // The workbench draws the editor from gpui's frame cache, so the
+        // edit only reaches the screen once this entity is notified. Every
+        // path below must repaint now, not when a debounced task lands.
+        cx.notify();
 
         // Keep find-bar highlights in step with buffer edits (debounced, so
         // a typing burst rescans once).
@@ -3109,8 +3118,12 @@ impl SqlEditor {
         svg.into_bytes()
     }
 
-    pub fn request_focus(&mut self) {
+    /// Take keyboard focus on the next render. Notifies, because the
+    /// workbench draws the editor from gpui's frame cache: without it the
+    /// request would sit until some unrelated notify rendered the editor.
+    pub fn request_focus(&mut self, cx: &mut Context<Self>) {
         self.needs_focus = true;
+        cx.notify();
     }
 
     /// Cancel the focus grab a newly created editor schedules for its first
@@ -5654,7 +5667,7 @@ impl SqlEditor {
             bar.visible = false;
             bar.current = None;
         }
-        self.request_focus();
+        self.request_focus(cx);
         cx.notify();
     }
 
@@ -7207,7 +7220,7 @@ impl SqlEditor {
         if let Some(bar) = &mut self.goto_line_bar {
             bar.visible = false;
         }
-        self.request_focus();
+        self.request_focus(cx);
         cx.notify();
     }
 

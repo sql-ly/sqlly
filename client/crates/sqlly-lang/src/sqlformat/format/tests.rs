@@ -238,6 +238,65 @@ fn identifier_quoting_remove_unnecessary_is_case_safe() {
 }
 
 #[test]
+fn quoted_reserved_words_keep_their_quotes_in_every_mode() {
+    // `User` is not one of the lexer's parser keywords, but SQL Server
+    // reserves it: `Shared.User` does not parse.
+    for quoting in IdentifierQuoting::all() {
+        let mut p = prefs();
+        p.identifier_quoting = *quoting;
+        p.dialect = SqlDialect::Tsql;
+        let out = fmt(
+            "select u.[Name] from Shared.[User] u join dbo.[Order] o on 1 = 1",
+            &p,
+        );
+        assert!(out.contains("[User]"), "{quoting:?}: {out}");
+        assert!(out.contains("[Order]"), "{quoting:?}: {out}");
+    }
+    let mut p = prefs();
+    p.identifier_quoting = IdentifierQuoting::RemoveUnnecessaryQuotes;
+    p.dialect = SqlDialect::Tsql;
+    let out = fmt("select u.[Name] from Shared.[User] u", &p);
+    assert!(out.contains("u.Name"), "{out}");
+    p.dialect = SqlDialect::Postgresql;
+    assert!(fmt("select \"user\".id from \"user\"", &p).contains("\"user\".id"));
+}
+
+#[test]
+fn quote_only_when_required_quotes_qualified_reserved_words() {
+    let mut p = prefs();
+    p.identifier_quoting = IdentifierQuoting::QuoteOnlyWhenRequired;
+    p.dialect = SqlDialect::Tsql;
+    let out = fmt("select u.Name from Shared.User u", &p);
+    assert!(out.contains("Shared.[User]"), "{out}");
+    assert!(out.contains("u.Name"), "{out}");
+    assert_eq!(fmt(&out, &p), out, "not idempotent:\n{out}");
+    // A lone USER is the current-user function, not a name.
+    assert!(fmt("select USER", &p).contains("USER"));
+    assert!(!fmt("select USER", &p).contains("[USER]"));
+    // Postgres folds the bare name, so the quoted spelling is the folded one.
+    p.dialect = SqlDialect::Postgresql;
+    assert!(fmt("select * from public.User", &p).contains("public.\"user\""));
+    // Remove Unnecessary Quotes never adds quotes.
+    p.identifier_quoting = IdentifierQuoting::RemoveUnnecessaryQuotes;
+    p.dialect = SqlDialect::Tsql;
+    assert!(fmt("select * from Shared.User", &p).contains("Shared.User"));
+}
+
+#[test]
+fn always_quote_keeps_case_meaning_and_niladic_functions() {
+    let mut p = prefs();
+    p.identifier_quoting = IdentifierQuoting::AlwaysQuote;
+    p.dialect = SqlDialect::Postgresql;
+    // `Orders` unquoted is `orders` in Postgres; `"Orders"` would be another table.
+    assert!(fmt("select * from Orders", &p).contains("\"orders\""));
+    p.dialect = SqlDialect::Tsql;
+    let out = fmt("select USER, x.User from Shared.User x", &p);
+    assert!(out.contains("USER,"), "{out}");
+    assert!(out.contains("[x].[User]"), "{out}");
+    assert!(out.contains("[Shared].[User]"), "{out}");
+}
+
+#[test]
 fn comma_style_leading() {
     let mut p = prefs();
     p.comma_style = CommaStyle::Leading;
@@ -681,6 +740,8 @@ fn helper_safe_to_unquote() {
     assert!(safe_to_unquote("plain", Dialect::Postgres));
     assert!(!safe_to_unquote("Mixed", Dialect::Postgres));
     assert!(!safe_to_unquote("select", Dialect::Postgres));
+    assert!(!safe_to_unquote("user", Dialect::Postgres));
+    assert!(!safe_to_unquote("User", Dialect::SqlServer));
     assert!(safe_to_unquote("Mixed", Dialect::SqlServer));
     assert!(!safe_to_unquote("has space", Dialect::SqlServer));
     assert!(safe_to_unquote("UPPER", Dialect::Oracle));

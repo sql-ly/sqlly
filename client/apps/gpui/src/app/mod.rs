@@ -421,6 +421,10 @@ pub struct AppView {
     /// see `chrome_region.rs`. Created on first render.
     tab_bar_region: Option<Entity<crate::app::chrome_region::ChromeRegion>>,
     status_bar_region: Option<Entity<crate::app::chrome_region::ChromeRegion>>,
+    /// App render counter the chrome regions measure staleness against.
+    chrome_frame: u64,
+    /// A chrome refresh timer is running (one at a time).
+    chrome_refresh_pending: bool,
     sidebar_visible: bool,
     pub(crate) tabs: Vec<QueryTab>,
     pub(crate) active_tab: usize,
@@ -1022,6 +1026,12 @@ pub enum AppViewEvent {
 impl EventEmitter<AppViewEvent> for AppView {}
 
 impl AppView {
+    /// Settings → Editor → Query parameters: whether `:name` / `?` / `$1`
+    /// placeholders in the SQL get strip rows and are filled on Run.
+    pub(crate) fn detect_query_placeholders(&self) -> bool {
+        self.editor_prefs.detect_query_placeholders
+    }
+
     pub fn new(services: Services, window: &mut Window, cx: &mut Context<Self>) -> Self {
         // Follow the OS appearance from the first paint.
         crate::theme::set_system_dark(appearance_is_dark(window.appearance()));
@@ -1306,6 +1316,8 @@ impl AppView {
             window_menu_bar,
             tab_bar_region: None,
             status_bar_region: None,
+            chrome_frame: 0,
+            chrome_refresh_pending: false,
             menus_reflect_connected: false,
             menus_reflect_engine: None,
             menus_reflect_localization_revision: crate::localization::chrome_revision(),
@@ -2521,8 +2533,8 @@ impl AppView {
         self.dismiss_floating_ui(cx);
         if let Some(tab) = self.tabs.get(self.active_tab) {
             let handle = tab.editor.read(cx).focus_handle(cx);
-            tab.editor.update(cx, |e, _| {
-                e.request_focus();
+            tab.editor.update(cx, |e, cx| {
+                e.request_focus(cx);
             });
             if let Some(window) = window {
                 window.focus(&handle, cx);
@@ -3175,7 +3187,7 @@ impl AppView {
                 if let Some(tab) = self.tabs.iter().find(|t| t.results == results) {
                     let editor = tab.editor.clone();
                     editor.update(cx, |e, cx| e.go_to_offset(*offset, cx));
-                    editor.update(cx, |e, _| e.request_focus());
+                    editor.update(cx, |e, cx| e.request_focus(cx));
                 }
             }
             crate::results::ResultsViewEvent::ActiveResultChanged => {
@@ -6912,8 +6924,8 @@ impl AppView {
     /// the results pane behind its divider. DDL viewer tabs render the viewer
     /// instead. Shared by the single-pane layout and both split panes;
     /// `pane_tag` keeps per-pane element ids distinct.
-    /// The frame-cached region for `kind`, created on first use. Also arms
-    /// the region's freshness timer for this frame (see `chrome_region.rs`).
+    /// The frame-cached region for `kind`, created on first use, marked as
+    /// shown by the current frame (see `chrome_region.rs`).
     fn chrome_region(
         &mut self,
         kind: crate::app::chrome_region::ChromeRegionKind,
@@ -6933,7 +6945,8 @@ impl AppView {
                 region
             }
         };
-        ChromeRegion::keep_fresh(&region, cx);
+        let frame = self.chrome_frame;
+        region.update(cx, |region, _| region.placed(frame));
         region
     }
 
@@ -7510,6 +7523,7 @@ impl AppView {
 impl Render for AppView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let s = Theme::scaled;
+        self.begin_chrome_frame(cx);
         // Re-sync the gpui-component global theme whenever the app palette
         // changed (theme kind/family switch, OS appearance flip, font prefs).
         // Fingerprint-gated, so steady-state frames are a cheap compare.
@@ -7598,11 +7612,16 @@ impl Render for AppView {
             log: self.results_visible(),
             ai_in_flight: self.ai_panel.read(cx).is_run_in_flight(),
         };
-        self.window_menu_bar.update(cx, |bar, cx| {
-            if bar.set_layout_toggles(layout) {
-                cx.notify();
-            }
-        });
+        // A notify made while the window is drawing neither reaches this
+        // frame nor schedules another, and the bar is drawn from the frame
+        // cache, so the notify waits until the draw is over.
+        if self
+            .window_menu_bar
+            .update(cx, |bar, _| bar.set_layout_toggles(layout))
+        {
+            let bar = self.window_menu_bar.clone();
+            cx.defer(move |cx| bar.update(cx, |_, cx| cx.notify()));
+        }
 
         // A firewall block recognised since the last frame becomes its dialog
         // here — this is the first point after detection with a `&mut Window`

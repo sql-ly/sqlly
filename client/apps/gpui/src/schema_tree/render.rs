@@ -925,6 +925,22 @@ impl Render for SchemaTree {
         // metadata fits before it would collide with the names. Zero on the
         // first frame (before layout has run) — treated as "show everything"
         // so a freshly opened rail never blinks its metadata off.
+        self.rendered_scroll_geometry = (self.scroll.bounds().size, self.scroll.max_offset());
+        let geometry_probe = {
+            let tree = cx.entity();
+            let scroll = self.scroll.clone();
+            let rendered = self.rendered_scroll_geometry;
+            gpui::canvas(
+                move |_, _, cx| {
+                    if rendered != (scroll.bounds().size, scroll.max_offset()) {
+                        cx.defer(move |cx| tree.update(cx, |_, cx| cx.notify()));
+                    }
+                },
+                |_, _, _, _| {},
+            )
+            .absolute()
+            .size_0()
+        };
         let rail_width = f32::from(self.scroll.bounds().size.width);
 
         let compiled = Rc::clone(&self.compiled);
@@ -1897,6 +1913,7 @@ impl Render for SchemaTree {
                 d.child(self.render_bulk_banner(cx))
             })
             .child(scroll_content)
+            .child(geometry_probe)
             // Track and thumb both appear only when there is something to
             // scroll. A track painted over an unscrollable list is 15px of a
             // ~250px rail spent saying nothing. The horizontal pair is gone
@@ -2519,5 +2536,52 @@ pub(crate) mod render_tests {
             "server-loaded folder keeps its own children"
         );
         assert_eq!(tables.children[0].title, "dbo.BrandNew");
+    }
+
+    /// The row window and scrollbar are computed in `render` from the previous
+    /// layout's scroll geometry. When rows arrive without any pointer
+    /// activity the tree must re-render by itself until the two agree — the
+    /// sidebar is frame-cached, so no parent frame does it.
+    #[gpui::test]
+    fn scroll_geometry_catches_up_after_rows_arrive(cx: &mut gpui::TestAppContext) {
+        ensure_components_initialized(cx);
+        let (tree, cx) = cx.add_window_view(|_window, cx| {
+            let log =
+                crate::log_console::DiagnosticLog::new(crate::log_console::DiagnosticLogLevel::Off);
+            SchemaTree::new(Services::new(), log, cx)
+        });
+        cx.run_until_parked();
+        tree.update(cx, |tree, cx| {
+            let discoveries = (0..400)
+                .map(|i| AzureSqlDiscovery {
+                    account_id: "acct-1".into(),
+                    username: "user@example.com".into(),
+                    tenant_id: "tenant-1".into(),
+                    subscription_id: "sub-1".into(),
+                    subscription_name: Some("My Sub".into()),
+                    resource_group: "rg-1".into(),
+                    server_id: "server-1".into(),
+                    server_name: "my-server".into(),
+                    server_fqdn: "my-server.database.windows.net".into(),
+                    location: "eastus".into(),
+                    database_id: format!("db-{i}"),
+                    database_name: format!("database-{i}"),
+                    service_tier: Some("GeneralPurpose".into()),
+                    status: Some("Online".into()),
+                    linked_profile_id: None,
+                })
+                .collect();
+            tree.set_azure_discoveries(discoveries, cx);
+        });
+        cx.run_until_parked();
+        tree.read_with(cx, |tree, _| {
+            let max = tree.scroll.max_offset();
+            assert!(max.y > px(0.0), "the rows overflow the viewport");
+            assert_eq!(
+                tree.rendered_scroll_geometry,
+                (tree.scroll.bounds().size, max),
+                "rendered from the current scroll geometry"
+            );
+        });
     }
 }

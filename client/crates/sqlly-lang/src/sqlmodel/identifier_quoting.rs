@@ -84,6 +84,18 @@ impl DatabaseType {
 /// Whether `word` is reserved on the engine, so a column or table of that
 /// name must be quoted (`[Order]`, `"user"`). Case-insensitive.
 pub fn is_reserved_word(db: DatabaseType, word: &str) -> bool {
+    // ClickHouse keywords are contextual: `default`, `user`, `table` and the
+    // like are everyday bare names there. Only the clause words that would
+    // end an expression need quotes.
+    if db == DatabaseType::ClickHouse {
+        return CLICKHOUSE.iter().any(|w| w.eq_ignore_ascii_case(word));
+    }
+    is_reserved_in_dialect(db.family(), word)
+}
+
+/// [`is_reserved_word`] for a grammar family rather than a specific engine —
+/// what the formatter has to go on. Case-insensitive.
+pub fn is_reserved_in_dialect(dialect: Dialect, word: &str) -> bool {
     if word.len() > MAX_RESERVED_LEN {
         return false;
     }
@@ -92,17 +104,11 @@ pub fn is_reserved_word(db: DatabaseType, word: &str) -> bool {
         *dst = b.to_ascii_lowercase();
     }
     let folded = &buf[..word.len()];
-    // ClickHouse keywords are contextual: `default`, `user`, `table` and the
-    // like are everyday bare names there. Only the clause words that would
-    // end an expression need quotes.
-    if db == DatabaseType::ClickHouse {
-        return CLICKHOUSE.iter().any(|w| w.as_bytes() == folded);
-    }
     let sets = reserved_sets();
     if sets[0].contains(folded) {
         return true;
     }
-    let extra = match db.family() {
+    let extra = match dialect {
         Dialect::SqlServer => &sets[1],
         Dialect::Postgres => &sets[2],
         Dialect::MySql => &sets[3],

@@ -555,8 +555,8 @@ impl AppView {
     /// `Dismissed` handler.
     pub(super) fn restore_editor_focus(&self, cx: &mut Context<Self>) {
         if let Some(tab) = self.tabs.get(self.active_tab) {
-            tab.editor.update(cx, |e, _| {
-                e.request_focus();
+            tab.editor.update(cx, |e, cx| {
+                e.request_focus(cx);
             });
         }
     }
@@ -582,8 +582,8 @@ impl AppView {
             #[cfg(not(target_arch = "wasm32"))]
             self.maybe_queue_disk_prompt_for_tab(index);
             if let Some(tab) = self.tabs.get(index) {
-                tab.editor.update(cx, |e, _| {
-                    e.request_focus();
+                tab.editor.update(cx, |e, cx| {
+                    e.request_focus(cx);
                 });
             }
             self.save_workspace_session(cx);

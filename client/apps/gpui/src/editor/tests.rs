@@ -7281,3 +7281,54 @@ fn refreshing_dates_rewrites_stale_literals(cx: &mut gpui::TestAppContext) {
     // A second refresh the same day changes nothing.
     view.update(cx, |e, cx| assert_eq!(e.refresh_all_dates(cx), 0));
 }
+
+/// With services attached, typing schedules a debounced completion instead of
+/// repainting synchronously. The editor is drawn from gpui's frame cache, so
+/// the keystroke must notify the entity itself or the character only appears
+/// when the 120 ms completion task lands.
+#[gpui::test]
+fn typing_with_services_notifies_immediately(cx: &mut gpui::TestAppContext) {
+    let (view, cx) = cx.add_window_view(|_window, cx| SqlEditor::new(cx));
+    view.update(cx, |editor, cx| {
+        editor.set_services(Services::new(), cx);
+    });
+    cx.run_until_parked();
+    let notified = std::rc::Rc::new(std::cell::Cell::new(0usize));
+    let _sub = cx.update(|_, cx| {
+        let notified = notified.clone();
+        cx.observe(&view, move |_, _| notified.set(notified.get() + 1))
+    });
+    view.update(cx, |editor, cx| editor.replace_selection("s", cx));
+    // No clock advance: the debounced completion/hint tasks have not run.
+    assert_eq!(
+        view.read_with(cx, |editor, _| editor.text().to_string()),
+        "s"
+    );
+    assert!(notified.get() > 0, "a keystroke must repaint the editor");
+}
+
+/// The scrollbar thumbs are sized in `render` from the previous layout's
+/// scroll geometry. After an edit that changes the line count the editor must
+/// re-render once more by itself, since no parent frame refreshes a cached view.
+#[gpui::test]
+fn scrollbar_geometry_catches_up_after_the_line_count_changes(cx: &mut gpui::TestAppContext) {
+    let (view, cx) = cx.add_window_view(|_window, cx| SqlEditor::new(cx));
+    cx.run_until_parked();
+    view.update(cx, |editor, cx| {
+        editor.set_text("select 1;\n".repeat(2_000), cx);
+    });
+    for _ in 0..5 {
+        cx.executor()
+            .advance_clock(std::time::Duration::from_millis(16));
+        cx.run_until_parked();
+    }
+    view.read_with(cx, |editor, _| {
+        let max = editor.scroll_handle.max_offset();
+        assert!(max.y > gpui::px(0.0), "the buffer overflows the viewport");
+        assert_eq!(
+            editor.scrollbar_geometry,
+            (editor.scroll_handle.bounds().size, max),
+            "the thumbs were rendered from the current scroll geometry"
+        );
+    });
+}

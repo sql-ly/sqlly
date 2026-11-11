@@ -34,7 +34,7 @@ pub use dialect::{
     CatalogName, Dialect, DialectCapabilities, IdentifierFold, NamespaceName, ObjectKind,
     ObjectName, ObjectRef, SqlName, fold_identifier,
 };
-pub use identifier_quoting::is_reserved_word;
+pub use identifier_quoting::{is_reserved_in_dialect, is_reserved_word};
 pub use schema::{
     CheckDef, ColumnDef, ContentHash, Fidelity, ForeignKeyDef, Generation, IncompleteRegions,
     KeyDef, ObjectBody, ObjectEntry, ObjectFragment, ObjectId, ParamDef, ParamMode, ProfileId,

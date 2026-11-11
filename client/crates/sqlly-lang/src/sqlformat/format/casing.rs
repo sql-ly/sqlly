@@ -3,7 +3,7 @@
 //! quote-safety decisions.
 
 use crate::sqlformat::prefs::KeywordCase;
-use crate::sqlmodel::Dialect;
+use crate::sqlmodel::{Dialect, IdentifierFold, is_reserved_in_dialect};
 
 pub(super) const CAT_CLAUSES: &[&str] = &[
     "select",
@@ -197,7 +197,11 @@ pub(super) fn safe_to_unquote(inner: &str, dialect: Dialect) -> bool {
     if !plain_identifier_ok(inner) {
         return false;
     }
-    if crate::sqllex::dialect_tables::is_keyword(inner, dialect) {
+    // The lexer's keyword table is only the words the parser dispatches on;
+    // `[User]`, `[Order]` and `"group"` need the engine's full reserved list.
+    if crate::sqllex::dialect_tables::is_keyword(inner, dialect)
+        || is_reserved_in_dialect(dialect, inner)
+    {
         return false;
     }
     match dialect {
@@ -212,10 +216,30 @@ pub(super) fn safe_to_unquote(inner: &str, dialect: Dialect) -> bool {
     }
 }
 
-pub(super) fn default_quotes(dialect: Dialect) -> (char, char) {
+fn default_quotes(dialect: Dialect) -> (char, char) {
     match dialect {
         Dialect::SqlServer => ('[', ']'),
         Dialect::MySql => ('`', '`'),
         _ => ('"', '"'),
     }
+}
+
+/// Whether the unquoted name `text` is a reserved word that only parses as
+/// a name once quoted (`Shared.User` → `Shared.[User]` on SQL Server).
+pub(super) fn reserved_needs_quotes(text: &str, dialect: Dialect) -> bool {
+    plain_identifier_ok(text) && is_reserved_in_dialect(dialect, text)
+}
+
+/// The unquoted name `text` quoted so it still names the same object:
+/// engines that fold unquoted names (Postgres lower, Oracle upper) get the
+/// folded spelling inside the quotes, since `"Orders"` is not `Orders` there.
+/// `text` must be a plain identifier (no quote characters to escape).
+pub(super) fn quote_plain(text: &str, dialect: Dialect) -> String {
+    let (open, close) = default_quotes(dialect);
+    let inner = match dialect.identifier_fold() {
+        IdentifierFold::Lower => text.to_ascii_lowercase(),
+        IdentifierFold::Upper => text.to_ascii_uppercase(),
+        IdentifierFold::CaseInsensitive | IdentifierFold::Exact => text.to_string(),
+    };
+    format!("{open}{inner}{close}")
 }

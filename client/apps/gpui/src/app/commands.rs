@@ -1517,7 +1517,7 @@ impl AppView {
             results.update(cx, |v, cx| v.focus_active_grid(window, cx));
         } else {
             // Grid (or anywhere else) → editor.
-            editor.update(cx, |e, _| e.request_focus());
+            editor.update(cx, |e, cx| e.request_focus(cx));
             window.focus(&editor_handle, cx);
         }
     }

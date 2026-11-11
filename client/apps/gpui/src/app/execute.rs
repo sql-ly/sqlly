@@ -399,16 +399,31 @@ pub(crate) fn run_label(input: RunLabelInput) -> (String, String) {
     )
 }
 
-/// Apply `-- sqlly param:` substitution from the full buffer into the SQL that
-/// will run. Skipped in procedure mode and on the mutation-confirm path.
+/// Where the SQL that will run sits in the editor buffer, and whether
+/// undeclared `:name` / `?` / `$1` placeholders are filled in.
+#[derive(Clone, Copy)]
+pub(super) struct ParamRegion {
+    /// Byte offset of the run's SQL in the buffer: plain `?` placeholders
+    /// before it count toward the numbering, so a statement run on its own
+    /// reads `?` the way the whole-buffer strip lists it.
+    pub start: usize,
+    pub detect_placeholders: bool,
+}
+
+/// Apply `${var}` variables, `:name` / `?` / `$1` placeholders, and
+/// `-- sqlly param:` substitution from the full buffer into the SQL that will
+/// run. Skipped in procedure mode and on the mutation-confirm path. Only the
+/// placeholders in the SQL being run need values, so an empty row for
+/// another statement never blocks this one.
 pub(super) fn apply_query_param_substitution(
     origin: &ExecuteOrigin,
     proc_mode_active: bool,
     user_sql: &str,
     full_buffer: &str,
+    region: ParamRegion,
     db_type: sqlly_core::DatabaseType,
     param_values: &[(String, String)],
-) -> Result<String, String> {
+) -> Result<String, crate::query_params::ParamRunError> {
     if proc_mode_active
         || matches!(
             origin,
@@ -426,10 +441,29 @@ pub(super) fn apply_query_param_substitution(
         crate::query_params::substitute_variables(db_type, user_sql, &vars)
     };
     let specs = crate::query_params::parse_param_directives(full_buffer);
-    if specs.is_empty() {
-        return Ok(user_sql.to_string());
+    let user_sql = if region.detect_placeholders {
+        let before = crate::query_params::positional_before(db_type, full_buffer, region.start);
+        let placeholders =
+            crate::query_params::find_placeholders_after(db_type, &user_sql, before, full_buffer);
+        crate::query_params::substitute_placeholders(
+            db_type,
+            &user_sql,
+            &placeholders,
+            &specs,
+            param_values,
+        )?
+    } else {
+        user_sql
+    };
+    if !specs.iter().any(|spec| spec.name.starts_with('@')) {
+        return Ok(user_sql);
     }
-    crate::query_params::substitute_params(db_type, &user_sql, &specs, param_values)
+    crate::query_params::substitute_params(db_type, &user_sql, &specs, param_values).map_err(
+        |message| crate::query_params::ParamRunError {
+            focus: crate::query_params::first_unresolved(&specs, param_values),
+            message,
+        },
+    )
 }
 
 /// Whether a confirmed `DatabaseChanged { name }` should retarget the tab away
@@ -726,18 +760,29 @@ impl AppView {
             .get(tab_idx)
             .map(|tab| tab.query_params.values())
             .unwrap_or_default();
+        let region = ParamRegion {
+            start: region_start,
+            detect_placeholders: self.detect_query_placeholders(),
+        };
         match apply_query_param_substitution(
             origin,
             proc_mode_active,
             &user_sql,
             &full_buffer,
+            region,
             database_type,
             &param_values,
         ) {
             Ok(substituted) => {
                 let mut history_changed = false;
                 for (name, value) in &param_values {
-                    if !value.trim().is_empty() && self.param_history.remember(name, value) {
+                    // A positional `?1` / `$1` names a slot, not a meaning,
+                    // so its values are not offered to other queries.
+                    let positional = name.starts_with(['?', '$']);
+                    if !positional
+                        && !value.trim().is_empty()
+                        && self.param_history.remember(name, value)
+                    {
                         history_changed = true;
                     }
                 }
@@ -746,9 +791,8 @@ impl AppView {
                 }
                 Some((substituted, region_start))
             }
-            Err(message) => {
-                let specs = crate::query_params::parse_param_directives(&full_buffer);
-                if let Some(name) = crate::query_params::first_unresolved(&specs, &param_values)
+            Err(crate::query_params::ParamRunError { message, focus }) => {
+                if let Some(name) = focus
                     && let Some(tab) = self.tabs.get_mut(tab_idx)
                 {
                     tab.query_params.pending_focus = Some(name);
@@ -759,6 +803,43 @@ impl AppView {
             }
         }
     }
+    /// The tab's whole buffer with its parameters filled in, for surfaces
+    /// that send the buffer as one script (Explain, query plans). A missing
+    /// or invalid value is reported and focused the way Run reports it.
+    pub(super) fn buffer_sql_with_params(
+        &mut self,
+        tab_idx: usize,
+        db_type: sqlly_core::DatabaseType,
+        cx: &mut Context<Self>,
+    ) -> Option<String> {
+        let tab = self.tabs.get(tab_idx)?;
+        let buffer = tab.editor.read(cx).text().to_string();
+        let values = tab.query_params.values();
+        let region = ParamRegion {
+            start: 0,
+            detect_placeholders: self.detect_query_placeholders(),
+        };
+        match apply_query_param_substitution(
+            &ExecuteOrigin::UserRun,
+            tab.proc_mode.enabled,
+            &buffer,
+            &buffer,
+            region,
+            db_type,
+            &values,
+        ) {
+            Ok(sql) => Some(sql),
+            Err(crate::query_params::ParamRunError { message, focus }) => {
+                if let Some(tab) = self.tabs.get_mut(tab_idx) {
+                    tab.query_params.pending_focus = focus;
+                }
+                self.set_status(StatusLevel::Error, message);
+                cx.notify();
+                None
+            }
+        }
+    }
+
     pub(super) fn execute_query(&mut self, tab_idx: usize, cx: &mut Context<Self>) {
         self.execute_query_with_origin(tab_idx, ExecuteOrigin::UserRun, cx);
     }
@@ -3395,8 +3476,8 @@ mod apply_include_statistics_tests {
 #[cfg(test)]
 mod execute_sql_resolution_tests {
     use super::{
-        BufferSqlInput, ExecuteOrigin, apply_query_param_substitution, executed_buffer_span,
-        resolve_buffer_sql, sql_for_execute_origin,
+        BufferSqlInput, ExecuteOrigin, ParamRegion, apply_query_param_substitution,
+        executed_buffer_span, resolve_buffer_sql, sql_for_execute_origin,
     };
     use sqlly_core::DatabaseType;
 
@@ -3673,6 +3754,10 @@ mod execute_sql_resolution_tests {
             false,
             remembered,
             "-- sqlly param: @id int\nSELECT @id",
+            ParamRegion {
+                start: 0,
+                detect_placeholders: true,
+            },
             DatabaseType::SqlServer,
             &[("@id".into(), "7".into())],
         )
@@ -3689,11 +3774,134 @@ mod execute_sql_resolution_tests {
             false,
             selection,
             buffer,
+            ParamRegion {
+                start: 0,
+                detect_placeholders: true,
+            },
             DatabaseType::SqlServer,
             &[("@id".into(), "7".into())],
         )
         .unwrap();
         assert_eq!(out, "SELECT 7;");
+    }
+
+    fn run_placeholders(
+        user_sql: &str,
+        buffer: &str,
+        start: usize,
+        db: DatabaseType,
+        values: &[(&str, &str)],
+    ) -> Result<String, crate::query_params::ParamRunError> {
+        let values: Vec<(String, String)> = values
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect();
+        apply_query_param_substitution(
+            &ExecuteOrigin::UserRun,
+            false,
+            user_sql,
+            buffer,
+            ParamRegion {
+                start,
+                detect_placeholders: true,
+            },
+            db,
+            &values,
+        )
+    }
+
+    // Chat2DB #2944 (its author reported the same gap to us): `:id` used to
+    // reach MariaDB as written and fail with a syntax error near `:id`.
+    #[test]
+    fn named_placeholder_runs_with_its_value_on_mariadb() {
+        let sql = "SELECT *\nFROM beneficiaries\nWHERE id = :id;";
+        let out = run_placeholders(sql, sql, 0, DatabaseType::MariaDb, &[(":id", "42")]).unwrap();
+        assert_eq!(out, "SELECT *\nFROM beneficiaries\nWHERE id = 42;");
+        let out =
+            run_placeholders(sql, sql, 0, DatabaseType::MariaDb, &[(":id", "O'Brien")]).unwrap();
+        assert_eq!(out, "SELECT *\nFROM beneficiaries\nWHERE id = 'O''Brien';");
+    }
+
+    #[test]
+    fn missing_placeholder_value_blocks_and_focuses_its_row() {
+        let sql = "SELECT * FROM t WHERE client_id = :client_id AND status = :status";
+        let err =
+            run_placeholders(sql, sql, 0, DatabaseType::MySql, &[(":client_id", "7")]).unwrap_err();
+        assert_eq!(err.focus.as_deref(), Some(":status"));
+        assert!(err.message.contains(":status"), "{}", err.message);
+    }
+
+    #[test]
+    fn positional_placeholders_keep_whole_buffer_numbering_for_one_statement() {
+        let buffer = "SELECT * FROM a WHERE x = ?;\nSELECT * FROM b WHERE y = ? AND z = ?;";
+        let start = buffer.find("SELECT * FROM b").unwrap();
+        let out = run_placeholders(
+            &buffer[start..],
+            buffer,
+            start,
+            DatabaseType::MySql,
+            &[("?2", "5"), ("?3", "active")],
+        )
+        .unwrap();
+        assert_eq!(out, "SELECT * FROM b WHERE y = 5 AND z = 'active';");
+    }
+
+    #[test]
+    fn an_empty_row_for_another_statement_does_not_block_this_one() {
+        let buffer = "SELECT :a;\nSELECT :b;";
+        let start = buffer.find("SELECT :b").unwrap();
+        let out = run_placeholders(
+            &buffer[start..],
+            buffer,
+            start,
+            DatabaseType::MySql,
+            &[(":b", "1")],
+        )
+        .unwrap();
+        assert_eq!(out, "SELECT 1;");
+    }
+
+    #[test]
+    fn placeholder_detection_off_sends_sql_as_written() {
+        let sql = "SELECT * FROM t WHERE id = :id";
+        let out = apply_query_param_substitution(
+            &ExecuteOrigin::UserRun,
+            false,
+            sql,
+            sql,
+            ParamRegion {
+                start: 0,
+                detect_placeholders: false,
+            },
+            DatabaseType::MySql,
+            &[],
+        )
+        .unwrap();
+        assert_eq!(out, sql);
+    }
+
+    #[test]
+    fn directive_types_a_colon_placeholder() {
+        let buffer = "-- sqlly param: :since date\nSELECT * FROM t WHERE created >= :since";
+        let start = buffer.find("SELECT").unwrap();
+        let err = run_placeholders(
+            &buffer[start..],
+            buffer,
+            start,
+            DatabaseType::Postgres,
+            &[(":since", "soon")],
+        )
+        .unwrap_err();
+        assert_eq!(err.focus.as_deref(), Some(":since"));
+        let out = run_placeholders(
+            &buffer[start..],
+            buffer,
+            start,
+            DatabaseType::Postgres,
+            &[(":since", "2026-11-01")],
+        )
+        .unwrap();
+        assert_eq!(out, "SELECT * FROM t WHERE created >= '2026-11-01'");
     }
 
     #[test]
@@ -3704,6 +3912,10 @@ mod execute_sql_resolution_tests {
             true,
             "SELECT @id",
             buffer,
+            ParamRegion {
+                start: 0,
+                detect_placeholders: true,
+            },
             DatabaseType::SqlServer,
             &[("@id".into(), "7".into())],
         )
@@ -3717,6 +3929,10 @@ mod execute_sql_resolution_tests {
             false,
             "SELECT @id",
             buffer,
+            ParamRegion {
+                start: 0,
+                detect_placeholders: true,
+            },
             DatabaseType::SqlServer,
             &[],
         )

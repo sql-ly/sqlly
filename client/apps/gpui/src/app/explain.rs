@@ -246,8 +246,7 @@ impl AppView {
             cx.notify();
             return;
         };
-        let sql = tab.editor.read(cx).text().to_string();
-        if sql.trim().is_empty() {
+        if tab.editor.read(cx).text().trim().is_empty() {
             self.set_status(
                 StatusLevel::Info,
                 crate::localization::text("shell.plans.no_sql"),
@@ -268,6 +267,10 @@ impl AppView {
         }
         let Some(plan_dialect) = sqlly_services::plan_dialect(profile.database_type) else {
             self.report_missing_plan_dialect(profile.database_type, cx);
+            return;
+        };
+        let Some(sql) = self.buffer_sql_with_params(self.active_tab, profile.database_type, cx)
+        else {
             return;
         };
         let opts = self.effective_explain_options(&profile, kind);
@@ -326,8 +329,8 @@ impl AppView {
                     cx.notify();
                     return;
                 };
-                let sql = tab.editor.read(cx).text().to_string();
-                if sql.trim().is_empty() {
+                let results = tab.results.clone();
+                if tab.editor.read(cx).text().trim().is_empty() {
                     self.set_status(
                         StatusLevel::Info,
                         crate::localization::text("shell.plans.profile_no_sql"),
@@ -335,6 +338,11 @@ impl AppView {
                     cx.notify();
                     return;
                 }
+                let Some(sql) =
+                    self.buffer_sql_with_params(self.active_tab, profile.database_type, cx)
+                else {
+                    return;
+                };
                 if let Some(reason) = crate::explain_options_popover::profile_block_reason(&sql) {
                     self.set_status(
                         StatusLevel::Error,
@@ -358,7 +366,6 @@ impl AppView {
                     .flatten();
                 let opts =
                     sqlly_services::plans::ExplainOptions::profile_defaults(version, plan_dialect);
-                let results = tab.results.clone();
                 if results.read(cx).is_capturing_execution_plan(cx) {
                     self.set_status(
                         StatusLevel::Info,

@@ -21791,8 +21791,8 @@
         "value": "Valor de parámetro faltante: {names}"
       },
       "name_requires_at": {
-        "location": "SQL editor → Directive diagnostics: reason inserted into the “param directive is ignored” underline message when a “-- sqlly param:” line does not start with an @name. Lowercase fragment.",
-        "value": "el nombre del parámetro debe comenzar con @"
+        "location": "SQL editor → Directive diagnostics: reason inserted into the “param directive is ignored” underline message when a “-- sqlly param:” line does not start with an @name or :name. Lowercase fragment.",
+        "value": "el nombre del parámetro debe comenzar con @ o :"
       },
       "named_value_invalid": {
         "location": "Workbench → Status bar: error shown when Run is pressed and a query parameter value fails validation; {name} is the @parameter name and {error} the type error (e.g. “not a valid date”).",
@@ -21871,6 +21871,14 @@
       "placeholder_value": {
         "location": "Query tab → Parameters strip: generic placeholder in the input of a text, number or decimal parameter, saying to type a value or NULL.",
         "value": "valor (o NULL)"
+      },
+      "placeholder_auto": {
+        "location": "Query tab → Parameters strip → Parameter row: placeholder text inside the input of a :name or ? placeholder found in the SQL, hinting at how the value is read.",
+        "value": "42, texto, NULL o 'texto entre comillas'"
+      },
+      "auto_type_tooltip": {
+        "location": "Query tab → Parameters strip → Parameter row: tooltip over the “auto” type label of a placeholder found in the SQL without a -- sqlly param: declaration.",
+        "value": "Encontrado en el SQL. Los números, true/false y NULL se usan tal cual; todo lo demás se pone entre comillas como texto. Declara -- sqlly param: :name int (o date, text, …) para fijar el tipo."
       },
       "required_status": {
         "location": "Query tab → Parameters strip → Parameter row: red status beside an input that is empty and has no declared default, meaning a value must be entered before Run.",
@@ -32805,6 +32813,10 @@
           "location": "Settings → Editor → General → Selection: checkbox that softly highlights every other occurrence of the currently selected word or phrase in the script.",
           "value": "Resaltar las apariciones de la selección"
         },
+        "detect_query_placeholders": {
+          "location": "Settings → Editor → General → Query parameters: checkbox that makes :name, ? and $1 placeholders in a query ask for values in the Parameters strip before Run.",
+          "value": "Pedir valores para los marcadores :name, ? y $1"
+        },
         "hover_info": {
           "location": "Settings → Editor → General → Display: checkbox that turns on the info cards shown when the mouse hovers over table, column, procedure or function names in the editor.",
           "value": "Mostrar información al pasar el cursor sobre tablas, columnas y rutinas"
@@ -33024,6 +33036,10 @@
         "highlight_occurrences_help": {
           "location": "Settings → Editor → General → Selection: help text under the “Highlight occurrences of selection” checkbox describing the VS Code–style highlight and noting it never changes the text.",
           "value": "Al seleccionar una palabra o frase, se resaltan suavemente los demás lugares en los que aparece en el script, como hace VS Code, para que los nombres y valores repetidos se vean de un vistazo. El resaltado sigue la selección y nunca cambia el texto."
+        },
+        "detect_query_placeholders_help": {
+          "location": "Settings → Editor → General → Query parameters: help text under the placeholder checkbox explaining that values are entered in the Parameters strip and how they are read.",
+          "value": "Un marcador como WHERE id = :id obtiene un campo en la franja de parámetros sobre los resultados, y Ejecutar usa lo que escribas sin modificar tu script. Los números, true/false y NULL se interpretan como tales; todo lo demás es texto, y las comillas ('42') fuerzan texto. En SQL Server, un @name que el script nunca declara con DECLARE funciona igual. Se ignoran los marcadores dentro de cadenas y comentarios."
         },
         "period_ranges_help": {
           "location": "Settings → Editor → IntelliSense → Date & time convenience: help text under “Turn periods into ranges” explaining how each comparison operator uses the period's first or last moment; operators stay unchanged.",
@@ -33348,6 +33364,10 @@
         "selection": {
           "location": "Settings → Editor → General: section heading above the checkbox that softly highlights other occurrences of the selected word or phrase in the editor.",
           "value": "Selección"
+        },
+        "query_parameters": {
+          "location": "Settings → Editor → General: section heading above the checkbox that turns :name, ? and $1 placeholders written in a query into rows of the Parameters strip.",
+          "value": "Parámetros de consulta"
         },
         "spacing": {
           "location": "Settings → Editor → General: section heading above the Auto spacing checkbox, which inserts spaces around SQL operators and punctuation as you type.",

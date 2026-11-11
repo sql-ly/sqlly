@@ -4,8 +4,8 @@
 use super::Options;
 use super::casing::{
     CAT_CLAUSES, CAT_DDL, CAT_DML, CAT_JOINS, CAT_SET_OPS, CAT_TRANSACTION, CAT_WORD_OPERATORS,
-    TYPE_WORDS, apply_keyword_case, default_quotes, pascal_case_identifier, plain_identifier_ok,
-    safe_to_unquote, word_in,
+    TYPE_WORDS, apply_keyword_case, pascal_case_identifier, plain_identifier_ok, quote_plain,
+    reserved_needs_quotes, safe_to_unquote, word_in,
 };
 use super::segment::{
     BatchSeparator, Clause, ClauseKind, Statement, control_comment_state, find_alias_pos,
@@ -1869,6 +1869,9 @@ impl<'a, 'o, 'p> Formatter<'a, 'o, 'p> {
         let inner = t.ident_text();
         let inner: &str = &inner;
 
+        // Quotes are only ever removed when the bare name still parses and
+        // resolves to the same object (never off `[User]`), and only ever
+        // added when they change nothing but the spelling.
         match self.o.p.identifier_quoting {
             IdentifierQuoting::PreserveExisting => {
                 if quoted {
@@ -1883,6 +1886,15 @@ impl<'a, 'o, 'p> Formatter<'a, 'o, 'p> {
                     self.cased_plain_identifier(inner)
                 } else if quoted {
                     t.text.to_string()
+                } else if self.o.p.identifier_quoting == IdentifierQuoting::QuoteOnlyWhenRequired
+                    && self.after_dot
+                    && reserved_needs_quotes(inner, self.o.dialect)
+                {
+                    // `Shared.User`: a reserved word as the member of a
+                    // qualified name is always a name, and SQL Server (among
+                    // others) rejects it bare. A lone `USER` is left alone —
+                    // it may be the niladic function.
+                    quote_plain(&self.cased_plain_identifier(inner), self.o.dialect)
                 } else {
                     self.cased_plain_identifier(inner)
                 }
@@ -1891,10 +1903,14 @@ impl<'a, 'o, 'p> Formatter<'a, 'o, 'p> {
                 if quoted {
                     t.text.to_string()
                 } else if plain_identifier_ok(inner)
-                    && (!matches!(t.kind, TokenKind::Keyword) || self.after_dot)
+                    && (self.after_dot
+                        || !(matches!(t.kind, TokenKind::Keyword)
+                            || reserved_needs_quotes(inner, self.o.dialect)))
                 {
-                    let (open, close) = default_quotes(self.o.dialect);
-                    format!("{open}{inner}{close}")
+                    // A bare reserved word outside a qualified name is a
+                    // keyword or niladic function (`USER`, `CURRENT_USER`),
+                    // which quoting would turn into a column reference.
+                    quote_plain(inner, self.o.dialect)
                 } else {
                     t.text.to_string()
                 }

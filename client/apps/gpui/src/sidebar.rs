@@ -224,6 +224,12 @@ impl Sidebar {
             tree.set_connections(connections.clone(), cx);
         });
 
+        // The sidebar is drawn from gpui's frame cache and chooses between
+        // the empty state and the tree from the tree's content. While the
+        // empty state shows, the tree is not on screen, so its own notify
+        // would not reach this view.
+        cx.observe(&schema_tree, |_, _, cx| cx.notify()).detach();
+
         // Translate schema-tree events into sidebar events. Server-level actions
         // map onto the existing connection events so `app.rs` needs no changes;
         // everything else is forwarded verbatim.

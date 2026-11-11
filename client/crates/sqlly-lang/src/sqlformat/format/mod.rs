@@ -249,6 +249,18 @@ fn detect_dialect<'a>(input: &'a str) -> (Dialect, Option<Vec<Token<'a>>>) {
     {
         return (Dialect::MySql, Some(probe));
     }
+    // A `?` placeholder (`WHERE id=?`) would glue into a PostgreSQL operator
+    // (`=?`), so it reads as MySQL unless the text also shows PostgreSQL
+    // (`::` casts, the `?|` / `?&` jsonb operators).
+    if probe
+        .iter()
+        .any(|t| matches!(t.kind, TokenKind::ParamMarker(ParamStyle::Question)))
+        && !input.contains("::")
+        && !input.contains("?|")
+        && !input.contains("?&")
+    {
+        return (Dialect::MySql, Some(probe));
+    }
     (Dialect::Postgres, None)
 }
 

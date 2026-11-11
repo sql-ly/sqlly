@@ -21,6 +21,10 @@ impl Render for SqlEditor {
         // actually overflows on that axis, so an empty track reads as a
         // disabled scrollbar.
         let scrollbar_w = 12.0_f32;
+        self.scrollbar_geometry = (
+            self.scroll_handle.bounds().size,
+            self.scroll_handle.max_offset(),
+        );
         let viewport_h = f32::from(self.scroll_handle.bounds().size.height);
         let max_scroll_y = f32::from(self.scroll_handle.max_offset().y);
         let offset_y = f32::from(self.scroll_handle.offset().y);

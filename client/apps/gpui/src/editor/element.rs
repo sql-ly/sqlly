@@ -567,6 +567,21 @@ impl Element for EditorElement {
             editor.last_tab_maps = std::rc::Rc::new(tab_maps);
             editor.last_bounds = Some(bounds);
         });
+        // The thumbs were sized in `render` from the previous layout. The
+        // editor is drawn from the frame cache, so nothing else would
+        // re-render it to pick up a changed line count or viewport.
+        let scrollbar_stale = {
+            let editor = self.editor.read(cx);
+            editor.scrollbar_geometry
+                != (
+                    editor.scroll_handle.bounds().size,
+                    editor.scroll_handle.max_offset(),
+                )
+        };
+        if scrollbar_stale {
+            let editor = self.editor.clone();
+            cx.defer(move |cx| editor.update(cx, |_, cx| cx.notify()));
+        }
 
         EditorPrepaintState {
             first_line: vrange.start,
