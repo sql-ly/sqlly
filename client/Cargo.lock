@@ -9775,7 +9775,7 @@ dependencies = [
 
 [[package]]
 name = "sqlly-browser"
-version = "1.36.0"
+version = "1.38.0"
 dependencies = [
  "chrono",
  "console_error_panic_hook",
@@ -9799,7 +9799,7 @@ dependencies = [
 
 [[package]]
 name = "sqlly-cli"
-version = "1.21.0"
+version = "1.22.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -9836,7 +9836,7 @@ dependencies = [
 
 [[package]]
 name = "sqlly-core"
-version = "1.23.0"
+version = "1.26.0"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
@@ -9861,8 +9861,8 @@ dependencies = [
 
 [[package]]
 name = "sqlly-datatable"
-version = "10.1.0"
-source = "git+https://github.com/sql-ly/sqlly-datatable.git?tag=v10.1.0#27c5ecdb60920c21a1ec9d66925c5968ac2c45fd"
+version = "11.1.0"
+source = "git+https://github.com/sql-ly/sqlly-datatable.git?tag=v11.1.0#2c5e8ef7178520b26127b20567257231bdcb8663"
 dependencies = [
  "gpui-component",
  "gpui-kit-assets",
@@ -9921,7 +9921,7 @@ dependencies = [
 
 [[package]]
 name = "sqlly-gpui"
-version = "1.36.0"
+version = "1.38.0"
 dependencies = [
  "ab_glyph",
  "async-trait",
@@ -9999,7 +9999,7 @@ dependencies = [
 
 [[package]]
 name = "sqlly-i18n"
-version = "1.13.0"
+version = "1.17.0"
 dependencies = [
  "criterion",
  "serde",
@@ -10042,7 +10042,7 @@ dependencies = [
 
 [[package]]
 name = "sqlly-lang"
-version = "1.18.0"
+version = "1.19.0"
 dependencies = [
  "criterion",
  "proptest",
@@ -10105,7 +10105,7 @@ dependencies = [
 
 [[package]]
 name = "sqlly-services"
-version = "1.36.0"
+version = "1.39.0"
 dependencies = [
  "async-trait",
  "aws-config",

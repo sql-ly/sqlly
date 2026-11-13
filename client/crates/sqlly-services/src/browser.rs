@@ -21,12 +21,15 @@
 //! Everything runs synchronously on the single browser thread: `execute`
 //! materializes the whole result and pre-buffers the [`QueryEvent`] stream
 //! into the channel before returning the handle, so no executor task is
-//! needed. The backend lives in a thread-local because `rusqlite::Connection`
+//! needed. A grid run first passes the stream through the spill stage ([`spill::stage`]),
+//! which moves the rows past the spill threshold to browser storage (OPFS)
+//! as they are read. The backend lives in a thread-local because `rusqlite::Connection`
 //! is `!Sync` — the service structs themselves stay zero-sized and `Send +
 //! Sync` as the ports require, which is fine on wasm's one thread.
 
 pub mod pglite;
 pub mod proxy;
+pub mod spill;
 
 use std::cell::RefCell;
 use std::sync::Arc;
@@ -180,11 +183,16 @@ fn sqlite_value_to_cell(value: rusqlite::types::ValueRef<'_>) -> CellValue {
     }
 }
 
-/// Run a SQL batch against the active backend, materializing every result
-/// set into the [`QueryEvent`] sequence the streaming contract promises.
-fn execute_to_events(sql: &str) -> Vec<QueryEvent> {
+/// Rows per [`QueryEvent::Rows`] batch from the SQLite backend, so a grid
+/// run's spill stage can move a large result to browser storage as it is
+/// read instead of after all of it is in memory.
+const SQLITE_BATCH_ROWS: usize = 4_096;
+
+/// Run a SQL batch against the active backend, handing every result set to
+/// `emit` as the [`QueryEvent`] sequence the streaming contract promises.
+fn execute_into(sql: &str, emit: &mut dyn FnMut(QueryEvent)) {
     let started = js_now_ms();
-    let mut events = vec![QueryEvent::Started];
+    emit(QueryEvent::Started);
     let result: StudioResult<()> = with_backend_mut(|backend| match backend {
         BrowserBackend::Demo(db) => {
             let execution = db
@@ -200,7 +208,7 @@ fn execute_to_events(sql: &str) -> Vec<QueryEvent> {
                         nullable: true,
                     })
                     .collect();
-                events.push(QueryEvent::ResultSet { index, columns });
+                emit(QueryEvent::ResultSet { index, columns });
                 let mut rows: Vec<Vec<CellValue>> = set
                     .rows
                     .iter()
@@ -208,20 +216,20 @@ fn execute_to_events(sql: &str) -> Vec<QueryEvent> {
                     .collect();
                 let count = rows.len() as u64;
                 let truncated = truncate_rows(&mut rows, 0, &CellLimits::default());
-                events.push(QueryEvent::Rows { index, rows });
+                emit(QueryEvent::Rows { index, rows });
                 if !truncated.is_empty() {
-                    events.push(QueryEvent::TruncatedCells {
+                    emit(QueryEvent::TruncatedCells {
                         index,
                         cells: truncated,
                     });
                 }
-                events.push(QueryEvent::RowCount {
+                emit(QueryEvent::RowCount {
                     index,
                     rows_affected: count,
                 });
             }
             for message in &execution.messages {
-                events.push(QueryEvent::Message {
+                emit(QueryEvent::Message {
                     text: message.clone(),
                 });
             }
@@ -243,7 +251,7 @@ fn execute_to_events(sql: &str) -> Vec<QueryEvent> {
                     let affected = stmt
                         .raw_execute()
                         .map_err(|e| StudioError::QueryExecution(e.to_string()))?;
-                    events.push(QueryEvent::Message {
+                    emit(QueryEvent::Message {
                         text: format!("({affected} row(s) affected)"),
                     });
                     continue;
@@ -255,8 +263,21 @@ fn execute_to_events(sql: &str) -> Vec<QueryEvent> {
                         nullable: true,
                     })
                     .collect();
-                events.push(QueryEvent::ResultSet { index, columns });
-                let mut rows_out: Vec<Vec<CellValue>> = Vec::new();
+                emit(QueryEvent::ResultSet { index, columns });
+                let mut count = 0usize;
+                let mut batch: Vec<Vec<CellValue>> = Vec::new();
+                let mut flush = |batch: &mut Vec<Vec<CellValue>>, count: &mut usize| {
+                    let mut rows = std::mem::take(batch);
+                    let truncated = truncate_rows(&mut rows, *count, &CellLimits::default());
+                    *count += rows.len();
+                    emit(QueryEvent::Rows { index, rows });
+                    if !truncated.is_empty() {
+                        emit(QueryEvent::TruncatedCells {
+                            index,
+                            cells: truncated,
+                        });
+                    }
+                };
                 let mut rows = stmt.raw_query();
                 while let Some(row) = rows
                     .next()
@@ -269,23 +290,18 @@ fn execute_to_events(sql: &str) -> Vec<QueryEvent> {
                             .map_err(|e| StudioError::QueryExecution(e.to_string()))?;
                         cells.push(sqlite_value_to_cell(value));
                     }
-                    rows_out.push(cells);
+                    batch.push(cells);
+                    if batch.len() >= SQLITE_BATCH_ROWS {
+                        flush(&mut batch, &mut count);
+                    }
                 }
-                let count = rows_out.len() as u64;
-                let truncated = truncate_rows(&mut rows_out, 0, &CellLimits::default());
-                events.push(QueryEvent::Rows {
-                    index,
-                    rows: rows_out,
-                });
-                if !truncated.is_empty() {
-                    events.push(QueryEvent::TruncatedCells {
-                        index,
-                        cells: truncated,
-                    });
+                if !batch.is_empty() || count == 0 {
+                    flush(&mut batch, &mut count);
                 }
-                events.push(QueryEvent::RowCount {
+                drop(flush);
+                emit(QueryEvent::RowCount {
                     index,
-                    rows_affected: count,
+                    rows_affected: count as u64,
                 });
                 index += 1;
             }
@@ -293,14 +309,13 @@ fn execute_to_events(sql: &str) -> Vec<QueryEvent> {
         }
     });
     match result {
-        Ok(()) => events.push(QueryEvent::Completed {
+        Ok(()) => emit(QueryEvent::Completed {
             elapsed_ms: js_now_ms().saturating_sub(started) as u128,
         }),
-        Err(error) => events.push(QueryEvent::Error {
+        Err(error) => emit(QueryEvent::Error {
             message: error.to_string(),
         }),
     }
-    events
 }
 
 /// `std::time::Instant` panics on wasm32-unknown-unknown; read the JS clock
@@ -329,13 +344,15 @@ impl Default for BrowserQueryExecutor {
     }
 }
 
-#[async_trait]
-impl QueryExecutor for BrowserQueryExecutor {
-    async fn execute(
+impl BrowserQueryExecutor {
+    /// Runs `sql` and buffers its whole event stream. A grid run (`grid`)
+    /// passes the events through the spill stage ([`spill::stage`]), which moves the
+    /// rows past the spill threshold to browser storage as they are read.
+    async fn run(
         &self,
         profile: &ConnectionProfile,
         sql: &str,
-        _row_buffer: usize,
+        grid: bool,
     ) -> StudioResult<QueryHandle> {
         let task_id = format!(
             "browser-{}",
@@ -356,31 +373,28 @@ impl QueryExecutor for BrowserQueryExecutor {
         // "already borrowed" and then cascades. Pre-buffering keeps every grid
         // mutation inside a single pump drain, matching the SQLite path that
         // never hit this.
-        if pglite::is_pglite_profile(profile) {
+        let events = if pglite::is_pglite_profile(profile) {
             let started = js_now_ms();
-            let mut events = vec![QueryEvent::Started];
-            match pglite::exec(sql.to_string()).await {
-                Ok(results) => {
-                    events.extend(pglite::events_from_results(results));
-                    events.push(QueryEvent::Completed {
-                        elapsed_ms: js_now_ms().saturating_sub(started) as u128,
-                    });
+            let outcome = pglite::exec(sql.to_string()).await;
+            staged(grid, |emit| {
+                emit(QueryEvent::Started);
+                match outcome {
+                    Ok(results) => {
+                        for event in pglite::events_from_results(results) {
+                            emit(event);
+                        }
+                        emit(QueryEvent::Completed {
+                            elapsed_ms: js_now_ms().saturating_sub(started) as u128,
+                        });
+                    }
+                    Err(error) => emit(QueryEvent::Error {
+                        message: error.to_string(),
+                    }),
                 }
-                Err(error) => events.push(QueryEvent::Error {
-                    message: error.to_string(),
-                }),
-            }
-            let (tx, rx) = mpsc::channel(events.len().max(1));
-            for event in events {
-                // Capacity equals the event count, so try_send cannot fail.
-                let _ = tx.try_send(event);
-            }
-            return Ok(QueryHandle {
-                task_id,
-                events: rx,
-            });
-        }
-        let events = execute_to_events(sql);
+            })
+        } else {
+            staged(grid, |emit| execute_into(sql, emit))
+        };
         let (tx, rx) = mpsc::channel(events.len().max(1));
         for event in events {
             // Capacity equals the event count, so try_send cannot fail.
@@ -390,6 +404,39 @@ impl QueryExecutor for BrowserQueryExecutor {
             task_id,
             events: rx,
         })
+    }
+}
+
+/// Collects the events `produce` emits, through a spill stage when `grid`.
+/// Synchronous, so the (`!Send`) stage never lives across an await.
+fn staged(grid: bool, produce: impl FnOnce(&mut dyn FnMut(QueryEvent))) -> Vec<QueryEvent> {
+    let mut events = Vec::new();
+    match grid.then(spill::stage).flatten() {
+        Some(mut stage) => produce(&mut |event| stage.push(event, &mut events)),
+        None => produce(&mut |event| events.push(event)),
+    }
+    events
+}
+
+#[async_trait]
+impl QueryExecutor for BrowserQueryExecutor {
+    async fn execute(
+        &self,
+        profile: &ConnectionProfile,
+        sql: &str,
+        _row_buffer: usize,
+    ) -> StudioResult<QueryHandle> {
+        self.run(profile, sql, false).await
+    }
+
+    async fn execute_for_grid(
+        &self,
+        profile: &ConnectionProfile,
+        _session: Option<&str>,
+        sql: &str,
+        _row_buffer: usize,
+    ) -> StudioResult<QueryHandle> {
+        self.run(profile, sql, true).await
     }
 
     async fn cancel(&self, _task_id: &str) -> StudioResult<()> {

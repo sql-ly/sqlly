@@ -35,9 +35,8 @@ pub mod servers_explorer;
 pub mod session;
 pub mod spatial;
 pub mod startup_sql;
-// Spill-to-disk is std::fs-based; on wasm results stay in memory (the query
-// executor's byte budget still applies) until an OPFS-backed writer exists.
-#[cfg(not(target_arch = "wasm32"))]
+// Spill-to-disk. On wasm only the storage-generic constructors work (the
+// browser backs them with OPFS); the `File` ones need a real filesystem.
 pub mod spill;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod tool_export;
@@ -98,7 +97,6 @@ pub use servers_explorer::{
 };
 pub use session::{SessionId, SessionInfo, SessionManager, SessionState};
 pub use spatial::{Geometry, GeometryKind, Shape, SpatialError};
-#[cfg(not(target_arch = "wasm32"))]
 pub use spill::{SpillError, SpillReader, SpillWriter};
 pub use sqlly_lang::sqlmodel::{
     ConnectionKind, DatabaseType, DbTypeMetadata, Dialect, RowLimitSyntax,

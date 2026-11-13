@@ -20,6 +20,18 @@ let wasmReady = false;
 let activeLanguage = 'en';
 let statusState = { key: 'browser.boot.preparing', fallback: 'Preparing…', arguments: {} };
 
+/* A rejection the translation manager can show in the translator's language.
+   `message` stays the English text (older hosts show it); `code` names the
+   translation_manager.preview_error_{code} catalog entry and `params` fill its
+   named placeholders (strings only). */
+class TranslationError extends Error {
+  constructor(code, message, params = {}) {
+    super(message);
+    this.code = code;
+    this.params = params;
+  }
+}
+
 function isPlainObject(value) {
   if (Object.prototype.toString.call(value) !== '[object Object]') {
     return false;
@@ -48,7 +60,7 @@ function hasExactFields(value, fields) {
 
 function validateLanguage(language) {
   if (!SUPPORTED_LANGUAGES.includes(language)) {
-    throw new Error(`Language must be one of: ${SUPPORTED_LANGUAGES.join(', ')}`);
+    throw new TranslationError('language_invalid', `Language must be one of: ${SUPPORTED_LANGUAGES.join(', ')}`);
   }
 }
 
@@ -66,42 +78,42 @@ function exceedsTranslationLimit(json) {
 
 function prepareOverrides(overrides) {
   if (!isPlainObject(overrides)) {
-    throw new Error('Overrides must be a nested catalog object');
+    throw new TranslationError('catalog_invalid', 'Overrides must be a nested catalog object');
   }
   let json;
   try {
     json = JSON.stringify(overrides);
   } catch {
-    throw new Error('Overrides must be JSON serializable');
+    throw new TranslationError('catalog_invalid', 'Overrides must be JSON serializable');
   }
   if (exceedsTranslationLimit(json)) {
-    throw new Error('Translation payload exceeds 8 MiB');
+    throw new TranslationError('payload_too_large', 'Translation payload exceeds 8 MiB');
   }
 
   function visit(node, prefix) {
     for (const key of ownKeys(node)) {
       if (typeof key !== 'string' || !KEY_SEGMENT.test(key)) {
-        throw new Error(`Invalid translation key segment: ${String(key)}`);
+        throw new TranslationError('catalog_key_invalid', `Invalid translation key segment: ${String(key)}`, { key: String(key) });
       }
       const child = node[key];
       const path = prefix ? `${prefix}.${key}` : key;
       if (!isPlainObject(child)) {
-        throw new Error(`Translation entry must be an object: ${path}`);
+        throw new TranslationError('catalog_entry_invalid', `Translation entry must be an object: ${path}`, { path });
       }
       const keys = ownKeys(child);
       if (keys.includes('value') || keys.includes('location')) {
         if (!hasExactFields(child, ['value', 'location'])) {
-          throw new Error(`Translation leaf must contain exactly value and location: ${path}`);
+          throw new TranslationError('catalog_entry_invalid', `Translation leaf must contain exactly value and location: ${path}`, { path });
         }
         if (typeof child.value !== 'string' || !child.value.trim()) {
-          throw new Error(`Translation value must be a nonempty string: ${path}`);
+          throw new TranslationError('catalog_value_invalid', `Translation value must be a nonempty string: ${path}`, { path });
         }
         if (typeof child.location !== 'string' || !child.location.trim()) {
-          throw new Error(`Translation location must be a nonempty string: ${path}`);
+          throw new TranslationError('catalog_location_invalid', `Translation location must be a nonempty string: ${path}`, { path });
         }
       } else {
         if (keys.length === 0) {
-          throw new Error(`Translation group must not be empty: ${path}`);
+          throw new TranslationError('catalog_entry_invalid', `Translation group must not be empty: ${path}`, { path });
         }
         visit(child, path);
       }
@@ -130,9 +142,20 @@ function errorText(error) {
   return String((error && error.message) || error);
 }
 
+/* The acknowledgement fields for a failure: the English `error`, plus the
+   stable `code` and `params` when the failure has them. */
+function failure(error) {
+  const result = { ok: false, error: errorText(error) };
+  if (error instanceof TranslationError) {
+    result.code = error.code;
+    result.params = error.params;
+  }
+  return result;
+}
+
 function requireReady() {
   if (!wasmModule || !wasmReady) {
-    throw new Error('SQLLY is not ready');
+    throw new TranslationError('not_ready', 'SQLLY is not ready');
   }
 }
 
@@ -203,6 +226,10 @@ function acknowledge(source, requestId, requestType, result) {
   const response = { channel: TRANSLATION_CHANNEL, requestId, type: 'ack', requestType, ok: result.ok };
   if (!result.ok) {
     response.error = result.error;
+    if (result.code) {
+      response.code = result.code;
+      response.params = result.params;
+    }
   } else if (result.skipped) {
     response.skipped = result.skipped;
   }
@@ -221,10 +248,10 @@ function prepareCommand(data) {
   } else if (data.type === 'clear_overrides') {
     expectedFields = ['channel', 'requestId', 'type'];
   } else {
-    throw new Error('Unknown translation command');
+    throw new TranslationError('command_unknown', 'Unknown translation command');
   }
   if (!hasExactFields(data, expectedFields)) {
-    throw new Error('Translation command has an invalid shape');
+    throw new TranslationError('command_shape', 'Translation command has an invalid shape');
   }
   if (data.type === 'set_language') {
     validateLanguage(data.language);
@@ -243,7 +270,7 @@ function runCommand(apply) {
     const outcome = apply() || {};
     return { ok: true, skipped: outcome.skipped };
   } catch (error) {
-    return { ok: false, error: errorText(error) };
+    return failure(error);
   }
 }
 
@@ -260,7 +287,7 @@ let pendingRequestCount = 0;
 
 function enqueueCommand(source, requestId, requestType, command) {
   if (pendingRequestCount >= MAX_QUEUED_REQUESTS) {
-    throw new Error('Too many translation commands queued before SQLLY was ready');
+    throw new TranslationError('queue_full', 'Too many translation commands queued before SQLLY was ready');
   }
   const waiter = { source, requestId, requestType };
   const existing = pendingCommands.findIndex((entry) => entry.slot === command.slot);
@@ -304,7 +331,7 @@ function onTranslationMessage(event) {
       return;
     }
   } catch (error) {
-    acknowledge(event.source, data.requestId, requestType, { ok: false, error: errorText(error) });
+    acknowledge(event.source, data.requestId, requestType, failure(error));
     return;
   }
   acknowledge(event.source, data.requestId, requestType, runCommand(command.apply));
@@ -580,8 +607,62 @@ async function bootPglite() {
   };
 }
 
+/* Start the spill worker (spill-worker.js) and expose the bridge the app
+   uses to keep large results in the Origin Private File System instead of
+   in memory. Without OPFS or workers the bridge is left out and results
+   stay in memory, as before. See
+   crates/sqlly-services/src/browser/spill.rs. */
+function installSpillBridge() {
+  if (typeof Worker === 'undefined' || typeof navigator.storage?.getDirectory !== 'function') {
+    return;
+  }
+  let worker;
+  try {
+    // Beside boot.js, like the other files it fetches page-relative.
+    worker = new Worker('./spill-worker.js');
+  } catch (error) {
+    console.warn('spill worker unavailable; large results stay in memory', error);
+    return;
+  }
+  let nextId = 1;
+  const pending = new Map();
+  worker.onmessage = ({ data }) => {
+    const waiter = pending.get(data.id);
+    if (!waiter) return;
+    pending.delete(data.id);
+    if (data.ok) waiter.resolve(data.value);
+    else waiter.reject(new Error(data.error));
+  };
+  worker.onerror = (event) => {
+    console.warn('spill worker failed', event.message);
+    for (const waiter of pending.values()) waiter.reject(new Error('the spill worker stopped'));
+    pending.clear();
+  };
+  const call = (op, args = {}, transfer = []) =>
+    new Promise((resolve, reject) => {
+      const id = nextId++;
+      pending.set(id, { resolve, reject });
+      worker.postMessage({ id, op, args }, transfer);
+    });
+  // No reply: writes and removals run in order with everything else, and a
+  // failed write shows up on the next read of that spill.
+  const send = (op, args, transfer = []) => worker.postMessage({ id: 0, op, args }, transfer);
+  globalThis.sqllySpill = {
+    supported: () => call('supported'),
+    create: (name) => send('create', { name }),
+    append: (name, data, index) =>
+      send('append', { name, data: data.buffer, index: index.buffer }, [data.buffer, index.buffer]),
+    page: (name, start, end) => call('page', { name, start, end }).then((b) => new Uint8Array(b)),
+    body: (name) => call('body', { name }).then((b) => new Uint8Array(b)),
+    remove: (name) => send('remove', { name }),
+    sweep: () => call('sweep'),
+    estimate: () => call('estimate'),
+  };
+}
+
 async function boot() {
   try {
+    installSpillBridge();
     const proxy = proxyConfig();
     // Postgres boots and Chinook loads while the app wasm downloads —
     // unless a relay proxy provides the connections, in which case no sample

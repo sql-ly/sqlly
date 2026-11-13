@@ -135,7 +135,7 @@ pub fn result_memory_budget_bytes() -> usize {
 /// Variable-length cells count their byte length plus a small fixed overhead;
 /// scalar cells a flat 16 bytes. This is a budget heuristic, not RSS
 /// accounting — no re-encoding, no allocation.
-fn estimate_row_bytes(row: &[CellValue]) -> usize {
+pub(crate) fn estimate_row_bytes(row: &[CellValue]) -> usize {
     row.iter()
         .map(|cell| match cell {
             CellValue::String(s) => s.len() + 24,

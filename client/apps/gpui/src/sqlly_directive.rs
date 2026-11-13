@@ -302,7 +302,7 @@ pub fn classify_body(body: &str) -> Option<Directive<'_>> {
 /// The `[<n>]: <body>` tail of an optionally indexed keyword (`lines`,
 /// `grid`): `None` unless a colon follows. An index needs whitespace between
 /// the keyword and its digits (`lines2:` is not a directive) and is 1-based.
-fn indexed_body(after: &str) -> Option<(Option<usize>, &str)> {
+pub(crate) fn indexed_body(after: &str) -> Option<(Option<usize>, &str)> {
     let after_kw = skip_ascii_ws(after);
     let digits = after_kw.bytes().take_while(u8::is_ascii_digit).count();
     let (index, rest_after) = if digits > 0 {
@@ -521,7 +521,7 @@ pub fn directive_keyword_span_at(content: &str, offset: usize) -> Option<(usize,
 /// at most one comment starts per line.
 /// Line-local by design: a multi-line construct spanning into this line can
 /// fool it, but that is the same perf boundary the rest of hover keeps.
-fn line_comment_start(line: &str) -> Option<usize> {
+pub(crate) fn line_comment_start(line: &str) -> Option<usize> {
     let bytes = line.as_bytes();
     let mut in_string = false;
     let mut in_bracket = false;

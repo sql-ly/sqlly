@@ -1460,7 +1460,7 @@ impl AppView {
                 .spawn(async move {
                     match services
                         .queries
-                        .execute_in_session(&profile, tab_lane.as_deref(), &sql, row_buffer)
+                        .execute_for_grid(&profile, tab_lane.as_deref(), &sql, row_buffer)
                         .await
                     {
                         Ok(handle) => {

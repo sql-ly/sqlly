@@ -404,6 +404,28 @@ test('bridge rejects malformed commands and oversize messages with correlated er
   assert.deepEqual(harness.calls, []);
 });
 
+test('rejections carry a stable code and parameters the manager can translate', () => {
+  const harness = createHarness();
+  const cases = [
+    [{ ...command('set_language'), language: 'xx' }, 'language_invalid', {}],
+    [{ ...command('set_language'), language: 'en', extra: true }, 'command_shape', {}],
+    [command('unknown'), 'command_unknown', {}],
+    [{ ...command('replace_overrides'), overrides: 'not an object' }, 'catalog_invalid', {}],
+    [{ ...command('replace_overrides'), overrides: catalogOfSize(MAX_TRANSLATION_BYTES + 1) }, 'payload_too_large', {}],
+    [{ ...command('replace_overrides'), overrides: { Bad: leaf('x') } }, 'catalog_key_invalid', { key: 'Bad' }],
+    [{ ...command('replace_overrides'), overrides: { menu: 'x' } }, 'catalog_entry_invalid', { path: 'menu' }],
+    [{ ...command('replace_overrides'), overrides: { menu: leaf('') } }, 'catalog_value_invalid', { path: 'menu' }],
+    [{ ...command('replace_overrides'), overrides: { menu: { value: 'x', location: ' ' } } }, 'catalog_location_invalid', { path: 'menu' }],
+  ];
+  cases.forEach(([data], index) => harness.send({ ...data, requestId: `coded-${index}` }));
+  cases.forEach(([, code, params], index) => {
+    const ack = harness.posted[index].data;
+    assert.equal(ack.code, code, `case ${index}`);
+    assert.deepEqual(plain(ack.params), params, `case ${index}`);
+    assert.equal(typeof ack.error, 'string', 'the English text stays for older managers');
+  });
+});
+
 test('bridge ignores foreign origins, sources, channels, and invalid request ids', () => {
   const harness = createHarness();
   const valid = { ...command('set_language'), language: 'en' };
@@ -572,6 +594,7 @@ test('the pre-ready queue is bounded', () => {
   assert.equal(harness.posted[0].data.requestId, 'lang-64');
   assert.equal(harness.posted[0].data.ok, false);
   assert.match(harness.posted[0].data.error, /Too many/);
+  assert.equal(harness.posted[0].data.code, 'queue_full');
   harness.markReady();
   assert.equal(harness.calls.length, 1);
   assert.equal(harness.posted.length, 65);

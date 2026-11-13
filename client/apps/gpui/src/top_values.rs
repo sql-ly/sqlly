@@ -273,6 +273,7 @@ impl TopValuesView {
                 .background_executor()
                 .spawn(async move {
                     crate::results::read_spill_column(&path, column, count)
+                        .await
                         .map(|cells| count_spill_cells(cells, &fmt))
                 })
                 .await;

@@ -42,6 +42,14 @@
 //! (a page read pulls its offset window in one I/O). That keeps reader memory
 //! O(page) even for billions of rows, where an in-memory `Vec<u64>` index
 //! would be gigabytes.
+//!
+//! # Storage
+//!
+//! Both types are generic over their storage. The default is [`File`]
+//! ([`SpillWriter::create`], [`SpillReader::open`]); any `Read + Write +
+//! Seek` handle works through [`SpillWriter::new`] and
+//! [`SpillReader::from_parts`], which is how the browser build backs a spill
+//! with OPFS sync access handles.
 
 use std::fs::{File, OpenOptions};
 use std::io::{BufReader, BufWriter, Read, Seek, SeekFrom, Write};
@@ -179,7 +187,7 @@ fn check_file_header(file: &mut impl Read, magic: &[u8; 4], what: &str) -> Resul
 // `as_chunks` (clippy 1.98's suggestion) needs Rust 1.88; the workspace MSRV
 // is 1.85, so `chunks_exact` stays until the MSRV moves.
 #[allow(unknown_lints, clippy::chunks_exact_to_as_chunks)]
-fn read_row_header(reader: &mut BufReader<File>) -> Result<(Vec<u32>, u64), SpillError> {
+fn read_row_header(reader: &mut impl Read) -> Result<(Vec<u32>, u64), SpillError> {
     let mut count_buf = [0u8; 4];
     reader.read_exact(&mut count_buf)?;
     let n = u32::from_le_bytes(count_buf);
@@ -200,18 +208,101 @@ fn read_row_header(reader: &mut BufReader<File>) -> Result<(Vec<u32>, u64), Spil
     Ok((lengths, 4 + 4 * u64::from(n) + payload_total))
 }
 
+/// Writes one row record (header + cells) and returns its encoded length.
+fn write_record(out: &mut impl Write, row: &[CellValue]) -> Result<u64, SpillError> {
+    let n = u32::try_from(row.len())
+        .ok()
+        .filter(|n| *n <= MAX_COLUMNS)
+        .ok_or_else(|| SpillError::Serialize(format!("row has {} columns", row.len())))?;
+    out.write_all(&n.to_le_bytes())?;
+    let mut payload_total = 0u64;
+    for cell in row {
+        let len = encoded_cell_len(cell);
+        let len = u32::try_from(len)
+            .map_err(|_| SpillError::Serialize(format!("cell of {len} bytes exceeds u32")))?;
+        payload_total += u64::from(len);
+        out.write_all(&len.to_le_bytes())?;
+    }
+    for cell in row {
+        write_cell(out, cell)?;
+    }
+    Ok(4 + 4 * u64::from(n) + payload_total)
+}
+
+/// Appends `rows` to `out` as consecutive row records: the data-file body
+/// format without its file header. This is the wire form for moving rows
+/// between threads or workers without a second serializer.
+pub fn encode_rows(rows: &[Vec<CellValue>], out: &mut Vec<u8>) -> Result<(), SpillError> {
+    for row in rows {
+        write_record(out, row)?;
+    }
+    Ok(())
+}
+
+/// Decodes a buffer of consecutive row records written by [`encode_rows`].
+pub fn decode_rows(mut bytes: &[u8]) -> Result<Vec<Vec<CellValue>>, SpillError> {
+    let mut rows = Vec::new();
+    while !bytes.is_empty() {
+        let (lengths, _) = read_row_header(&mut bytes)?;
+        let mut cells = Vec::with_capacity(lengths.len());
+        for len in lengths {
+            let (payload, rest) = bytes
+                .split_at_checked(len as usize)
+                .ok_or_else(|| SpillError::Corrupt("row record truncated".into()))?;
+            cells.push(decode_cell(payload)?);
+            bytes = rest;
+        }
+        rows.push(cells);
+    }
+    Ok(rows)
+}
+
+/// Decodes the complete row records at the start of `bytes` and stops at a
+/// record the buffer ends inside. Returns the rows and the bytes they used,
+/// so a caller reading a long run of records in chunks can carry the partial
+/// tail into the next chunk.
+// `as_chunks` (clippy 1.98's suggestion) needs Rust 1.88; the workspace MSRV
+// is 1.85, so `chunks_exact` stays until the MSRV moves.
+#[allow(unknown_lints, clippy::chunks_exact_to_as_chunks)]
+pub fn decode_complete_rows(bytes: &[u8]) -> Result<(Vec<Vec<CellValue>>, usize), SpillError> {
+    let mut used = 0usize;
+    loop {
+        let rest = &bytes[used..];
+        let Some(count) = rest.get(..4) else { break };
+        let n = u32::from_le_bytes(count.try_into().expect("checked length"));
+        if n > MAX_COLUMNS {
+            return Err(SpillError::Corrupt(format!(
+                "row claims {n} columns (max {MAX_COLUMNS})"
+            )));
+        }
+        let header_len = 4 + 4 * n as usize;
+        let Some(lengths) = rest.get(4..header_len) else {
+            break;
+        };
+        let payload: usize = lengths
+            .chunks_exact(4)
+            .map(|c| u32::from_le_bytes(c.try_into().expect("checked length")) as usize)
+            .sum();
+        if rest.len() < header_len + payload {
+            break;
+        }
+        used += header_len + payload;
+    }
+    Ok((decode_rows(&bytes[..used])?, used))
+}
+
 /// Append-only writer. Rows are flushed to disk as they arrive; only a row
 /// counter and the write cursor live in memory. The offset index streams to
 /// the sidecar `.idx` file in parallel.
-pub struct SpillWriter {
-    path: PathBuf,
-    writer: BufWriter<File>,
-    index_writer: BufWriter<File>,
+pub struct SpillWriter<F: Write = File> {
+    path: Option<PathBuf>,
+    writer: BufWriter<F>,
+    index_writer: BufWriter<F>,
     rows: usize,
     cursor: u64,
 }
 
-impl SpillWriter {
+impl SpillWriter<File> {
     /// Creates (or truncates) a spill file at `path` plus its `.idx` sidecar,
     /// writing the magic + version headers.
     pub fn create<P: AsRef<Path>>(path: P) -> Result<Self, SpillError> {
@@ -226,12 +317,32 @@ impl SpillWriter {
             .write(true)
             .truncate(true)
             .open(index_path(&path))?;
-        let mut writer = BufWriter::new(file);
-        let mut index_writer = BufWriter::new(index_file);
+        let mut writer = Self::new(file, index_file)?;
+        writer.path = Some(path);
+        Ok(writer)
+    }
+
+    /// Flushes buffered writes and converts into a random-access [`SpillReader`].
+    pub fn finish(mut self) -> Result<SpillReader, SpillError> {
+        self.flush()?;
+        let path = self
+            .path
+            .take()
+            .ok_or_else(|| SpillError::Serialize("spill writer has no path".into()))?;
+        SpillReader::open(path)
+    }
+}
+
+impl<F: Write> SpillWriter<F> {
+    /// Starts a spill on caller-supplied, empty storage for the data and the
+    /// offset index, writing the magic + version headers to both.
+    pub fn new(data: F, index: F) -> Result<Self, SpillError> {
+        let mut writer = BufWriter::new(data);
+        let mut index_writer = BufWriter::new(index);
         write_file_header(&mut writer, DATA_MAGIC)?;
         write_file_header(&mut index_writer, INDEX_MAGIC)?;
         Ok(Self {
-            path,
+            path: None,
             writer,
             index_writer,
             rows: 0,
@@ -242,26 +353,9 @@ impl SpillWriter {
     /// Appends one row of typed cells, spilling it to disk immediately in the
     /// binary record format and streaming its offset to the `.idx` sidecar.
     pub fn append(&mut self, row: &[CellValue]) -> Result<(), SpillError> {
-        let n = u32::try_from(row.len())
-            .ok()
-            .filter(|n| *n <= MAX_COLUMNS)
-            .ok_or_else(|| SpillError::Serialize(format!("row has {} columns", row.len())))?;
         self.index_writer.write_all(&self.cursor.to_le_bytes())?;
-
-        self.writer.write_all(&n.to_le_bytes())?;
-        let mut payload_total = 0u64;
-        for cell in row {
-            let len = encoded_cell_len(cell);
-            let len = u32::try_from(len)
-                .map_err(|_| SpillError::Serialize(format!("cell of {len} bytes exceeds u32")))?;
-            payload_total += u64::from(len);
-            self.writer.write_all(&len.to_le_bytes())?;
-        }
-        for cell in row {
-            write_cell(&mut self.writer, cell)?;
-        }
+        self.cursor += write_record(&mut self.writer, row)?;
         self.rows += 1;
-        self.cursor += 4 + 4 * u64::from(n) + payload_total;
         Ok(())
     }
 
@@ -284,11 +378,19 @@ impl SpillWriter {
         Ok(())
     }
 
-    /// Flushes buffered writes and converts into a random-access [`SpillReader`].
-    pub fn finish(mut self) -> Result<SpillReader, SpillError> {
-        self.writer.flush()?;
-        self.index_writer.flush()?;
-        SpillReader::open(&self.path)
+    /// Flushes buffered writes and hands back the data and index storage,
+    /// ready for [`SpillReader::from_parts`].
+    pub fn into_parts(mut self) -> Result<(F, F), SpillError> {
+        self.flush()?;
+        let data = self
+            .writer
+            .into_inner()
+            .map_err(|e| SpillError::Io(e.into_error()))?;
+        let index = self
+            .index_writer
+            .into_inner()
+            .map_err(|e| SpillError::Io(e.into_error()))?;
+        Ok((data, index))
     }
 }
 
@@ -297,28 +399,37 @@ impl SpillWriter {
 /// Both the rows AND the offset index are paged from disk — no O(total rows)
 /// structure lives in memory, so this scales to sets whose index alone would
 /// not fit in RAM.
-pub struct SpillReader {
-    reader: BufReader<File>,
-    index: File,
+pub struct SpillReader<F: Read + Seek = File> {
+    reader: BufReader<F>,
+    index: F,
     rows: usize,
 }
 
-impl SpillReader {
+impl SpillReader<File> {
     /// Opens an existing spill file for random-access reading, validating the
     /// magic + version headers. If the `.idx` sidecar is missing, it is
     /// rebuilt on disk by walking the self-describing row headers once.
     pub fn open<P: AsRef<Path>>(path: P) -> Result<Self, SpillError> {
         let path = path.as_ref();
-        let mut file = File::open(path)?;
-        check_file_header(&mut file, DATA_MAGIC, "spill file")?;
-
+        let file = File::open(path)?;
         let index_file = index_path(path);
         if !index_file.exists() {
             rebuild_index(path, &index_file)?;
         }
-        let mut index = File::open(&index_file)?;
+        Self::from_parts(file, File::open(&index_file)?)
+    }
+}
+
+impl<F: Read + Seek> SpillReader<F> {
+    /// Opens a spill over caller-supplied data and index storage, validating
+    /// both headers. The index must be complete: unlike [`SpillReader::open`],
+    /// a missing index is not rebuilt.
+    pub fn from_parts(mut data: F, mut index: F) -> Result<Self, SpillError> {
+        data.seek(SeekFrom::Start(0))?;
+        check_file_header(&mut data, DATA_MAGIC, "spill file")?;
+        index.seek(SeekFrom::Start(0))?;
         check_file_header(&mut index, INDEX_MAGIC, "spill index")?;
-        let index_len = index.metadata()?.len();
+        let index_len = index.seek(SeekFrom::End(0))?;
         let body = index_len - HEADER_LEN;
         if !body.is_multiple_of(8) {
             return Err(SpillError::Corrupt(format!(
@@ -326,7 +437,7 @@ impl SpillReader {
             )));
         }
         Ok(Self {
-            reader: BufReader::new(file),
+            reader: BufReader::new(data),
             index,
             rows: (body / 8) as usize,
         })
@@ -507,6 +618,54 @@ mod tests {
         assert_eq!(r.row(999).unwrap(), row(999));
         assert_eq!(r.row(500).unwrap(), row(500));
         cleanup(&path);
+    }
+
+    #[test]
+    fn round_trips_rows_through_caller_supplied_storage() {
+        use std::io::Cursor;
+        let mut w = SpillWriter::new(Cursor::new(Vec::new()), Cursor::new(Vec::new())).unwrap();
+        for i in 0..500 {
+            w.append(&row(i)).unwrap();
+        }
+        let (data, index) = w.into_parts().unwrap();
+        let mut r = SpillReader::from_parts(data, index).unwrap();
+        assert_eq!(r.row_count(), 500);
+        assert_eq!(r.row(499).unwrap(), row(499));
+        let page = r.page(200, 3).unwrap();
+        assert_eq!(page, vec![row(200), row(201), row(202)]);
+    }
+
+    #[test]
+    fn encoded_rows_decode_back() {
+        let rows: Vec<_> = (0..50).map(row).collect();
+        let mut bytes = Vec::new();
+        encode_rows(&rows, &mut bytes).unwrap();
+        assert_eq!(decode_rows(&bytes).unwrap(), rows);
+        assert!(decode_rows(&bytes[..bytes.len() - 1]).is_err());
+    }
+
+    #[test]
+    fn complete_rows_stop_at_a_cut_record_and_resume_from_the_tail() {
+        let rows: Vec<_> = (0..40).map(row).collect();
+        let mut bytes = Vec::new();
+        encode_rows(&rows, &mut bytes).unwrap();
+        let (whole, used) = decode_complete_rows(&bytes).unwrap();
+        assert_eq!((whole.len(), used), (40, bytes.len()));
+
+        // Read in small chunks, carrying each partial record forward.
+        let mut decoded = Vec::new();
+        let mut carry: Vec<u8> = Vec::new();
+        for chunk in bytes.chunks(37) {
+            carry.extend_from_slice(chunk);
+            let (got, used) = decode_complete_rows(&carry).unwrap();
+            decoded.extend(got);
+            carry.drain(..used);
+        }
+        assert!(carry.is_empty());
+        assert_eq!(decoded, rows);
+
+        assert_eq!(decode_complete_rows(&[1, 0]).unwrap().1, 0, "short header");
+        assert!(decode_complete_rows(&u32::MAX.to_le_bytes()).is_err());
     }
 
     #[test]

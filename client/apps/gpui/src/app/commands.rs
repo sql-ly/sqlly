@@ -1164,6 +1164,8 @@ impl AppView {
                         "shell.commands.ai_quit_description",
                     ))
                     .confirm()
+                    .ok_text(crate::localization::text("shell.commands.ai_quit_confirm"))
+                    .cancel_text(crate::localization::text("shell.commands.ai_quit_cancel"))
                     .on_ok(move |_ev, window, cx| {
                         let _ = app_view.update(cx, |this, cx| {
                             this.save_workspace_session(cx);

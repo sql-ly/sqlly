@@ -77,9 +77,15 @@ pub mod task {
         F::Output: 'static,
     {
         let (tx, rx) = futures::channel::oneshot::channel();
-        wasm_bindgen_futures::spawn_local(async move {
+        let task = async move {
             let _ = tx.send(future.await);
-        });
+        };
+        #[cfg(target_feature = "atomics")]
+        if !super::on_page_thread() {
+            super::post_to_page_thread(Box::pin(task));
+            return JoinHandle(rx);
+        }
+        wasm_bindgen_futures::spawn_local(task);
         JoinHandle(rx)
     }
 
@@ -92,6 +98,61 @@ pub mod task {
     {
         spawn(async move { f() })
     }
+}
+
+/// Threaded (atomics) builds run gpui background tasks on Web Workers, and a
+/// worker never returns to its JS event loop, so `spawn_local` there would
+/// never poll. The browser services also live on the page's thread (the
+/// in-tab SQLite connection is a thread-local; PGlite and fetch are page JS
+/// objects). So futures spawned off the page thread are posted here and run
+/// on the page thread; their result still crosses back over the oneshot.
+#[cfg(target_feature = "atomics")]
+mod page_thread {
+    use std::future::Future;
+    use std::pin::Pin;
+    use std::sync::OnceLock;
+
+    use futures::StreamExt;
+    use futures::channel::mpsc::{UnboundedSender, unbounded};
+
+    /// SPIKE: asserts the posted future is safe to move to the page thread.
+    /// Futures reaching `spawn` from a background task were created inside a
+    /// `Send` gpui task, but `spawn` has no `Send` bound, so this is unchecked.
+    struct PageTask(Pin<Box<dyn Future<Output = ()>>>);
+    unsafe impl Send for PageTask {}
+
+    static MAILBOX: OnceLock<UnboundedSender<PageTask>> = OnceLock::new();
+
+    pub(super) fn on_page_thread() -> bool {
+        web_sys::window().is_some()
+    }
+
+    pub(super) fn install() {
+        let (tx, mut rx) = unbounded::<PageTask>();
+        if MAILBOX.set(tx).is_err() {
+            return;
+        }
+        wasm_bindgen_futures::spawn_local(async move {
+            while let Some(task) = rx.next().await {
+                wasm_bindgen_futures::spawn_local(task.0);
+            }
+        });
+    }
+
+    pub(super) fn post(task: Pin<Box<dyn Future<Output = ()>>>) {
+        let mailbox = MAILBOX
+            .get()
+            .expect("install_browser_task_mailbox runs before any background task");
+        let _ = mailbox.unbounded_send(PageTask(task));
+    }
+}
+
+#[cfg(target_feature = "atomics")]
+use page_thread::{on_page_thread, post as post_to_page_thread};
+
+pub(crate) fn install_main_thread_mailbox() {
+    #[cfg(target_feature = "atomics")]
+    page_thread::install();
 }
 
 pub mod sync {

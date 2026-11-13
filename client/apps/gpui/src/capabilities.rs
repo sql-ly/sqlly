@@ -1057,7 +1057,10 @@ mod tests {
                 )),
                 "{reason}"
             );
-            assert!(reason.contains("Estimated Plan"), "{reason}");
+            assert!(
+                reason.contains("Explain Query (Estimated, No Execution)"),
+                "{reason}"
+            );
             assert_eq!(plan_unavailable_reason(db, PlanKind::Estimated), None);
         }
     }

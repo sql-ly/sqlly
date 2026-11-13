@@ -69,6 +69,7 @@ mod lock;
 mod render;
 mod result_settings;
 mod spill;
+mod spill_drill;
 pub(crate) use fk_labels::FkLabelHeaderMenuInfo;
 pub use lock::LockSnapshot;
 pub(crate) use spill::read_spill_column;
@@ -1046,6 +1047,12 @@ pub struct ResultsView {
     /// The in-flight background spill read (column scan or row prefix on a
     /// windowed result), shown in the grid caption while it runs.
     background_read: Option<BackgroundRead>,
+    /// Per-slot drill-through over a spill-backed result: the parked full
+    /// result while a filtered file is shown, and the drill being written.
+    spill_drills: Vec<Option<spill_drill::SpillDrill>>,
+    /// Generation token for drills; a finished drill applies only if it is
+    /// still the slot's current one.
+    spill_drill_generation: u64,
     /// Generation token for `background_read`; bumped per read.
     background_read_generation: u64,
     /// Row prefixes read off the UI thread for windowed slots, waiting for
@@ -1925,6 +1932,8 @@ impl ResultsView {
             layout_store: None,
             layout_store_mode: LayoutStoreMode::Disk,
             background_read: None,
+            spill_drills: Vec::new(),
+            spill_drill_generation: 0,
             background_read_generation: 0,
             spill_prefixes: std::cell::RefCell::new(Vec::new()),
             applied_layouts: Vec::new(),
@@ -2937,11 +2946,15 @@ impl ResultsView {
     }
 
     /// The Pivot/Chart tab lock for `slot`. Locked while the query streams,
-    /// and locked for spill-backed sets: the interactive pivot and chart
-    /// aggregate only in-memory rows, so a windowed grid would silently
-    /// pivot a partial set — and the pivot's drill-through cannot apply
-    /// value filters to a windowed grid, making double-click a silent no-op.
-    fn pivot_chart_lock_for_slot(&self, slot: usize) -> (bool, Option<String>) {
+    /// and locked for a spill-backed set whose grid has no row source
+    /// (`has_row_source`): without one, the pivot and chart would aggregate
+    /// only the resident window and silently show a partial set. With one,
+    /// both read the whole spill file in the background.
+    fn pivot_chart_lock_for_slot(
+        &self,
+        slot: usize,
+        has_row_source: bool,
+    ) -> (bool, Option<String>) {
         if self.is_running {
             return (
                 true,
@@ -2950,7 +2963,7 @@ impl ResultsView {
                 )),
             );
         }
-        if matches!(self.spill_backings.get(slot), Some(Some(_))) {
+        if matches!(self.spill_backings.get(slot), Some(Some(_))) && !has_row_source {
             return (
                 true,
                 Some(crate::localization::text(
@@ -2962,6 +2975,15 @@ impl ResultsView {
     }
 
     fn set_pivot_loading(&mut self, loading: bool, cx: &mut Context<Self>) {
+        if !loading {
+            // A finished spill-backed set gets its whole-file row source
+            // (sized to the final total) before the lock is recomputed.
+            for slot in 0..self.grid_views.len() {
+                if matches!(self.spill_backings.get(slot), Some(Some(_))) {
+                    self.sync_row_source_for_slot(slot, cx);
+                }
+            }
+        }
         let auto_pivot = !loading
             && self
                 .view_hints
@@ -2977,7 +2999,7 @@ impl ResultsView {
                     )),
                 )
             } else {
-                self.pivot_chart_lock_for_slot(slot)
+                self.pivot_chart_lock_for_slot(slot, view.read(cx).row_source().is_some())
             };
             let open_pivot = auto_pivot && !locked && self.pivot_config_for_slot(slot).is_some();
             let open_chart = !loading && !locked && self.auto_chart_for_slot(slot);
@@ -6567,6 +6589,19 @@ impl ResultsView {
         self.result_sets.len()
     }
 
+    /// Column names of every result set, in result order.
+    pub fn result_set_column_names(&self) -> Vec<Vec<String>> {
+        self.result_sets
+            .iter()
+            .map(|set| {
+                set.columns
+                    .iter()
+                    .map(|column| column.name.clone())
+                    .collect()
+            })
+            .collect()
+    }
+
     fn ensure_transpose_len(&mut self) {
         let n = self.result_sets.len().max(self.grid_views.len());
         while self.transposed.len() < n {
@@ -6731,10 +6766,15 @@ impl ResultsView {
             .get(slot)
             .filter(|m| !m.is_empty())
             .cloned();
-        let parts: Vec<String> = [transpose, limitation, self.background_read_caption(slot)]
-            .into_iter()
-            .flatten()
-            .collect();
+        let parts: Vec<String> = [
+            transpose,
+            limitation,
+            self.background_read_caption(slot),
+            self.spill_drill_caption(slot),
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
         (!parts.is_empty()).then(|| parts.join(" · "))
     }
 
@@ -7736,7 +7776,7 @@ impl ResultsView {
             let outcome = cx
                 .background_executor()
                 .spawn(async move {
-                    let cells = spill::read_spill_column(&path, column, count)?;
+                    let cells = spill::read_spill_column(&path, column, count).await?;
                     Some(purpose.finish(&meta, cells, &formatting))
                 })
                 .await;
@@ -9084,16 +9124,15 @@ impl ResultsView {
             let read = cx
                 .background_executor()
                 .spawn(async move {
-                    reads
-                        .into_iter()
-                        .map(|(slot, limit, total, path)| {
-                            // The same page `SpillBacking::first_rows` reads,
-                            // through a private reader.
-                            let rows = crate::spill_pager::SpillRowPager::open(&path)
-                                .map(|mut pager| pager.page(0, limit.min(total)));
-                            (slot, limit, total, rows)
-                        })
-                        .collect::<Vec<_>>()
+                    let mut read = Vec::with_capacity(reads.len());
+                    for (slot, limit, total, path) in reads {
+                        // The same page `SpillBacking::first_rows` reads,
+                        // through a private reader.
+                        let rows =
+                            crate::spill_pager::read_spill_rows(path, 0, limit.min(total)).await;
+                        read.push((slot, limit, total, rows));
+                    }
+                    read
                 })
                 .await;
             let _ = this.update(cx, |this, cx| {
@@ -10389,6 +10428,9 @@ impl ResultsView {
         let (col, row_range) = selection_column_and_rows(sel, row_count)?;
         let column = rs.columns.get(col)?;
         self.memoized_selection_stats(slot, sel, row_count, || {
+            if self.selection_rows_unloaded(slot, row_range.clone(), cx) {
+                return None;
+            }
             let values: Vec<CellValue> = row_range
                 .filter_map(|ri| {
                     self.source_row_for_slot(slot, ri, cx)
@@ -10402,6 +10444,22 @@ impl ResultsView {
             let prefs = self.effective_formatting_for_slot(slot);
             selection_stats::footer(&values, kind, &prefs)
         })
+    }
+
+    /// Whether a selection on a spill-backed slot reaches rows the browser's
+    /// pager has not loaded: those get no stats rather than partial ones.
+    /// Always `false` on the desktop, where the pager reads the file.
+    fn selection_rows_unloaded(
+        &self,
+        slot: usize,
+        rows: std::ops::Range<usize>,
+        cx: &gpui::App,
+    ) -> bool {
+        cfg!(target_arch = "wasm32")
+            && matches!(self.spill_backings.get(slot), Some(Some(_)))
+            && rows
+                .into_iter()
+                .any(|row| self.source_row_for_slot(slot, row, cx).is_none())
     }
 
     /// Per-card selection stats for a specific result-set slot (used by
@@ -10420,6 +10478,9 @@ impl ResultsView {
         let (col, row_range) = selection_column_and_rows(sel, row_count)?;
         let column = rs.columns.get(col)?;
         self.memoized_selection_stats(slot, sel, row_count, || {
+            if self.selection_rows_unloaded(slot, row_range.clone(), cx) {
+                return None;
+            }
             let values: Vec<CellValue> = row_range
                 .filter_map(|ri| {
                     self.source_row_for_slot(slot, ri, cx)
@@ -11864,6 +11925,11 @@ impl ResultsView {
         first_source_row: usize,
         grid_rows: &mut [Vec<sqlly_datatable::CellValue>],
     ) {
+        // Markers are keyed by row in the full result; a drill's filtered
+        // file numbers its rows afresh.
+        if self.spill_drill_shown(slot) {
+            return;
+        }
         let Some(rs) = self.result_sets.get(slot) else {
             return;
         };
@@ -13012,7 +13078,16 @@ impl ResultsView {
             .chart_save_config(self.chart_save_config_handler(slot, cx))
             .build(cx);
         self.apply_density_to_table(&view, cx);
-        let (locked, lock_status) = self.pivot_chart_lock_for_slot(slot);
+        // A rebuilt spill-backed grid reads the whole file for Pivot/Chart.
+        let grid_columns = view.state.read(cx).data.columns.len();
+        let row_source = self.row_source_for_slot(slot, grid_columns);
+        let has_row_source = row_source.is_some();
+        view.set_row_source(row_source, cx);
+        if has_row_source {
+            view.set_row_source_drill_handler(Some(self.spill_drill_handler(slot, cx)), cx);
+            self.restore_spill_drill_banner(slot, &mut view, cx);
+        }
+        let (locked, lock_status) = self.pivot_chart_lock_for_slot(slot, has_row_source);
         view.set_pivot_locked(locked, lock_status.clone());
         view.set_chart_locked(locked, lock_status);
         if auto_pivot && !locked {
@@ -13245,7 +13320,15 @@ impl ResultsView {
             .chart(self.chart_config_for_slot(slot_idx).unwrap_or_default())
             .chart_save_config(self.chart_save_config_handler(slot_idx, cx))
             .build(cx);
-        let (locked, lock_status) = self.pivot_chart_lock_for_slot(slot_idx);
+        let grid_columns = new_view.state.read(cx).data.columns.len();
+        let row_source = self.row_source_for_slot(slot_idx, grid_columns);
+        let has_row_source = row_source.is_some();
+        new_view.set_row_source(row_source, cx);
+        if has_row_source {
+            new_view.set_row_source_drill_handler(Some(self.spill_drill_handler(slot_idx, cx)), cx);
+            self.restore_spill_drill_banner(slot_idx, &mut new_view, cx);
+        }
+        let (locked, lock_status) = self.pivot_chart_lock_for_slot(slot_idx, has_row_source);
         new_view.set_pivot_locked(locked, lock_status.clone());
         new_view.set_chart_locked(locked, lock_status);
         if (previous_tab == GridTab::Pivot || previous_tab == GridTab::Chart) && !locked {
@@ -13348,6 +13431,8 @@ impl ResultsView {
             pager: std::cell::RefCell::new(pager),
             total,
             path: spill_file.to_string(),
+            row_source: std::cell::RefCell::new(None),
+            _owned_file: None,
         };
 
         // Free the streamed in-memory rows — the file holds the full set.
@@ -13371,9 +13456,12 @@ impl ResultsView {
             .unwrap_or_default();
         let format_hints = self.format_hints.clone();
         let effective = self.effective_formatting_for_slot(slot);
+        let page = backing.pager.borrow_mut().page(start, end - start);
+        // The browser's pager only has cached rows; read the rest.
+        let short = page.len() < end - start;
         let rows = crate::grid_bridge::convert_rows_owned_with_formats(
             self.classification_db(),
-            backing.pager.borrow_mut().page(start, end - start),
+            page,
             &columns,
             &format_hints,
             Some(&effective),
@@ -13387,18 +13475,18 @@ impl ResultsView {
             cx.notify();
         });
 
+        // A replacement backing ends any drill-through on the slot.
+        if let Some(drill) = self.spill_drills.get_mut(slot) {
+            *drill = None;
+        }
         self.spill_backings[slot] = Some(backing);
         self.clear_windowed_slot_filters(slot, cx);
-        // The grid is windowed from here on: the interactive pivot/chart
-        // would aggregate only the resident rows and drill-through cannot
-        // filter a windowed grid — lock both tabs with a reason.
-        let (locked, lock_status) = self.pivot_chart_lock_for_slot(slot);
-        if let Some(Some(view)) = self.grid_views.get(slot) {
-            view.update(cx, |table, cx| {
-                table.set_pivot_locked(locked, lock_status.clone());
-                table.set_chart_locked(locked, lock_status);
-                cx.notify();
-            });
+        // The grid is windowed from here on: the Pivot and Chart tabs read
+        // the whole spill file instead of the resident rows (locked while
+        // the query still streams).
+        self.sync_row_source_for_slot(slot, cx);
+        if short {
+            self.schedule_spill_page(slot, start, end, cx);
         }
         cx.notify();
         true
@@ -13614,11 +13702,12 @@ impl ResultsView {
             let rows = async_cx
                 .background_executor()
                 .spawn(async move {
-                    // Ephemeral reader: open → page → drop within this block.
-                    // `open` failure yields None (file gone or unreadable).
-                    // An empty page is Some(vec![]) — not None.
-                    let mut pager = crate::spill_pager::SpillRowPager::open(&path)?;
-                    let page = pager.page(start, end - start);
+                    // Ephemeral reader: open → page → drop within this read
+                    // (in the browser, a request to the spill worker). A
+                    // failed read yields None (file gone or unreadable). An
+                    // empty page is Some(vec![]) — not None.
+                    let page =
+                        crate::spill_pager::read_spill_window(path, start, end - start).await?;
                     Some(crate::grid_bridge::convert_rows_owned_with_formats(
                         db,
                         page,
@@ -13721,6 +13810,9 @@ impl ResultsView {
         for st in &mut self.spill_paging {
             st.invalidate();
         }
+        // Drills over the old result stop, and its parked full backings
+        // close, before the backings are dropped and the files deleted.
+        self.discard_spill_drills();
     }
 }
 

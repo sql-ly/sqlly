@@ -93,6 +93,8 @@ cp apps/browser/www/index.html "$dist/"
 # boot.js is an external module (kept out of index.html) so the page loads
 # under the marketing site's strict CSP without a per-path exemption.
 cp apps/browser/www/boot.js "$dist/"
+# The worker that keeps large results in browser storage (OPFS).
+cp apps/browser/www/spill-worker.js "$dist/"
 # The loading screen shows the app logo before any wasm is available.
 cp "$repo_root/assets/sqlly2.svg" "$dist/"
 

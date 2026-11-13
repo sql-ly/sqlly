@@ -321,6 +321,7 @@ mod chart_dashboard;
 mod clickhouse_live;
 mod data_compare;
 mod detached_results;
+mod directive_completion;
 mod paste_rows;
 mod pending_changes;
 mod query_history;
@@ -745,6 +746,13 @@ fn cloud_app_ai_provider(
 #[cfg(target_arch = "wasm32")]
 pub fn configure_browser_proxy(url: Option<String>, token: Option<String>) {
     app::browser_proxy::configure(url, token);
+}
+
+/// Browser build: lets service futures spawned from gpui background workers
+/// run on the page's thread. Call on the page's thread before [`init_ui`].
+#[cfg(target_arch = "wasm32")]
+pub fn install_browser_task_mailbox() {
+    wasm_tokio::install_main_thread_mailbox();
 }
 
 pub fn init_ui(services: Services, cx: &mut App) {

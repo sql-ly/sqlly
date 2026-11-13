@@ -325,6 +325,9 @@ pub enum ClauseBodyPlacement {
 }
 
 impl ClauseBodyPlacement {
+    /// English title for hosts without a catalog (the browser formatter). The
+    /// desktop app labels its dropdown from the translation catalog instead,
+    /// and persists the serde name, never this text.
     pub fn display_title(self) -> &'static str {
         match self {
             ClauseBodyPlacement::NewLineIndented => "New line, indented",

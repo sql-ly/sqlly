@@ -879,7 +879,7 @@ SQLly is built with these Rust crates, and ships the icons, fonts and other asse
 | spki | 0.8.1 | Apache-2.0 OR MIT | https://github.com/RustCrypto/formats |
 | sponge-cursor | 0.1.0 | MIT OR Apache-2.0 | https://github.com/RustCrypto/utils |
 | sqlite-wasm-rs | 0.6.2 | MIT | https://github.com/Spxg/sqlite-wasm-rs |
-| sqlly-datatable | 10.1.0 | MIT | https://github.com/mattvanhorn/sqlly-datatable |
+| sqlly-datatable | 11.1.0 | MIT | https://github.com/mattvanhorn/sqlly-datatable |
 | ssh-cipher | 0.3.0 | Apache-2.0 OR MIT | https://github.com/RustCrypto/SSH |
 | ssh-encoding | 0.3.0 | Apache-2.0 OR MIT | https://github.com/RustCrypto/SSH |
 | ssh-key | 0.7.0-rc.11 | Apache-2.0 OR MIT | https://github.com/RustCrypto/SSH |

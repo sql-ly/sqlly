@@ -216,22 +216,22 @@ mod tests {
     fn capability_message_display_has_exactly_one_prefix() {
         let keyed = StudioError::CapabilityNotSupportedMessage(DisplayMessage::new(
             "services.query.errors.manual_commit_unavailable",
-            "Manual commit mode is not available on this port",
+            "Manual commit mode is not available for this query service",
         ));
         assert_eq!(
             keyed.to_string(),
-            "Server capability not supported: Manual commit mode is not available on this port"
+            "Server capability not supported: Manual commit mode is not available for this query service"
         );
         assert_eq!(
             keyed.to_string(),
             StudioError::CapabilityNotSupported(
-                "Manual commit mode is not available on this port".into()
+                "Manual commit mode is not available for this query service".into()
             )
             .to_string()
         );
         assert_eq!(
             keyed.detail(),
-            "Manual commit mode is not available on this port"
+            "Manual commit mode is not available for this query service"
         );
     }
 

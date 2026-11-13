@@ -310,8 +310,19 @@ mod web {
         );
 
         super::mac_command_key::install();
+        // Large results go to browser storage (OPFS) when the tab has it.
+        sqlly_services::browser::spill::start();
+        sqlly_gpui::install_browser_task_mailbox();
         gpui_platform::web_init();
         let app = {
+            // A shared-memory (atomics) build runs gpui's background executor
+            // on Web Workers; the dispatcher still falls back to the main
+            // thread when the page is not cross-origin isolated.
+            #[cfg(target_feature = "atomics")]
+            let app = gpui_platform::application_with_web_backend(
+                gpui_platform::WebBackendPreference::Auto,
+            );
+            #[cfg(not(target_feature = "atomics"))]
             let app = gpui_platform::single_threaded_web();
 
             // Keep the application alive for the page's lifetime: `run` never

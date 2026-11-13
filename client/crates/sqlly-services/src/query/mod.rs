@@ -19,6 +19,9 @@ pub mod multi_target;
 #[cfg(not(target_arch = "wasm32"))]
 mod producer;
 mod spill;
+// Used by the browser build; compiled natively for its tests.
+#[cfg(any(target_arch = "wasm32", test))]
+pub(crate) mod spill_stage;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub use manual_tx::{ManualTxState, TransactionEnd};
@@ -30,6 +33,8 @@ pub use producer::{
     register_oracle_cancel, register_pg_cancel, register_sqlite_cancel, register_tds_cancel,
     run_query_producer,
 };
+#[cfg(any(target_arch = "wasm32", test))]
+pub(crate) use spill::estimate_row_bytes;
 pub use spill::{
     RESULT_MEMORY_BUDGET_BYTES, SPILL_ROW_THRESHOLD, SpillManifestData, SpillResultSetData,
     result_memory_budget_bytes, set_result_memory_budget_bytes, set_spill_row_threshold,
@@ -124,7 +129,7 @@ pub enum QueryEvent {
 fn manual_commit_unavailable() -> StudioError {
     StudioError::CapabilityNotSupportedMessage(sqlly_core::DisplayMessage::new(
         "services.query.errors.manual_commit_unavailable",
-        "Manual commit mode is not available on this port",
+        "Manual commit mode is not available for this query service",
     ))
 }
 
@@ -180,6 +185,22 @@ pub trait QueryExecutor: Send + Sync {
     /// rows into a spill file, so callers must keep handling
     /// `TruncatedCells` and `SpillManifest`.
     async fn execute_full_values(
+        &self,
+        profile: &ConnectionProfile,
+        session: Option<&str>,
+        sql: &str,
+        row_buffer: usize,
+    ) -> StudioResult<QueryHandle> {
+        self.execute_in_session(profile, session, sql, row_buffer)
+            .await
+    }
+
+    /// A results-grid run: [`Self::execute_in_session`] for a consumer that
+    /// pages a large result from its spill file (the results view) rather
+    /// than collecting every row. The browser build overrides it to keep
+    /// rows past the spill threshold in browser storage; everywhere else it
+    /// is `execute_in_session`, which already spills.
+    async fn execute_for_grid(
         &self,
         profile: &ConnectionProfile,
         session: Option<&str>,
@@ -822,11 +843,11 @@ mod tests {
         let error = manual_commit_unavailable();
         assert_eq!(
             error.to_string(),
-            "Server capability not supported: Manual commit mode is not available on this port"
+            "Server capability not supported: Manual commit mode is not available for this query service"
         );
         assert_eq!(
             error.message().fallback(),
-            "Manual commit mode is not available on this port"
+            "Manual commit mode is not available for this query service"
         );
     }
 

@@ -15,13 +15,13 @@
     "editor_label": { "value": "Edit translation", "location": "Website → Translation manager → Editor: accessible label of the selected translation editor." },
     "current_label": { "value": "Current wording", "location": "Website → Translation manager → Editor: label above the editable translation wording." },
     "description_label": { "value": "Description", "location": "Website → Translation manager → Editor: heading of the always-visible description and interface location below the current wording." },
-    "original_label": { "value": "Original wording", "location": "Website → Translation manager → Editor: disclosure showing the built-in wording for comparison." },
+    "original_label": { "value": "Original wording", "location": "Website → Translation manager → Editor: disclosure showing the original wording for comparison." },
     "note_label": { "value": "Revision note (optional)", "location": "Website → Translation manager → Editor → Review and recovery: label of the optional revision note field." },
     "review_label": { "value": "Review and recovery", "location": "Website → Translation manager → Editor: disclosure containing revision notes, votes, and restore and undo actions." },
     "history_label": { "value": "Revision history", "location": "Website → Translation manager → Editor: disclosure containing the selected wording's revision history." },
     "save_button": { "value": "Save", "location": "Website → Translation manager → Editor footer: primary button saving the changed wording." },
     "discard_button": { "value": "Discard draft", "location": "Website → Translation manager → Editor footer: button discarding the selected entry's unsaved wording and note." },
-    "restore_button": { "value": "Restore original", "location": "Website → Translation manager → Editor → Review and recovery: button returning the saved translation to built-in wording." },
+    "restore_button": { "value": "Restore original wording", "location": "Website → Translation manager → Editor → Review and recovery: button returning the saved translation to the original wording." },
     "undo_button": { "value": "Undo last change", "location": "Website → Translation manager → Editor → Review and recovery: button reversing the last saved change." },
     "upvote_button": { "value": "Upvote ({count})", "location": "Website → Translation manager → Editor → Review and recovery: button voting in favor of the saved wording, including its vote count." },
     "downvote_button": { "value": "Downvote ({count})", "location": "Website → Translation manager → Editor → Review and recovery: button voting against the saved wording, including its vote count." },
@@ -39,7 +39,7 @@
     "preview_waiting": { "value": "Preview connecting… Saved wording will appear when it is ready.", "location": "Website → Translation manager → Preview status: message while waiting for the embedded application to connect." },
     "preview_updating": { "value": "Preview updating…", "location": "Website → Translation manager → Preview status: message while awaiting acknowledgement of the latest language and wording update." },
     "preview_updated": { "value": "Preview updated.", "location": "Website → Translation manager → Preview status: confirmation after both latest preview commands are acknowledged successfully." },
-    "preview_partial": { "value": "Preview updated with {count} entries skipped because this preview build does not support them.", "location": "Website → Translation manager → Preview status: non-blocking version-skew notice after the preview applies compatible entries." },
+    "preview_partial": { "value": "Preview updated. Entries skipped because this preview build does not support them: {count}.", "location": "Website → Translation manager → Preview status: non-blocking version-skew notice after the preview applies compatible entries." },
     "preview_failed": { "value": "Preview could not update: {reason}. Saved translations are unchanged; retry the preview.", "location": "Website → Translation manager → Preview status: failure message that distinguishes preview delivery from saved translation persistence." },
     "preview_timeout": { "value": "The preview has not confirmed the update", "location": "Website → Translation manager → Preview status: reason shown when the latest preview commands time out." },
     "preview_retry": { "value": "Retry preview", "location": "Website → Translation manager → Preview status: button resending the latest saved language and wording to the preview." },
@@ -54,16 +54,16 @@
     "request_failed": { "value": "The request failed (HTTP {status}). Your draft is unchanged; try again.", "location": "Website → Translation manager → Save status: fallback error when a failed server request provides no explanation." },
     "history_empty": { "value": "No revisions yet.", "location": "Website → Translation manager → Editor → Revision history: empty state when the selected wording has never been revised." },
     "history_loading": { "value": "Loading revisions…", "location": "Website → Translation manager → Editor → Revision history: button label while a page of revisions is loading." },
-    "source_changed_notice": { "value": "The built-in wording changed after this translation was saved. Review it, then save to confirm it still fits.", "location": "Website → Translation manager → Editor: notice shown when the built-in wording changed after the selected override was saved." },
+    "source_changed_notice": { "value": "The original wording changed after this translation was saved. Review it, then save to confirm it still fits.", "location": "Website → Translation manager → Editor: notice shown when the original wording changed after the selected override was saved." },
     "rejected_notice": { "value": "More translators voted this wording down than up, so the app shows the original wording until it gets more support.", "location": "Website → Translation manager → Editor: notice shown when net translator votes keep the selected override out of the app." },
-    "language_pending": { "value": "Choose Set language to edit {language_name}. Editing stays paused until then.", "location": "Website → Translation manager → Toolbar: hint shown when a different language is chosen in the selector but not yet applied with Set language." },
+    "language_pending": { "value": "Choose “{button_label}” to edit {language_name}. Editing stays paused until then.", "location": "Website → Translation manager → Toolbar: hint shown when a different language is chosen in the selector but not yet applied; {button_label} is replaced by the text of the Set language button." },
     "stale_notice": {
-      "value": "This wording no longer matches the current catalog. The preview uses the original until you repair or restore it.",
-      "location": "Website → Translation manager → Editor: warning above an override whose placeholders became incompatible after a catalog update."
+      "value": "This wording's placeholders no longer match the original wording. The preview uses the original wording until you repair or restore it.",
+      "location": "Website → Translation manager → Editor: warning above an override whose placeholders became incompatible with the original wording after a catalog update."
     },
     "result_votes": {
       "value": "+{up_votes} / −{down_votes} · Your vote: {my_vote}",
-      "location": "Website → Translation manager → Editor → Review and recovery: vote totals and the signed-in translator's vote for the selected entry's saved wording."
+      "location": "Website → Translation manager → Editor → Review and recovery: vote totals and the signed-in translator's vote for the selected entry's saved wording; {my_vote} is replaced by one of the own-vote words (up, down or none), never a number."
     },
     "wrong_language": {
       "value": "The server returned a different language. Reload and try again.",
@@ -78,12 +78,136 @@
       "location": "Website → Translation manager → Editor → Revision history: button that loads the next older page of revisions."
     },
     "history_catalog": {
-      "value": "Use current catalog wording",
-      "location": "Website → Translation manager → Editor → Revision history: value shown when a revision removed an override and follows the catalog."
+      "value": "Back to the original wording",
+      "location": "Website → Translation manager → Editor → Revision history: value shown in a revision row when the revision removed an override, so the app uses the original wording again."
     },
     "history_entry": {
       "value": "Revision {sequence} · {actor} · {at}",
       "location": "Website → Translation manager → Editor → Revision history: heading identifying a revision's sequence, translator and timestamp."
+    },
+    "vote_mine_up": {
+      "value": "up",
+      "location": "Website → Translation manager → Editor → Review and recovery: word substituted into the vote summary after \"Your vote:\" when the signed-in translator has upvoted the saved wording."
+    },
+    "vote_mine_down": {
+      "value": "down",
+      "location": "Website → Translation manager → Editor → Review and recovery: word substituted into the vote summary after \"Your vote:\" when the signed-in translator has downvoted the saved wording."
+    },
+    "vote_mine_none": {
+      "value": "none",
+      "location": "Website → Translation manager → Editor → Review and recovery: word substituted into the vote summary after \"Your vote:\" when the signed-in translator has not voted on the saved wording."
+    },
+    "history_actor_fallback": {
+      "value": "Translator",
+      "location": "Website → Translation manager → Editor → Revision history: name shown in a revision heading when the translator who made the change has no display name."
+    },
+    "error_missing_field": {
+      "value": "The request is missing “{field}”.",
+      "location": "Website → Translation manager → Save status: error when a request to the server omits a required field; {field} is the technical field name."
+    },
+    "error_key_required": {
+      "value": "Choose a translation first.",
+      "location": "Website → Translation manager → Save status: error when a request names no translation key."
+    },
+    "error_key_not_found": {
+      "value": "The key “{key}” does not exist in the {language} catalog.",
+      "location": "Website → Translation manager → Save status: error when the selected key is missing from the language catalog; {language} is the language code."
+    },
+    "error_language_unsupported": {
+      "value": "“{language}” is not a supported language.",
+      "location": "Website → Translation manager → Save status: error when the requested language code is not supported."
+    },
+    "error_catalog_missing": {
+      "value": "The {language} catalog could not be found on the server.",
+      "location": "Website → Translation manager → Save status: error when the server has no catalog file for the language; {language} is the language code."
+    },
+    "error_value_empty": {
+      "value": "The wording cannot be empty.",
+      "location": "Website → Translation manager → Save status: error when the translator tries to save blank wording."
+    },
+    "error_value_too_long": {
+      "value": "The wording is limited to {max} characters.",
+      "location": "Website → Translation manager → Save status: error when saved wording is longer than the allowed maximum; {max} is that maximum."
+    },
+    "error_notes_too_long": {
+      "value": "Revision notes are limited to {max} characters.",
+      "location": "Website → Translation manager → Save status: error when a revision note is longer than the allowed maximum; {max} is that maximum."
+    },
+    "error_vote_invalid": {
+      "value": "A vote must be up, down or withdrawn.",
+      "location": "Website → Translation manager → Save status: error when a vote request carries a value that is not up, down or withdraw."
+    },
+    "error_nothing_to_undo": {
+      "value": "There is no earlier change to undo.",
+      "location": "Website → Translation manager → Save status: error when Undo last change finds no earlier saved change that still fits the current original wording."
+    },
+    "error_changed_since_loaded": {
+      "value": "This wording changed after you loaded it. Reload the current wording and try again.",
+      "location": "Website → Translation manager → Save status: conflict error when another translator changed the wording after this page loaded it."
+    },
+    "error_invalid_format": {
+      "value": "“{key}” has invalid brace syntax. Write a literal brace as {{{{ or }}}}.",
+      "location": "Website → Translation manager → Save status: error when saved wording has unbalanced or malformed braces; {key} is the translation key. The doubled braces in the value show how to write a literal brace."
+    },
+    "error_placeholders_missing": {
+      "value": "“{key}” must keep the same placeholders as the original ({allowed}). Missing: {missing}. Write a literal brace as {{{{ or }}}}.",
+      "location": "Website → Translation manager → Save status: error when saved wording drops placeholders of the original; {key} is the translation key, {allowed} the original's placeholders and {missing} the dropped ones."
+    },
+    "error_placeholders_unknown": {
+      "value": "“{key}” must keep the same placeholders as the original ({allowed}). Not allowed: {unknown}. Write a literal brace as {{{{ or }}}}.",
+      "location": "Website → Translation manager → Save status: error when saved wording adds placeholders the original does not have; {key} is the translation key, {allowed} the original's placeholders and {unknown} the added ones."
+    },
+    "error_placeholders_both": {
+      "value": "“{key}” must keep the same placeholders as the original ({allowed}). Missing: {missing}. Not allowed: {unknown}. Write a literal brace as {{{{ or }}}}.",
+      "location": "Website → Translation manager → Save status: error when saved wording both drops and adds placeholders; {key} is the translation key, {allowed} the original's placeholders, {missing} the dropped ones and {unknown} the added ones."
+    },
+    "error_placeholders_none_allowed": {
+      "value": "“{key}” has no placeholders, but the wording uses {unknown}. Remove them, or write a literal brace as {{{{ or }}}}.",
+      "location": "Website → Translation manager → Save status: error when the original wording has no placeholders but the saved wording adds some; {key} is the translation key and {unknown} the added placeholders."
+    },
+    "preview_error_language_invalid": {
+      "value": "The preview does not support that language",
+      "location": "Website → Translation manager → Preview status: reason when the preview is asked for a language it does not support. It is substituted into the {reason} of the preview failure message."
+    },
+    "preview_error_command_unknown": {
+      "value": "The preview did not recognize the command",
+      "location": "Website → Translation manager → Preview status: reason when the preview receives a command type it does not know. It is substituted into the {reason} of the preview failure message."
+    },
+    "preview_error_command_shape": {
+      "value": "The preview rejected a command with an unexpected shape",
+      "location": "Website → Translation manager → Preview status: reason when a command has missing or extra fields. It is substituted into the {reason} of the preview failure message."
+    },
+    "preview_error_payload_too_large": {
+      "value": "The translation data is larger than the preview accepts (8 MiB)",
+      "location": "Website → Translation manager → Preview status: reason when the catalog sent to the preview exceeds its 8 MiB limit. It is substituted into the {reason} of the preview failure message."
+    },
+    "preview_error_queue_full": {
+      "value": "Too many updates were queued before the preview was ready",
+      "location": "Website → Translation manager → Preview status: reason when more updates than the preview can hold arrive before it finishes starting. It is substituted into the {reason} of the preview failure message."
+    },
+    "preview_error_not_ready": {
+      "value": "The preview is not ready yet",
+      "location": "Website → Translation manager → Preview status: reason when an update reaches the preview before the application has started. It is substituted into the {reason} of the preview failure message."
+    },
+    "preview_error_catalog_invalid": {
+      "value": "The preview received translation data it cannot read",
+      "location": "Website → Translation manager → Preview status: reason when the catalog sent to the preview is not a valid nested catalog. It is substituted into the {reason} of the preview failure message."
+    },
+    "preview_error_catalog_key_invalid": {
+      "value": "The preview rejected the key “{key}”",
+      "location": "Website → Translation manager → Preview status: reason when a catalog key segment is not snake_case; {key} is the offending segment. It is substituted into the {reason} of the preview failure message."
+    },
+    "preview_error_catalog_entry_invalid": {
+      "value": "The preview rejected the entry “{path}” because it is not shaped like a translation",
+      "location": "Website → Translation manager → Preview status: reason when a catalog entry is not an object with exactly wording and description; {path} is its dotted key. It is substituted into the {reason} of the preview failure message."
+    },
+    "preview_error_catalog_value_invalid": {
+      "value": "The entry “{path}” has no wording",
+      "location": "Website → Translation manager → Preview status: reason when a catalog entry has blank wording; {path} is its dotted key. It is substituted into the {reason} of the preview failure message."
+    },
+    "preview_error_catalog_location_invalid": {
+      "value": "The entry “{path}” has no description",
+      "location": "Website → Translation manager → Preview status: reason when a catalog entry has a blank description; {path} is its dotted key. It is substituted into the {reason} of the preview failure message."
     }
   },
   "about": {
@@ -1371,7 +1495,7 @@
       "data": {
         "detail": {
           "location": "Help menu → Mac App Store Edition dialog → Limitations list: indented guidance under the separate-data heading explaining each edition has its own keychain entries and how to move connections with File ▸ Export Credentials and File ▸ Import Connections.",
-          "value": "Each edition has its own keychain entries, so neither asks for your Mac password to read the other's. To move connections and their passwords, choose File ▸ Export Credentials in one edition and File ▸ Import Connections in the other, then delete the exported file."
+          "value": "Each edition has its own keychain entries, so neither asks for your Mac password to read the other's. To move connections and their passwords, choose File ▸ Export Connections with Credentials in one edition and File ▸ Import Connections in the other, then delete the exported file."
         },
         "title": {
           "location": "Help menu → Mac App Store Edition dialog → Limitations list: bold limitation heading saying the App Store edition and the direct-download edition keep settings, saved connections and passwords separately.",
@@ -3857,20 +3981,28 @@
         "value": "Pod"
       },
       "kube_refresh_contexts": {
-        "location": "New/Edit Connection dialog → Kubernetes port-forward → Context: Refresh button to the right of the Context dropdown that reloads the context list from the kubeconfig file; its text also fills the “Refreshing …” status.",
+        "location": "New/Edit Connection dialog → Kubernetes port-forward → Context: Refresh button to the right of the Context dropdown that reloads the context list from the kubeconfig file.",
         "value": "Refresh"
       },
       "kube_refresh_namespaces": {
-        "location": "New/Edit Connection dialog → Kubernetes port-forward → Namespace: Refresh button to the right of the Namespace dropdown that reloads namespaces from the cluster; its text also fills the “Refreshing …” status.",
+        "location": "New/Edit Connection dialog → Kubernetes port-forward → Namespace: Refresh button to the right of the Namespace dropdown that reloads namespaces from the cluster.",
         "value": "Refresh"
       },
       "kube_refresh_targets": {
-        "location": "New/Edit Connection dialog → Kubernetes port-forward → Target: Refresh button to the right of the Target dropdown that reloads the pods, services or deployments of the chosen kind; its text also fills the “Refreshing …” status.",
+        "location": "New/Edit Connection dialog → Kubernetes port-forward → Target: Refresh button to the right of the Target dropdown that reloads the pods, services or deployments of the chosen kind.",
         "value": "Refresh"
       },
-      "kube_refreshing": {
-        "location": "New/Edit Connection dialog → Kubernetes port-forward: status line under the port-forward fields while a list is reloading from the cluster; {resource_kind} is filled with the text of the Refresh button that was clicked.",
-        "value": "Refreshing {resource_kind}…"
+      "kube_refreshing_contexts": {
+        "location": "New/Edit Connection dialog → Kubernetes port-forward: status line under the port-forward fields while the Context list is reloading from the cluster after clicking its Refresh button.",
+        "value": "Refreshing contexts…"
+      },
+      "kube_refreshing_namespaces": {
+        "location": "New/Edit Connection dialog → Kubernetes port-forward: status line under the port-forward fields while the namespace list is reloading from the cluster after clicking its Refresh button.",
+        "value": "Refreshing namespaces…"
+      },
+      "kube_refreshing_targets": {
+        "location": "New/Edit Connection dialog → Kubernetes port-forward: status line under the port-forward fields while the target list (pods, services or deployments) is reloading from the cluster after clicking its Refresh button.",
+        "value": "Refreshing targets…"
       },
       "kube_remote_port_invalid": {
         "location": "New/Edit Connection dialog → Kubernetes port-forward → Form errors: red error on Save or Test when the Remote port is not a whole number from 1 to 65535.",
@@ -5754,7 +5886,7 @@
       },
       "no_connections": {
         "location": "Connections & Settings dialog → Connections pane → Connection list: empty-state message in the saved-connection tree when it has no rows and the search box above it is empty.",
-        "value": "No connections match the filter."
+        "value": "No saved connections yet."
       },
       "no_databases": {
         "location": "Connections & Settings dialog → Connections pane → Connection form → Server group → Database dropdown: empty-state message in the dropdown opened by the caret beside the Database field when the server returns no databases.",
@@ -6264,7 +6396,7 @@
       },
       "proxy_session_not_open": {
         "location": "Browser preview → Relay proxy connections: error returned by every query or metadata request on a connection supplied by the relay proxy while the proxy session is down; says SQLly is reconnecting and suggests waiting or reloading the page.",
-        "value": "The relay proxy session is not connected. SQLly is reconnecting; try again in a moment, or reload the page."
+        "value": "The relay proxy session is not connected. SQLLY is reconnecting; try again in a moment, or reload the page."
       },
       "rate_limited": {
         "location": "Connection status → Relay → Rate limiting: guidance when relay requests are rate-limited.",
@@ -6596,6 +6728,16 @@
           "value": "Value high–low"
         }
       },
+      "scan": {
+        "failed": {
+          "location": "Results → Chart tab: message shown in place of the chart when the rows of a large result could not be read from disk.",
+          "value": "Couldn't read all of the result rows, so the chart can't be shown."
+        },
+        "progress": {
+          "location": "Results → Chart tab: progress label shown over the chart (or in its place) while SQLLY reads every row of a large result to redraw it; {percent} is a whole percent and {total} the result's row count.",
+          "value": "Charting… {percent}% of {total} rows"
+        }
+      },
       "series": {
         "fallback_name": {
           "location": "SQLLY → Results → Chart → Legend or export: fallback series name when a numeric source column is unnamed.",
@@ -6681,13 +6823,17 @@
           "location": "Results → Chart tab → Legend strip → Showing note: separator placed between the listed limits (top categories, first numeric columns, first source rows) inside the “Showing …” note; spaces included.",
           "value": " · "
         },
+        "downsampled_shape": {
+          "location": "Results → Chart tab → Legend strip → Showing note: fragment, inserted after “Showing”, saying a long line, area, or scatter chart draws the shape of {rows} result rows using {points} points (each bucket of rows drawn as its lowest and highest value). Lowercase fragment.",
+          "value": "the shape of {rows} rows in {points} points"
+        },
+        "first_distinct_categories": {
+          "location": "Results → Chart tab → Legend strip → Showing note: fragment, inserted after “Showing”, saying categories were ranked by value among only the first {count} distinct categories (the tracking cap, 100,000). Lowercase fragment.",
+          "value": "first {count} distinct categories"
+        },
         "first_numeric_columns": {
           "location": "Results → Chart tab → Legend strip → Showing note: fragment, inserted after “Showing”, saying only the first {count} numeric columns are plotted (the series cap, 4). Lowercase fragment.",
           "value": "first {count} numeric columns"
-        },
-        "first_source_rows": {
-          "location": "Results → Chart tab → Legend strip → Showing note: fragment, inserted after “Showing”, saying only the first {count} result rows feed the chart (the row cap, 10,000). Lowercase fragment.",
-          "value": "first {count} source rows"
         },
         "showing": {
           "location": "Results → Chart tab → Legend strip: note shown above the plot when chart limits dropped data; {details} is one or more lowercase fragments such as “top 25 categories” joined by separators.",
@@ -7330,6 +7476,16 @@
           "value": "(blank)"
         }
       },
+      "scan": {
+        "failed": {
+          "location": "Results → Pivot tab: message shown in place of the pivot when the rows of a large result could not be read from disk.",
+          "value": "Couldn't read all of the result rows, so the pivot can't be shown."
+        },
+        "progress": {
+          "location": "Results → Pivot tab: progress label shown over the pivot (or in its place) while SQLLY reads every row of a large result to rebuild it; {percent} is a whole percent and {total} the result's row count.",
+          "value": "Pivoting… {percent}% of {total} rows"
+        }
+      },
       "sidebar": {
         "align_center": {
           "location": "Results → Pivot tab → Pivot Controls sidebar → Field format popup → Alignment row: middle toggle button that centers the field’s values in their cells; one short word, the three buttons share a narrow row.",
@@ -7904,6 +8060,10 @@
         "location": "Formatting Directives window → Detail pane: centered empty-state hint shown on the right when the filter matches nothing; {count} is the total number of directive families available.",
         "value": "Clear the filter to see all {count} families."
       },
+      "completion_worksheet_function": {
+        "location": "SQL editor → Directive autocomplete (“-- sqlly column:” computed-column formula): detail text beside each worksheet function name (SUM, IF, ROUND…) offered after the “=”; a short noun phrase naming the kind of suggestion.",
+        "value": "Worksheet function"
+      },
       "copied_button": {
         "location": "Formatting Directives window → Directive card → Examples: chip text shown for about 1.6 seconds after an example line is copied, confirming it is on the clipboard; past participle, very short.",
         "value": "Copied"
@@ -8099,7 +8259,7 @@
         },
         "grid_columns_overview": {
           "location": "Formatting Directives window → Grid columns directive card: overview paragraph under the card heading, explaining that the “-- sqlly grid:” directive sets column order, hidden and frozen columns, sorting, grouping, filters, and foreign-key labels, overriding the layout SQLly remembers for the query.",
-          "value": "Arranges a result grid's columns: order, hidden and frozen columns, sort, grouping, column filters, and foreign-key labels. Wins over the layout SQLly remembers for the query."
+          "value": "Arranges a result grid's columns: order, hidden and frozen columns, sort, grouping, column filters, and foreign-key labels. Wins over the layout SQLLY remembers for the query."
         },
         "grid_columns_title": {
           "location": "Formatting Directives window → Grid columns directive card: large heading at the top of the detail pane, shown when the “-- sqlly grid:” directive family is selected in the left list; names that family (arranging results-grid columns).",
@@ -9616,15 +9776,15 @@
       },
       "reason_actual_plan_clickhouse": {
         "location": "Explorer → Actual Plan capability tooltip: ClickHouse limitation and alternatives.",
-        "value": "ClickHouse has no EXPLAIN ANALYZE; use Estimated Plan (No Execution), then read the run's rows, bytes and memory in Query Insights"
+        "value": "ClickHouse has no EXPLAIN ANALYZE; use Explain Query (Estimated, No Execution), then read the run's rows, bytes and memory in Query Insights"
       },
       "reason_actual_plan_libsql": {
         "location": "Explorer → Actual Plan capability tooltip: libSQL limitation and estimated-plan alternative.",
-        "value": "libSQL exposes SQLite's estimated query plan here; use Estimated Plan (No Execution)"
+        "value": "libSQL exposes SQLite's estimated query plan here; use Explain Query (Estimated, No Execution)"
       },
       "reason_actual_plan_sqlite": {
         "location": "Explorer → Actual Plan capability tooltip: SQLite limitation and estimated-plan alternative.",
-        "value": "SQLite exposes an estimated query plan here; use Estimated Plan (No Execution)"
+        "value": "SQLite exposes an estimated query plan here; use Explain Query (Estimated, No Execution)"
       },
       "reason_agent_azure": {
         "location": "Explorer → SQL Agent capability tooltip: reason for Azure SQL Database.",
@@ -9688,7 +9848,7 @@
       },
       "reason_data_transfer_redis": {
         "location": "Explorer → Data Transfer capability tooltip: Redis limitation and key-copy alternatives.",
-        "value": "Redis has no tables to transfer; right-click a key and choose Copy to connection… (DUMP / RESTORE), or export a folder as a command file and import it on the other server"
+        "value": "Redis has no tables to transfer; right-click a key and choose Copy to Connection… (DUMP / RESTORE), or export a folder as a command file and import it on the other server"
       },
       "reason_data_transfer_unsupported": {
         "location": "Explorer → Data Transfer capability tooltip: supported engines.",
@@ -9804,11 +9964,11 @@
       },
       "reason_insights_duckdb": {
         "location": "Explorer → Query Insights capability tooltip: DuckDB limitation and alternative.",
-        "value": "DuckDB keeps no query statistics store; use Explain Query (Actual) to profile a statement"
+        "value": "DuckDB keeps no query statistics store; use Explain Query (Actual, Executes Query) to profile a statement"
       },
       "reason_insights_libsql": {
         "location": "Explorer → Query Insights capability tooltip: libSQL limitation and alternative.",
-        "value": "libSQL / Turso keeps no query statistics store; use Estimated Plan (No Execution) to inspect a statement"
+        "value": "libSQL / Turso keeps no query statistics store; use Explain Query (Estimated, No Execution) to inspect a statement"
       },
       "reason_insights_unsupported": {
         "location": "Explorer → Query Insights capability tooltip: supported telemetry stores.",
@@ -9940,7 +10100,7 @@
       },
       "reason_statistics_postgres": {
         "location": "Explorer → Include Statistics capability tooltip: PostgreSQL double-execution reason and alternative.",
-        "value": "Include Statistics is not available on PostgreSQL: gathering runtime statistics there requires EXPLAIN ANALYZE, which would run the query twice — use Explain Query (Actual) instead"
+        "value": "Include Statistics is not available on PostgreSQL: gathering runtime statistics there requires EXPLAIN ANALYZE, which would run the query twice — use Explain Query (Actual, Executes Query) instead"
       },
       "reason_statistics_unsupported": {
         "location": "Explorer → Include Statistics capability tooltip: engines that support runtime statistics.",
@@ -10848,7 +11008,7 @@
       },
       "empty": {
         "location": "Deploy Cart → Items: empty state explaining how to collect database objects.",
-        "value": "Nothing collected yet — right-click a table, view, procedure, or function and choose Deploy Cart ▸ Add."
+        "value": "Nothing collected yet — right-click a table, view, procedure, or function and choose Deploy Cart ▸ Add to Deploy Cart."
       },
       "export_cancelled_partial": {
         "location": "Deploy Cart → Files: cancellation status warning where partial output remains.",
@@ -19062,7 +19222,7 @@
       },
       "introduction": {
         "location": "Help menu → SQLLY Help window: opening title and paragraph at the top of the generated help text, explaining that every listed shortcut reflects the user’s current keybindings, including changes made in Preferences → Keybindings.",
-        "value": "SQLLY Help\n\nEvery shortcut below is resolved from your current keybindings, including any changes made in Preferences > Keybindings.\n"
+        "value": "SQLLY Help\n\nEvery shortcut below is resolved from your current keybindings, including any changes made in Preferences > Keyboard Shortcuts.\n"
       },
       "key_backspace": {
         "location": "Help menu → SQLLY Help window → Shortcut column: name of the Backspace key as printed inside a keyboard shortcut (after any modifier symbols); use the conventional key-cap name for this key in the target language.",
@@ -21674,7 +21834,7 @@
       },
       "empty_timeline": {
         "location": "Query tab → History side panel: empty-state message in the timeline area when the tab has no saved versions yet, explaining that versions are saved when you run the query or pause typing, and that F5 runs it.",
-        "value": "No versions yet. Versions seal when you run the query or pause editing — run with F5 to create the first."
+        "value": "No versions yet. A version is saved when you run the query or pause editing — run with F5 to create the first."
       },
       "file_backed_badge": {
         "location": "Query tab → History side panel → Footer, right side: small label shown when the query tab is backed by a file on disk (version history survives closing the tab and git history is listed).",
@@ -22880,7 +23040,7 @@
       },
       "profile_caption": {
         "location": "Results → Grid: background caption while profiling {column_name} and reading {row_count} rows from a spill file.",
-        "value": "Profiling in {column_name} — reading {row_count} rows from disk…"
+        "value": "Profiling {column_name} — reading {row_count} rows from disk…"
       }
     },
     "computed_columns": {
@@ -24468,7 +24628,7 @@
       },
       "spill_recompute_notice": {
         "location": "Results → Messages tab → Computed columns: notice when computed columns change but a result set is paged from disk, so its new columns need a rerun; {result_number} is the result set's number.",
-        "value": "Results {result_number} is paged from disk — run the query again to compute its new columns."
+        "value": "Result set {result_number} is paged from disk — run the query again to compute its new columns."
       },
       "update_column_button": {
         "location": "Results → Formula bar: primary button at the right of the formula input when editing an existing computed column; recomputes it and updates its directive in the query.",
@@ -26119,8 +26279,8 @@
         "value": "Loading…"
       },
       "result_too_large_locked": {
-        "location": "Results → Grid tab bar → Pivot and Chart tabs: short status shown in parentheses after the disabled Pivot and Chart tab labels when the result was spilled to disk and is too large to pivot or chart; keep very short.",
-        "value": "Result too large"
+        "location": "Results → Grid tab bar → Pivot and Chart tabs: short status shown in parentheses after the disabled Pivot and Chart tab labels when a result too large to keep in memory has staged edits; keep very short.",
+        "value": "Unavailable while editing"
       }
     },
     "preview_sql": {
@@ -27275,6 +27435,16 @@
         "value": "Error: could not read this page of the result from disk. The file may have been removed or is unreadable."
       }
     },
+    "spill_drill": {
+      "failed": {
+        "location": "Results → Messages: notice shown when the rows behind a double-clicked pivot cell or clicked chart mark could not be collected because the large result's file on disk could not be read or written.",
+        "value": "Couldn't show the matching rows because the result file couldn't be read."
+      },
+      "progress": {
+        "location": "Results → grid caption strip: progress shown while SQLLY collects the rows behind a double-clicked pivot cell or clicked chart mark from a large result kept on disk; {percent} is a whole percent.",
+        "value": "Finding matching rows… {percent}%"
+      }
+    },
     "stacked_cards": {
       "clear_filters_tooltip": {
         "location": "Results → Stacked layout → Result card header: tooltip on the filter-with-X button that removes all row filters from that result set; enabled only when filters are applied.",
@@ -27352,7 +27522,7 @@
       },
       "sql_copied": {
         "location": "Results → Messages tab: confirmation logged after Copy as SQL puts the staged-change script on the clipboard; {change_count} is the total number of pending edits, inserts and deletes.",
-        "value": "Copied the SQL for {change_count} staged changes to the clipboard"
+        "value": "Copied the SQL for {change_count} staged change(s) to the clipboard"
       },
       "transform_button": {
         "location": "Results → Tab strip → Staged-change controls: dropdown button after Copy as SQL that opens a menu of text transforms (such as changing case) to apply to every staged string value; verb, short space.",
@@ -29633,7 +29803,7 @@
         },
         "manual_commit_unavailable": {
           "location": "Query tab → Manual commit mode → Begin or end transaction: error when the query service in use (e.g. a remote or browser one) has no manual-commit support.",
-          "value": "Manual commit mode is not available on this port"
+          "value": "Manual commit mode is not available for this query service"
         },
         "no_connection": {
           "location": "Query Execution → Connection Error: message shown when the session has no active connection.",
@@ -30288,8 +30458,12 @@
           "value": "Recreating materialized view {object_name} drops the rows stored in its inner table unless it targets an explicit TO table."
         },
         "postgres_trigger": {
-          "location": "Schema Compare → Deployment Warnings: warning shown when a PostgreSQL trigger cannot be replaced automatically.",
-          "value": "PostgreSQL has no CREATE OR REPLACE TRIGGER for {object_name}; review manually."
+          "location": "Schema Compare → Deployment Warnings: warning shown when a PostgreSQL trigger cannot be replaced automatically because the target server is older than PostgreSQL 14.",
+          "value": "PostgreSQL before version 14 has no CREATE OR REPLACE TRIGGER for {object_name}; review manually."
+        },
+        "postgres_trigger_unknown_version": {
+          "location": "Schema Compare → Deployment Warnings: softer warning shown when a PostgreSQL trigger is left for manual review because the target server version is not known (CREATE OR REPLACE TRIGGER needs PostgreSQL 14 or later).",
+          "value": "The target PostgreSQL version is not known, and CREATE OR REPLACE TRIGGER needs version 14 or later, so {object_name} is left for manual review."
         },
         "view_order": {
           "location": "Schema Compare → Deployment Warnings: warning shown when mutually dependent views cannot be ordered safely.",
@@ -35156,7 +35330,7 @@
       },
       "message_types": {
         "location": "Settings → Results → Protobuf Schemas → schema row: the message types a schema defines; {count} is how many, {messages} a comma-separated list of names.",
-        "value": "{count} message types: {messages}"
+        "value": "{count} message type(s): {messages}"
       },
       "more_messages": {
         "location": "Settings → Results → Protobuf Schemas → schema row: trailing item of the message list when it is cut short; {count} is how many are not listed.",
@@ -36352,6 +36526,16 @@
       }
     },
     "sql_formatting": {
+      "clause_body_placement": {
+        "new_line_indented": {
+          "location": "Settings → Editor → Formatting → Clause layout: option in the “Table after FROM” and “First condition after WHERE / HAVING” dropdowns that starts the clause body on a new indented line under the keyword. The hint beneath the dropdowns quotes this name.",
+          "value": "New line, indented"
+        },
+        "same_line": {
+          "location": "Settings → Editor → Formatting → Clause layout: option in the “Table after FROM” and “First condition after WHERE / HAVING” dropdowns that keeps the clause body on the same line as its keyword.",
+          "value": "Same line as the keyword"
+        }
+      },
       "heading": {
         "sql_formatting": {
           "location": "Settings → Editor → Formatting: title at the top of the SQL formatting settings pane, which controls how the editor's Format Document and Format Selection commands lay out SQL.",
@@ -36960,7 +37144,7 @@
     "azure": {
       "account_not_signed_in": {
         "location": "Workbench → Status bar → Azure SQL connect: error shown when the Microsoft Entra account linked to a connection is not registered in SQLLY; {name} is the connection name.",
-        "value": "{name} uses an Azure account that isn't signed in on this device — open Manage Entra Accounts and click Add User."
+        "value": "{name} uses an Azure account that isn't signed in on this device — open Tools → Azure SQL Connection… and click Add User in the Microsoft Entra Users dialog."
       },
       "browser_unavailable": {
         "location": "Browser version → Status bar → Tools menu → Azure SQL Connection: notice shown when the command is used in the browser build, where Azure (Microsoft Entra) sign-in is not available.",
@@ -37028,7 +37212,7 @@
       },
       "session_expired": {
         "location": "Workbench → Status bar → Azure SQL connect: error shown when the Microsoft Entra sign-in for a connection has expired and the user must sign in again; {name} is the connection name.",
-        "value": "Your Azure session for {name} has expired — open Manage Entra Accounts and click Add User to sign in again."
+        "value": "Your Azure session for {name} has expired — open Tools → Azure SQL Connection… and click Add User in the Microsoft Entra Users dialog to sign in again."
       },
       "sign_in_before_discovery": {
         "location": "Connection management dialog and connection editor → Azure SQL servers list: message shown when no Microsoft Entra account is signed in, so Azure SQL servers cannot be discovered.",
@@ -37052,7 +37236,7 @@
       },
       "result_snapshots_unavailable": {
         "location": "Browser version → Status bar → Tools menu → Result Snapshots: feature name inserted into the “not available in the browser” notice; should read as a short noun phrase naming the feature.",
-        "value": "Result snapshots unavailable"
+        "value": "Result snapshots are not available"
       }
     },
     "browser_proxy": {
@@ -37246,7 +37430,7 @@
       },
       "staged_expression": {
         "location": "Workbench → Status bar → Results grid cell context menu → text transform: notice that the cell already has a staged SQL expression (for example a server function), so a text transform cannot be applied; {column} is the column name.",
-        "value": "Staged expression for {column}"
+        "value": "{column} already has a staged expression, so this text transform cannot be applied"
       },
       "text_rejected": {
         "location": "Workbench → Status bar: shown when text applied in the Cell Details panel is not valid for the column; {column} is the column name and {error} the reason, such as “Enter a whole number.”",
@@ -37288,8 +37472,16 @@
         "location": "Workbench → Status bar: message shown in the browser preview when the Build AI Cache and Embeddings or Clear AI Catalog Data command is run; names the feature that the browser build does not support.",
         "value": "AI catalog maintenance is not available"
       },
+      "ai_quit_cancel": {
+        "location": "Quit confirmation dialog → AI run in progress: cancel button that closes the dialog and leaves SQLLY running so the AI Assistant can finish its answer.",
+        "value": "Wait"
+      },
+      "ai_quit_confirm": {
+        "location": "Quit confirmation dialog → AI run in progress: confirm button that quits SQLLY immediately, stopping the run and discarding the AI Assistant's unfinished answer.",
+        "value": "Quit anyway"
+      },
       "ai_quit_description": {
-        "location": "Quit confirmation dialog → AI run in progress: body text shown when the user quits SQLLY while the AI Assistant is still answering; explains that quitting discards the partial answer and names the Wait and Quit anyway buttons.",
+        "location": "Quit confirmation dialog → AI run in progress: body text shown when the user quits SQLLY while the AI Assistant is still answering; explains that quitting discards the partial answer and names the dialog's two buttons (the “Wait” and “Quit anyway” labels).",
         "value": "Quitting now stops the run and discards its unfinished answer. Choose Wait to keep working, or Quit anyway to exit."
       },
       "ai_quit_title": {
@@ -39052,7 +39244,7 @@
       },
       "scope_credentials_unresolved": {
         "location": "Workbench → Object Explorer → Generate Models for schema or database: error shown when saved credentials cannot be resolved; {error} is the credential-store error.",
-        "value": "Credentials unresolved {error}"
+        "value": "Cannot resolve credentials: {error}"
       },
       "select_object": {
         "location": "Workbench → Status bar: info message shown when Generate Model is invoked on an Object Explorer node that has no table or view name; asks the user to select a table or view.",
@@ -39258,7 +39450,7 @@
       },
       "unrecognised_format": {
         "location": "Workbench → Status bar: error shown when an opened or pasted plan is in none of the supported formats; the list of formats is technical and should keep its product names.",
-        "value": "Unrecognised plan format (expected ShowPlan XML, PostgreSQL/MySQL JSON, MySQL TREE, or SQLite EXPLAIN QUERY PLAN rows)"
+        "value": "Unrecognized plan format (expected ShowPlan XML, PostgreSQL/MySQL JSON, MySQL TREE, or SQLite EXPLAIN QUERY PLAN rows)"
       },
       "unsupported_engine": {
         "location": "Workbench → Status bar: info message shown when a plan shortcut is used on a database engine with no execution plan support; {engine} is the database type name.",

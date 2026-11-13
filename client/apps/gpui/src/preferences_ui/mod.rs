@@ -170,7 +170,6 @@ impl_sql_option!(
     preferences::IdentifierCase,
     preferences::IdentifierQuoting,
     preferences::MajorClausePlacement,
-    preferences::ClauseBodyPlacement,
     preferences::SelectListStyle,
     preferences::CommaStyle,
     preferences::BooleanOperatorPlacement,
@@ -191,6 +190,22 @@ impl_sql_option!(
     preferences::OrderGroupLayout,
     preferences::SemicolonStyle,
 );
+
+/// The Table-after-FROM and First-condition dropdowns read their option names
+/// from the catalog (the hint text beneath them quotes the same name). The
+/// persisted value is the enum's serde name; this text is display-only.
+impl SqlOption for preferences::ClauseBodyPlacement {
+    fn title(&self) -> String {
+        crate::localization::text(match self {
+            preferences::ClauseBodyPlacement::NewLineIndented => {
+                "settings.sql_formatting.clause_body_placement.new_line_indented"
+            }
+            preferences::ClauseBodyPlacement::SameLine => {
+                "settings.sql_formatting.clause_body_placement.same_line"
+            }
+        })
+    }
+}
 
 pub enum PreferencesWindowEvent {
     Closed,
@@ -784,6 +799,18 @@ const FIM_DEFAULT_STOP_SEQUENCES_REEXPORT: &[&str] = DEFAULT_STOP_SEQUENCES;
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn clause_body_placement_titles_follow_the_language() {
+        use preferences::ClauseBodyPlacement::{NewLineIndented, SameLine};
+        let english = crate::localization::test_language(crate::localization::Language::English);
+        assert_eq!(NewLineIndented.title(), "New line, indented");
+        assert_eq!(SameLine.title(), "Same line as the keyword");
+        drop(english);
+        let _spanish = crate::localization::test_language(crate::localization::Language::Spanish);
+        assert_eq!(NewLineIndented.title(), "Nueva línea con indentación");
+        assert_ne!(SameLine.title(), "Same line as the keyword");
+    }
 
     // ---- IntelliSense Cache pane helpers ----
 

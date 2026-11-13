@@ -460,59 +460,60 @@ fn editor_scrollbar_tracks_remain_visible_and_enable_for_overflow(cx: &mut gpui:
     );
 }
 
-#[test]
-fn pivot_directive_completion_inserts_valid_templates() {
-    let sql = "-- ";
-    let (items, replace_start) = pivot_directive_completions(sql, sql.len()).unwrap();
+/// Accepting through a directive: each setting opens its values, the text
+/// lands exactly as offered (no SQL casing, quoting or layout), and the
+/// last run's columns are written the way the family reads them.
+#[gpui::test]
+fn directive_completions_chain_from_family_to_setting_to_value(cx: &mut gpui::TestAppContext) {
+    let (view, cx) = cx.add_window_view(|_window, cx| SqlEditor::new(cx));
+    view.update(cx, |editor, cx| {
+        editor.set_result_columns(vec![vec!["Region".into(), "Order Total".into()]], cx);
+        editor.set_text("SELECT 1;\n-- sqlly gr", cx);
+        editor.cursor = editor.content.len();
+        editor.trigger_completions_with(false, cx);
+        assert!(editor.completion_visible);
+        assert_eq!(editor.completions[0].label, "grid:");
 
-    assert_eq!(replace_start, 0);
-    assert_eq!(
-        items[0].insert_text,
-        "-- sqlly view:pivot\n-- sqlly pivot: row:Region,Country; column:Year,Quarter; value:Revenue:sum"
-    );
-    assert_eq!(items[0].replace_span, Some((0, sql.len())));
-}
-
-#[test]
-fn pivot_directive_completion_ignores_sql_code() {
-    assert!(pivot_directive_completions("SELECT ", "SELECT ".len()).is_none());
-}
-
-#[test]
-fn sqlly_directive_completion_uses_the_namespaced_prefix() {
-    let sql = "-- sqlly ";
-    let (items, _) = pivot_directive_completions(sql, sql.len()).unwrap();
-    assert!(
-        items
+        editor.accept_completion(cx);
+        assert_eq!(editor.content.as_ref(), "SELECT 1;\n-- sqlly grid: ");
+        assert!(editor.completion_visible, "the settings open by themselves");
+        let sort = editor
+            .completions
             .iter()
-            .all(|item| item.insert_text.starts_with("-- sqlly "))
-    );
-}
+            .position(|item| item.label == "sort=")
+            .expect("sort is a grid setting");
+        editor.completion_index = sort;
 
-#[test]
-fn directive_completions_accept_every_spelling_the_grammar_accepts() {
-    // Trigger recognition rides the shared lexer, so loose-but-valid
-    // spellings (no space, tab, any case) offer the same menus the
-    // canonical spelling gets.
-    for namespace_only in ["--sqlly", "--\tsqlly ", "-- SQLLY "] {
-        let (items, _) = pivot_directive_completions(namespace_only, namespace_only.len()).unwrap();
-        assert_eq!(items.len(), 5, "family menu for {namespace_only:?}");
-    }
-    for (line, expected_first) in [
-        ("--sqlly view:", "-- sqlly view:pivot"),
-        ("-- SQLLY PIVOT: row:", "-- sqlly pivot: row:Region,Country"),
-    ] {
-        let (items, _) = pivot_directive_completions(line, line.len()).unwrap();
-        assert!(
-            items[0].insert_text.starts_with(expected_first),
-            "{line:?} → {:?}",
-            items[0].insert_text
+        editor.accept_completion(cx);
+        assert_eq!(editor.content.as_ref(), "SELECT 1;\n-- sqlly grid: sort=");
+        assert!(editor.completion_visible, "the columns open by themselves");
+        assert_eq!(editor.completions[1].label, "Order Total");
+        editor.completion_index = 1;
+
+        editor.accept_completion(cx);
+        assert_eq!(
+            editor.content.as_ref(),
+            "SELECT 1;\n-- sqlly grid: sort=\"Order Total\""
         );
-    }
-    // A completed name/canvas/placement directive offers no menu.
-    for done in ["-- sqlly name 1: X", "-- sqlly 2x2", "-- sqlly result: 1|1"] {
-        assert!(pivot_directive_completions(done, done.len()).is_none());
-    }
+        assert!(
+            !editor.completion_visible,
+            "a finished value closes the menu"
+        );
+        assert_eq!(editor.cursor, editor.content.len());
+    });
+    // The columns survive the edits that follow the run, and an automatic
+    // pass with nothing to offer stays closed.
+    view.update(cx, |editor, cx| {
+        editor.set_text("-- sqlly name 1: Ord", cx);
+        editor.cursor = editor.content.len();
+        editor.trigger_completions_with(false, cx);
+        assert!(!editor.completion_visible);
+        editor.set_text("-- sqlly chart: kind:bar; label:", cx);
+        editor.cursor = editor.content.len();
+        editor.trigger_completions_with(false, cx);
+        assert!(editor.completion_visible);
+        assert_eq!(editor.completions[0].label, "Region");
+    });
 }
 
 #[test]
@@ -2550,36 +2551,6 @@ fn clamp_scroll_offset_unchanged_at_boundary() {
     assert_eq!(clamp_scroll_offset(7, 0, 8), 0);
     // First visible slot (index == offset) stays put
     assert_eq!(clamp_scroll_offset(3, 3, 8), 3);
-}
-
-/// Every directive snippet the completion popup can insert must be a
-/// directive the shared grammar accepts and the diagnostics pass stays
-/// quiet on — the snippets and the parsers may never drift apart.
-#[test]
-fn directive_completion_snippets_survive_directive_diagnostics() {
-    let triggers = [
-        "-- sqlly ",
-        "-- sqlly pivot:",
-        "-- sqlly format:",
-        "-- sqlly view:",
-    ];
-    for trigger in triggers {
-        let (items, _) = pivot_directive_completions(trigger, trigger.len())
-            .unwrap_or_else(|| panic!("trigger must offer completions: {trigger}"));
-        assert!(!items.is_empty(), "trigger must offer items: {trigger}");
-        for item in items {
-            // Inserted at the top of a query, a snippet must never
-            // squiggle (some snippets are multi-line; the whole insertion
-            // is checked at once).
-            let sql = format!("{}\nSELECT 1;", item.insert_text);
-            let diags = crate::sqlly_directive::directive_diagnostics(&sql);
-            assert!(
-                diags.is_empty(),
-                "snippet '{}' must produce no diagnostics: {diags:?}",
-                item.insert_text
-            );
-        }
-    }
 }
 
 // ── state-machine: move_completion_down scrolls offset ────────────────
@@ -6495,6 +6466,65 @@ fn diagnostic_on_a_directive_hides_the_directive_info_popup(cx: &mut gpui::TestA
         assert!(
             editor.hovered_sqlly_directive.is_none(),
             "the info popup must not cover the diagnostic"
+        );
+    });
+}
+
+/// The GROUP BY popup opens under the first ungrouped column, on top of the
+/// next ones. Moving down toward its "Fix this" link crosses their
+/// underlines; the open popup must keep the hover, not hand it to them.
+#[gpui::test]
+fn diagnostic_popup_keeps_the_hover_over_a_diagnostic_it_covers(cx: &mut gpui::TestAppContext) {
+    let (view, cx) = cx.add_window_view(|_window, cx| SqlEditor::new(cx));
+    view.update_in(cx, |editor, window, cx| {
+        let sql = "SELECT\n  a.Id,\n  a.Name,\n  COUNT(1)\nFROM a";
+        editor.set_text(sql, cx);
+        // Unpainted, a hit lands on its line's end, so each diagnostic spans
+        // its whole line (newline included).
+        let line_diag = |column: &str| {
+            let start = sql.find(column).unwrap();
+            ValidationDiagnostic {
+                severity: DiagnosticSeverity::Error,
+                source: DiagnosticSource::Validation,
+                message: format!("ungrouped {column}"),
+                line: sql[..start].matches('\n').count(),
+                identifier: Some(column.to_string()),
+                start_byte: start,
+                end_byte: start + sql[start..].find('\n').unwrap() + 1,
+                explainer: None,
+                fix: None,
+            }
+        };
+        editor.set_diagnostics(vec![line_diag("a.Id"), line_diag("a.Name")], cx);
+        editor.last_bounds = Some(gpui::Bounds {
+            origin: gpui::Point::new(px(0.0), px(0.0)),
+            size: gpui::size(px(800.0), px(400.0)),
+        });
+        let line_height = f32::from(editor.line_height);
+        let x = f32::from(editor.line_number_width) + 20.0;
+        let mv =
+            |editor: &mut SqlEditor, y: f32, window: &mut Window, cx: &mut Context<SqlEditor>| {
+                editor.handle_mouse_move(
+                    &MouseMoveEvent {
+                        position: gpui::Point::new(px(x), px(y)),
+                        ..Default::default()
+                    },
+                    window,
+                    cx,
+                );
+            };
+        mv(editor, line_height * 1.5, window, cx);
+        assert_eq!(editor.hovered_diagnostic, Some(0), "hovering a.Id");
+        // The painted popup starts on the line below, over `a.Name`.
+        editor.diagnostic_popup_bounds.set(Some(gpui::Bounds {
+            origin: gpui::Point::new(px(0.0), px(line_height * 2.0)),
+            size: gpui::size(px(800.0), px(line_height * 6.0)),
+        }));
+        mv(editor, line_height * 2.5, window, cx);
+        assert_eq!(
+            editor.hovered_diagnostic,
+            Some(0),
+            "the a.Name underline under the popup must not take the hover"
         );
     });
 }

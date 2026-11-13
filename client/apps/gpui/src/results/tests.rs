@@ -2191,6 +2191,8 @@ fn bare_results_view() -> ResultsView {
         layout_store: None,
         layout_store_mode: LayoutStoreMode::Disk,
         background_read: None,
+        spill_drills: Vec::new(),
+        spill_drill_generation: 0,
         background_read_generation: 0,
         spill_prefixes: std::cell::RefCell::new(Vec::new()),
         applied_layouts: vec![],
@@ -2297,6 +2299,16 @@ fn bare_results_view() -> ResultsView {
 
 /// Writes a complete typed spill file of two-column rows plus its `.idx`
 /// sidecar, returning the data-file path.
+/// Runs a native spill read, which never waits, to its result.
+fn ready<T>(read: impl std::future::Future<Output = T>) -> T {
+    let mut read = std::pin::pin!(read);
+    let mut context = std::task::Context::from_waker(std::task::Waker::noop());
+    match read.as_mut().poll(&mut context) {
+        std::task::Poll::Ready(value) => value,
+        std::task::Poll::Pending => panic!("a native spill read waited"),
+    }
+}
+
 fn write_test_spill(total: usize) -> String {
     // Unique per call: parallel tests can share a clock timestamp, and a
     // colliding path means one test's cleanup deletes another's file.
@@ -5027,6 +5039,8 @@ fn row_count_for_slot_prefers_spill_backing_total() {
             pager: std::cell::RefCell::new(pager),
             total: 10,
             path: spill_file.clone(),
+            row_source: std::cell::RefCell::new(None),
+            _owned_file: None,
         })],
         ..bare_results_view()
     };
@@ -8584,11 +8598,11 @@ fn pivot_drill_through_ntier_rows_filters_grid(cx: &mut gpui::TestAppContext) {
     });
 }
 
-/// A spill-backed (windowed) slot must lock the Pivot and Chart tabs: the
-/// interactive pivot would silently aggregate only the resident window and
-/// its double-click drill-through cannot filter a windowed grid.
+/// A spill-backed (windowed) slot keeps the Pivot and Chart tabs open: its
+/// grid gets a row source over the whole spill file, so the pivot reads all
+/// 200,000 rows in the background rather than the ~100 resident ones.
 #[gpui::test]
-fn spill_backed_slot_locks_pivot_and_chart_tabs(cx: &mut gpui::TestAppContext) {
+fn spill_backed_slot_pivots_every_row_of_the_spill_file(cx: &mut gpui::TestAppContext) {
     let total = 200_000usize;
     let spill_file = write_test_spill(total);
 
@@ -8635,13 +8649,40 @@ fn spill_backed_slot_locks_pivot_and_chart_tabs(cx: &mut gpui::TestAppContext) {
 
     view.read_with(cx, |v, cx| {
         let table = v.grid_views[0].as_ref().expect("grid exists").read(cx);
-        assert!(
-            table.pivot_locked(),
-            "spill-backed slot locks the Pivot tab"
-        );
-        assert!(
-            table.chart_locked(),
-            "spill-backed slot locks the Chart tab"
+        assert!(!table.pivot_locked(), "the Pivot tab stays available");
+        assert!(!table.chart_locked(), "the Chart tab stays available");
+        let source = table.row_source().expect("the grid reads the spill file");
+        assert_eq!(source.row_count(), total);
+    });
+
+    // Count rows per name over the whole file: the grand total must be the
+    // file's row count, not the resident window's.
+    view.update(cx, |v, cx| {
+        let table = v.grid_views[0].clone().expect("grid exists");
+        table.update(cx, |table, cx| {
+            table.enable_pivot(
+                sqlly_datatable::PivotConfig {
+                    row_fields: vec![1],
+                    value_field: Some(0),
+                    aggregation: sqlly_datatable::AggregationFn::Count,
+                    ..sqlly_datatable::PivotConfig::default()
+                },
+                cx,
+            );
+            table.set_active_tab(GridTab::Pivot, cx);
+            assert_eq!(table.active_tab(), GridTab::Pivot);
+        });
+        cx.notify();
+    });
+    cx.run_until_parked();
+    view.read_with(cx, |v, cx| {
+        let table = v.grid_views[0].as_ref().expect("grid exists").read(cx);
+        let pivot = table.pivot_state().expect("pivot").read(cx);
+        assert!(!pivot.is_scanning(), "{:?}", pivot.scan_status());
+        assert_eq!(pivot.result.source_row_count, total);
+        assert_eq!(
+            pivot.result.grand_total,
+            sqlly_datatable::CellValue::Integer(total as i64)
         );
     });
     let _ = std::fs::remove_file(&spill_file);
@@ -10986,4 +11027,229 @@ fn apply_to_query_carries_the_grid_sort_as_order_by(cx: &mut gpui::TestAppContex
             "SELECT id, name FROM people ORDER BY [name] DESC, [id] ASC;"
         );
     });
+}
+
+/// A finished, spill-backed `total`-row result (`id`, `name = row{id}`).
+fn spilled_results_view(
+    cx: &mut gpui::TestAppContext,
+    total: usize,
+) -> (Entity<ResultsView>, &mut gpui::VisualTestContext, String) {
+    // A folder of its own, so drill files written next to the spill file
+    // can be counted without other tests' files in the way.
+    let written = write_test_spill(total);
+    let dir = std::env::temp_dir().join(format!(
+        "sqlly-drill-test-{}",
+        uuid::Uuid::new_v4().simple()
+    ));
+    std::fs::create_dir_all(&dir).expect("test dir");
+    let spill_file = dir
+        .join(
+            std::path::Path::new(&written)
+                .file_name()
+                .expect("spill file name"),
+        )
+        .to_string_lossy()
+        .to_string();
+    std::fs::rename(&written, &spill_file).expect("move spill");
+    let _ = std::fs::rename(format!("{written}.idx"), format!("{spill_file}.idx"));
+    ensure_components_initialized(cx);
+    let (view, cx) = cx.add_window_view(|_window, cx| {
+        let mut v = ResultsView::new(cx);
+        v.perf_prefs = crate::preferences::PerformancePreferences::default();
+        v.handle_event(QueryEvent::Started, cx);
+        v.handle_event(two_column_result_set(), cx);
+        v.handle_event(rows_batch(0..100), cx);
+        v
+    });
+    cx.run_until_parked();
+    let manifest_event = QueryEvent::SpillManifest {
+        manifest: sqlly_services::query::SpillManifestData {
+            result_sets: vec![sqlly_services::query::SpillResultSetData {
+                result_set_index: 0,
+                columns: vec![
+                    ResultColumn {
+                        name: "id".into(),
+                        data_type: "int".into(),
+                        nullable: false,
+                    },
+                    ResultColumn {
+                        name: "name".into(),
+                        data_type: "text".into(),
+                        nullable: true,
+                    },
+                ],
+                row_count: total,
+                spill_file: spill_file.clone(),
+            }],
+            messages: Vec::new(),
+            error: None,
+            elapsed_ms: Some(1),
+        },
+    };
+    view.update(cx, |v, cx| {
+        v.handle_event(manifest_event, cx);
+        v.handle_event(QueryEvent::Completed { elapsed_ms: 1 }, cx);
+    });
+    cx.run_until_parked();
+    (view, cx, spill_file)
+}
+
+fn remove_test_spill(spill_file: &str) {
+    let _ = std::fs::remove_file(spill_file);
+    let _ = std::fs::remove_file(format!("{spill_file}.idx"));
+    if let Some(dir) = std::path::Path::new(spill_file).parent() {
+        let _ = std::fs::remove_dir(dir);
+    }
+}
+
+/// Double-clicking a pivot cell over a spill-backed result writes exactly
+/// that cell's rows to a filtered spill file and shows it under the drill
+/// banner; the pivot keeps reading the full result, and Clear puts the full
+/// result back and deletes the filtered file.
+#[gpui::test]
+fn pivot_drill_on_a_spilled_result_shows_a_filtered_spill_file(cx: &mut gpui::TestAppContext) {
+    let total = 50_000usize;
+    let (view, cx, spill_file) = spilled_results_view(cx, total);
+    // Count ids per name: every name is unique, so each leaf drills to one row.
+    view.update(cx, |v, cx| {
+        let table = v.grid_views[0].clone().expect("grid exists");
+        table.update(cx, |table, cx| {
+            table.enable_pivot(
+                sqlly_datatable::PivotConfig {
+                    row_fields: vec![1],
+                    value_field: Some(0),
+                    aggregation: sqlly_datatable::AggregationFn::Count,
+                    ..sqlly_datatable::PivotConfig::default()
+                },
+                cx,
+            );
+            table.set_active_tab(GridTab::Pivot, cx);
+        });
+        cx.notify();
+    });
+    cx.run_until_parked();
+    view.update(cx, |v, cx| {
+        let table = v.grid_views[0].clone().expect("grid exists");
+        let pivot = table.read(cx).pivot_state().expect("pivot").clone();
+        let first = pivot.read(cx).row_label(&pivot.read(cx).visible_rows()[0]);
+        assert_eq!(first, "row0", "canonical order puts row0 first");
+        pivot.update(cx, |p, cx| {
+            p.request_drill_down(0, 0);
+            cx.notify();
+        });
+        table.update(cx, |_t, cx| cx.notify());
+    });
+    cx.update(|window, _cx| window.refresh());
+    cx.run_until_parked();
+
+    let drill_file = view.read_with(cx, |v, cx| {
+        assert!(v.spill_drill_shown(0), "the filtered view is shown");
+        let backing = v.spill_backings[0].as_ref().expect("backing");
+        assert_eq!(backing.total, 1, "exactly the drilled cell's rows");
+        assert_ne!(backing.path, spill_file);
+        assert!(std::path::Path::new(&backing.path).exists());
+        let table = v.grid_views[0].as_ref().expect("grid").read(cx);
+        assert_eq!(table.active_tab(), GridTab::Grid);
+        assert_eq!(table.drill_filter(), Some("name = row0"));
+        assert_eq!(
+            table.state.read(cx).window.map(|w| w.total_rows),
+            Some(1),
+            "the grid windows over the filtered file"
+        );
+        assert_eq!(
+            table.row_source().expect("source").row_count(),
+            total,
+            "the pivot still reads the full result"
+        );
+        backing.path.clone()
+    });
+
+    view.update(cx, |v, cx| v.clear_spill_drill(0, cx));
+    view.read_with(cx, |v, cx| {
+        assert!(!v.spill_drill_shown(0));
+        assert_eq!(v.spill_backings[0].as_ref().expect("backing").total, total);
+        let table = v.grid_views[0].as_ref().expect("grid").read(cx);
+        assert_eq!(table.drill_filter(), None);
+        assert_eq!(
+            table.state.read(cx).window.map(|w| w.total_rows),
+            Some(total)
+        );
+    });
+    assert!(
+        !std::path::Path::new(&drill_file).exists(),
+        "Clear deletes the filtered file"
+    );
+    remove_test_spill(&spill_file);
+}
+
+/// Clearing for a new query drops the filtered view and deletes its file.
+#[gpui::test]
+fn new_query_deletes_the_drill_file(cx: &mut gpui::TestAppContext) {
+    let (view, cx, spill_file) = spilled_results_view(cx, 20_000);
+    view.update(cx, |v, cx| {
+        v.start_spill_drill(
+            0,
+            sqlly_datatable::RowSourceDrill::new("id < 25", |row| {
+                matches!(row.first(), Some(sqlly_datatable::CellValue::Integer(id)) if *id < 25)
+            }),
+            cx,
+        );
+    });
+    cx.run_until_parked();
+    let drill_file = view.read_with(cx, |v, _cx| {
+        let backing = v.spill_backings[0].as_ref().expect("backing");
+        assert_eq!(backing.total, 25);
+        backing.path.clone()
+    });
+    assert!(std::path::Path::new(&drill_file).exists());
+    view.update(cx, |v, cx| v.clear(cx));
+    cx.run_until_parked();
+    assert!(
+        !std::path::Path::new(&drill_file).exists(),
+        "clearing for a new query removes the filtered file"
+    );
+    view.read_with(cx, |v, _cx| assert!(!v.spill_drill_shown(0)));
+    remove_test_spill(&spill_file);
+}
+
+/// A drill replaced by a newer one leaves nothing of the older on disk, and
+/// only the newer lands.
+#[gpui::test]
+fn superseded_drill_leaves_no_file(cx: &mut gpui::TestAppContext) {
+    let (view, cx, spill_file) = spilled_results_view(cx, 20_000);
+    let dir = std::path::Path::new(&spill_file)
+        .parent()
+        .expect("dir")
+        .to_path_buf();
+    let drills_on_disk = || {
+        std::fs::read_dir(&dir)
+            .map(|entries| {
+                entries
+                    .filter_map(Result::ok)
+                    .filter(|e| {
+                        let name = e.file_name().to_string_lossy().to_string();
+                        name.starts_with("sqlly-spill-drill-") && name.ends_with(".bin")
+                    })
+                    .count()
+            })
+            .unwrap_or(0)
+    };
+    assert_eq!(drills_on_disk(), 0);
+    view.update(cx, |v, cx| {
+        let id_below = |limit: i64| {
+            sqlly_datatable::RowSourceDrill::new(format!("id < {limit}"), move |row| {
+                matches!(row.first(), Some(sqlly_datatable::CellValue::Integer(id)) if *id < limit)
+            })
+        };
+        v.start_spill_drill(0, id_below(10), cx);
+        v.start_spill_drill(0, id_below(30), cx);
+    });
+    cx.run_until_parked();
+    view.read_with(cx, |v, _cx| {
+        assert_eq!(v.spill_backings[0].as_ref().expect("backing").total, 30);
+    });
+    assert_eq!(drills_on_disk(), 1, "only the newest drill's file remains");
+    view.update(cx, |v, cx| v.clear_spill_drill(0, cx));
+    assert_eq!(drills_on_disk(), 0, "Clear removes it too");
+    remove_test_spill(&spill_file);
 }

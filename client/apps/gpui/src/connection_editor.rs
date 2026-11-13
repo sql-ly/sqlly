@@ -4604,15 +4604,11 @@ impl ConnectionEditor {
         .when(self.kube_enabled, |d| {
             let mut status = String::new();
             if let Some(busy) = self.kube_busy {
-                let resource_kind = crate::localization::text(match busy {
-                    "contexts" => "connections.editor.kube_refresh_contexts",
-                    "namespaces" => "connections.editor.kube_refresh_namespaces",
-                    _ => "connections.editor.kube_refresh_targets",
+                status = crate::localization::text(match busy {
+                    "contexts" => "connections.editor.kube_refreshing_contexts",
+                    "namespaces" => "connections.editor.kube_refreshing_namespaces",
+                    _ => "connections.editor.kube_refreshing_targets",
                 });
-                status = crate::localization::format(
-                    "connections.editor.kube_refreshing",
-                    &[("resource_kind", resource_kind.as_str())],
-                );
             } else if let Some(err) = &self.kube_error {
                 status = err.clone();
             } else if matches!(

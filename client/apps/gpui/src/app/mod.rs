@@ -3091,6 +3091,13 @@ impl AppView {
                         tab.last_run_completed_at = Some(Instant::now());
                     }
                     self.refresh_result_source(tab_idx, crate::editor::RunOutcome::Succeeded, cx);
+                    // Directive completion offers this run's column names.
+                    let columns = results.read(cx).result_set_column_names();
+                    if let Some(tab) = self.tabs.get(tab_idx) {
+                        tab.editor
+                            .clone()
+                            .update(cx, |editor, cx| editor.set_result_columns(columns, cx));
+                    }
                 }
             }
             crate::results::ResultsViewEvent::ExecutionPlanCaptureRequested(kind) => {

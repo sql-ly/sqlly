@@ -389,10 +389,16 @@ pub async fn connect(url: &str) -> Result<ProxySession, ConnectError> {
         inbound: inbound_rx,
     };
     let remote = RemoteServices::from_transport(transport);
+    // Grid runs keep large results in browser storage; metadata and every
+    // other caller see the remote executor as is.
+    let mut services = remote.services().clone();
+    services.queries = std::sync::Arc::new(super::spill::SpillingQueryExecutor::new(
+        services.queries.clone(),
+    ));
     Ok(ProxySession {
         relay,
         catalog,
-        services: remote.services().clone(),
+        services,
         closed: closed_rx,
         close_reason,
         license: license_rx,

@@ -514,6 +514,8 @@ pub struct SqlEditor {
     hovered_play_line: Option<usize>,
     /// Span + outcome of the last run, for the result-source tint and glyph.
     result_source: Option<ResultSource>,
+    /// Column names of the last run's result sets, for directive completion.
+    result_columns: std::sync::Arc<Vec<Vec<String>>>,
     /// `statement_spans` cache keyed by `content_revision`.
     statement_cache: std::cell::RefCell<(Option<u64>, Vec<statements::StatementSpan>)>,
 }
@@ -735,6 +737,7 @@ impl SqlEditor {
             last_completion_trigger: None,
             hovered_play_line: None,
             result_source: None,
+            result_columns: std::sync::Arc::new(Vec::new()),
             statement_cache: std::cell::RefCell::new((None, Vec::new())),
         }
     }
@@ -850,6 +853,7 @@ impl SqlEditor {
                 view.font_size = src.font_size;
                 view.line_height = src.line_height;
                 view.result_source = src.result_source.clone();
+                view.result_columns = src.result_columns.clone();
                 view.insert_hints = src.insert_hints.clone();
                 view.insert_hints_revision = src.insert_hints_revision;
                 view.insert_hints_version = view.insert_hints_version.wrapping_add(1);
@@ -1978,17 +1982,8 @@ impl SqlEditor {
             self.trigger_redis_completions(trigger, manual, cx);
             return;
         }
-        if let Some((items, replace_start)) =
-            pivot_directive_completions(&self.content, self.cursor)
-        {
-            self.completions = std::rc::Rc::new(items);
-            self.completion_index = 0;
-            self.completion_scroll_offset = 0;
-            self.completion_replace_start = replace_start;
-            self.set_completion_visible(true);
-            self.completion_user_navigated = false;
-            self.last_completion_trigger = None;
-            cx.notify();
+        if let Some(directive) = self.directive_completions() {
+            self.show_directive_completions(directive, cx);
             return;
         }
         if let Some(services) = &self.services {
@@ -2063,6 +2058,43 @@ impl SqlEditor {
         }
     }
 
+    /// The `-- sqlly` directive menu for the caret, when it is in a directive
+    /// comment (see [`crate::directive_completion`]). A line-local text scan,
+    /// so it runs inline.
+    fn directive_completions(&self) -> Option<crate::directive_completion::DirectiveCompletions> {
+        crate::directive_completion::complete(&self.content, self.cursor, &self.result_columns)
+    }
+
+    /// Show a directive menu. An empty one (free text, or a finished value)
+    /// closes the popup unless it was opened by hand, where it reads "No
+    /// suggestions" like any other manual pass.
+    fn show_directive_completions(
+        &mut self,
+        directive: crate::directive_completion::DirectiveCompletions,
+        cx: &mut Context<Self>,
+    ) {
+        self.completions = std::rc::Rc::new(directive.items);
+        self.completion_index = 0;
+        self.completion_scroll_offset = 0;
+        self.completion_replace_start = directive.replace_start;
+        self.set_completion_visible(self.completion_manual_open || !self.completions.is_empty());
+        self.completion_user_navigated = false;
+        self.last_completion_trigger = None;
+        cx.notify();
+    }
+
+    /// Column names of the tab's last run, one list per result set: what the
+    /// directive menu offers wherever a directive takes a column. Unlike
+    /// `result_source` it survives edits — the directive is written after
+    /// the run it describes.
+    pub fn set_result_columns(&mut self, columns: Vec<Vec<String>>, cx: &mut Context<Self>) {
+        self.result_columns = std::sync::Arc::new(columns);
+        let columns = self.result_columns.clone();
+        self.forward_to_shared_view(cx, move |view, _| {
+            view.result_columns = columns;
+        });
+    }
+
     /// Command IntelliSense for a Redis tab: the vocabulary and key index
     /// the app pushed, looked at for the caret's line only (a few
     /// microseconds), so it runs inline rather than on the background
@@ -2131,12 +2163,19 @@ impl SqlEditor {
             let sql_before_accept = self.content.clone();
             let cursor_before_accept = self.cursor;
             let multi_cursor = !self.extra_cursors.is_empty();
-            let insert_text = accepted_completion_insert_text(
-                &item,
-                &self.editor_prefs,
-                &self.content,
-                self.cursor,
-            );
+            // A directive item is written exactly as offered: the SQL
+            // casing, quoting and layout rules do not apply inside a comment.
+            let directive = self.directive_completions().is_some();
+            let insert_text = if directive {
+                item.insert_text.clone()
+            } else {
+                accepted_completion_insert_text(
+                    &item,
+                    &self.editor_prefs,
+                    &self.content,
+                    self.cursor,
+                )
+            };
             // Prefer per-item replace_span, then response-level
             // completion_replace_start, then fall back to word_start_before_cursor.
             let primary_replace_start = item
@@ -2148,7 +2187,9 @@ impl SqlEditor {
                         .max(self.completion_replace_start),
                 );
             let primary_replace_end = item.replace_span.map(|(_, e)| e).unwrap_or(self.cursor);
-            if item.kind == CompletionKind::Snippet && crate::snippets::has_tab_stops(&insert_text)
+            if !directive
+                && item.kind == CompletionKind::Snippet
+                && crate::snippets::has_tab_stops(&insert_text)
             {
                 let range =
                     utf8_safe_edit_range(&self.content, primary_replace_start..primary_replace_end);
@@ -2157,7 +2198,7 @@ impl SqlEditor {
                 self.accepted_completion_at = Some((self.content_revision, self.cursor));
                 return;
             }
-            let insert_text = if multi_cursor {
+            let insert_text = if multi_cursor || directive {
                 insert_text
             } else {
                 self.formatted_completion_insert(
@@ -2187,15 +2228,32 @@ impl SqlEditor {
                 .collect();
             self.apply_edits_at_all_cursors(edits, cx);
             self.accepted_completion_at = Some((self.content_revision, self.cursor));
-            if !matches!(
-                item.kind,
-                CompletionKind::Keyword | CompletionKind::Value | CompletionKind::Snippet
-            ) && let Ok(mut history) = self.accept_history.lock()
+            if !directive
+                && !matches!(
+                    item.kind,
+                    CompletionKind::Keyword | CompletionKind::Value | CompletionKind::Snippet
+                )
+                && let Ok(mut history) = self.accept_history.lock()
             {
                 history.record(&item.label);
             }
             self.close_completions(cx);
-            if !multi_cursor {
+            if directive {
+                // An accepted setting (`sort=`, `kind:`, a column that takes
+                // a suffix) leads straight into its values: open that menu
+                // rather than wait for a keystroke. A finished word does not.
+                let open_ended = insert_text
+                    .chars()
+                    .next_back()
+                    .is_some_and(|c| !c.is_alphanumeric());
+                if open_ended
+                    && !multi_cursor
+                    && let Some(next) = self.directive_completions()
+                    && !next.items.is_empty()
+                {
+                    self.show_directive_completions(next, cx);
+                }
+            } else if !multi_cursor {
                 self.suggest_table_alias_after_completion(
                     &item,
                     &sql_before_accept,
@@ -7911,12 +7969,14 @@ impl SqlEditor {
                             })
                         });
                 // Keep the popup up while the pointer is on it, so its
-                // "Fix this" link stays reachable.
+                // "Fix this" link stays reachable — even when the text it
+                // covers holds another diagnostic (the next ungrouped column
+                // a line down), which would otherwise steal the hover.
                 let over_popup = self
                     .diagnostic_popup_bounds
                     .get()
                     .is_some_and(|b| b.contains(&event.position));
-                let new_hovered = if new_hovered.is_none() && over_popup {
+                let new_hovered = if over_popup && self.hovered_diagnostic.is_some() {
                     self.hovered_diagnostic
                 } else {
                     new_hovered

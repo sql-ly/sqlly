@@ -103,49 +103,56 @@ mod wasm {
     }
 }
 
-/// Test-only redirection of the native storage roots. `ai_conversations` and
-/// other host-storage callers otherwise read/write/evict against the real
-/// `dirs::data_dir()/SQLLY`, so parallel tests race and a full real index can
-/// evict a test's own freshly-saved conversation. A test holds the returned
-/// guard for its body to point the roots at a temp dir instead.
+/// Test-only redirection of the native storage roots. Without it,
+/// `ai_conversations` and other host-storage callers would read, write and
+/// evict against the real `dirs::data_dir()/SQLLY`: tests would pollute the
+/// developer's (or CI agent's) profile, and a full real index could evict a
+/// test's freshly saved conversation.
+///
+/// Every test thread therefore gets a root: the one its test redirected to
+/// for its body, otherwise one shared temp root (shared like the real
+/// profile was, so tests that need isolation still redirect). The
+/// redirect is per thread only. It was once process-wide, which let another
+/// test's half-finished save (index loaded from the real profile) land in
+/// the redirected dir and evict the redirecting test's own conversation.
 #[cfg(all(test, not(target_arch = "wasm32")))]
 pub mod test_support {
     use std::cell::RefCell;
     use std::path::PathBuf;
-    use std::sync::{Mutex, MutexGuard};
+    use std::sync::OnceLock;
 
-    static ROOT_OVERRIDE: Mutex<Option<PathBuf>> = Mutex::new(None);
     thread_local! {
         static ROOT_OVERRIDE_LOCAL: RefCell<Option<PathBuf>> = const { RefCell::new(None) };
     }
-    static SERIAL: Mutex<()> = Mutex::new(());
 
     pub(super) fn root_override() -> Option<PathBuf> {
         ROOT_OVERRIDE_LOCAL
             .with(|slot| slot.borrow().clone())
-            .or_else(|| ROOT_OVERRIDE.lock().ok().and_then(|guard| guard.clone()))
+            .or_else(|| Some(shared_test_root().clone()))
     }
 
-    /// Redirects the native storage roots to `root` for the current test,
-    /// serialized against other storage-redirecting tests. Resets on drop.
+    /// The root for tests that do not redirect. One fixed name, so test runs
+    /// never accumulate directories.
+    fn shared_test_root() -> &'static PathBuf {
+        static ROOT: OnceLock<PathBuf> = OnceLock::new();
+        ROOT.get_or_init(|| std::env::temp_dir().join("sqlly-test-storage"))
+    }
+
+    /// Redirects the native storage roots to `root` on this thread until the
+    /// guard drops.
     pub struct StorageRootGuard {
-        _serial: MutexGuard<'static, ()>,
+        _not_send: std::marker::PhantomData<*const ()>,
     }
 
     pub fn redirect_storage(root: PathBuf) -> StorageRootGuard {
-        let serial = SERIAL.lock().unwrap_or_else(|poison| poison.into_inner());
-        if let Ok(mut guard) = ROOT_OVERRIDE.lock() {
-            *guard = Some(root.clone());
-        }
         ROOT_OVERRIDE_LOCAL.with(|slot| *slot.borrow_mut() = Some(root));
-        StorageRootGuard { _serial: serial }
+        StorageRootGuard {
+            _not_send: std::marker::PhantomData,
+        }
     }
 
     impl Drop for StorageRootGuard {
         fn drop(&mut self) {
-            if let Ok(mut guard) = ROOT_OVERRIDE.lock() {
-                *guard = None;
-            }
             ROOT_OVERRIDE_LOCAL.with(|slot| *slot.borrow_mut() = None);
         }
     }

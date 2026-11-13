@@ -26,12 +26,12 @@ standalone = []
 async-trait = { workspace = true }
 sqlly-services = { workspace = true }
 sqlly-intel = { workspace = true }
-sqlly-i18n = { path = "../../crates/sqlly-i18n", version = "1.13.0" }
+sqlly-i18n = { path = "../../crates/sqlly-i18n", version = "1.17.0" }
 sqlly-core = { workspace = true }
 sqlly-ai = { workspace = true }
 sqlly-lang = { workspace = true }
 sqlly-lsp = { workspace = true }
-sqlly-datatable = "10.1.0"
+sqlly-datatable = "11.1.0"
 gpui-component = "0.9.0"
 gpui-kit-assets = "0.9.0"
 rust-i18n = "4.2.4"

@@ -412,16 +412,16 @@ fn column_scan_is_refused_for_a_resident_result(cx: &mut gpui::TestAppContext) {
 #[test]
 fn read_spill_column_matches_a_whole_row_read() {
     let path = write_test_spill(4_500);
-    let column = read_spill_column(&path, 1, 4_200).expect("readable");
+    let column = ready(read_spill_column(&path, 1, 4_200)).expect("readable");
     assert_eq!(column.len(), 4_200, "clamped to the requested count");
     assert_eq!(column[0], CellValue::String("row0".into()));
     assert_eq!(column[4_199], CellValue::String("row4199".into()));
     // Past the end of the file: the rows it has.
     assert_eq!(
-        read_spill_column(&path, 0, 10_000).map(|c| c.len()),
+        ready(read_spill_column(&path, 0, 10_000)).map(|c| c.len()),
         Some(4_500)
     );
-    assert!(read_spill_column("/definitely/not/a/spill/file", 0, 1).is_none());
+    assert!(ready(read_spill_column("/definitely/not/a/spill/file", 0, 1)).is_none());
     crate::spill_pager::remove_spill_files(&path);
 }
 

@@ -209,6 +209,93 @@ impl SpillRowPager {
     }
 }
 
+/// Rows `[offset, offset + len)` of the spill file at `path`, clamped to its
+/// rows, through a private reader. Async so background work can read the
+/// browser's spills the same way; here it never waits. `None` when the file
+/// cannot be opened.
+pub async fn read_spill_rows(
+    path: String,
+    offset: usize,
+    len: usize,
+) -> Option<Vec<Vec<CellValue>>> {
+    SpillRowPager::open(&path).map(|mut pager| pager.page(offset, len))
+}
+
+/// [`read_spill_rows`] for the grid's windows (the browser build caches
+/// them; here it is the same read).
+pub async fn read_spill_window(
+    path: String,
+    offset: usize,
+    len: usize,
+) -> Option<Vec<Vec<CellValue>>> {
+    read_spill_rows(path, offset, len).await
+}
+
+/// A spill file being written, for drill-through's filtered results.
+/// Dropped before [`Self::finish`], it deletes the partial file.
+pub struct SpillFileWriter {
+    writer: Option<sqlly_core::SpillWriter>,
+    path: String,
+}
+
+impl SpillFileWriter {
+    /// A new spill file in the folder of `beside`, named under the
+    /// `sqlly-spill-` prefix the startup orphan sweep cleans.
+    pub fn create(beside: &str) -> Option<Self> {
+        let dir = Path::new(beside)
+            .parent()
+            .map(Path::to_path_buf)
+            .unwrap_or_else(std::env::temp_dir);
+        let path = dir
+            .join(format!(
+                "sqlly-spill-drill-{}.bin",
+                uuid::Uuid::new_v4().simple()
+            ))
+            .to_string_lossy()
+            .to_string();
+        match sqlly_core::SpillWriter::create(&path) {
+            Ok(writer) => Some(Self {
+                writer: Some(writer),
+                path,
+            }),
+            Err(error) => {
+                tracing::warn!(%error, path, "could not create a spill file");
+                None
+            }
+        }
+    }
+
+    pub fn append(&mut self, row: &[CellValue]) -> Result<(), String> {
+        match &mut self.writer {
+            Some(writer) => writer.append(row).map_err(|e| e.to_string()),
+            None => Err("spill file already finished".into()),
+        }
+    }
+
+    /// Finishes the file and returns its path.
+    pub fn finish(mut self) -> Result<String, String> {
+        let writer = self
+            .writer
+            .take()
+            .ok_or_else(|| "spill file already finished".to_string())?;
+        match writer.finish() {
+            Ok(_) => Ok(std::mem::take(&mut self.path)),
+            Err(error) => {
+                remove_spill_files(&self.path);
+                Err(error.to_string())
+            }
+        }
+    }
+}
+
+impl Drop for SpillFileWriter {
+    fn drop(&mut self) {
+        if self.writer.take().is_some() {
+            remove_spill_files(&self.path);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -204,6 +204,10 @@ pub const RENAME_SIMILARITY_THRESHOLD: u8 = 80;
 pub struct DeployOptions {
     pub include_drops: bool,
     pub wrap_in_transaction: bool,
+    /// Major version of the PostgreSQL target server, when known. PostgreSQL
+    /// 14 added `CREATE OR REPLACE TRIGGER`, so a trigger change is scripted
+    /// in place only when this is 14 or later; `None` means unknown.
+    pub target_postgres_major: Option<u32>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -716,6 +720,7 @@ fn rewrite_create_prefix(definition: &str, dialect: Dialect, or_words: &str) -> 
 fn changed_definition_sql(
     difference: &ComparedDifference,
     target_type: DatabaseType,
+    target_postgres_major: Option<u32>,
     plan: &mut DeployPlan,
 ) -> (String, String, bool) {
     let identity = qualified_identity(&difference.object.schema, &difference.object.name);
@@ -741,14 +746,30 @@ fn changed_definition_sql(
                 (sql, rollback, true)
             }
             ConnectionKind::PostgresWire => {
-                if difference.object.kind == "TRIGGER" {
-                    plan.warnings.push(
+                if difference.object.kind == "TRIGGER"
+                    && !target_postgres_major.is_some_and(|major| major >= 14)
+                {
+                    // `CREATE OR REPLACE TRIGGER` arrived in PostgreSQL 14: warn
+                    // firmly on a known older server, softly when the version
+                    // is not known.
+                    let warning = if target_postgres_major.is_some() {
                         sqlly_core::DisplayMessage::new(
                             "services.schema_compare.warnings.postgres_trigger",
-                            format!("PostgreSQL has no CREATE OR REPLACE TRIGGER for {identity}; review manually."),
+                            format!(
+                                "PostgreSQL before version 14 has no CREATE OR REPLACE TRIGGER for {identity}; review manually."
+                            ),
                         )
-                        .with_arg("object_name", identity.clone()),
-                    );
+                        .with_arg("object_name", identity.clone())
+                    } else {
+                        sqlly_core::DisplayMessage::new(
+                            "services.schema_compare.warnings.postgres_trigger_unknown_version",
+                            format!(
+                                "The target PostgreSQL version is not known, and CREATE OR REPLACE TRIGGER needs version 14 or later, so {identity} is left for manual review."
+                            ),
+                        )
+                        .with_arg("object_name", identity.clone())
+                    };
+                    plan.warnings.push(warning);
                     (
                         format!(
                             "-- MANUAL REVIEW: trigger change for {identity}\n{}",
@@ -1248,6 +1269,7 @@ fn step_for_difference(
     source_type: DatabaseType,
     target_type: DatabaseType,
     include_drops: bool,
+    target_postgres_major: Option<u32>,
     plan: &mut DeployPlan,
 ) -> Option<DeployStep> {
     let same_engine = source_type.connection_kind() == target_type.connection_kind();
@@ -1289,7 +1311,7 @@ fn step_for_difference(
             false,
         ),
         DifferenceStatus::Changed | DifferenceStatus::ManualReview if same_engine => {
-            changed_definition_sql(difference, target_type, plan)
+            changed_definition_sql(difference, target_type, target_postgres_major, plan)
         }
         DifferenceStatus::Changed | DifferenceStatus::ManualReview => (
             format!(
@@ -1313,7 +1335,7 @@ fn step_for_difference(
                     note: difference.note.clone(),
                 };
                 let (changed_sql, changed_rollback, _) =
-                    changed_definition_sql(&changed, target_type, plan);
+                    changed_definition_sql(&changed, target_type, target_postgres_major, plan);
                 return Some(DeployStep {
                     identity: identity.clone(),
                     kind: difference.object.kind.clone(),
@@ -1434,6 +1456,7 @@ pub fn plan_deploy(
             source_type,
             target_type,
             options.include_drops,
+            options.target_postgres_major,
             &mut plan,
         );
         let Some(step) = step else { continue };
@@ -2708,5 +2731,68 @@ mod tests {
         );
         let script = deploy_script(&plan, "");
         assert!(!script.lines().any(|line| line == "GO"));
+    }
+
+    fn postgres_trigger_plan(target_postgres_major: Option<u32>) -> DeployPlan {
+        let db = DatabaseType::Postgres;
+        let diffs = vec![ComparedDifference {
+            status: DifferenceStatus::Changed,
+            object: obj(
+                "public",
+                "orders.audit",
+                "TRIGGER",
+                "CREATE TRIGGER audit AFTER INSERT ON orders FOR EACH ROW EXECUTE FUNCTION log()",
+            ),
+            target_definition: Some(
+                "CREATE TRIGGER audit AFTER UPDATE ON orders FOR EACH ROW EXECUTE FUNCTION log()"
+                    .into(),
+            ),
+            note: String::new(),
+        }];
+        plan_deploy(
+            &diffs,
+            db,
+            db,
+            DeployOptions {
+                target_postgres_major,
+                ..DeployOptions::default()
+            },
+        )
+    }
+
+    #[test]
+    fn postgres_trigger_is_replaced_in_place_on_14_and_later() {
+        for major in [14, 16] {
+            let plan = postgres_trigger_plan(Some(major));
+            assert!(plan.warnings.is_empty(), "{:?}", plan.warnings);
+            assert!(plan.steps[0].runnable);
+            assert!(
+                plan.steps[0].sql.starts_with("CREATE OR REPLACE TRIGGER"),
+                "{}",
+                plan.steps[0].sql
+            );
+        }
+    }
+
+    #[test]
+    fn postgres_trigger_warns_firmly_before_14() {
+        let plan = postgres_trigger_plan(Some(13));
+        assert!(!plan.steps[0].runnable);
+        assert_eq!(plan.warnings.len(), 1);
+        assert_eq!(
+            plan.warnings[0].key(),
+            Some("services.schema_compare.warnings.postgres_trigger")
+        );
+    }
+
+    #[test]
+    fn postgres_trigger_warns_softly_when_the_version_is_unknown() {
+        let plan = postgres_trigger_plan(None);
+        assert!(!plan.steps[0].runnable);
+        assert_eq!(plan.warnings.len(), 1);
+        assert_eq!(
+            plan.warnings[0].key(),
+            Some("services.schema_compare.warnings.postgres_trigger_unknown_version")
+        );
     }
 }

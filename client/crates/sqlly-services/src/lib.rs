@@ -399,11 +399,22 @@ mod presentation_catalog_tests {
         entries
     }
 
+    /// `{{` and `}}` are literal braces (the `format` grammar), so they are
+    /// skipped rather than read as the start or end of a placeholder.
     fn placeholders(text: &str) -> BTreeSet<String> {
         let mut found = BTreeSet::new();
         let mut rest = text;
-        while let Some(start) = rest.find('{') {
-            let after = &rest[start + 1..];
+        while let Some(start) = rest.find(['{', '}']) {
+            rest = &rest[start..];
+            if rest.starts_with("{{") || rest.starts_with("}}") {
+                rest = &rest[2..];
+                continue;
+            }
+            if rest.starts_with('}') {
+                rest = &rest[1..];
+                continue;
+            }
+            let after = &rest[1..];
             let Some(end) = after.find('}') else {
                 panic!("unclosed placeholder in {text}");
             };

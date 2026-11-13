@@ -5750,13 +5750,13 @@ async fn ordinary_engine_is_unaffected_by_the_proxy_policy_check() {
 fn query_failures_map_plain_and_keyed_capability_errors_to_unsupported() {
     let keyed = StudioError::CapabilityNotSupportedMessage(sqlly_core::DisplayMessage::new(
         "services.query.errors.manual_commit_unavailable",
-        "Manual commit mode is not available on this port",
+        "Manual commit mode is not available for this query service",
     ));
     let display = keyed.to_string();
     let error = query_failure(keyed);
     assert_eq!(
         error,
-        EngineError::unsupported("Manual commit mode is not available on this port")
+        EngineError::unsupported("Manual commit mode is not available for this query service")
     );
     assert_eq!(error.code(), "unsupported");
     // The client rebuilds `CapabilityNotSupported(detail)` from the frame;
