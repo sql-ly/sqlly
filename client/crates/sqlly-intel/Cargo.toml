@@ -1,6 +1,6 @@
 [package]
 name = "sqlly-intel"
-version = "1.30.0"
+version = "1.31.0"
 edition.workspace = true
 license.workspace = true
 publish = false
@@ -13,7 +13,9 @@ publish = false
 [dependencies]
 serde = { workspace = true }
 # The Redis command grammar reads JSON argument lines on every target.
-serde_json = { workspace = true }
+# preserve_order: plan documents keep their properties in the order the engine wrote
+# them, whether or not another crate in the build happens to enable the feature.
+serde_json = { workspace = true, features = ["preserve_order"] }
 chrono = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }

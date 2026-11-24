@@ -45,7 +45,7 @@ operators: 12
                     estimated_rows: 96231
                     join_predicate: "order_id = id"
                     join_type: "INNER"
-                    properties: [{name="Build Max" value="400000"}, {name="Build Min" value="1"}]
+                    properties: [{name="Build Min" value="1"}, {name="Build Max" value="400000"}]
                   #9 SEQ_SCAN order_items [SEQ_SCAN]
                       estimated_cost: 1200000
                       estimated_rows: 1200000
@@ -58,7 +58,7 @@ operators: 12
                       estimated_rows: 83777
                       join_predicate: "customer_id = id"
                       join_type: "INNER"
-                      properties: [{name="Build Max" value="50000"}, {name="Build Min" value="1"}]
+                      properties: [{name="Build Min" value="1"}, {name="Build Max" value="50000"}]
                     #11 SEQ_SCAN orders [SEQ_SCAN]
                         estimated_cost: 100000
                         estimated_rows: 100000

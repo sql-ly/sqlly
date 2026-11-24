@@ -17,7 +17,7 @@ operators: 6
       estimated_cost: 23.573188
       loops: 1
       output_list: ["Actual time: 4.692853078 ms"]
-      properties: [{name="cost" value="23.57318802"}, {name="r_loops" value="1"}, {name="r_total_time_ms" value="4.692853078"}, {name="select_id" value="1"}]
+      properties: [{name="select_id" value="1"}, {name="cost" value="23.57318802"}, {name="r_loops" value="1"}, {name="r_total_time_ms" value="4.692853078"}]
       subplan_name: "Select #1"
     #2 Filesort [Filesort]
         actual_rows: 4
@@ -25,7 +25,7 @@ operators: 6
         actual_self_time_ms: 0.002458
         loops: 1
         peak_memory_kb: 3
-        properties: [{name="r_buffer_size" value="3KiB"}, {name="r_loops" value="1"}, {name="r_output_rows" value="4"}, {name="r_sort_mode" value="sort_key,rowid"}, {name="r_total_time_ms" value="0.002457864"}, {name="r_used_priority_queue" value="false"}]
+        properties: [{name="r_loops" value="1"}, {name="r_total_time_ms" value="0.002457864"}, {name="r_used_priority_queue" value="false"}, {name="r_output_rows" value="4"}, {name="r_buffer_size" value="3KiB"}, {name="r_sort_mode" value="sort_key,rowid"}]
         sort_keys: ["orders.`status`"]
       #3 Window functions computation [Window functions computation]
         #4 Filesort [Filesort]
@@ -34,7 +34,7 @@ operators: 6
             actual_self_time_ms: 0.005832
             loops: 1
             peak_memory_kb: 0.351563
-            properties: [{name="r_buffer_size" value="360"}, {name="r_loops" value="1"}, {name="r_output_rows" value="4"}, {name="r_sort_mode" value="sort_key,rowid"}, {name="r_total_time_ms" value="0.005832219"}, {name="r_used_priority_queue" value="false"}]
+            properties: [{name="r_loops" value="1"}, {name="r_total_time_ms" value="0.005832219"}, {name="r_used_priority_queue" value="false"}, {name="r_output_rows" value="4"}, {name="r_buffer_size" value="360"}, {name="r_sort_mode" value="sort_key,rowid"}]
             sort_keys: ["count(0) desc"]
         #5 Temporary table [Temporary table]
           #6 Table: orders [Access: ALL]
@@ -52,7 +52,7 @@ operators: 6
               filtered_percent: 63.073433
               loops: 1
               output_list: ["orders", "Condition: orders.placed_at > '2023-01-20'", "Actual time: 1.897553997 ms", "Actual filtered: 31.6%"]
-              properties: [{name="cost" value="6.6889758"}, {name="loops" value="1"}, {name="possible_keys" value="orders_placed_idx"}, {name="r_engine_stats.pages_accessed" value="130"}, {name="r_filtered" value="31.6"}, {name="r_other_time_ms" value="2.766512917"}, {name="r_table_time_ms" value="1.897553997"}, {name="r_total_filtered" value="31.6"}]
+              properties: [{name="possible_keys" value="orders_placed_idx"}, {name="loops" value="1"}, {name="cost" value="6.6889758"}, {name="r_table_time_ms" value="1.897553997"}, {name="r_other_time_ms" value="2.766512917"}, {name="r_engine_stats.pages_accessed" value="130"}, {name="r_total_filtered" value="31.6"}, {name="r_filtered" value="31.6"}]
               relation: "orders"
               rows_read: 40000
               rows_removed_by_filter: 27360

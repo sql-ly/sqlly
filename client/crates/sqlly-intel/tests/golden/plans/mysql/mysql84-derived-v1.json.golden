@@ -10,7 +10,7 @@ total_subtree_cost: 17908.73
 operators: 7
   #1 Query Block [Query Block]
       estimated_cost: 17908.73
-      properties: [{name="cost_info.query_cost" value="17908.73"}, {name="select_id" value="1"}]
+      properties: [{name="select_id" value="1"}, {name="cost_info.query_cost" value="17908.73"}]
       subplan_name: "Select #1"
     #2 Table: c [Access: ALL]
         estimated_cost: 502.8
@@ -20,7 +20,7 @@ operators: 7
         filtered_percent: 100
         output_columns: ["id", "name"]
         output_list: ["c"]
-        properties: [{name="cost_info.data_read_per_join" value="2M"}, {name="cost_info.eval_cost" value="497.30"}, {name="cost_info.prefix_cost" value="502.80"}, {name="cost_info.read_cost" value="5.50"}, {name="possible_keys" value="PRIMARY"}, {name="rows_produced_per_join" value="4973"}]
+        properties: [{name="possible_keys" value="PRIMARY"}, {name="rows_produced_per_join" value="4973"}, {name="cost_info.read_cost" value="5.50"}, {name="cost_info.eval_cost" value="497.30"}, {name="cost_info.prefix_cost" value="502.80"}, {name="cost_info.data_read_per_join" value="2M"}]
         relation: "c"
         warnings: [{TableScan={table="c"}}]
     #3 Table: d [Access: ref]
@@ -33,13 +33,13 @@ operators: 7
         index_name: "<auto_key0>"
         output_columns: ["customer_id", "t"]
         output_list: ["d", "Key: <auto_key0>"]
-        properties: [{name="cost_info.data_read_per_join" value="1M"}, {name="cost_info.eval_cost" value="4973.12"}, {name="cost_info.prefix_cost" value="17908.73"}, {name="cost_info.read_cost" value="12432.81"}, {name="key_length" value="4"}, {name="possible_keys" value="<auto_key0>"}, {name="ref" value="shop.c.id"}, {name="rows_produced_per_join" value="49731"}, {name="used_key_parts" value="customer_id"}]
+        properties: [{name="possible_keys" value="<auto_key0>"}, {name="used_key_parts" value="customer_id"}, {name="key_length" value="4"}, {name="ref" value="shop.c.id"}, {name="rows_produced_per_join" value="49731"}, {name="cost_info.read_cost" value="12432.81"}, {name="cost_info.eval_cost" value="4973.12"}, {name="cost_info.prefix_cost" value="17908.73"}, {name="cost_info.data_read_per_join" value="1M"}]
       #4 Materialized subquery [Materialized subquery]
           extra: ["Using temporary"]
-          properties: [{name="cacheable" value="true"}, {name="dependent" value="false"}, {name="using_temporary_table" value="true"}]
+          properties: [{name="using_temporary_table" value="true"}, {name="dependent" value="false"}, {name="cacheable" value="true"}]
         #5 Query Block [Query Block]
             estimated_cost: 4053.35
-            properties: [{name="cost_info.query_cost" value="4053.35"}, {name="select_id" value="2"}]
+            properties: [{name="select_id" value="2"}, {name="cost_info.query_cost" value="4053.35"}]
             subplan_name: "Select #2"
           #6 Grouping operation [Grouping operation]
               properties: [{name="using_filesort" value="false"}]
@@ -52,5 +52,5 @@ operators: 7
                 index_name: "orders_customer_idx"
                 output_columns: ["id", "customer_id", "total"]
                 output_list: ["orders", "Key: orders_customer_idx"]
-                properties: [{name="cost_info.data_read_per_join" value="2M"}, {name="cost_info.eval_cost" value="4013.10"}, {name="cost_info.prefix_cost" value="4053.35"}, {name="cost_info.read_cost" value="40.25"}, {name="key_length" value="4"}, {name="possible_keys" value="orders_customer_idx"}, {name="rows_produced_per_join" value="40131"}, {name="used_key_parts" value="customer_id"}]
+                properties: [{name="possible_keys" value="orders_customer_idx"}, {name="used_key_parts" value="customer_id"}, {name="key_length" value="4"}, {name="rows_produced_per_join" value="40131"}, {name="cost_info.read_cost" value="40.25"}, {name="cost_info.eval_cost" value="4013.10"}, {name="cost_info.prefix_cost" value="4053.35"}, {name="cost_info.data_read_per_join" value="2M"}]
                 relation: "orders"

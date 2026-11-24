@@ -10,11 +10,11 @@ total_subtree_cost: 967.2
 operators: 3
   #1 Query Block [Query Block]
       estimated_cost: 967.2
-      properties: [{name="cost_info.query_cost" value="967.20"}, {name="select_id" value="1"}]
+      properties: [{name="select_id" value="1"}, {name="cost_info.query_cost" value="967.20"}]
       subplan_name: "Select #1"
     #2 Grouping operation [Grouping operation]
         extra: ["Using temporary"]
-        properties: [{name="using_filesort" value="false"}, {name="using_temporary_table" value="true"}]
+        properties: [{name="using_temporary_table" value="true"}, {name="using_filesort" value="false"}]
       #3 Table: events [Access: ALL]
           estimated_cost: 967.2
           estimated_io: 647.17
@@ -25,6 +25,6 @@ operators: 3
           output_columns: ["happened_at", "kind"]
           output_list: ["events", "Condition: (`shop`.`events`.`happened_at` >= DATE'2025-03-01')"]
           partitions: ["p2025"]
-          properties: [{name="cost_info.data_read_per_join" value="150K"}, {name="cost_info.eval_cost" value="320.03"}, {name="cost_info.prefix_cost" value="967.20"}, {name="cost_info.read_cost" value="647.17"}, {name="rows_produced_per_join" value="3200"}]
+          properties: [{name="rows_produced_per_join" value="3200"}, {name="cost_info.read_cost" value="647.17"}, {name="cost_info.eval_cost" value="320.03"}, {name="cost_info.prefix_cost" value="967.20"}, {name="cost_info.data_read_per_join" value="150K"}]
           relation: "events"
           warnings: [{TableScan={table="events"}}]

@@ -17,7 +17,7 @@ operators: 6
       estimated_cost: 155.831382
       loops: 1
       output_list: ["Actual time: 28.68135161 ms"]
-      properties: [{name="cost" value="155.8313818"}, {name="r_loops" value="1"}, {name="r_total_time_ms" value="28.68135161"}, {name="select_id" value="1"}]
+      properties: [{name="select_id" value="1"}, {name="cost" value="155.8313818"}, {name="r_loops" value="1"}, {name="r_total_time_ms" value="28.68135161"}]
       subplan_name: "Select #1"
     #2 Filesort [Filesort]
         actual_rows: 2
@@ -25,7 +25,7 @@ operators: 6
         actual_self_time_ms: 0.026453
         loops: 1
         peak_memory_kb: 0.53125
-        properties: [{name="r_buffer_size" value="544"}, {name="r_loops" value="1"}, {name="r_output_rows" value="2"}, {name="r_sort_mode" value="sort_key,rowid"}, {name="r_total_time_ms" value="0.026453277"}, {name="r_used_priority_queue" value="false"}]
+        properties: [{name="r_loops" value="1"}, {name="r_total_time_ms" value="0.026453277"}, {name="r_used_priority_queue" value="false"}, {name="r_output_rows" value="2"}, {name="r_buffer_size" value="544"}, {name="r_sort_mode" value="sort_key,rowid"}]
         sort_keys: ["sum(oi.quantity * oi.unit_price) desc"]
       #3 Temporary table [Temporary table]
         #4 Table: o [Access: ALL]
@@ -43,7 +43,7 @@ operators: 6
             filtered_percent: 100
             loops: 1
             output_list: ["o", "Condition: o.`status` = 'paid'", "Actual time: 2.737393482 ms", "Actual filtered: 25%"]
-            properties: [{name="cost" value="6.6889758"}, {name="loops" value="1"}, {name="possible_keys" value="PRIMARY, orders_customer_idx"}, {name="r_engine_stats.pages_accessed" value="118"}, {name="r_filtered" value="25"}, {name="r_other_time_ms" value="1.157403791"}, {name="r_table_time_ms" value="2.737393482"}, {name="r_total_filtered" value="25"}]
+            properties: [{name="possible_keys" value="PRIMARY, orders_customer_idx"}, {name="loops" value="1"}, {name="cost" value="6.6889758"}, {name="r_table_time_ms" value="2.737393482"}, {name="r_other_time_ms" value="1.157403791"}, {name="r_engine_stats.pages_accessed" value="118"}, {name="r_total_filtered" value="25"}, {name="r_filtered" value="25"}]
             relation: "o"
             rows_read: 40000
             rows_removed_by_filter: 30000
@@ -63,7 +63,7 @@ operators: 6
             index_name: "PRIMARY"
             loops: 10000
             output_list: ["c", "Key: PRIMARY", "Actual time: 4.802915376 ms", "Actual filtered: 100%"]
-            properties: [{name="cost" value="35.91279404"}, {name="key_length" value="4"}, {name="loops" value="40131"}, {name="possible_keys" value="PRIMARY"}, {name="r_engine_stats.pages_accessed" value="20080"}, {name="r_filtered" value="100"}, {name="r_other_time_ms" value="0.214042424"}, {name="r_table_time_ms" value="4.802915376"}, {name="r_total_filtered" value="100"}, {name="ref" value="shop.o.customer_id"}, {name="used_key_parts" value="id"}]
+            properties: [{name="possible_keys" value="PRIMARY"}, {name="key_length" value="4"}, {name="used_key_parts" value="id"}, {name="ref" value="shop.o.customer_id"}, {name="loops" value="40131"}, {name="cost" value="35.91279404"}, {name="r_table_time_ms" value="4.802915376"}, {name="r_other_time_ms" value="0.214042424"}, {name="r_engine_stats.pages_accessed" value="20080"}, {name="r_total_filtered" value="100"}, {name="r_filtered" value="100"}]
             relation: "c"
             rows_read: 10000
         #6 Table: oi [Access: ref]
@@ -81,6 +81,6 @@ operators: 6
             index_name: "order_items_order_idx"
             loops: 10000
             output_list: ["oi", "Key: order_items_order_idx", "Actual time: 14.67856956 ms", "Actual filtered: 100%"]
-            properties: [{name="cost" value="113.229612"}, {name="key_length" value="4"}, {name="loops" value="40131"}, {name="possible_keys" value="order_items_order_idx"}, {name="r_engine_stats.pages_accessed" value="70065"}, {name="r_filtered" value="100"}, {name="r_other_time_ms" value="5.049076662"}, {name="r_table_time_ms" value="14.67856956"}, {name="r_total_filtered" value="100"}, {name="ref" value="shop.o.id"}, {name="used_key_parts" value="order_id"}]
+            properties: [{name="possible_keys" value="order_items_order_idx"}, {name="key_length" value="4"}, {name="used_key_parts" value="order_id"}, {name="ref" value="shop.o.id"}, {name="loops" value="40131"}, {name="cost" value="113.229612"}, {name="r_table_time_ms" value="14.67856956"}, {name="r_other_time_ms" value="5.049076662"}, {name="r_engine_stats.pages_accessed" value="70065"}, {name="r_total_filtered" value="100"}, {name="r_filtered" value="100"}]
             relation: "oi"
             rows_read: 25000

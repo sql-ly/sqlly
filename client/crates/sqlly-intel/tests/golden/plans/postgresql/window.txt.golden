@@ -24,7 +24,7 @@ operators: 4
       estimated_rows: 4249
       estimated_startup_cost: 3584.35
       loops: 1
-      properties: [{name="Storage" value="Memory Maximum Storage: 17kB"}, {name="Window" value="w1 AS (PARTITION BY customer_id ORDER BY placed_at ROWS UNBOUNDED PRECEDING)"}]
+      properties: [{name="Window" value="w1 AS (PARTITION BY customer_id ORDER BY placed_at ROWS UNBOUNDED PRECEDING)"}, {name="Storage" value="Memory Maximum Storage: 17kB"}]
     #2 Sort [Sort]
         actual_rows: 3992
         actual_rows_total: 3992

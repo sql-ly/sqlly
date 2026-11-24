@@ -13,7 +13,7 @@ operators: 5
   #1 Aggregate: count(0) [Aggregate: count(0)]
       estimated_cost: 364861.382955
       estimated_rows: 1
-      properties: [{name="access_type" value="aggregate"}, {name="functions" value="count(0)"}]
+      properties: [{name="functions" value="count(0)"}, {name="access_type" value="aggregate"}]
     #2 Inner hash join (c.`name` = p.`name`) [Inner hash join (c.`name` = p.`name`)]
         estimated_cost: 331711.365011
         estimated_rows: 331500.179438
@@ -36,7 +36,7 @@ operators: 5
           estimated_rows: 666.599989
           filter: "p.price > 100.00"
           output_list: ["Condition: (p.price > 100.00)"]
-          properties: [{name="access_type" value="filter"}, {name="heading" value="Hash"}]
+          properties: [{name="heading" value="Hash"}, {name="access_type" value="filter"}]
         #5 Table scan on p [Table scan on p]
             alias: "p"
             estimated_cost: 202.25

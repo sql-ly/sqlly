@@ -10,13 +10,13 @@ total_subtree_cost: 24118.35
 operators: 4
   #1 Query Block [Query Block]
       estimated_cost: 24118.35
-      properties: [{name="cost_info.query_cost" value="24118.35"}, {name="select_id" value="1"}]
+      properties: [{name="select_id" value="1"}, {name="cost_info.query_cost" value="24118.35"}]
       subplan_name: "Select #1"
     #2 Windowing [Windowing]
-        properties: [{name="cost_info.sort_cost" value="20065.00"}, {name="windows" value="[{\"filesort_key\":[\"count(0) desc\"],\"functions\":[\"rank\"],\"name\":\"<unnamed window>\",\"using_filesort\":true}]"}]
+        properties: [{name="windows" value="[{\"name\":\"<unnamed window>\",\"using_filesort\":true,\"filesort_key\":[\"count(0) desc\"],\"functions\":[\"rank\"]}]"}, {name="cost_info.sort_cost" value="20065.00"}]
       #3 Grouping operation [Grouping operation]
           extra: ["Using temporary"]
-          properties: [{name="using_filesort" value="false"}, {name="using_temporary_table" value="true"}]
+          properties: [{name="using_temporary_table" value="true"}, {name="using_filesort" value="false"}]
         #4 Table: orders [Access: ALL]
             estimated_cost: 4053.35
             estimated_io: 2046.85
@@ -26,6 +26,6 @@ operators: 4
             filtered_percent: 50
             output_columns: ["id", "status", "placed_at"]
             output_list: ["orders", "Condition: (`shop`.`orders`.`placed_at` > TIMESTAMP'2023-01-20 00:00:00')"]
-            properties: [{name="cost_info.data_read_per_join" value="1M"}, {name="cost_info.eval_cost" value="2006.50"}, {name="cost_info.prefix_cost" value="4053.35"}, {name="cost_info.read_cost" value="2046.85"}, {name="possible_keys" value="orders_placed_idx"}, {name="rows_produced_per_join" value="20065"}]
+            properties: [{name="possible_keys" value="orders_placed_idx"}, {name="rows_produced_per_join" value="20065"}, {name="cost_info.read_cost" value="2046.85"}, {name="cost_info.eval_cost" value="2006.50"}, {name="cost_info.prefix_cost" value="4053.35"}, {name="cost_info.data_read_per_join" value="1M"}]
             relation: "orders"
             warnings: [{TableScan={table="orders"}}]

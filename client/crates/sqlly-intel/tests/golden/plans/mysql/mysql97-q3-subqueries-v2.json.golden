@@ -13,7 +13,7 @@ operators: 11
   #1 Limit: 20 row(s) [Limit: 20 row(s)]
       estimated_cost: 6674121.110726
       estimated_rows: 20
-      properties: [{name="access_type" value="limit"}, {name="limit" value="20"}, {name="limit_offset" value="0"}]
+      properties: [{name="limit" value="20"}, {name="access_type" value="limit"}, {name="limit_offset" value="0"}]
     #2 Nested loop inner join [Nested loop inner join]
         estimated_cost: 6674121.110726
         estimated_rows: 66731178.107257
@@ -49,7 +49,7 @@ operators: 11
           index_name: "<auto_distinct_key>"
           output_columns: ["customer_id"]
           output_list: ["<subquery3>", "Key: <auto_distinct_key>"]
-          properties: [{name="access_type" value="index"}, {name="covering" value="false"}, {name="index_access_type" value="index_lookup"}, {name="key_columns" value="customer_id"}, {name="lookup_references" value="shop.c.id"}]
+          properties: [{name="covering" value="false"}, {name="access_type" value="index"}, {name="key_columns" value="customer_id"}, {name="index_access_type" value="index_lookup"}, {name="lookup_references" value="shop.c.id"}]
         #7 Materialize with deduplication [Materialize with deduplication]
             estimated_cost: 7135.299788
             estimated_rows: 13375.662078
@@ -74,7 +74,7 @@ operators: 11
     #10 Aggregate: max(o.total) [Aggregate: max(o.total)]
         estimated_cost: 4.680994
         estimated_rows: 1
-        properties: [{name="access_type" value="aggregate"}, {name="dependent" value="true"}, {name="functions" value="max(o.total)"}, {name="heading" value="Select #2 (subquery in projection; dependent)"}, {name="subquery" value="true"}, {name="subquery_location" value="projection"}]
+        properties: [{name="heading" value="Select #2 (subquery in projection; dependent)"}, {name="subquery" value="true"}, {name="dependent" value="true"}, {name="functions" value="max(o.total)"}, {name="access_type" value="aggregate"}, {name="subquery_location" value="projection"}]
         subplan_name: "Select #2 (subquery in projection; dependent)"
       #11 Index lookup on o using orders_customer_idx (customer_id = c.id) [Index lookup on o using orders_customer_idx (customer_id = c.id)]
           alias: "o"
@@ -84,7 +84,7 @@ operators: 11
           index_name: "orders_customer_idx"
           output_columns: ["customer_id", "total"]
           output_list: ["orders", "Key: orders_customer_idx"]
-          properties: [{name="access_type" value="index"}, {name="covering" value="false"}, {name="index_access_type" value="index_lookup"}, {name="key_columns" value="customer_id"}, {name="lookup_references" value="shop.c.id"}]
+          properties: [{name="covering" value="false"}, {name="access_type" value="index"}, {name="key_columns" value="customer_id"}, {name="index_access_type" value="index_lookup"}, {name="lookup_references" value="shop.c.id"}]
           relation: "orders"
           relation_resolved: yes
           schema: "shop"

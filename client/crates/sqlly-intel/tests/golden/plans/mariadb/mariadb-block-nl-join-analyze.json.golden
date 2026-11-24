@@ -17,7 +17,7 @@ operators: 4
       estimated_cost: 927.924386
       loops: 1
       output_list: ["Actual time: 197.4568027 ms"]
-      properties: [{name="cost" value="927.9243858"}, {name="r_loops" value="1"}, {name="r_total_time_ms" value="197.4568027"}, {name="select_id" value="1"}]
+      properties: [{name="select_id" value="1"}, {name="cost" value="927.9243858"}, {name="r_loops" value="1"}, {name="r_total_time_ms" value="197.4568027"}]
       subplan_name: "Select #1"
     #2 Table: p [Access: ALL]
         actual_rebinds: 1
@@ -34,7 +34,7 @@ operators: 4
         filtered_percent: 100
         loops: 1
         output_list: ["p", "Condition: p.price > 100", "Actual time: 0.107562775 ms", "Actual filtered: 80%"]
-        properties: [{name="cost" value="0.3436932"}, {name="loops" value="1"}, {name="r_engine_stats.pages_accessed" value="9"}, {name="r_filtered" value="80"}, {name="r_other_time_ms" value="0.070319893"}, {name="r_table_time_ms" value="0.107562775"}, {name="r_total_filtered" value="80"}]
+        properties: [{name="loops" value="1"}, {name="cost" value="0.3436932"}, {name="r_table_time_ms" value="0.107562775"}, {name="r_other_time_ms" value="0.070319893"}, {name="r_engine_stats.pages_accessed" value="9"}, {name="r_total_filtered" value="80"}, {name="r_filtered" value="80"}]
         relation: "p"
         rows_read: 2000
         rows_removed_by_filter: 400
@@ -43,7 +43,7 @@ operators: 4
         join_predicate: "c.`name` = p.`name`"
         loops: 1600
         output_list: ["Condition: c.`name` = p.`name`"]
-        properties: [{name="attached_condition" value="c.`name` = p.`name`"}, {name="buffer_size" value="256KiB"}, {name="buffer_type" value="flat"}, {name="join_type" value="BNL"}, {name="r_effective_rows" value="5000"}, {name="r_filtered" value="0"}, {name="r_loops" value="1600"}, {name="r_other_time_ms" value="123.7942565"}, {name="r_unpack_time_ms" value="73.0368325"}]
+        properties: [{name="buffer_type" value="flat"}, {name="buffer_size" value="256KiB"}, {name="join_type" value="BNL"}, {name="attached_condition" value="c.`name` = p.`name`"}, {name="r_loops" value="1600"}, {name="r_filtered" value="0"}, {name="r_unpack_time_ms" value="73.0368325"}, {name="r_other_time_ms" value="123.7942565"}, {name="r_effective_rows" value="5000"}]
       #4 Table: c [Access: ALL]
           actual_rebinds: 1
           actual_rows: 5000
@@ -58,7 +58,7 @@ operators: 4
           filtered_percent: 100
           loops: 1
           output_list: ["c", "Actual time: 0.394466274 ms", "Actual filtered: 100%"]
-          properties: [{name="cost" value="927.5806926"}, {name="loops" value="2000"}, {name="r_engine_stats.pages_accessed" value="22"}, {name="r_filtered" value="100"}, {name="r_other_time_ms" value="0.049948787"}, {name="r_table_time_ms" value="0.394466274"}, {name="r_total_filtered" value="100"}]
+          properties: [{name="loops" value="2000"}, {name="cost" value="927.5806926"}, {name="r_table_time_ms" value="0.394466274"}, {name="r_other_time_ms" value="0.049948787"}, {name="r_engine_stats.pages_accessed" value="22"}, {name="r_total_filtered" value="100"}, {name="r_filtered" value="100"}]
           relation: "c"
           rows_read: 5000
           warnings: [{TableScan={table="c"}}]

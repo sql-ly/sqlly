@@ -49,6 +49,7 @@ SYMBOL_CODEPOINTS = [
     0x2013, 0x2014,                                      # en/em dash
     0x2019, 0x201C, 0x201D,                              # curly quotes
     0x2022, 0x2026, 0x2039, 0x203A,                      # bullet, ellipsis, single angle quotes
+    0x202F,                                              # narrow no-break space (French digit grouping)
     0x2070, 0x2074, 0x2075, 0x2076, 0x2077, 0x2078, 0x2079,  # superscript digits
     0x20AC,                                              # euro
     0x2190, 0x2191, 0x2192, 0x2193, 0x2194,             # arrows

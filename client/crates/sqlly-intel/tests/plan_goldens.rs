@@ -623,8 +623,8 @@ mod plan_documents {
                 (!parts.is_empty()).then(|| format!("[{}]", parts.join(", ")))
             }
             Value::Object(map) => {
-                let parts: Vec<String> = map
-                    .iter()
+                let parts: Vec<String> = sorted(map)
+                    .into_iter()
                     .filter_map(|(key, value)| compact(value).map(|value| format!("{key}={value}")))
                     .collect();
                 (!parts.is_empty()).then(|| format!("{{{}}}", parts.join(" ")))
@@ -632,9 +632,18 @@ mod plan_documents {
         }
     }
 
+    /// Keys in name order. Whether serde_json keeps insertion order depends on
+    /// its `preserve_order` feature, which a workspace-wide test build turns on
+    /// and a per-crate build may not, so the dump must not depend on it.
+    fn sorted(map: &serde_json::Map<String, Value>) -> Vec<(&String, &Value)> {
+        let mut entries: Vec<_> = map.iter().collect();
+        entries.sort_by(|a, b| a.0.cmp(b.0));
+        entries
+    }
+
     fn fields(out: &mut String, indent: &str, value: &Value, skip: &[&str]) {
         let Some(map) = value.as_object() else { return };
-        for (key, value) in map {
+        for (key, value) in sorted(map) {
             if skip.contains(&key.as_str()) {
                 continue;
             }

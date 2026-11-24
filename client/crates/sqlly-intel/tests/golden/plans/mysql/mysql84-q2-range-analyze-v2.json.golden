@@ -50,7 +50,7 @@ operators: 5
           loops: 1
           output_columns: ["id", "name"]
           output_list: ["Actual time: 0.027208 ms", "customers", "Key: PRIMARY"]
-          properties: [{name="access_type" value="index"}, {name="covering" value="false"}, {name="index_access_type" value="index_range_scan"}]
+          properties: [{name="covering" value="false"}, {name="access_type" value="index"}, {name="index_access_type" value="index_range_scan"}]
           relation: "customers"
           relation_resolved: yes
           schema: "shop"
@@ -80,7 +80,7 @@ operators: 5
           loops: 41
           output_columns: ["id", "customer_id", "total"]
           output_list: ["Actual time: 0.015185975609756095 ms", "orders", "Key: orders_customer_idx"]
-          properties: [{name="access_type" value="index"}, {name="covering" value="false"}, {name="index_access_type" value="index_lookup"}]
+          properties: [{name="covering" value="false"}, {name="access_type" value="index"}, {name="index_access_type" value="index_lookup"}]
           relation: "orders"
           relation_resolved: yes
           schema: "shop"

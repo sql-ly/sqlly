@@ -21,7 +21,7 @@ operators: 2
       estimated_startup_cost: 0.42
       loops: 1
       output_list: ["orders"]
-      properties: [{name="Operation" value="Update"}, {name="WAL Bytes" value="1543871"}, {name="WAL FPI" value="205"}, {name="WAL Records" value="1004"}]
+      properties: [{name="Operation" value="Update"}, {name="WAL Records" value="1004"}, {name="WAL FPI" value="205"}, {name="WAL Bytes" value="1543871"}]
       relation: "orders"
     #2 Index Scan [Index Scan]
         actual_rows: 199

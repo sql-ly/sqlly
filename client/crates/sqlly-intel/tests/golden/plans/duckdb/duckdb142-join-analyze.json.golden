@@ -119,7 +119,7 @@ operators: 13
                           filter: "status='paid'"
                           output_columns: ["id", "customer_id"]
                           output_list: ["id", "customer_id"]
-                          properties: [{name="Type" value="Sequential Scan"}, {name="operator_rows_scanned" value="1600000"}, {name="result_set_size" value="1600000"}]
+                          properties: [{name="Type" value="Sequential Scan"}, {name="result_set_size" value="1600000"}, {name="operator_rows_scanned" value="1600000"}]
                           relation: "orders"
                       #13 TABLE_SCAN customers [TABLE_SCAN]
                           actual_rows: 50000
@@ -130,6 +130,6 @@ operators: 13
                           estimated_rows: 50000
                           output_columns: ["id", "country"]
                           output_list: ["id", "country"]
-                          properties: [{name="Type" value="Sequential Scan"}, {name="operator_rows_scanned" value="50000"}, {name="result_set_size" value="1200000"}]
+                          properties: [{name="Type" value="Sequential Scan"}, {name="result_set_size" value="1200000"}, {name="operator_rows_scanned" value="50000"}]
                           relation: "customers"
                           warnings: [{TableScan={table="customers"}}]

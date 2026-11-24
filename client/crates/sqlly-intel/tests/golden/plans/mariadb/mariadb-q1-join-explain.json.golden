@@ -10,7 +10,7 @@ total_subtree_cost: 155.831382
 operators: 6
   #1 Query Block [Query Block]
       estimated_cost: 155.831382
-      properties: [{name="cost" value="155.8313818"}, {name="select_id" value="1"}]
+      properties: [{name="select_id" value="1"}, {name="cost" value="155.8313818"}]
       subplan_name: "Select #1"
     #2 Filesort [Filesort]
         sort_keys: ["sum(oi.quantity * oi.unit_price) desc"]
@@ -23,7 +23,7 @@ operators: 6
             filter: "o.`status` = 'paid'"
             filtered_percent: 100
             output_list: ["o", "Condition: o.`status` = 'paid'"]
-            properties: [{name="cost" value="6.6889758"}, {name="loops" value="1"}, {name="possible_keys" value="PRIMARY, orders_customer_idx"}]
+            properties: [{name="possible_keys" value="PRIMARY, orders_customer_idx"}, {name="loops" value="1"}, {name="cost" value="6.6889758"}]
             relation: "o"
             warnings: [{TableScan={table="o"}}]
         #5 Table: c [Access: eq_ref]
@@ -34,7 +34,7 @@ operators: 6
             filtered_percent: 100
             index_name: "PRIMARY"
             output_list: ["c", "Key: PRIMARY"]
-            properties: [{name="cost" value="35.91279404"}, {name="key_length" value="4"}, {name="loops" value="40131"}, {name="possible_keys" value="PRIMARY"}, {name="ref" value="shop.o.customer_id"}, {name="used_key_parts" value="id"}]
+            properties: [{name="possible_keys" value="PRIMARY"}, {name="key_length" value="4"}, {name="used_key_parts" value="id"}, {name="ref" value="shop.o.customer_id"}, {name="loops" value="40131"}, {name="cost" value="35.91279404"}]
             relation: "c"
         #6 Table: oi [Access: ref]
             estimated_cost: 113.229612
@@ -44,5 +44,5 @@ operators: 6
             filtered_percent: 100
             index_name: "order_items_order_idx"
             output_list: ["oi", "Key: order_items_order_idx"]
-            properties: [{name="cost" value="113.229612"}, {name="key_length" value="4"}, {name="loops" value="40131"}, {name="possible_keys" value="order_items_order_idx"}, {name="ref" value="shop.o.id"}, {name="used_key_parts" value="order_id"}]
+            properties: [{name="possible_keys" value="order_items_order_idx"}, {name="key_length" value="4"}, {name="used_key_parts" value="order_id"}, {name="ref" value="shop.o.id"}, {name="loops" value="40131"}, {name="cost" value="113.229612"}]
             relation: "oi"

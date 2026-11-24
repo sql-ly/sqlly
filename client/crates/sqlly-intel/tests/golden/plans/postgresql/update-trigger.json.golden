@@ -21,7 +21,7 @@ operators: 2
       estimated_startup_cost: 0.42
       loops: 1
       output_list: ["orders"]
-      properties: [{name="Operation" value="Update"}, {name="WAL Buffers Full" value="0"}, {name="WAL Bytes" value="70726"}, {name="WAL FPI" value="0"}, {name="WAL Records" value="997"}]
+      properties: [{name="Operation" value="Update"}, {name="WAL Records" value="997"}, {name="WAL FPI" value="0"}, {name="WAL Bytes" value="70726"}, {name="WAL Buffers Full" value="0"}]
       relation: "orders"
     #2 Index Scan [Index Scan]
         actual_rows: 199
@@ -39,5 +39,5 @@ operators: 2
         loops: 1
         output_list: ["orders", "Index Cond: (id < 200)", "Index: orders_pkey"]
         parent_relationship: "Outer"
-        properties: [{name="Index Searches" value="1"}, {name="WAL Buffers Full" value="0"}, {name="WAL Bytes" value="0"}, {name="WAL FPI" value="0"}, {name="WAL Records" value="0"}]
+        properties: [{name="Index Searches" value="1"}, {name="WAL Records" value="0"}, {name="WAL FPI" value="0"}, {name="WAL Bytes" value="0"}, {name="WAL Buffers Full" value="0"}]
         relation: "orders"

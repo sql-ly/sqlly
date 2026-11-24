@@ -17,7 +17,7 @@ operators: 11
       estimated_cost: 15.083913
       loops: 1
       output_list: ["Actual time: 4.878442608 ms"]
-      properties: [{name="cost" value="15.08391288"}, {name="r_loops" value="1"}, {name="r_total_time_ms" value="4.878442608"}, {name="select_id" value="1"}]
+      properties: [{name="select_id" value="1"}, {name="cost" value="15.08391288"}, {name="r_loops" value="1"}, {name="r_total_time_ms" value="4.878442608"}]
       subplan_name: "Select #1"
     #2 Read sorted file [Read sorted file]
         actual_rows: 295
@@ -29,7 +29,7 @@ operators: 11
           actual_self_time_ms: 1.42981
           loops: 1
           peak_memory_kb: 2047
-          properties: [{name="r_buffer_size" value="2047KiB"}, {name="r_loops" value="1"}, {name="r_output_rows" value="5000"}, {name="r_sort_mode" value="packed_sort_key,rowid"}, {name="r_total_time_ms" value="1.429810061"}, {name="r_used_priority_queue" value="false"}]
+          properties: [{name="r_loops" value="1"}, {name="r_total_time_ms" value="1.429810061"}, {name="r_used_priority_queue" value="false"}, {name="r_output_rows" value="5000"}, {name="r_buffer_size" value="2047KiB"}, {name="r_sort_mode" value="packed_sort_key,rowid"}]
           sort_keys: ["c.`name`"]
         #4 Table: c [Access: ALL]
             actual_rebinds: 1
@@ -45,7 +45,7 @@ operators: 11
             filtered_percent: 100
             loops: 1
             output_list: ["c", "Actual time: 0.381635393 ms", "Actual filtered: 100%"]
-            properties: [{name="cost" value="0.8420126"}, {name="loops" value="1"}, {name="possible_keys" value="PRIMARY"}, {name="r_engine_stats.pages_accessed" value="614"}, {name="r_filtered" value="100"}, {name="r_other_time_ms" value="1.200062305"}, {name="r_table_time_ms" value="0.381635393"}, {name="r_total_filtered" value="100"}]
+            properties: [{name="possible_keys" value="PRIMARY"}, {name="loops" value="1"}, {name="cost" value="0.8420126"}, {name="r_table_time_ms" value="0.381635393"}, {name="r_other_time_ms" value="1.200062305"}, {name="r_engine_stats.pages_accessed" value="614"}, {name="r_total_filtered" value="100"}, {name="r_filtered" value="100"}]
             relation: "c"
             rows_read: 5000
             warnings: [{TableScan={table="c"}}]
@@ -62,7 +62,7 @@ operators: 11
         index_name: "distinct_key"
         loops: 295
         output_list: ["<subquery3>", "Key: distinct_key", "Actual time: 0.034368431 ms", "Actual filtered: 100%"]
-        properties: [{name="key_length" value="4"}, {name="possible_keys" value="distinct_key"}, {name="r_filtered" value="100"}, {name="r_other_time_ms" value="0.035159947"}, {name="r_table_loops" value="691"}, {name="r_table_time_ms" value="0.034368431"}, {name="r_total_filtered" value="100"}, {name="ref" value="func"}, {name="used_key_parts" value="customer_id"}]
+        properties: [{name="possible_keys" value="distinct_key"}, {name="key_length" value="4"}, {name="used_key_parts" value="customer_id"}, {name="ref" value="func"}, {name="r_table_loops" value="691"}, {name="r_table_time_ms" value="0.034368431"}, {name="r_other_time_ms" value="0.035159947"}, {name="r_total_filtered" value="100"}, {name="r_filtered" value="100"}]
         rows_read: 20
       #6 Materialized subquery [Materialized subquery]
           properties: [{name="unique" value="1"}]
@@ -84,21 +84,21 @@ operators: 11
               filtered_percent: 100
               loops: 1
               output_list: ["orders", "Condition: orders.total > 900", "Actual time: 1.989994662 ms", "Actual filtered: 0.99%"]
-              properties: [{name="cost" value="6.6889758"}, {name="loops" value="1"}, {name="possible_keys" value="orders_customer_idx"}, {name="r_engine_stats.pages_accessed" value="118"}, {name="r_filtered" value="0.99"}, {name="r_other_time_ms" value="1.02559565"}, {name="r_table_time_ms" value="1.989994662"}, {name="r_total_filtered" value="0.99"}]
+              properties: [{name="possible_keys" value="orders_customer_idx"}, {name="loops" value="1"}, {name="cost" value="6.6889758"}, {name="r_table_time_ms" value="1.989994662"}, {name="r_other_time_ms" value="1.02559565"}, {name="r_engine_stats.pages_accessed" value="118"}, {name="r_total_filtered" value="0.99"}, {name="r_filtered" value="0.99"}]
               relation: "orders"
               rows_read: 40000
               rows_removed_by_filter: 39604
               warnings: [{TableScan={table="orders"}}]
     #9 Subquery cache [Subquery cache]
         loops: 20
-        properties: [{name="r_hit_ratio" value="0"}, {name="r_loops" value="20"}, {name="subquery_list" value="subqueries"}]
+        properties: [{name="r_loops" value="20"}, {name="r_hit_ratio" value="0"}, {name="subquery_list" value="subqueries"}]
       #10 Query Block [Query Block]
           actual_self_time_ms: 0.008165
           actual_time_ms: 0.160344
           estimated_cost: 0.016147
           loops: 20
           output_list: ["Actual time: 0.160344354 ms"]
-          properties: [{name="cost" value="0.01614704"}, {name="r_loops" value="20"}, {name="r_total_time_ms" value="0.160344354"}, {name="select_id" value="2"}]
+          properties: [{name="select_id" value="2"}, {name="cost" value="0.01614704"}, {name="r_loops" value="20"}, {name="r_total_time_ms" value="0.160344354"}]
           subplan_name: "Select #2"
         #11 Table: o [Access: ref]
             actual_rebinds: 20
@@ -115,6 +115,6 @@ operators: 11
             index_name: "orders_customer_idx"
             loops: 20
             output_list: ["o", "Key: orders_customer_idx", "Actual time: 0.138681828 ms", "Actual filtered: 100%"]
-            properties: [{name="cost" value="0.01614704"}, {name="key_length" value="4"}, {name="loops" value="1"}, {name="possible_keys" value="orders_customer_idx"}, {name="r_engine_stats.pages_accessed" value="360"}, {name="r_filtered" value="100"}, {name="r_other_time_ms" value="0.01349742"}, {name="r_table_time_ms" value="0.138681828"}, {name="r_total_filtered" value="100"}, {name="ref" value="shop.c.id"}, {name="used_key_parts" value="customer_id"}]
+            properties: [{name="possible_keys" value="orders_customer_idx"}, {name="key_length" value="4"}, {name="used_key_parts" value="customer_id"}, {name="ref" value="shop.c.id"}, {name="loops" value="1"}, {name="cost" value="0.01614704"}, {name="r_table_time_ms" value="0.138681828"}, {name="r_other_time_ms" value="0.01349742"}, {name="r_engine_stats.pages_accessed" value="360"}, {name="r_total_filtered" value="100"}, {name="r_filtered" value="100"}]
             relation: "o"
             rows_read: 160

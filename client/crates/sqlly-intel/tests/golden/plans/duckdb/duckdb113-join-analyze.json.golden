@@ -87,7 +87,7 @@ operators: 13
                       estimated_rows: 96231
                       join_predicate: "order_id = id"
                       join_type: "INNER"
-                      properties: [{name="Build Max" value="400000"}, {name="Build Min" value="1"}, {name="result_set_size" value="16800000"}]
+                      properties: [{name="Build Min" value="1"}, {name="Build Max" value="400000"}, {name="result_set_size" value="16800000"}]
                     #10 TABLE_SCAN order_items [TABLE_SCAN]
                         actual_rows: 1199991
                         actual_rows_total: 1199991
@@ -97,7 +97,7 @@ operators: 13
                         estimated_rows: 1200000
                         output_columns: ["order_id", "quantity", "unit_price"]
                         output_list: ["order_id", "quantity", "unit_price"]
-                        properties: [{name="operator_rows_scanned" value="12000000"}, {name="result_set_size" value="38399712"}]
+                        properties: [{name="result_set_size" value="38399712"}, {name="operator_rows_scanned" value="12000000"}]
                         relation: "order_items"
                         warnings: [{TableScan={table="order_items"}}]
                     #11 HASH_JOIN [HASH_JOIN]
@@ -109,7 +109,7 @@ operators: 13
                         estimated_rows: 83777
                         join_predicate: "customer_id = id"
                         join_type: "INNER"
-                        properties: [{name="Build Max" value="50000"}, {name="Build Min" value="1"}, {name="result_set_size" value="4000000"}]
+                        properties: [{name="Build Min" value="1"}, {name="Build Max" value="50000"}, {name="result_set_size" value="4000000"}]
                       #12 TABLE_SCAN orders [TABLE_SCAN]
                           actual_rows: 100000
                           actual_rows_total: 100000

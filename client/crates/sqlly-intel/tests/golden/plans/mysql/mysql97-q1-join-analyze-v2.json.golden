@@ -105,7 +105,7 @@ operators: 9
                 loops: 10000
                 output_columns: ["id", "country"]
                 output_list: ["Actual time: 0.0006521063 ms", "customers", "Key: PRIMARY"]
-                properties: [{name="access_type" value="index"}, {name="covering" value="false"}, {name="index_access_type" value="index_lookup"}, {name="key_columns" value="id"}, {name="lookup_references" value="shop.o.customer_id"}]
+                properties: [{name="covering" value="false"}, {name="access_type" value="index"}, {name="key_columns" value="id"}, {name="index_access_type" value="index_lookup"}, {name="lookup_references" value="shop.o.customer_id"}]
                 relation: "customers"
                 relation_resolved: yes
                 schema: "shop"
@@ -123,7 +123,7 @@ operators: 9
               loops: 10000
               output_columns: ["id", "order_id", "quantity", "unit_price"]
               output_list: ["Actual time: 0.0022092328 ms", "order_items", "Key: order_items_order_idx"]
-              properties: [{name="access_type" value="index"}, {name="covering" value="false"}, {name="index_access_type" value="index_lookup"}, {name="key_columns" value="order_id"}, {name="lookup_references" value="shop.o.id"}]
+              properties: [{name="covering" value="false"}, {name="access_type" value="index"}, {name="key_columns" value="order_id"}, {name="index_access_type" value="index_lookup"}, {name="lookup_references" value="shop.o.id"}]
               relation: "order_items"
               relation_resolved: yes
               schema: "shop"

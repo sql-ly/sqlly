@@ -21,7 +21,7 @@ members = [
 ]
 
 [workspace.package]
-version = "1.42.1"
+version = "1.42.3"
 edition = "2024"
 license = "PolyForm-Small-Business-1.0.0 OR LicenseRef-SQLly-Commercial"
 rust-version = "1.96"
@@ -112,7 +112,7 @@ lopdf = { version = "0.47", default-features = false }
 sqlly-core = { path = "crates/sqlly-core", version = "1.27.0" }
 sqlly-ai = { path = "crates/sqlly-ai", version = "1.10.0" }
 sqlly-engines = { path = "crates/sqlly-engines", version = "1.35.0" }
-sqlly-intel = { path = "crates/sqlly-intel", version = "1.30.0" }
+sqlly-intel = { path = "crates/sqlly-intel", version = "1.31.0" }
 sqlly-lang = { path = "crates/sqlly-lang", version = "1.21.0" }
 sqlly-testkit = { path = "crates/sqlly-testkit", version = "1.1.0" }
 sqlly-services = { path = "crates/sqlly-services", version = "1.43.0" }

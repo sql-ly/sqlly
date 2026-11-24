@@ -51,7 +51,7 @@ operators: 9
                 index_name: "PRIMARY"
                 output_columns: ["id", "country"]
                 output_list: ["customers", "Key: PRIMARY"]
-                properties: [{name="access_type" value="index"}, {name="covering" value="false"}, {name="index_access_type" value="index_lookup"}]
+                properties: [{name="covering" value="false"}, {name="access_type" value="index"}, {name="index_access_type" value="index_lookup"}]
                 relation: "customers"
                 relation_resolved: yes
                 schema: "shop"
@@ -63,7 +63,7 @@ operators: 9
               index_name: "order_items_order_idx"
               output_columns: ["id", "order_id", "quantity", "unit_price"]
               output_list: ["order_items", "Key: order_items_order_idx"]
-              properties: [{name="access_type" value="index"}, {name="covering" value="false"}, {name="index_access_type" value="index_lookup"}]
+              properties: [{name="covering" value="false"}, {name="access_type" value="index"}, {name="index_access_type" value="index_lookup"}]
               relation: "order_items"
               relation_resolved: yes
               schema: "shop"

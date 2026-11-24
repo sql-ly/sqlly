@@ -1942,8 +1942,16 @@ impl ResultsView {
             source_db_type: None,
             layout_scope: None,
             saved_filter_store_for_test: None,
+            // Tests never touch the real column-layouts.json: a width one test
+            // saves there would come back as the starting width of the next run.
+            #[cfg(not(test))]
             layout_store: None,
+            #[cfg(not(test))]
             layout_store_mode: LayoutStoreMode::Disk,
+            #[cfg(test)]
+            layout_store: Some(crate::column_layout::ColumnLayoutStore::default()),
+            #[cfg(test)]
+            layout_store_mode: LayoutStoreMode::MemoryOnly,
             background_read: None,
             spill_drills: Vec::new(),
             spill_drill_generation: 0,
@@ -10785,6 +10793,14 @@ impl ResultsView {
     ) {
         self.layout_store = Some(store);
         self.layout_store_mode = LayoutStoreMode::MemoryOnly;
+    }
+
+    /// Tests that exercise the real file: only call this with storage
+    /// redirected to a temp directory.
+    #[cfg(test)]
+    pub(crate) fn use_disk_layout_store_for_test(&mut self) {
+        self.layout_store = None;
+        self.layout_store_mode = LayoutStoreMode::Disk;
     }
 
     /// Stop writing layouts because the on-disk store is unreadable, and say

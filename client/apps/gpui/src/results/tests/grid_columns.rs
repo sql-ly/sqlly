@@ -440,6 +440,7 @@ fn corrupt_layout_store_is_reported_and_left_untouched(cx: &mut gpui::TestAppCon
 
     let (view, cx) = make_results_view_with_data(cx);
     view.update(cx, |view, cx| {
+        view.use_disk_layout_store_for_test();
         view.set_query_sql("select * from t", cx);
         view.set_layout_scope(Some(crate::column_layout::LayoutScope {
             server: "h".into(),

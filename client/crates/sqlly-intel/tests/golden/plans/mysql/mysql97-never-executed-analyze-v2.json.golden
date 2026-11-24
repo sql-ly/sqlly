@@ -34,7 +34,7 @@ operators: 3
         loops: 1
         output_columns: ["id", "name", "email"]
         output_list: ["Actual time: 0.011583 ms", "customers", "Key: customers_email_idx"]
-        properties: [{name="access_type" value="index"}, {name="covering" value="false"}, {name="index_access_type" value="index_lookup"}, {name="key_columns" value="email"}, {name="lookup_references" value="const"}]
+        properties: [{name="covering" value="false"}, {name="access_type" value="index"}, {name="key_columns" value="email"}, {name="index_access_type" value="index_lookup"}, {name="lookup_references" value="const"}]
         relation: "customers"
         relation_resolved: yes
         schema: "shop"
@@ -47,7 +47,7 @@ operators: 3
         never_executed: yes
         output_columns: ["customer_id", "total"]
         output_list: ["orders", "Key: orders_customer_idx"]
-        properties: [{name="access_type" value="index"}, {name="covering" value="false"}, {name="index_access_type" value="index_lookup"}, {name="key_columns" value="customer_id"}, {name="lookup_references" value="shop.c.id"}]
+        properties: [{name="covering" value="false"}, {name="access_type" value="index"}, {name="key_columns" value="customer_id"}, {name="index_access_type" value="index_lookup"}, {name="lookup_references" value="shop.c.id"}]
         relation: "orders"
         relation_resolved: yes
         schema: "shop"

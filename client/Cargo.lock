@@ -9918,7 +9918,7 @@ dependencies = [
 
 [[package]]
 name = "sqlly-browser"
-version = "1.42.1"
+version = "1.42.3"
 dependencies = [
  "chrono",
  "console_error_panic_hook",
@@ -10073,7 +10073,7 @@ dependencies = [
 
 [[package]]
 name = "sqlly-gpui"
-version = "1.42.1"
+version = "1.42.3"
 dependencies = [
  "ab_glyph",
  "async-trait",
@@ -10161,7 +10161,7 @@ dependencies = [
 
 [[package]]
 name = "sqlly-intel"
-version = "1.30.0"
+version = "1.31.0"
 dependencies = [
  "async-trait",
  "chrono",

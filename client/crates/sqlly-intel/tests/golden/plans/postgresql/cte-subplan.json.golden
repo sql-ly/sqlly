@@ -181,7 +181,7 @@ operators: 12
         loops: 1
         output_list: ["Filter: (total > (InitPlan 5).col1)"]
         parent_relationship: "Outer"
-        properties: [{name="Maximum Storage" value="19"}, {name="Storage" value="Memory"}]
+        properties: [{name="Storage" value="Memory"}, {name="Maximum Storage" value="19"}]
         rows_read: 50
       #12 Seq Scan [Seq Scan]
           actual_rows: 240000
