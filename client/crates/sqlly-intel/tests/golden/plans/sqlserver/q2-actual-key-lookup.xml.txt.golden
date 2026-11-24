@@ -1,0 +1,90 @@
+format: sqlserver-xml (Certain)
+statements: 1
+
+== statement 1
+cardinality_estimator_version: 160
+degree_of_parallelism: 1
+dialect: "SqlServer"
+early_abort_reason: "GoodEnoughPlanFound"
+estimated_rows: 6
+has_actuals: yes
+memory_grant: {granted_kb=0 max_used_kb=0 serial_desired_kb=0 serial_required_kb=0}
+notes: ["Compile CPU: 2 ms", "Compile memory: 176 kB", "Cached plan size: 32 kB"]
+optimization_level: "FULL"
+parameters: [{compiled_value="4242" data_type="smallint" name="@1" runtime_value="4242"}]
+planning_time_ms: 2
+query_hash: "0xF57B992DBE9DF1CF"
+query_plan_hash: "0xF0B5D905793417EF"
+settings: [{name="QUOTED_IDENTIFIER" value="false"}, {name="ARITHABORT" value="false"}, {name="CONCAT_NULL_YIELDS_NULL" value="true"}, {name="ANSI_NULLS" value="true"}, {name="ANSI_PADDING" value="true"}, {name="ANSI_WARNINGS" value="true"}, {name="NUMERIC_ROUNDABORT" value="false"}]
+source_format: "sqlserver-xml"
+statement_text: "SELECT [o].[order_id],[o].[total],[o].[status] FROM [dbo].[orders] [o] WHERE [o].[customer_id]=@1"
+statement_type: "SELECT"
+statistics_used: [{last_update="2026-11-23T23:03:31.64" modification_count=0 sampling_percent=100 schema="dbo" statistics="IX_orders_customer" table="orders"}, {last_update="2026-11-23T23:03:31.77" modification_count=0 sampling_percent=100 schema="dbo" statistics="IX_orders_date" table="orders"}]
+total_subtree_cost: 0.019882
+warnings: [{KeyLookup={index="PK__orders__46596229A6DBB338" table="orders"}}]
+operators: 3
+  #0 Nested Loops [Inner Join]
+      actual_rows: 6
+      actual_rows_total: 6
+      estimated_cost: 0.019882
+      estimated_cpu: 0.000025
+      estimated_executions: 1
+      estimated_row_width: 34
+      estimated_rows: 6
+      execution_mode: "Row"
+      join_type: "Inner"
+      loops: 1
+      output_columns: ["o.order_id", "o.status", "o.total"]
+      output_list: ["o.order_id", "o.status", "o.total"]
+      properties: [{name="Outer References" value="o.order_id"}, {name="Optimized" value="0"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}]
+      row_count: 6
+    #1 Index Seek [Index Seek]
+        actual_rows: 6
+        actual_rows_total: 6
+        alias: "o"
+        buffers: {logical_reads=3 physical_reads=0 read_aheads=0}
+        database: "Shop"
+        estimated_cost: 0.003289
+        estimated_cpu: 0.000164
+        estimated_executions: 1
+        estimated_io: 0.003125
+        estimated_row_width: 11
+        estimated_rows: 6
+        estimated_rows_read: 6
+        execution_mode: "Row"
+        index_cond: "o.customer_id = (4242)"
+        index_name: "IX_orders_customer"
+        loops: 1
+        output_columns: ["o.order_id"]
+        output_list: ["o.order_id"]
+        properties: [{name="Ordered" value="1"}, {name="ScanDirection" value="FORWARD"}, {name="ForcedIndex" value="0"}, {name="ForceSeek" value="0"}, {name="ForceScan" value="0"}, {name="NoExpandHint" value="0"}, {name="Storage" value="RowStore"}, {name="TableCardinality" value="300000"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}, {name="IndexKind" value="NonClustered"}, {name="Storage" value="RowStore"}, {name="Actual Scans" value="1"}]
+        relation: "orders"
+        row_count: 6
+        rows_read: 6
+        schema: "dbo"
+        table_cardinality: 300000
+    #3 Clustered Index Seek [Clustered Index Seek]
+        actual_rows: 6
+        actual_rows_total: 6
+        alias: "o"
+        buffers: {logical_reads=18 physical_reads=0 read_aheads=0}
+        database: "Shop"
+        estimated_cost: 0.016568
+        estimated_cpu: 0.000158
+        estimated_executions: 6
+        estimated_io: 0.003125
+        estimated_row_width: 30
+        estimated_rows: 6
+        execution_mode: "Row"
+        index_cond: "o.order_id = [Shop].[dbo].[orders].[order_id] as [o].[order_id]"
+        index_name: "PK__orders__46596229A6DBB338"
+        loops: 6
+        output_columns: ["o.status", "o.total"]
+        output_list: ["o.status", "o.total"]
+        properties: [{name="Lookup" value="1"}, {name="Ordered" value="1"}, {name="ScanDirection" value="FORWARD"}, {name="ForcedIndex" value="0"}, {name="ForceSeek" value="0"}, {name="ForceScan" value="0"}, {name="NoExpandHint" value="0"}, {name="Storage" value="RowStore"}, {name="TableCardinality" value="300000"}, {name="EstimateRebinds" value="5"}, {name="EstimateRewinds" value="0"}, {name="EstimateRows" value="1"}, {name="IndexKind" value="Clustered"}, {name="Storage" value="RowStore"}]
+        relation: "orders"
+        row_count: 6
+        rows_read: 6
+        schema: "dbo"
+        table_cardinality: 300000
+        warnings: [{KeyLookup={index="PK__orders__46596229A6DBB338" table="orders"}}]

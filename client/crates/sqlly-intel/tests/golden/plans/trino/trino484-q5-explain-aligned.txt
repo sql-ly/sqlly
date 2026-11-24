@@ -1,0 +1,72 @@
+                                                                   Query Plan
+-------------------------------------------------------------------------------------------------------------------------------------------------
+ Trino version: 484
+ Fragment 0 [SINGLE]
+     Output layout: [name, sum, row_number_3]
+     Output partitioning: SINGLE []
+     Output[columnNames = [name, t, rn]]
+     │   Layout: [name:varchar(25), sum:double, row_number_3:bigint]
+     │   Estimates: {rows: ? (?), cpu: 0, memory: 0B, network: 0B}
+     │   t := sum
+     │   rn := row_number_3
+     └─ Window[orderBy = [sum DESC NULLS LAST]]
+        │   Layout: [name:varchar(25), sum:double, row_number_3:bigint]
+        │   row_number_3 := row_number() RANGE UNBOUNDED_PRECEDING CURRENT_ROW
+        └─ LocalExchange[partitioning = SINGLE]
+           │   Layout: [name:varchar(25), sum:double]
+           │   Estimates: {rows: 900 (28.13kB), cpu: 0, memory: 0B, network: 0B}
+           └─ RemoteSource[sourceFragmentIds = [1]]
+                  Layout: [name:varchar(25), sum:double]
+
+ Fragment 1 [SOURCE]
+     Output layout: [name, sum]
+     Output partitioning: SINGLE []
+     InnerJoin[criteria = (custkey_1 = custkey), distribution = REPLICATED]
+     │   Layout: [name:varchar(25), sum:double]
+     │   Estimates: {rows: 900 (28.13kB), cpu: 90.82k, memory: 15.82kB, network: 0B}
+     │   Distribution: REPLICATED
+     │   dynamicFilterAssignments = {custkey -> #df_383}
+     ├─ ScanFilter[table = tpch:tiny:customer, dynamicFilters = {custkey_1 = #df_383}]
+     │      Layout: [custkey_1:bigint, name:varchar(25)]
+     │      Estimates: {rows: 1500 (46.88kB), cpu: 46.88k, memory: 0B, network: 0B}/{rows: 1500 (46.88kB), cpu: 46.88k, memory: 0B, network: 0B}
+     │      name := tpch:name
+     │      custkey_1 := tpch:custkey
+     └─ LocalExchange[partitioning = SINGLE]
+        │   Layout: [custkey:bigint, sum:double]
+        │   Estimates: {rows: 900 (15.82kB), cpu: 0, memory: 0B, network: 0B}
+        └─ RemoteSource[sourceFragmentIds = [2]]
+               Layout: [custkey:bigint, sum:double]
+
+ Fragment 2 [HASH]
+     Output layout: [custkey, sum]
+     Output partitioning: BROADCAST []
+     Filter[filterPredicate = (double '500000.0' < sum)]
+     │   Layout: [custkey:bigint, sum:double]
+     │   Estimates: {rows: 900 (15.82kB), cpu: 17.58k, memory: 0B, network: 0B}
+     └─ Aggregate[type = FINAL, keys = [custkey]]
+        │   Layout: [custkey:bigint, sum:double]
+        │   Estimates: {rows: 1000 (17.58kB), cpu: 263.67k, memory: 17.58kB, network: 0B}
+        │   sum := sum(sum_4)
+        └─ LocalExchange[partitioning = HASH, arguments = [custkey::bigint]]
+           │   Layout: [custkey:bigint, sum_4:double]
+           │   Estimates: {rows: 15000 (263.67kB), cpu: 263.67k, memory: 0B, network: 0B}
+           └─ RemoteSource[sourceFragmentIds = [3]]
+                  Layout: [custkey:bigint, sum_4:double]
+
+ Fragment 3 [tpch:orders:15000]
+     Output layout: [custkey, sum_4]
+     Output partitioning: HASH [custkey]
+     Aggregate[type = PARTIAL, keys = [custkey]]
+     │   Layout: [custkey:bigint, sum_4:double]
+     │   Estimates: {rows: 15000 (263.67kB), cpu: ?, memory: ?, network: ?}
+     │   sum_4 := sum(totalprice)
+     └─ TableScan[table = tpch:tiny:orders]
+            Layout: [custkey:bigint, totalprice:double]
+            Estimates: {rows: 15000 (263.67kB), cpu: 263.67k, memory: 0B, network: 0B}
+            totalprice := tpch:totalprice
+            custkey := tpch:custkey
+            tpch:orderstatus
+                :: [[F], [O], [P]]
+
+
+(1 row)

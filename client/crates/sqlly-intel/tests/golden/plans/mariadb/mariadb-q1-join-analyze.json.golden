@@ -1,0 +1,86 @@
+format: mariadb-json (Certain)
+statements: 1
+
+== statement 1
+dialect: "MariaDb"
+estimated_rows: 40131
+execution_time_ms: 28.681352
+has_actuals: yes
+planning_time_ms: 0.320105
+source_format: "mariadb-json"
+statement_type: "ANALYZE"
+total_subtree_cost: 155.831382
+operators: 6
+  #1 Query Block [Query Block]
+      actual_self_time_ms: 28.681352
+      actual_time_ms: 28.681352
+      estimated_cost: 155.831382
+      loops: 1
+      output_list: ["Actual time: 28.68135161 ms"]
+      properties: [{name="cost" value="155.8313818"}, {name="r_loops" value="1"}, {name="r_total_time_ms" value="28.68135161"}, {name="select_id" value="1"}]
+      subplan_name: "Select #1"
+    #2 Filesort [Filesort]
+        actual_rows: 2
+        actual_rows_total: 2
+        actual_self_time_ms: 0.026453
+        loops: 1
+        peak_memory_kb: 0.53125
+        properties: [{name="r_buffer_size" value="544"}, {name="r_loops" value="1"}, {name="r_output_rows" value="2"}, {name="r_sort_mode" value="sort_key,rowid"}, {name="r_total_time_ms" value="0.026453277"}, {name="r_used_priority_queue" value="false"}]
+        sort_keys: ["sum(oi.quantity * oi.unit_price) desc"]
+      #3 Temporary table [Temporary table]
+        #4 Table: o [Access: ALL]
+            actual_rebinds: 1
+            actual_rows: 40000
+            actual_rows_total: 40000
+            actual_self_time_ms: 3.894797
+            actual_time_ms: 3.894797
+            buffers: {logical_reads=118}
+            estimated_cost: 6.688976
+            estimated_executions: 1
+            estimated_rows: 40131
+            estimated_rows_read: 40131
+            filter: "o.`status` = 'paid'"
+            filtered_percent: 100
+            loops: 1
+            output_list: ["o", "Condition: o.`status` = 'paid'", "Actual time: 2.737393482 ms", "Actual filtered: 25%"]
+            properties: [{name="cost" value="6.6889758"}, {name="loops" value="1"}, {name="possible_keys" value="PRIMARY, orders_customer_idx"}, {name="r_engine_stats.pages_accessed" value="118"}, {name="r_filtered" value="25"}, {name="r_other_time_ms" value="1.157403791"}, {name="r_table_time_ms" value="2.737393482"}, {name="r_total_filtered" value="25"}]
+            relation: "o"
+            rows_read: 40000
+            rows_removed_by_filter: 30000
+            warnings: [{TableScan={table="o"}}]
+        #5 Table: c [Access: eq_ref]
+            actual_rebinds: 10000
+            actual_rows: 10000
+            actual_rows_total: 10000
+            actual_self_time_ms: 5.016958
+            actual_time_ms: 5.016958
+            buffers: {logical_reads=20080}
+            estimated_cost: 35.912794
+            estimated_executions: 40131
+            estimated_rows: 1
+            estimated_rows_read: 1
+            filtered_percent: 100
+            index_name: "PRIMARY"
+            loops: 10000
+            output_list: ["c", "Key: PRIMARY", "Actual time: 4.802915376 ms", "Actual filtered: 100%"]
+            properties: [{name="cost" value="35.91279404"}, {name="key_length" value="4"}, {name="loops" value="40131"}, {name="possible_keys" value="PRIMARY"}, {name="r_engine_stats.pages_accessed" value="20080"}, {name="r_filtered" value="100"}, {name="r_other_time_ms" value="0.214042424"}, {name="r_table_time_ms" value="4.802915376"}, {name="r_total_filtered" value="100"}, {name="ref" value="shop.o.customer_id"}, {name="used_key_parts" value="id"}]
+            relation: "c"
+            rows_read: 10000
+        #6 Table: oi [Access: ref]
+            actual_rebinds: 10000
+            actual_rows: 25000
+            actual_rows_total: 25000
+            actual_self_time_ms: 19.727646
+            actual_time_ms: 19.727646
+            buffers: {logical_reads=70065}
+            estimated_cost: 113.229612
+            estimated_executions: 40131
+            estimated_rows: 2
+            estimated_rows_read: 2
+            filtered_percent: 100
+            index_name: "order_items_order_idx"
+            loops: 10000
+            output_list: ["oi", "Key: order_items_order_idx", "Actual time: 14.67856956 ms", "Actual filtered: 100%"]
+            properties: [{name="cost" value="113.229612"}, {name="key_length" value="4"}, {name="loops" value="40131"}, {name="possible_keys" value="order_items_order_idx"}, {name="r_engine_stats.pages_accessed" value="70065"}, {name="r_filtered" value="100"}, {name="r_other_time_ms" value="5.049076662"}, {name="r_table_time_ms" value="14.67856956"}, {name="r_total_filtered" value="100"}, {name="ref" value="shop.o.id"}, {name="used_key_parts" value="order_id"}]
+            relation: "oi"
+            rows_read: 25000

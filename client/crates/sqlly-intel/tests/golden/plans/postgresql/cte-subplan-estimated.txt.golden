@@ -1,0 +1,111 @@
+format: postgresql-text (Certain)
+statements: 1
+
+== statement 1
+dialect: "Postgres"
+estimated_rows: 50
+source_format: "postgresql-text"
+statement_type: "EXPLAIN"
+total_subtree_cost: 16641.21
+operators: 12
+  #1 Limit [Limit]
+      estimated_cost: 16641.21
+      estimated_row_width: 37
+      estimated_rows: 50
+      estimated_startup_cost: 15813.5
+    #2 Index Scan [Index Scan]
+        cte_name: "recent"
+        estimated_cost: 1822.69
+        estimated_row_width: 27
+        estimated_rows: 50244
+        estimated_startup_cost: 0.42
+        index_cond: "(placed_at > '2023-09-01 00:00:00+00'::timestamp with time zone)"
+        index_name: "orders_placed_idx"
+        output_list: ["orders", "Index Cond: (placed_at > '2023-09-01 00:00:00+00'::timestamp with time zone)", "Index: orders_placed_idx"]
+        parent_relationship: "InitPlan"
+        relation: "orders"
+        subplan_name: "CTE recent"
+    #3 Aggregate [Finalize Aggregate]
+        estimated_cost: 6995.4
+        estimated_row_width: 32
+        estimated_rows: 1
+        estimated_startup_cost: 6995.39
+        parent_relationship: "InitPlan"
+        properties: [{name="Partial Mode" value="Finalize"}]
+        subplan_name: "InitPlan 2"
+      #4 Gather [Gather]
+          estimated_cost: 6995.39
+          estimated_row_width: 32
+          estimated_rows: 2
+          estimated_startup_cost: 6995.18
+          parent_relationship: "Outer"
+          workers_planned: 1
+        #5 Aggregate [Partial Aggregate]
+            estimated_cost: 5995.19
+            estimated_row_width: 32
+            estimated_rows: 1
+            estimated_startup_cost: 5995.18
+            parent_relationship: "Outer"
+            properties: [{name="Partial Mode" value="Partial"}]
+          #6 Seq Scan [Parallel Seq Scan]
+              alias: "orders_1"
+              estimated_cost: 5406.94
+              estimated_row_width: 5
+              estimated_rows: 235294
+              output_list: ["orders"]
+              parallel: yes
+              parent_relationship: "Outer"
+              relation: "orders"
+              warnings: [{TableScan={table="orders"}}]
+    #7 Aggregate [Finalize Aggregate]
+        estimated_cost: 6995.41
+        estimated_row_width: 32
+        estimated_rows: 1
+        estimated_startup_cost: 6995.4
+        parent_relationship: "InitPlan"
+        properties: [{name="Partial Mode" value="Finalize"}]
+        subplan_name: "InitPlan 5"
+      #8 Gather [Gather]
+          estimated_cost: 6995.39
+          estimated_row_width: 32
+          estimated_rows: 2
+          estimated_startup_cost: 6995.18
+          parent_relationship: "Outer"
+          workers_planned: 1
+        #9 Aggregate [Partial Aggregate]
+            estimated_cost: 5995.19
+            estimated_row_width: 32
+            estimated_rows: 1
+            estimated_startup_cost: 5995.18
+            parent_relationship: "Outer"
+            properties: [{name="Partial Mode" value="Partial"}]
+          #10 Seq Scan [Parallel Seq Scan]
+              alias: "orders_2"
+              estimated_cost: 5406.94
+              estimated_row_width: 5
+              estimated_rows: 235294
+              output_list: ["orders"]
+              parallel: yes
+              parent_relationship: "Outer"
+              relation: "orders"
+              warnings: [{TableScan={table="orders"}}]
+    #11 CTE Scan [CTE Scan]
+        alias: "r"
+        cte_name: "recent"
+        estimated_cost: 277247.53
+        estimated_row_width: 37
+        estimated_rows: 16748
+        filter: "(total > (InitPlan 5).col1)"
+        output_list: ["Filter: (total > (InitPlan 5).col1)"]
+        parent_relationship: "Outer"
+      #12 Seq Scan [Seq Scan]
+          alias: "oi"
+          estimated_cost: 23824
+          estimated_row_width: 4
+          estimated_rows: 240360
+          filter: "(quantity > 4)"
+          output_list: ["order_items", "Filter: (quantity > 4)"]
+          parent_relationship: "SubPlan"
+          relation: "order_items"
+          subplan_name: "SubPlan 4"
+          warnings: [{TableScan={table="order_items"}}]

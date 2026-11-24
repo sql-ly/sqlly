@@ -449,10 +449,10 @@ pub static GROUPS: &[Group] = &[
             },
             Credit {
                 name: "Noto Sans",
-                version: "2.015 / SC 2.004",
+                version: "2.015 / CJK 2.004",
                 license: "OFL-1.1",
                 url: "https://notofonts.github.io",
-                purpose: "Interface fonts (Latin and Simplified Chinese subsets) embedded in the browser edition.",
+                purpose: "Interface fonts of the browser edition (Latin, Greek, Cyrillic, Chinese, Japanese and Korean subsets).",
             },
         ],
     },

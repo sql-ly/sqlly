@@ -1,0 +1,39 @@
+*************************** 1. row ***************************
+           id: 1
+  select_type: SIMPLE
+        table: o
+   partitions: NULL
+         type: ALL
+possible_keys: PRIMARY,orders_customer_idx
+          key: NULL
+      key_len: NULL
+          ref: NULL
+         rows: 40131
+     filtered: 10.00
+        Extra: Using where; Using temporary; Using filesort
+*************************** 2. row ***************************
+           id: 1
+  select_type: SIMPLE
+        table: c
+   partitions: NULL
+         type: eq_ref
+possible_keys: PRIMARY
+          key: PRIMARY
+      key_len: 4
+          ref: shop.o.customer_id
+         rows: 1
+     filtered: 100.00
+        Extra: NULL
+*************************** 3. row ***************************
+           id: 1
+  select_type: SIMPLE
+        table: oi
+   partitions: NULL
+         type: ref
+possible_keys: order_items_order_idx
+          key: order_items_order_idx
+      key_len: 4
+          ref: shop.o.id
+         rows: 2
+     filtered: 100.00
+        Extra: NULL

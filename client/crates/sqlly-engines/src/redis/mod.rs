@@ -510,6 +510,9 @@ fn credentials(profile: &ConnectionProfile) -> StudioResult<(Option<String>, Opt
             "Auth tokens apply to libSQL / Turso; Redis signs in with an ACL user and password"
                 .into(),
         )),
+        AuthenticationType::PostgresOAuth { .. } => Err(StudioError::InvalidProfile(
+            "PostgreSQL OAuth sign-in applies to PostgreSQL, not Redis".into(),
+        )),
     }
 }
 
@@ -1894,6 +1897,26 @@ mod tests {
             credentials(&blank),
             Err(StudioError::InvalidProfile(_))
         ));
+    }
+
+    /// A Redis server with no AUTH/ACL: a blank user and password connect as
+    /// the `default` user without sending `AUTH` (an `AUTH "" ""` would be
+    /// refused by a server that has no password set).
+    #[test]
+    fn blank_sql_login_builds_a_client_that_sends_no_auth() {
+        let mut p = profile();
+        p.authentication = AuthenticationType::SqlLogin {
+            username: "   ".into(),
+            secret_ref: SecretRef {
+                provider: SecretProvider::InMemory,
+                key: String::new(),
+            },
+        };
+        let host = p.server.clone();
+        let client = build_client(&p, &host, 6379).unwrap();
+        let settings = client.get_connection_info().redis_settings();
+        assert_eq!(settings.username(), None);
+        assert_eq!(settings.password(), None);
     }
 
     #[test]

@@ -12,6 +12,14 @@ use std::{
 };
 
 mod catalog;
+#[cfg(feature = "translator-locator")]
+mod locator;
+
+#[cfg(feature = "translator-locator")]
+pub use locator::{
+    Keys as TranslatorKeys, keys_for as translator_keys_for,
+    set_enabled as set_translator_locator_enabled,
+};
 
 include!(concat!(env!("OUT_DIR"), "/compiled_catalogs.rs"));
 
@@ -156,6 +164,14 @@ pub fn set_language(language: Language) {
         state.language = language;
         state.overrides.clear();
     });
+    catalog_changed();
+}
+
+/// The active catalog changed, so wordings the translator locator recorded
+/// may no longer be what their keys show.
+fn catalog_changed() {
+    #[cfg(feature = "translator-locator")]
+    locator::forget_texts();
 }
 
 pub fn set_language_code(code: &str) -> Result<Language, String> {
@@ -178,20 +194,28 @@ pub fn set_language_code(code: &str) -> Result<Language, String> {
 /// hash lookup; compiled defaults use binary search over sorted static data.
 /// Unknown keys are returned verbatim so missing catalog entries stay visible.
 pub fn text(key: &str) -> String {
-    with_template(key, |template| template.unwrap_or(key).to_owned())
+    let text = with_template(key, |template| template.unwrap_or(key).to_owned());
+    #[cfg(feature = "translator-locator")]
+    locator::record(key, &text);
+    text
 }
 
 /// Like [`text`], but `None` for keys missing from the catalog so a caller
 /// with its own fallback (the results-grid translator) needs one lookup, not a
 /// separate [`contains_key`] check followed by [`text`].
 pub fn try_text(key: &str) -> Option<String> {
-    with_template(key, |template| template.map(str::to_owned))
+    let text = with_template(key, |template| template.map(str::to_owned));
+    #[cfg(feature = "translator-locator")]
+    if let Some(text) = &text {
+        locator::record(key, text);
+    }
+    text
 }
 
 /// [`try_text`] without allocating for compiled values: borrowed from the
 /// static catalog, owned only when an override supplies the text. One lookup.
 pub fn try_text_cow(key: &str) -> Option<Cow<'static, str>> {
-    STATE.with(|state| {
+    let text = STATE.with(|state| {
         let state = state.borrow();
         if !state.overrides.is_empty()
             && let Some(value) = state.overrides.get(key)
@@ -199,7 +223,12 @@ pub fn try_text_cow(key: &str) -> Option<Cow<'static, str>> {
             return Some(Cow::Owned(value.clone()));
         }
         compiled_value(state.language, key).map(Cow::Borrowed)
-    })
+    });
+    #[cfg(feature = "translator-locator")]
+    if let Some(text) = &text {
+        locator::record(key, text);
+    }
+    text
 }
 
 /// The compiled value for the active language without allocating, or `None`
@@ -326,6 +355,7 @@ pub fn restore(snapshot: Snapshot) {
         state.language = snapshot.language;
         state.overrides = snapshot.overrides;
     });
+    catalog_changed();
 }
 
 /// Replace both language and overrides only after the complete override file
@@ -340,6 +370,7 @@ pub fn activate(language: Language, overrides_json: Option<&str>) -> Result<(), 
         state.language = language;
         state.overrides = overrides;
     });
+    catalog_changed();
     Ok(())
 }
 
@@ -348,6 +379,7 @@ pub fn activate(language: Language, overrides_json: Option<&str>) -> Result<(), 
 pub fn set_overrides_json(json: &str) -> Result<(), String> {
     let overrides = parse_overrides(json)?;
     STATE.with(|state| state.borrow_mut().overrides = overrides);
+    catalog_changed();
     Ok(())
 }
 
@@ -374,6 +406,7 @@ impl std::fmt::Display for SkippedOverride {
 pub fn set_overrides_json_lenient(json: &str) -> Result<Vec<SkippedOverride>, String> {
     let (overrides, skipped) = parse_overrides_lenient(json)?;
     STATE.with(|state| state.borrow_mut().overrides = overrides);
+    catalog_changed();
     Ok(skipped)
 }
 
@@ -392,11 +425,13 @@ pub fn activate_lenient(
         state.language = language;
         state.overrides = overrides;
     });
+    catalog_changed();
     Ok(skipped)
 }
 
 pub fn clear_overrides() {
     STATE.with(|state| state.borrow_mut().overrides.clear());
+    catalog_changed();
 }
 
 fn parse_overrides(json: &str) -> Result<HashMap<String, String>, String> {
@@ -448,9 +483,14 @@ pub fn format(key: &str, arguments: &[(&str, &str)]) -> Result<String, String> {
 /// [`format`] for any `Display` argument values, written straight into the
 /// result so callers need not convert each value to a `String` first.
 pub fn format_with<V: Display>(key: &str, arguments: &[(&str, V)]) -> Result<String, String> {
-    with_template(key, |template| {
+    let formatted = with_template(key, |template| {
         format_template(key, template.unwrap_or(key), arguments)
-    })
+    });
+    #[cfg(feature = "translator-locator")]
+    if let Ok(text) = &formatted {
+        locator::record(key, text);
+    }
+    formatted
 }
 
 /// [`format_with`] with one catalog lookup for callers that need to know
@@ -459,9 +499,14 @@ pub fn format_if_known<V: Display>(
     key: &str,
     arguments: &[(&str, V)],
 ) -> Option<Result<String, String>> {
-    with_template(key, |template| {
+    let formatted = with_template(key, |template| {
         template.map(|template| format_template(key, template, arguments))
-    })
+    });
+    #[cfg(feature = "translator-locator")]
+    if let Some(Ok(text)) = &formatted {
+        locator::record(key, text);
+    }
+    formatted
 }
 
 /// Format `key` from one language's compiled catalog, ignoring the active

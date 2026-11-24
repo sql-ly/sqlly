@@ -1424,6 +1424,43 @@ fn replace_document_is_one_undo_step_and_preserves_prior_history(cx: &mut gpui::
 }
 
 #[gpui::test]
+fn toggle_block_comment_wraps_selection_and_undoes_as_one_step(cx: &mut gpui::TestAppContext) {
+    let (view, cx) = cx.add_window_view(|_window, cx| SqlEditor::new(cx));
+    view.update(cx, |e, cx| {
+        e.set_text("SELECT a, b FROM t", cx);
+        e.selection_anchor = Some(7);
+        e.cursor = 11;
+    });
+    view.update_in(cx, |e, window, cx| {
+        e.handle_toggle_block_comment(&ToggleBlockComment, window, cx);
+    });
+    view.read_with(cx, |e, _| {
+        assert_eq!(e.text(), "SELECT /* a, b */ FROM t");
+        assert_eq!(e.selection(), Some(7..17));
+    });
+
+    // Toggling the still-selected comment takes the markers back off.
+    view.update_in(cx, |e, window, cx| {
+        e.handle_toggle_block_comment(&ToggleBlockComment, window, cx);
+    });
+    view.read_with(cx, |e, _| {
+        assert_eq!(e.text(), "SELECT a, b FROM t");
+        assert_eq!(e.selection(), Some(7..11));
+    });
+
+    // Each toggle is exactly one undo step.
+    view.update(cx, |e, cx| e.undo(cx));
+    view.read_with(cx, |e, _| assert_eq!(e.text(), "SELECT /* a, b */ FROM t"));
+    view.update(cx, |e, cx| e.undo(cx));
+    view.read_with(cx, |e, _| {
+        assert_eq!(e.text(), "SELECT a, b FROM t");
+        assert_eq!(e.selection(), Some(7..11));
+    });
+    view.update(cx, |e, cx| e.redo(cx));
+    view.read_with(cx, |e, _| assert_eq!(e.text(), "SELECT /* a, b */ FROM t"));
+}
+
+#[gpui::test]
 fn replace_document_noop_on_identical_text_keeps_undo(cx: &mut gpui::TestAppContext) {
     let (view, cx) = cx.add_window_view(|_window, cx| SqlEditor::new(cx));
     view.update(cx, |e, cx| {
@@ -3034,6 +3071,60 @@ fn completion_popup_paints_mid_fade(cx: &mut gpui::TestAppContext) {
     // The stamp survives the paint; steady-state (None) is covered by the
     // popup state-machine tests above, which paint fully opaque.
     assert!(view.read_with(cx, |e, _| e.completion_shown_at.is_some()));
+}
+
+/// A completion whose text spans lines (a Markdown table snippet with no
+/// detail, a label from any source) is drawn as one line: shaping a
+/// multi-line string as a single line panics.
+#[gpui::test]
+fn completion_popup_draws_multi_line_items_on_one_line(cx: &mut gpui::TestAppContext) {
+    cx.update(|cx| {
+        if cx.try_global::<gpui_component::Theme>().is_none() {
+            gpui_component::init(cx);
+        }
+    });
+    let (view, cx) = cx.add_window_view(|_window, cx| SqlEditor::new(cx));
+    view.update(cx, |e, _| {
+        e.content = "/".into();
+        e.invalidate_text_derived_caches();
+        e.cursor = 1;
+        let snippet = |label: &str, insert: &str| CompletionItem {
+            label: label.to_string(),
+            insert_text: insert.to_string(),
+            kind: CompletionKind::Snippet,
+            source: CompletionSource::Inferred,
+            score: 0,
+            detail: String::new(),
+            replace_span: Some((0, 1)),
+        };
+        e.completions = std::rc::Rc::new(vec![
+            snippet("Table", "| Column | Column |\n| --- | --- |\n|  |  |\n"),
+            snippet("Divider", "---\n"),
+            snippet("Two\nlines", "x"),
+            CompletionItem {
+                detail: "first\r\nsecond".into(),
+                ..snippet("Code", "```sql\n\n```")
+            },
+        ]);
+        e.completion_index = 0;
+        e.completion_visible = true;
+    });
+    cx.draw(
+        gpui::Point::default(),
+        gpui::size(px(800.0), px(600.0)),
+        |_window, _cx| div().size_full().child(view.clone()),
+    );
+    assert!(view.read_with(cx, |e, _| e.completion_popup_visible()));
+}
+
+#[test]
+fn popup_text_keeps_only_the_first_line() {
+    use super::element::one_line;
+    assert_eq!(one_line("| a | b |\n| --- | --- |\n"), "| a | b | …");
+    assert_eq!(one_line("---\n"), "---");
+    assert_eq!(one_line("\n\nSELECT 1\nFROM t"), "SELECT 1 …");
+    assert_eq!(one_line("plain"), "plain");
+    assert_eq!(one_line("a\r\nb"), "a …");
 }
 
 /// `set_completion_visible` stamps the fade start only on the hidden →

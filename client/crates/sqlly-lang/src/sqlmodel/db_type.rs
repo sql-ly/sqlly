@@ -96,10 +96,13 @@ pub enum DatabaseType {
     AmazonElastiCache,
     /// Amazon MemoryDB (RESP, TLS required).
     AmazonMemoryDb,
+    /// EDB WarehousePG, the open-source Greenplum fork: PostgreSQL wire and
+    /// catalog, with tables spread across segments by a distribution key.
+    WarehousePg,
 }
 
 impl DatabaseType {
-    pub const ALL: [DatabaseType; 38] = [
+    pub const ALL: [DatabaseType; 39] = [
         DatabaseType::SqlServer,
         DatabaseType::AzureSqlDatabase,
         DatabaseType::Postgres,
@@ -138,6 +141,7 @@ impl DatabaseType {
         DatabaseType::DragonflyDb,
         DatabaseType::AmazonElastiCache,
         DatabaseType::AmazonMemoryDb,
+        DatabaseType::WarehousePg,
     ];
 
     pub fn display_name(self) -> &'static str {
@@ -167,6 +171,7 @@ impl DatabaseType {
             CloudSqlMySql => "Google Cloud SQL for MySQL",
             Neon => "Neon",
             Supabase => "Supabase",
+            WarehousePg => "WarehousePG",
             PlanetScale => "PlanetScale",
             TiDb => "TiDB",
             Teradata => "Teradata",
@@ -200,6 +205,7 @@ impl DatabaseType {
             | CloudSqlPostgres
             | Neon
             | Supabase
+            | WarehousePg
             | DuckDb
             | Snowflake
             | Spanner
@@ -279,7 +285,8 @@ impl DatabaseType {
             | AzurePostgresFlexible
             | CloudSqlPostgres
             | Neon
-            | Supabase => ConnectionKind::PostgresWire,
+            | Supabase
+            | WarehousePg => ConnectionKind::PostgresWire,
             MySql | MariaDb | AmazonAurora | AmazonRds | AzureMySqlFlexible | CloudSqlMySql
             | PlanetScale | TiDb => ConnectionKind::MySqlWire,
             Sqlite => ConnectionKind::SqliteFile,
@@ -338,7 +345,8 @@ impl DatabaseType {
             | AzurePostgresFlexible
             | CloudSqlPostgres
             | Neon
-            | Supabase => Some(Postgres),
+            | Supabase
+            | WarehousePg => Some(Postgres),
             AmazonAurora | AmazonRds | AzureMySqlFlexible | CloudSqlMySql | PlanetScale | TiDb => {
                 Some(MySql)
             }
@@ -373,6 +381,7 @@ impl DatabaseType {
             | CloudSqlPostgres
             | Neon
             | Supabase
+            | WarehousePg
             | Snowflake => Some("public"),
             // DuckDB's (and SQLite's) default schema is `main`.
             DuckDb => Some("main"),
@@ -423,6 +432,7 @@ impl DatabaseType {
                     | CloudSqlPostgres
                     | Neon
                     | Supabase
+                    | WarehousePg
                     | DuckDb
                     | Snowflake
                     | ClickHouse
@@ -460,6 +470,7 @@ impl DatabaseType {
                     | CloudSqlPostgres
                     | Neon
                     | Supabase
+                    | WarehousePg
                     | Informix
             ),
             // Native single-statement upsert (ON CONFLICT / ON DUPLICATE KEY /
@@ -476,6 +487,7 @@ impl DatabaseType {
                     | CloudSqlPostgres
                     | Neon
                     | Supabase
+                    | WarehousePg
                     | Sqlite
                     | DuckDb
                     | MySql
@@ -499,6 +511,7 @@ impl DatabaseType {
                     | CloudSqlPostgres
                     | Neon
                     | Supabase
+                    | WarehousePg
                     | Sqlite
                     | DuckDb
                     | MariaDb
@@ -652,6 +665,7 @@ impl DatabaseType {
             | CloudSqlPostgres
             | Neon
             | Supabase
+            | WarehousePg
             | Sqlite
             | LibSql
             | DuckDb => UpsertPattern::OnConflict,
@@ -720,6 +734,7 @@ impl DatabaseType {
             | CloudSqlPostgres
             | Neon
             | Supabase
+            | WarehousePg
             | DuckDb
             | Snowflake
             | Spanner
@@ -763,6 +778,7 @@ impl DatabaseType {
             | CloudSqlPostgres
             | Neon
             | Supabase
+            | WarehousePg
             | DuckDb => format!("'\\x{hex}'"),
             Oracle => format!("HEXTORAW('{hex}')"),
             _ => format!("X'{hex}'"),
@@ -889,6 +905,7 @@ impl DatabaseType {
                 | CloudSqlPostgres
                 | Neon
                 | Supabase
+                | WarehousePg
                 | DuckDb => m("bytea", Native),
                 Oracle | Db2 | Informix | SapHana => m("blob", Native),
                 MySql | MariaDb | AmazonAurora | AmazonRds | AzureMySqlFlexible | CloudSqlMySql
@@ -932,6 +949,7 @@ impl DatabaseType {
                 | CloudSqlPostgres
                 | Neon
                 | Supabase
+                | WarehousePg
                 | DuckDb
                 | Snowflake
                 | Teradata
@@ -957,6 +975,7 @@ impl DatabaseType {
                 | CloudSqlPostgres
                 | Neon
                 | Supabase
+                | WarehousePg
                 | DuckDb
                 | Snowflake => m("timestamp with time zone", Native),
                 Oracle | Db2 | Teradata | SapHana | Informix => {
@@ -984,6 +1003,7 @@ impl DatabaseType {
                 | CloudSqlPostgres
                 | Neon
                 | Supabase
+                | WarehousePg
                 | DuckDb => m("uuid", Native),
                 Oracle => m("raw(16)", BinaryEncoded),
                 Teradata | Db2 | Informix | SapHana => m("char(36)", TextEncoded),
@@ -1006,7 +1026,8 @@ impl DatabaseType {
                 | AzurePostgresFlexible
                 | CloudSqlPostgres
                 | Neon
-                | Supabase => m("jsonb", Native),
+                | Supabase
+                | WarehousePg => m("jsonb", Native),
                 MySql | MariaDb | AmazonAurora | AmazonRds | AzureMySqlFlexible | CloudSqlMySql
                 | PlanetScale | TiDb => m("json", Native),
                 Oracle => m("json", Native),
@@ -1030,7 +1051,8 @@ impl DatabaseType {
                 | AzurePostgresFlexible
                 | CloudSqlPostgres
                 | Neon
-                | Supabase => m("xml", Native),
+                | Supabase
+                | WarehousePg => m("xml", Native),
                 Oracle => m("xmltype", Native),
                 Db2 => m("xml", Native),
                 _ => m("text", TextEncoded),
@@ -1635,6 +1657,19 @@ mod tests {
         );
     }
 
+    /// WarehousePG (Greenplum) rides the PostgreSQL driver and grammar.
+    #[test]
+    fn warehousepg_is_a_postgres_compatible_engine() {
+        let db = DatabaseType::WarehousePg;
+        assert_eq!(db.display_name(), "WarehousePG");
+        assert_eq!(db.connection_kind(), ConnectionKind::PostgresWire);
+        assert_eq!(db.compatible_with(), Some(DatabaseType::Postgres));
+        assert_eq!(db.family(), DatabaseType::Postgres.family());
+        assert!(db.has_native_driver());
+        assert!(!db.requires_tls());
+        assert!(DatabaseType::ALL.contains(&db));
+    }
+
     #[test]
     fn compatible_engines_share_wire_family_and_driver() {
         for db in DatabaseType::ALL {
@@ -1648,7 +1683,7 @@ mod tests {
 
     #[test]
     fn all_registry_is_complete_and_unique() {
-        assert_eq!(DatabaseType::ALL.len(), 38);
+        assert_eq!(DatabaseType::ALL.len(), 39);
         let mut seen = std::collections::BTreeSet::new();
         for db in DatabaseType::ALL {
             assert!(seen.insert(db), "duplicate {db:?}");

@@ -1,0 +1,24 @@
+                                                                    QUERY PLAN                                                                    
+--------------------------------------------------------------------------------------------------------------------------------------------------
+ WindowAgg  (cost=3584.35..3669.33 rows=4249 width=24) (actual time=4.794..5.329 rows=3992.00 loops=1)
+   Window: w1 AS (PARTITION BY customer_id ORDER BY placed_at ROWS UNBOUNDED PRECEDING)
+   Storage: Memory  Maximum Storage: 17kB
+   Buffers: shared hit=3064 read=4
+   ->  Sort  (cost=3584.35..3594.98 rows=4249 width=16) (actual time=4.789..4.887 rows=3992.00 loops=1)
+         Sort Key: customer_id, placed_at
+         Sort Method: quicksort  Memory: 221kB
+         Buffers: shared hit=3064 read=4
+         ->  Bitmap Heap Scan on orders  (cost=61.35..3328.29 rows=4249 width=16) (actual time=1.114..4.249 rows=3992.00 loops=1)
+               Recheck Cond: (customer_id < 500)
+               Heap Blocks: exact=3054
+               Buffers: shared hit=3058 read=4
+               ->  Bitmap Index Scan on orders_customer_idx  (cost=0.00..60.29 rows=4249 width=0) (actual time=0.889..0.889 rows=3992.00 loops=1)
+                     Index Cond: (customer_id < 500)
+                     Index Searches: 1
+                     Buffers: shared hit=4 read=4
+ Planning:
+   Buffers: shared hit=112
+ Planning Time: 0.187 ms
+ Execution Time: 5.478 ms
+(20 rows)
+

@@ -1,111 +1,571 @@
 //! Reading a plan document someone pasted or opened, whatever produced it.
 //!
 //! The app's own captures know their engine. A plan pasted from the
-//! clipboard, opened from a file, or dropped on the online viewer does not:
-//! [`clean_plan_text`] removes what terminal clients wrap around it,
-//! [`sniff_plan_document`] recognizes the engine, and
-//! [`parse_plan_document`] runs the right parser. The desktop app's Open
-//! Plan / Paste Plan and the web viewer share these, so both accept the
-//! same documents.
+//! clipboard, opened from a file, or dropped on the online viewer does not.
+//! [`import_plan_document`] does the whole job: [`clean_plan_text`] removes
+//! what clients, chat tools and logs wrap around a plan,
+//! [`detect_plan_format`] works out which engine and output format it is,
+//! and the matching parser fills the shared model. When the document cannot
+//! be read, the error says what it looks like, where it broke, and how to
+//! capture a plan that can be read.
+//!
+//! [`sniff_plan_document`] and [`parse_plan_document`] are the older
+//! two-step form of the same thing, kept for callers that work in terms of
+//! a [`PlanDialect`].
 
-use serde_json::Value;
+mod clean;
+mod detect;
 
 use crate::plans::dialects::{
-    PlanDialect, parse_captured_plan, parse_oracle_xplan_text, parse_sqlite_query_plan_any,
+    PlanDialect, extract_sqlserver_message_stats, parse_clickhouse_explain_json,
+    parse_clickhouse_explain_pipeline, parse_clickhouse_explain_text, parse_cockroach_explain_text,
+    parse_duckdb_explain_json, parse_duckdb_explain_text, parse_mysql_explain_analyze_tree,
+    parse_mysql_explain_json, parse_mysql_explain_json_v2, parse_mysql_explain_table,
+    parse_oracle_plan_lines, parse_oracle_xplan_plans, parse_pg_explain_json_multi,
+    parse_pg_explain_text, parse_pg_explain_xml, parse_pg_explain_yaml, parse_spark_explain_text,
+    parse_sqlite_query_plan_any, parse_sqlserver_showplan_text, parse_trino_explain_text,
 };
-use crate::plans::error::PlanResult;
+use crate::plans::error::{PlanError, PlanImportError, PlanResult};
 use crate::plans::model::ExecutionPlan;
 
-/// Undo what clients wrap around a plan when it is copied from a terminal:
-/// a byte-order mark, CRLF line ends, Markdown code fences, psql's aligned
-/// output (`QUERY PLAN` header, dashes, ` +` continuations, `(1 row)`), and
-/// the mysql client's `\G` row banner or table borders.
-pub fn clean_plan_text(text: &str) -> String {
-    let text = text
-        .trim_start_matches('\u{feff}')
-        .replace("\r\n", "\n")
-        .replace('\r', "\n");
-    let mut lines: Vec<&str> = text
-        .lines()
-        .filter(|l| !l.trim_start().starts_with("```"))
-        .collect();
+pub use clean::{clean_plan_text, decode_plan_bytes};
+pub use detect::{PlanConfidence, PlanDetection, detect_plan_format};
 
-    // psql aligned output: every line of the cell but the last ends in `+`.
-    // (Border rows like `+-----+` end in `+` too; they are not continuations.)
-    let continued = lines
-        .iter()
-        .filter(|l| {
-            let t = l.trim();
-            t.ends_with('+') && !t.chars().all(|c| c == '-' || c == '+')
-        })
-        .count();
-    if continued >= 2 {
-        let mut out = Vec::new();
-        for line in &lines {
-            let t = line.trim();
-            if t.eq_ignore_ascii_case("QUERY PLAN")
-                || (!t.is_empty() && t.chars().all(|c| c == '-' || c == '+'))
-                || is_row_count(t)
-            {
-                continue;
-            }
-            let body = line.trim_end();
-            let body = body.strip_suffix('+').unwrap_or(body).trim_end();
-            out.push(body.strip_prefix(' ').unwrap_or(body).to_string());
-        }
-        return out.join("\n").trim().to_string();
-    }
-
-    // mysql `\G`: `*** 1. row ***` then `EXPLAIN: <plan>`.
-    lines.retain(|l| {
-        let t = l.trim();
-        !(t.starts_with("***") && t.ends_with("***") && t.contains("row"))
-    });
-    // mysql table mode: `+----+` borders, a `| EXPLAIN |` header, and the
-    // cell's text with `| ` before its first line and ` |` after its last.
-    let mysql_table = lines.iter().any(|l| {
-        let t = l.trim();
-        t.starts_with("| EXPLAIN") && t.ends_with('|') && t.len() < 80
-    });
-    let mut out: Vec<String> = Vec::new();
-    for line in lines {
-        let t = line.trim();
-        if mysql_table {
-            if t.starts_with('+') && t.chars().all(|c| c == '-' || c == '+') {
-                continue;
-            }
-            if t.starts_with("| EXPLAIN") && t.ends_with('|') {
-                continue;
-            }
-        }
-        if is_row_count(t) {
-            continue;
-        }
-        out.push(line.to_string());
-    }
-    if mysql_table {
-        if let Some(first) = out.iter_mut().find(|l| !l.trim().is_empty())
-            && let Some(rest) = first.trim_start().strip_prefix("| ")
-        {
-            *first = rest.to_string();
-        }
-        if let Some(last) = out.iter_mut().rev().find(|l| !l.trim().is_empty()) {
-            let t = last.trim_end();
-            *last = t.strip_suffix('|').unwrap_or(t).trim_end().to_string();
-        }
-    }
-    let mut joined = out.join("\n").trim().to_string();
-    if let Some(rest) = joined.strip_prefix("EXPLAIN:") {
-        joined = rest.trim_start().to_string();
-    }
-    joined
+/// A database engine whose plans can be imported. Wider than
+/// [`PlanDialect`], which only lists engines the app connects to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum PlanEngine {
+    SqlServer,
+    Postgres,
+    MySql,
+    MariaDb,
+    Sqlite,
+    DuckDb,
+    ClickHouse,
+    Oracle,
+    CockroachDb,
+    Trino,
+    Spark,
 }
 
-fn is_row_count(t: &str) -> bool {
-    // `(1 row)`, `(2 rows)`, `1 row in set (0.01 sec)`
-    (t.starts_with('(') && (t.ends_with(" row)") || t.ends_with(" rows)")))
-        || t.contains(" row in set")
-        || t.contains(" rows in set")
+impl PlanEngine {
+    pub const ALL: [PlanEngine; 11] = [
+        PlanEngine::SqlServer,
+        PlanEngine::Postgres,
+        PlanEngine::MySql,
+        PlanEngine::MariaDb,
+        PlanEngine::Sqlite,
+        PlanEngine::DuckDb,
+        PlanEngine::ClickHouse,
+        PlanEngine::Oracle,
+        PlanEngine::CockroachDb,
+        PlanEngine::Trino,
+        PlanEngine::Spark,
+    ];
+
+    /// Stable id, also the id of the online viewer's format picker entry.
+    pub fn id(self) -> &'static str {
+        match self {
+            PlanEngine::SqlServer => "sqlserver",
+            PlanEngine::Postgres => "postgresql",
+            PlanEngine::MySql => "mysql",
+            PlanEngine::MariaDb => "mariadb",
+            PlanEngine::Sqlite => "sqlite",
+            PlanEngine::DuckDb => "duckdb",
+            PlanEngine::ClickHouse => "clickhouse",
+            PlanEngine::Oracle => "oracle",
+            PlanEngine::CockroachDb => "cockroachdb",
+            PlanEngine::Trino => "trino",
+            PlanEngine::Spark => "spark",
+        }
+    }
+
+    pub fn from_id(id: &str) -> Option<PlanEngine> {
+        PlanEngine::ALL
+            .into_iter()
+            .find(|engine| engine.id() == id.trim())
+    }
+
+    /// The engine's name as its vendor writes it.
+    pub fn name(self) -> &'static str {
+        match self {
+            PlanEngine::SqlServer => "SQL Server",
+            PlanEngine::Postgres => "PostgreSQL",
+            PlanEngine::MySql => "MySQL",
+            PlanEngine::MariaDb => "MariaDB",
+            PlanEngine::Sqlite => "SQLite",
+            PlanEngine::DuckDb => "DuckDB",
+            PlanEngine::ClickHouse => "ClickHouse",
+            PlanEngine::Oracle => "Oracle",
+            PlanEngine::CockroachDb => "CockroachDB",
+            PlanEngine::Trino => "Trino",
+            PlanEngine::Spark => "Spark SQL",
+        }
+    }
+
+    /// The app's capture dialect for this engine, when it has one.
+    pub fn dialect(self) -> Option<PlanDialect> {
+        Some(match self {
+            PlanEngine::SqlServer => PlanDialect::SqlServer,
+            PlanEngine::Postgres => PlanDialect::Postgres,
+            PlanEngine::MySql => PlanDialect::MySql,
+            PlanEngine::MariaDb => PlanDialect::MariaDb,
+            PlanEngine::Sqlite => PlanDialect::Sqlite,
+            PlanEngine::DuckDb => PlanDialect::DuckDb,
+            PlanEngine::ClickHouse => PlanDialect::ClickHouse,
+            PlanEngine::Oracle => PlanDialect::Oracle,
+            PlanEngine::CockroachDb | PlanEngine::Trino | PlanEngine::Spark => return None,
+        })
+    }
+
+    /// The dialect whose row, cost and timing arithmetic the plan analysis
+    /// applies to this engine's plans: its own when it has one, PostgreSQL
+    /// for CockroachDB, Trino and Spark. It says nothing about the engine's
+    /// operators, which have their own glossary.
+    pub fn analysis_dialect(self) -> PlanDialect {
+        self.dialect().unwrap_or(PlanDialect::Postgres)
+    }
+
+    pub fn from_dialect(dialect: PlanDialect) -> PlanEngine {
+        match dialect {
+            PlanDialect::SqlServer => PlanEngine::SqlServer,
+            PlanDialect::Postgres => PlanEngine::Postgres,
+            PlanDialect::MySql => PlanEngine::MySql,
+            PlanDialect::MariaDb => PlanEngine::MariaDb,
+            PlanDialect::Sqlite => PlanEngine::Sqlite,
+            PlanDialect::DuckDb => PlanEngine::DuckDb,
+            PlanDialect::ClickHouse => PlanEngine::ClickHouse,
+            PlanDialect::Oracle => PlanEngine::Oracle,
+        }
+    }
+
+    /// How to get a plan out of this engine in a form the importer reads.
+    pub fn capture_hint(self) -> &'static str {
+        match self {
+            PlanEngine::SqlServer => {
+                "In SSMS, right-click the plan and choose Show Execution Plan XML, or save it with Save Execution Plan As (.sqlplan). SET STATISTICS XML ON returns the same XML next to the results, and SET SHOWPLAN_XML ON returns the estimated plan without running the query."
+            }
+            PlanEngine::Postgres => {
+                "Run EXPLAIN (ANALYZE, BUFFERS) in front of the query and paste everything psql prints. EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) works too, and plain EXPLAIN gives the estimated plan without running the query."
+            }
+            PlanEngine::MySql => {
+                "Run EXPLAIN ANALYZE in front of the query (MySQL 8.0.18 and later), or EXPLAIN FORMAT=JSON, or plain EXPLAIN, and paste the whole result including the table borders."
+            }
+            PlanEngine::MariaDb => {
+                "Run ANALYZE FORMAT=JSON in front of the query for run-time numbers, or EXPLAIN FORMAT=JSON, or plain EXPLAIN, and paste the whole result including the table borders."
+            }
+            PlanEngine::Sqlite => {
+                "Run EXPLAIN QUERY PLAN in front of the query in the sqlite3 shell and paste what it prints. Plain EXPLAIN prints bytecode, which is not a plan."
+            }
+            PlanEngine::DuckDb => {
+                "Run EXPLAIN ANALYZE in front of the query (or EXPLAIN for the estimated plan) and paste the whole box drawing. EXPLAIN (FORMAT JSON) works too."
+            }
+            PlanEngine::ClickHouse => {
+                "Run EXPLAIN indexes = 1, actions = 1 in front of the query and paste the output. EXPLAIN json = 1, indexes = 1 and EXPLAIN PIPELINE work too."
+            }
+            PlanEngine::Oracle => {
+                "Run EXPLAIN PLAN FOR in front of the query, then SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY) and paste the table. For run-time numbers, run the query with the gather_plan_statistics hint and paste SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY_CURSOR(FORMAT => 'ALLSTATS LAST'))."
+            }
+            PlanEngine::CockroachDb => {
+                "Run EXPLAIN ANALYZE in front of the query (or EXPLAIN for the estimated plan) in cockroach sql and paste everything it prints."
+            }
+            PlanEngine::Trino => {
+                "Run EXPLAIN ANALYZE in front of the query (or EXPLAIN for the estimated plan) and paste the text it returns."
+            }
+            PlanEngine::Spark => {
+                "Run EXPLAIN FORMATTED in front of the query, or call df.explain(\"formatted\"), and paste the text. Plain EXPLAIN and EXPLAIN EXTENDED work too."
+            }
+        }
+    }
+}
+
+/// One output format of one engine.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum PlanFormat {
+    SqlServerXml,
+    SqlServerText,
+    PostgresText,
+    PostgresJson,
+    PostgresYaml,
+    PostgresXml,
+    MySqlTable,
+    MySqlTree,
+    MySqlJson,
+    MySqlJsonV2,
+    MariaDbTable,
+    MariaDbJson,
+    OracleXplan,
+    OracleRows,
+    SqliteQueryPlan,
+    DuckDbText,
+    DuckDbJson,
+    ClickHouseText,
+    ClickHousePipeline,
+    ClickHouseJson,
+    CockroachText,
+    TrinoText,
+    SparkText,
+}
+
+impl PlanFormat {
+    pub const ALL: [PlanFormat; 23] = [
+        PlanFormat::SqlServerXml,
+        PlanFormat::SqlServerText,
+        PlanFormat::PostgresText,
+        PlanFormat::PostgresJson,
+        PlanFormat::PostgresYaml,
+        PlanFormat::PostgresXml,
+        PlanFormat::MySqlTable,
+        PlanFormat::MySqlTree,
+        PlanFormat::MySqlJson,
+        PlanFormat::MySqlJsonV2,
+        PlanFormat::MariaDbTable,
+        PlanFormat::MariaDbJson,
+        PlanFormat::OracleXplan,
+        PlanFormat::OracleRows,
+        PlanFormat::SqliteQueryPlan,
+        PlanFormat::DuckDbText,
+        PlanFormat::DuckDbJson,
+        PlanFormat::ClickHouseText,
+        PlanFormat::ClickHousePipeline,
+        PlanFormat::ClickHouseJson,
+        PlanFormat::CockroachText,
+        PlanFormat::TrinoText,
+        PlanFormat::SparkText,
+    ];
+
+    /// Stable id; parsers write the same string to
+    /// [`ExecutionPlan::source_format`].
+    pub fn id(self) -> &'static str {
+        match self {
+            PlanFormat::SqlServerXml => "sqlserver-xml",
+            PlanFormat::SqlServerText => "sqlserver-text",
+            PlanFormat::PostgresText => "postgresql-text",
+            PlanFormat::PostgresJson => "postgresql-json",
+            PlanFormat::PostgresYaml => "postgresql-yaml",
+            PlanFormat::PostgresXml => "postgresql-xml",
+            PlanFormat::MySqlTable => "mysql-table",
+            PlanFormat::MySqlTree => "mysql-tree",
+            PlanFormat::MySqlJson => "mysql-json",
+            PlanFormat::MySqlJsonV2 => "mysql-json-v2",
+            PlanFormat::MariaDbTable => "mariadb-table",
+            PlanFormat::MariaDbJson => "mariadb-json",
+            PlanFormat::OracleXplan => "oracle-xplan",
+            PlanFormat::OracleRows => "oracle-rows",
+            PlanFormat::SqliteQueryPlan => "sqlite-eqp",
+            PlanFormat::DuckDbText => "duckdb-text",
+            PlanFormat::DuckDbJson => "duckdb-json",
+            PlanFormat::ClickHouseText => "clickhouse-text",
+            PlanFormat::ClickHousePipeline => "clickhouse-pipeline",
+            PlanFormat::ClickHouseJson => "clickhouse-json",
+            PlanFormat::CockroachText => "cockroachdb-text",
+            PlanFormat::TrinoText => "trino-text",
+            PlanFormat::SparkText => "spark-text",
+        }
+    }
+
+    pub fn from_id(id: &str) -> Option<PlanFormat> {
+        PlanFormat::ALL
+            .into_iter()
+            .find(|format| format.id() == id.trim())
+    }
+
+    /// What the format is called where it comes from.
+    pub fn label(self) -> &'static str {
+        match self {
+            PlanFormat::SqlServerXml => "SQL Server ShowPlan XML",
+            PlanFormat::SqlServerText => "SQL Server text showplan",
+            PlanFormat::PostgresText => "PostgreSQL EXPLAIN text",
+            PlanFormat::PostgresJson => "PostgreSQL EXPLAIN (FORMAT JSON)",
+            PlanFormat::PostgresYaml => "PostgreSQL EXPLAIN (FORMAT YAML)",
+            PlanFormat::PostgresXml => "PostgreSQL EXPLAIN (FORMAT XML)",
+            PlanFormat::MySqlTable => "MySQL EXPLAIN table",
+            PlanFormat::MySqlTree => "MySQL EXPLAIN FORMAT=TREE",
+            PlanFormat::MySqlJson => "MySQL EXPLAIN FORMAT=JSON",
+            PlanFormat::MySqlJsonV2 => "MySQL EXPLAIN FORMAT=JSON (version 2)",
+            PlanFormat::MariaDbTable => "MariaDB EXPLAIN table",
+            PlanFormat::MariaDbJson => "MariaDB EXPLAIN FORMAT=JSON",
+            PlanFormat::OracleXplan => "Oracle DBMS_XPLAN output",
+            PlanFormat::OracleRows => "Oracle PLAN_TABLE rows",
+            PlanFormat::SqliteQueryPlan => "SQLite EXPLAIN QUERY PLAN",
+            PlanFormat::DuckDbText => "DuckDB EXPLAIN text",
+            PlanFormat::DuckDbJson => "DuckDB EXPLAIN (FORMAT JSON)",
+            PlanFormat::ClickHouseText => "ClickHouse EXPLAIN text",
+            PlanFormat::ClickHousePipeline => "ClickHouse EXPLAIN PIPELINE",
+            PlanFormat::ClickHouseJson => "ClickHouse EXPLAIN json = 1",
+            PlanFormat::CockroachText => "CockroachDB EXPLAIN text",
+            PlanFormat::TrinoText => "Trino EXPLAIN text",
+            PlanFormat::SparkText => "Spark SQL EXPLAIN text",
+        }
+    }
+
+    pub fn engine(self) -> PlanEngine {
+        match self {
+            PlanFormat::SqlServerXml | PlanFormat::SqlServerText => PlanEngine::SqlServer,
+            PlanFormat::PostgresText
+            | PlanFormat::PostgresJson
+            | PlanFormat::PostgresYaml
+            | PlanFormat::PostgresXml => PlanEngine::Postgres,
+            PlanFormat::MySqlTable
+            | PlanFormat::MySqlTree
+            | PlanFormat::MySqlJson
+            | PlanFormat::MySqlJsonV2 => PlanEngine::MySql,
+            PlanFormat::MariaDbTable | PlanFormat::MariaDbJson => PlanEngine::MariaDb,
+            PlanFormat::OracleXplan | PlanFormat::OracleRows => PlanEngine::Oracle,
+            PlanFormat::SqliteQueryPlan => PlanEngine::Sqlite,
+            PlanFormat::DuckDbText | PlanFormat::DuckDbJson => PlanEngine::DuckDb,
+            PlanFormat::ClickHouseText
+            | PlanFormat::ClickHousePipeline
+            | PlanFormat::ClickHouseJson => PlanEngine::ClickHouse,
+            PlanFormat::CockroachText => PlanEngine::CockroachDb,
+            PlanFormat::TrinoText => PlanEngine::Trino,
+            PlanFormat::SparkText => PlanEngine::Spark,
+        }
+    }
+
+    /// The app's capture dialect for this format's engine, when it has one.
+    pub fn dialect(self) -> Option<PlanDialect> {
+        self.engine().dialect()
+    }
+}
+
+/// The result of [`import_plan_document`].
+#[derive(Debug, Clone)]
+pub struct ImportedPlan {
+    pub format: PlanFormat,
+    pub confidence: PlanConfidence,
+    /// One plan per statement the document holds.
+    pub plans: Vec<ExecutionPlan>,
+}
+
+/// Read a pasted or opened plan document: clean it, work out the format,
+/// parse it. `text` is the raw text; nothing needs to be done to it first.
+pub fn import_plan_document(text: &str) -> PlanResult<ImportedPlan> {
+    let cleaned = clean_plan_text(text);
+    if cleaned.trim().is_empty() {
+        return Err(PlanError::EmptyPlan);
+    }
+    let Some(detection) = detect_plan_format(&cleaned) else {
+        return Err(unrecognized(&cleaned));
+    };
+    let plans = parse_format(detection.format, &cleaned)?;
+    Ok(imported(detection.format, detection.confidence, plans))
+}
+
+/// Read a plan document the user says came from `engine`. The format within
+/// the engine is still detected. MySQL and MariaDB are accepted for each
+/// other, since people pick either for both. If the document is certainly
+/// another engine's, it is read as that engine and the result's `format`
+/// says so.
+pub fn import_plan_document_as(engine: PlanEngine, text: &str) -> PlanResult<ImportedPlan> {
+    let cleaned = clean_plan_text(text);
+    if cleaned.trim().is_empty() {
+        return Err(PlanError::EmptyPlan);
+    }
+    let detection = detect_plan_format(&cleaned);
+    if let Some(found) = &detection
+        && same_family(found.format.engine(), engine)
+    {
+        let plans = parse_format(found.format, &cleaned)?;
+        return Ok(imported(found.format, found.confidence, plans));
+    }
+    // Detection did not agree: try the engine's formats in turn.
+    let mut first_error = None;
+    for format in PlanFormat::ALL
+        .into_iter()
+        .filter(|format| same_family(format.engine(), engine))
+    {
+        match parse_format(format, &cleaned) {
+            Ok(plans) if plans.iter().any(|plan| !plan.nodes.is_empty()) => {
+                return Ok(imported(format, PlanConfidence::Guess, plans));
+            }
+            Ok(_) => {}
+            Err(error) => {
+                first_error.get_or_insert(error);
+            }
+        }
+    }
+    if let Some(found) = detection {
+        if found.confidence == PlanConfidence::Certain
+            && let Ok(plans) = parse_format(found.format, &cleaned)
+        {
+            return Ok(imported(found.format, found.confidence, plans));
+        }
+        return Err(PlanError::Import(Box::new(PlanImportError {
+            format_id: Some(found.format.id()),
+            format_label: Some(found.format.label().to_string()),
+            line: None,
+            column: None,
+            detail: format!(
+                "it does not read as a {} plan; it looks like {}",
+                engine.name(),
+                found.format.label()
+            ),
+            hint: Some(engine.capture_hint().to_string()),
+        })));
+    }
+    if let Some(reason) = detect::unreadable_shape(&cleaned) {
+        return Err(PlanError::Import(Box::new(reason)));
+    }
+    Err(PlanError::Import(Box::new(PlanImportError {
+        format_id: None,
+        format_label: None,
+        line: None,
+        column: None,
+        detail: format!(
+            "this does not read as a {} plan{}",
+            engine.name(),
+            first_error
+                .map(|error| format!(" ({})", error.message().fallback()))
+                .unwrap_or_default()
+        ),
+        hint: Some(engine.capture_hint().to_string()),
+    })))
+}
+
+fn same_family(a: PlanEngine, b: PlanEngine) -> bool {
+    let mysql = |engine| matches!(engine, PlanEngine::MySql | PlanEngine::MariaDb);
+    a == b || (mysql(a) && mysql(b))
+}
+
+fn imported(
+    format: PlanFormat,
+    confidence: PlanConfidence,
+    mut plans: Vec<ExecutionPlan>,
+) -> ImportedPlan {
+    // A parser that reads two engines' output (the MySQL family) knows
+    // which one it saw better than detection does.
+    let format = plans
+        .first()
+        .and_then(|plan| plan.source_format.as_deref())
+        .and_then(PlanFormat::from_id)
+        .filter(|parsed| same_family(parsed.engine(), format.engine()))
+        .unwrap_or(format);
+    for plan in &mut plans {
+        stamp(plan, format);
+    }
+    ImportedPlan {
+        format,
+        confidence,
+        plans,
+    }
+}
+
+/// Fill what every imported plan must carry, whatever its parser set.
+fn stamp(plan: &mut ExecutionPlan, format: PlanFormat) {
+    if plan.source_format.is_none() {
+        plan.source_format = Some(format.id().to_string());
+    }
+    if plan.dialect.is_none() {
+        plan.dialect = format.dialect();
+    }
+    if !plan.has_actuals {
+        plan.has_actuals = plan
+            .nodes
+            .iter()
+            .any(|node| node.actual_rows.is_some() || node.actual_time_ms.is_some());
+    }
+}
+
+/// Run the parser for `format` over cleaned text, and turn a failure into
+/// an error that names the format, the position and the way out.
+fn parse_format(format: PlanFormat, text: &str) -> PlanResult<Vec<ExecutionPlan>> {
+    let one = |plan: PlanResult<ExecutionPlan>| plan.map(|plan| vec![plan]);
+    let result = match format {
+        PlanFormat::SqlServerXml => {
+            let (xml, stats) = extract_sqlserver_message_stats(text);
+            crate::plans::parse_showplan_xml_multi(detect::xml_slice(&xml)).map(|mut plans| {
+                if !stats.is_empty() {
+                    // Messages belong to the batch; attach them to the last
+                    // statement that has operators, as SSMS shows them.
+                    if let Some(plan) = plans.iter_mut().rev().find(|p| !p.nodes.is_empty()) {
+                        stats.apply(plan);
+                    }
+                }
+                plans
+            })
+        }
+        PlanFormat::SqlServerText => {
+            let (body, stats) = extract_sqlserver_message_stats(text);
+            parse_sqlserver_showplan_text(&body).map(|mut plans| {
+                if !stats.is_empty()
+                    && let Some(plan) = plans.iter_mut().rev().find(|p| !p.nodes.is_empty())
+                {
+                    stats.apply(plan);
+                }
+                plans
+            })
+        }
+        PlanFormat::PostgresText => parse_pg_explain_text(text),
+        PlanFormat::PostgresJson => parse_pg_explain_json_multi(detect::json_slice(text)),
+        PlanFormat::PostgresYaml => parse_pg_explain_yaml(text),
+        PlanFormat::PostgresXml => parse_pg_explain_xml(detect::xml_slice(text)),
+        PlanFormat::MySqlTable | PlanFormat::MariaDbTable => one(parse_mysql_explain_table(text)),
+        PlanFormat::MySqlTree => one(parse_mysql_explain_analyze_tree(text)),
+        PlanFormat::MySqlJson | PlanFormat::MariaDbJson => {
+            one(parse_mysql_explain_json(detect::json_slice(text)))
+        }
+        PlanFormat::MySqlJsonV2 => one(parse_mysql_explain_json_v2(detect::json_slice(text))),
+        PlanFormat::OracleXplan => parse_oracle_xplan_plans(text),
+        PlanFormat::OracleRows => one(parse_oracle_plan_lines(text)),
+        PlanFormat::SqliteQueryPlan => one(parse_sqlite_query_plan_any(text)),
+        PlanFormat::DuckDbText => one(parse_duckdb_explain_text(text)),
+        PlanFormat::DuckDbJson => one(parse_duckdb_explain_json(detect::json_slice(text))),
+        PlanFormat::ClickHouseText => one(parse_clickhouse_explain_text(text)),
+        PlanFormat::ClickHousePipeline => one(parse_clickhouse_explain_pipeline(text)),
+        PlanFormat::ClickHouseJson => one(parse_clickhouse_explain_json(detect::json_slice(text))),
+        PlanFormat::CockroachText => one(parse_cockroach_explain_text(text)),
+        PlanFormat::TrinoText => one(parse_trino_explain_text(text)),
+        PlanFormat::SparkText => one(parse_spark_explain_text(text)),
+    };
+    match result {
+        Ok(plans) if plans.iter().any(|plan| !plan.nodes.is_empty()) => Ok(plans),
+        Ok(_) => Err(import_error(
+            format,
+            text,
+            "it holds no operators. If it came from a batch, the statements that ran may have produced no plan (SET and DECLARE do not)".to_string(),
+        )),
+        Err(PlanError::Import(error)) => Err(PlanError::Import(error)),
+        Err(error) => Err(import_error(format, text, detail_of(&error))),
+    }
+}
+
+fn detail_of(error: &PlanError) -> String {
+    match error {
+        PlanError::EmptyPlan => "it holds no operators".to_string(),
+        PlanError::XmlParse(detail)
+        | PlanError::InvalidStructure(detail)
+        | PlanError::Other(detail) => detail.clone(),
+        PlanError::Import(inner) => inner.detail.clone(),
+    }
+}
+
+fn import_error(format: PlanFormat, text: &str, detail: String) -> PlanError {
+    let (line, column) = detect::error_position(format, text, &detail);
+    PlanError::Import(Box::new(PlanImportError {
+        format_id: Some(format.id()),
+        format_label: Some(format.label().to_string()),
+        line,
+        column,
+        detail,
+        hint: Some(format.engine().capture_hint().to_string()),
+    }))
+}
+
+fn unrecognized(cleaned: &str) -> PlanError {
+    if let Some(reason) = detect::unreadable_shape(cleaned) {
+        return PlanError::Import(Box::new(reason));
+    }
+    PlanError::Import(Box::new(PlanImportError {
+        format_id: None,
+        format_label: None,
+        line: None,
+        column: None,
+        detail: "this does not look like an execution plan".to_string(),
+        hint: Some(
+            "Paste the plan exactly as the database tool printed it: SQL Server ShowPlan XML or a .sqlplan file, PostgreSQL EXPLAIN output in any format, MySQL or MariaDB EXPLAIN (table, TREE or JSON), Oracle DBMS_XPLAN output, SQLite EXPLAIN QUERY PLAN, DuckDB, ClickHouse, CockroachDB, Trino or Spark SQL EXPLAIN output.".to_string(),
+        ),
+    }))
 }
 
 /// What a pasted or opened plan document is.
@@ -113,247 +573,72 @@ fn is_row_count(t: &str) -> bool {
 pub enum PlanSniff {
     /// A document [`parse_plan_document`] reads for this engine.
     Dialect(PlanDialect),
-    /// A recognizable plan in a form the parsers do not read (PostgreSQL's
-    /// text EXPLAIN, SQL Server's text showplan, MySQL's version 2 JSON);
-    /// the English reason says how to capture a readable one.
+    /// A recognizable document that cannot be read through a
+    /// [`PlanDialect`]: something that is not a plan (SQLite bytecode, a
+    /// ClickHouse syntax tree), or a plan from an engine the app has no
+    /// dialect for, which [`import_plan_document`] reads. The English
+    /// reason says which.
     Unsupported(String),
     Unknown,
 }
 
 /// Recognize the engine that produced `text` (already [`clean_plan_text`]ed).
-/// Shapes are checked most specific first, so ClickHouse's PostgreSQL-like
-/// JSON and MariaDB's MySQL-like JSON are told apart.
+/// CockroachDB plans report as [`PlanDialect::Postgres`], the dialect the
+/// app talks to CockroachDB with; [`parse_plan_document`] reads them.
 pub fn sniff_plan_document(text: &str) -> PlanSniff {
-    let t = text.trim();
-    if t.is_empty() {
-        return PlanSniff::Unknown;
+    match detect_plan_format(text) {
+        Some(found) => match found.format.engine() {
+            PlanEngine::CockroachDb => PlanSniff::Dialect(PlanDialect::Postgres),
+            engine => match engine.dialect() {
+                Some(dialect) => PlanSniff::Dialect(dialect),
+                // No connection dialect to hand back; callers that want
+                // these read them with `import_plan_document`.
+                None => PlanSniff::Unsupported(format!(
+                    "This is a {} plan, which cannot be opened here yet.",
+                    engine.name()
+                )),
+            },
+        },
+        None => match detect::unreadable_shape(text) {
+            Some(reason) => PlanSniff::Unsupported(reason.to_string()),
+            None => PlanSniff::Unknown,
+        },
     }
-    if t.contains("<ShowPlanXML") || (t.starts_with('<') && t.contains("StmtSimple")) {
-        return PlanSniff::Dialect(PlanDialect::SqlServer);
-    }
-    if t.starts_with('[') || t.starts_with('{') {
-        return match serde_json::from_str::<Value>(t) {
-            Ok(value) => sniff_json(&value),
-            Err(_) => PlanSniff::Unknown,
-        };
-    }
-    let first = t.lines().next().unwrap_or("").trim();
-    // PostgreSQL's default text EXPLAIN: `Seq Scan on t  (cost=0.00..35.50 rows=2550 width=4)`.
-    if t.contains("(cost=") && t.contains("width=") && t.contains("..") {
-        return PlanSniff::Unsupported(
-            "This looks like PostgreSQL's text EXPLAIN output. SQLly reads the JSON form: run EXPLAIN (ANALYZE, FORMAT JSON) or EXPLAIN (FORMAT JSON) and paste that.".into(),
-        );
-    }
-    // SQL Server SHOWPLAN_TEXT / STATISTICS PROFILE.
-    if t.contains("OBJECT:(") || first.starts_with("StmtText") {
-        return PlanSniff::Unsupported(
-            "This looks like SQL Server's text showplan. SQLly reads ShowPlan XML: use SET STATISTICS XML ON (or SET SHOWPLAN_XML ON for an estimated plan), or save the plan from SSMS with Save Execution Plan As.".into(),
-        );
-    }
-    if first.starts_with("->") {
-        return PlanSniff::Dialect(PlanDialect::MySql);
-    }
-    if t.lines().any(|l| {
-        let l = l.trim();
-        l.starts_with('|') && l.contains(" Id ") && l.contains("Operation")
-    }) {
-        return PlanSniff::Dialect(PlanDialect::Oracle);
-    }
-    let rows: Vec<Vec<&str>> = t
-        .lines()
-        .filter(|l| !l.trim().is_empty())
-        .map(|l| l.split('\t').collect())
-        .collect();
-    if rows.iter().all(|f| f.len() >= 13)
-        && rows
-            .iter()
-            .all(|f| f[0].trim().parse::<i64>().is_ok() && f[1].trim().parse::<i64>().is_ok())
-    {
-        return PlanSniff::Dialect(PlanDialect::Oracle);
-    }
-    let sqlite_tree = first.eq_ignore_ascii_case("QUERY PLAN")
-        || t.lines().any(|l| {
-            let l = l.trim_start();
-            l.starts_with("|--") || l.starts_with("`--")
-        });
-    if sqlite_tree {
-        return PlanSniff::Dialect(PlanDialect::Sqlite);
-    }
-    let numbered = t.lines().filter(|l| !l.trim().is_empty()).all(|line| {
-        let sep = if line.contains('\t') { '\t' } else { '|' };
-        let fields: Vec<&str> = line.split(sep).collect();
-        fields.len() >= 3
-            && ((fields[0].trim().parse::<i64>().is_ok()
-                && fields[1].trim().parse::<i64>().is_ok())
-                || fields[0].trim().eq_ignore_ascii_case("id"))
-    });
-    if numbered {
-        return PlanSniff::Dialect(PlanDialect::Sqlite);
-    }
-    PlanSniff::Unknown
 }
 
-fn sniff_json(value: &Value) -> PlanSniff {
-    if let Some(block) = value.get("query_block") {
-        let mariadb = value.get("query_optimization").is_some()
-            || block.get("cost").is_some_and(Value::is_number)
-            || block
-                .as_object()
-                .is_some_and(|m| m.keys().any(|k| k.starts_with("r_")));
-        return PlanSniff::Dialect(if mariadb {
-            PlanDialect::MariaDb
-        } else {
-            PlanDialect::MySql
-        });
-    }
-    if value.get("query").is_some() && value.get("inputs").is_some() {
-        return PlanSniff::Unsupported(
-            "This is MySQL's version 2 JSON EXPLAIN format. SQLly reads version 1: run SET explain_json_format_version = 1 before EXPLAIN FORMAT=JSON, or paste EXPLAIN ANALYZE output instead.".into(),
-        );
-    }
-    let plan = value
-        .get(0)
-        .and_then(|first| first.get("Plan"))
-        .or_else(|| value.get("Plan"));
-    if let Some(plan) = plan {
-        let postgres = [
-            "Parallel Aware",
-            "Total Cost",
-            "Startup Cost",
-            "Plan Rows",
-            "Actual Rows",
-        ]
-        .iter()
-        .any(|key| plan.get(key).is_some());
-        let clickhouse = ["Node Id", "Indexes", "Description"]
-            .iter()
-            .any(|key| plan.get(key).is_some());
-        return PlanSniff::Dialect(if postgres || !clickhouse {
-            PlanDialect::Postgres
-        } else {
-            PlanDialect::ClickHouse
-        });
-    }
-    let duck_keys = |v: &Value| {
-        ["extra_info", "operator_type", "operator", "children"]
-            .iter()
-            .any(|key| v.get(key).is_some())
-    };
-    let duck = match value {
-        Value::Array(items) => !items.is_empty() && items.iter().all(duck_keys),
-        Value::Object(_) => duck_keys(value),
-        _ => false,
-    };
-    if duck {
-        return PlanSniff::Dialect(PlanDialect::DuckDb);
-    }
-    PlanSniff::Unknown
-}
-
-/// Parse a document [`sniff_plan_document`] recognized (or the caller
-/// chose) as `dialect`. Beyond [`parse_captured_plan`] — the app's own
-/// capture formats — this reads what people copy out of other tools: a lone
-/// PostgreSQL plan object without its array, the `sqlite3` shell's tree and
-/// four-column rows, and Oracle's `DBMS_XPLAN` text.
+/// Parse a document as `dialect` (from [`sniff_plan_document`], or the
+/// caller's choice). Reads every format of that engine, not only the one
+/// the app captures. Every returned plan has `dialect` and `has_actuals`
+/// set.
 pub fn parse_plan_document(dialect: PlanDialect, text: &str) -> PlanResult<Vec<ExecutionPlan>> {
-    match dialect {
-        PlanDialect::Postgres if text.trim().starts_with('{') => {
-            parse_captured_plan(PlanDialect::Postgres, &format!("[{}]", text.trim()))
+    let engine = PlanEngine::from_dialect(dialect);
+    let detection = detect_plan_format(text);
+    let format = match &detection {
+        Some(found) if same_family(found.format.engine(), engine) => Some(found.format),
+        Some(found)
+            if found.format == PlanFormat::CockroachText && dialect == PlanDialect::Postgres =>
+        {
+            Some(found.format)
         }
-        PlanDialect::Sqlite => parse_sqlite_query_plan_any(text).map(|p| vec![p]),
-        PlanDialect::Oracle if text.lines().any(|l| l.trim_start().starts_with('|')) => {
-            parse_oracle_xplan_text(text).map(|p| vec![p])
+        _ => None,
+    };
+    let mut plans = match format {
+        Some(format) => {
+            let mut plans = parse_format(format, text)?;
+            for plan in &mut plans {
+                stamp(plan, format);
+            }
+            plans
         }
-        other => parse_captured_plan(other, text),
+        None => import_plan_document_as(engine, text)?.plans,
+    };
+    for plan in &mut plans {
+        if plan.dialect.is_none() && plan.source_format.as_deref() != Some("cockroachdb-text") {
+            plan.dialect = Some(dialect);
+        }
     }
+    Ok(plans)
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn sniffs_every_engine() {
-        let cases: [(&str, PlanDialect); 10] = [
-            (
-                "<ShowPlanXML xmlns=\"http://schemas.microsoft.com/sqlserver/2004/07/showplan\">",
-                PlanDialect::SqlServer,
-            ),
-            (
-                "[{\"Plan\": {\"Node Type\": \"Result\"}}]",
-                PlanDialect::Postgres,
-            ),
-            (
-                "[{\"Plan\": {\"Node Type\": \"Expression\", \"Node Id\": \"Expression_2\"}}]",
-                PlanDialect::ClickHouse,
-            ),
-            (
-                "{\"query_block\": {\"select_id\": 1, \"cost_info\": {\"query_cost\": \"1.0\"}}}",
-                PlanDialect::MySql,
-            ),
-            (
-                "{\"query_optimization\": {}, \"query_block\": {\"select_id\": 1, \"cost\": 0.5}}",
-                PlanDialect::MariaDb,
-            ),
-            ("-> Nested loop\n    -> Table scan on t", PlanDialect::MySql),
-            ("QUERY PLAN\n`--SCAN t", PlanDialect::Sqlite),
-            ("2|0|SCAN TABLE t", PlanDialect::Sqlite),
-            (
-                "{\"operator\": [], \"query\": \"select 1\"}",
-                PlanDialect::DuckDb,
-            ),
-            (
-                "| Id  | Operation         | Name |\n|   0 | SELECT STATEMENT  |      |",
-                PlanDialect::Oracle,
-            ),
-        ];
-        for (doc, dialect) in cases {
-            assert_eq!(
-                sniff_plan_document(doc),
-                PlanSniff::Dialect(dialect),
-                "{doc}"
-            );
-        }
-    }
-
-    #[test]
-    fn unreadable_shapes_say_why_and_garbage_is_unknown() {
-        assert!(matches!(
-            sniff_plan_document("Seq Scan on t  (cost=0.00..1.50 rows=50 width=4)"),
-            PlanSniff::Unsupported(why) if why.contains("FORMAT JSON")
-        ));
-        assert!(matches!(
-            sniff_plan_document("  |--Table Scan(OBJECT:([db].[dbo].[t]))"),
-            PlanSniff::Unsupported(_)
-        ));
-        for doc in ["hello world", "{}", "[{}]", ""] {
-            assert_eq!(sniff_plan_document(doc), PlanSniff::Unknown, "{doc}");
-        }
-    }
-
-    #[test]
-    fn clean_unwraps_psql_and_mysql_output() {
-        let psql = " QUERY PLAN \n------------\n [         +\n   {\"Plan\": {\"Node Type\": \"Result\"}}+\n ]\n(1 row)\n";
-        assert_eq!(
-            clean_plan_text(psql),
-            "[\n  {\"Plan\": {\"Node Type\": \"Result\"}}\n]"
-        );
-        let mysql = "+---------+\n| EXPLAIN |\n+---------+\n| -> Table scan on t  (cost=1 rows=2)\n |\n+---------+\n1 row in set (0.00 sec)";
-        assert_eq!(
-            clean_plan_text(mysql),
-            "-> Table scan on t  (cost=1 rows=2)"
-        );
-        let banner = "*************************** 1. row ***************************\nEXPLAIN: {\"query_block\": {}}";
-        assert_eq!(clean_plan_text(banner), "{\"query_block\": {}}");
-    }
-
-    #[test]
-    fn a_lone_postgres_plan_object_parses() {
-        let plans = parse_plan_document(
-            PlanDialect::Postgres,
-            "{\"Plan\": {\"Node Type\": \"Seq Scan\", \"Relation Name\": \"t\", \"Total Cost\": 1.0, \"Plan Rows\": 5}}",
-        )
-        .unwrap();
-        assert_eq!(plans[0].nodes[0].physical_op, "Seq Scan");
-    }
-}
+mod tests;

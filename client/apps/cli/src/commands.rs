@@ -859,6 +859,8 @@ pub fn agent_create_job_sql(name: &str, step_name: &str, command: &str) -> Strin
         subsystem: "TSQL".to_string(),
         command: command.to_string(),
         database_name: None,
+        on_success: None,
+        on_failure: None,
     };
     JobWriter::create_job_sql(&job, &[step])
 }

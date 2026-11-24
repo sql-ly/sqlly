@@ -720,3 +720,72 @@ test('size check counts UTF-8 bytes for multi-byte payloads near the limit', () 
   assert.throws(() => harness.api.replaceOverrides(overrides), /8 MiB/);
   assert.deepEqual(harness.calls, []);
 });
+
+function installLocator(harness) {
+  harness.wasm.highlight_translation_key = (key) => harness.calls.push(['highlight_translation_key', key]);
+  harness.wasm.clear_translation_highlight = () => harness.calls.push(['clear_translation_highlight']);
+  harness.wasm.set_translation_pick_mode = (enabled) => harness.calls.push(['set_translation_pick_mode', enabled]);
+}
+
+test('locator commands validate keys, booleans, and build capability', () => {
+  const harness = createHarness();
+  installLocator(harness);
+  harness.send({ ...command('highlight_key', 'highlight-1'), key: 'settings.appearance.language.title' });
+  harness.send(command('clear_highlight', 'clear-1'));
+  harness.send({ ...command('set_pick_mode', 'pick-1'), enabled: true });
+  assert.deepEqual(harness.calls, [
+    ['highlight_translation_key', 'settings.appearance.language.title'],
+    ['clear_translation_highlight'],
+    ['set_translation_pick_mode', true],
+  ]);
+  assert.deepEqual(plain(harness.posted.map(({ data }) => [data.requestType, data.ok])), [
+    ['highlight_key', true], ['clear_highlight', true], ['set_pick_mode', true],
+  ]);
+
+  for (const [index, data] of [
+    { ...command('highlight_key'), key: 'Bad key' },
+    { ...command('highlight_key'), key: '' },
+    { ...command('set_pick_mode'), enabled: 'yes' },
+    { ...command('clear_highlight'), extra: true },
+  ].entries()) {
+    harness.send({ ...data, requestId: `invalid-${index}` });
+    const ack = harness.posted.at(-1).data;
+    assert.equal(ack.ok, false);
+    assert.equal(ack.requestId, `invalid-${index}`);
+  }
+});
+
+test('an older WASM build reports locator commands as unavailable without changing translations', () => {
+  const harness = createHarness();
+  harness.send({ ...command('highlight_key', 'highlight-1'), key: 'settings.title' });
+  const ack = harness.posted[0].data;
+  assert.equal(ack.ok, false);
+  assert.equal(ack.code, 'locator_unavailable');
+  assert.deepEqual(harness.calls, []);
+});
+
+test('ready advertises locator only when every required export exists', () => {
+  const harness = createHarness();
+  installLocator(harness);
+  harness.ready();
+  assert.deepEqual(plain(harness.posted[0].data), {
+    channel: CHANNEL, type: 'ready', features: ['locator'],
+  });
+});
+
+test('queued highlight and pick commands coalesce independently and acknowledge every waiter', () => {
+  const harness = createHarness({ ready: false });
+  installLocator(harness);
+  harness.send({ ...command('highlight_key', 'highlight-1'), key: 'settings.title' });
+  harness.send({ ...command('set_pick_mode', 'pick-1'), enabled: true });
+  harness.send({ ...command('highlight_key', 'highlight-2'), key: 'menu.file' });
+  harness.send({ ...command('set_pick_mode', 'pick-2'), enabled: false });
+  harness.markReady();
+  assert.deepEqual(harness.calls, [
+    ['highlight_translation_key', 'menu.file'],
+    ['set_translation_pick_mode', false],
+  ]);
+  assert.deepEqual(plain(harness.posted.map(({ data }) => [data.requestId, data.ok])), [
+    ['highlight-1', true], ['highlight-2', true], ['pick-1', true], ['pick-2', true],
+  ]);
+});

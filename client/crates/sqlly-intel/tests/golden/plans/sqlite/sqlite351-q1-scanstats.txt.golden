@@ -1,0 +1,44 @@
+format: sqlite-eqp (Certain)
+statements: 1
+
+== statement 1
+dialect: "Sqlite"
+has_actuals: yes
+source_format: "sqlite-eqp"
+statement_type: "EXPLAIN QUERY PLAN"
+operators: 5
+  #1 SCAN o [SCAN]
+      actual_rows: 40000
+      actual_rows_total: 40000
+      loops: 1
+      output_list: ["o"]
+      relation: "o"
+      warnings: [{TableScan={table="o"}}]
+  #2 SEARCH c USING INTEGER PRIMARY KEY (rowid=?) [SEARCH]
+      actual_rows: 10000
+      actual_rows_total: 10000
+      extra: ["INTEGER PRIMARY KEY"]
+      index_cond: "rowid=?"
+      loops: 10000
+      output_list: ["c", "Index Cond: rowid=?"]
+      properties: [{name="Access" value="INTEGER PRIMARY KEY"}]
+      relation: "c"
+  #3 SEARCH oi USING INDEX order_items_order_idx (order_id=?) [SEARCH]
+      actual_rows: 25000
+      actual_rows_total: 25000
+      index_cond: "order_id=?"
+      index_name: "order_items_order_idx"
+      loops: 10000
+      output_list: ["oi", "Index Cond: order_id=?", "Index: order_items_order_idx"]
+      properties: [{name="Access" value="INDEX"}]
+      relation: "oi"
+  #4 USE TEMP B-TREE FOR GROUP BY [USE]
+      actual_rows: 25000
+      actual_rows_total: 25000
+      loops: 1
+      properties: [{name="Temp B-tree for" value="GROUP BY"}]
+  #5 USE TEMP B-TREE FOR ORDER BY [USE]
+      actual_rows: 2
+      actual_rows_total: 2
+      loops: 1
+      properties: [{name="Temp B-tree for" value="ORDER BY"}]

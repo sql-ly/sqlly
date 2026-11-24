@@ -1,0 +1,30 @@
+
+WARNING: EXPLAIN TYPE LOGICAL is deprecated. Please use EXPLAIN TYPE DISTRIBUTED instead.
+                                                                                                Query Plan
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ WARNING: EXPLAIN TYPE LOGICAL is no longer supported and will be removed in a future release.
+ Below is the output for EXPLAIN TYPE DISTRIBUTED. Please update your query.
+
+ Trino version: 484
+ Fragment 0 [tpch:orders:15000]
+     Output layout: [orderkey, custkey, orderstatus, totalprice, orderdate, orderpriority, clerk, shippriority, comment]
+     Output partitioning: SINGLE []
+     Output[columnNames = [orderkey, custkey, orderstatus, totalprice, orderdate, orderpriority, clerk, shippriority, comment]]
+     │   Layout: [orderkey:bigint, custkey:bigint, orderstatus:varchar(1), totalprice:double, orderdate:date, orderpriority:varchar(15), clerk:varchar(15), shippriority:integer, comment:varchar(79)]
+     │   Estimates: {rows: 5527 (581.02kB), cpu: 0, memory: 0B, network: 0B}
+     └─ ScanFilter[table = tpch:tiny:orders, filterPredicate = (double '100000.0' < totalprice)]
+            Layout: [orderkey:bigint, custkey:bigint, orderstatus:varchar(1), totalprice:double, orderdate:date, orderpriority:varchar(15), clerk:varchar(15), shippriority:integer, comment:varchar(79)]
+            Estimates: {rows: 7304 (767.81kB), cpu: 767.81k, memory: 0B, network: 0B}/{rows: 5527 (581.02kB), cpu: 767.81k, memory: 0B, network: 0B}
+            orderstatus := tpch:orderstatus
+                :: [[F]]
+            clerk := tpch:clerk
+            shippriority := tpch:shippriority
+            totalprice := tpch:totalprice
+            orderdate := tpch:orderdate
+            orderpriority := tpch:orderpriority
+            comment := tpch:comment
+            orderkey := tpch:orderkey
+            custkey := tpch:custkey
+
+
+(1 row)

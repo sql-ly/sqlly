@@ -1,0 +1,103 @@
+                                                                                               Query Plan
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Trino version: 484
+ Fragment 0 [SINGLE]
+     Output layout: [name_5, count, sum]
+     Output partitioning: SINGLE []
+     Output[columnNames = [name, n, revenue]]
+     │   Layout: [name_5:varchar(25), count:bigint, sum:double]
+     │   Estimates: {rows: 25 (752B), cpu: 0, memory: 0B, network: 0B}
+     │   name := name_5
+     │   n := count
+     │   revenue := sum
+     └─ RemoteMerge[sourceFragmentIds = [1]]
+            Layout: [name_5:varchar(25), count:bigint, sum:double]
+
+ Fragment 1 [ROUND_ROBIN]
+     Output layout: [name_5, count, sum]
+     Output partitioning: SINGLE []
+     LocalMerge[orderBy = [sum DESC NULLS LAST]]
+     │   Layout: [name_5:varchar(25), count:bigint, sum:double]
+     │   Estimates: {rows: 25 (752B), cpu: 0, memory: 0B, network: 0B}
+     └─ PartialSort[orderBy = [sum DESC NULLS LAST]]
+        │   Layout: [name_5:varchar(25), count:bigint, sum:double]
+        │   Estimates: {rows: 25 (752B), cpu: ?, memory: ?, network: ?}
+        └─ RemoteSource[sourceFragmentIds = [2]]
+               Layout: [name_5:varchar(25), count:bigint, sum:double]
+
+ Fragment 2 [HASH]
+     Output layout: [name_5, count, sum]
+     Output partitioning: ROUND_ROBIN []
+     Aggregate[type = FINAL, keys = [name_5]]
+     │   Layout: [name_5:varchar(25), count:bigint, sum:double]
+     │   Estimates: {rows: 25 (752B), cpu: 132.19k, memory: 752B, network: 0B}
+     │   count := count(count_7)
+     │   sum := sum(sum_8)
+     └─ LocalExchange[partitioning = HASH, arguments = [name_5::varchar(25)]]
+        │   Layout: [name_5:varchar(25), count_7:bigint, sum_8:double]
+        │   Estimates: {rows: 4500 (132.19kB), cpu: 132.19k, memory: 0B, network: 0B}
+        └─ RemoteSource[sourceFragmentIds = [3]]
+               Layout: [name_5:varchar(25), count_7:bigint, sum_8:double]
+
+ Fragment 3 [tpch:orders:15000]
+     Output layout: [name_5, count_7, sum_8]
+     Output partitioning: HASH [name_5]
+     Aggregate[type = INTERMEDIATE, keys = [name_5]]
+     │   Layout: [name_5:varchar(25), count_7:bigint, sum_8:double]
+     │   Estimates: {rows: 4500 (132.19kB), cpu: ?, memory: ?, network: ?}
+     │   count_7 := count(count_7)
+     │   sum_8 := sum(sum_8)
+     └─ InnerJoin[criteria = (custkey_1 = custkey), distribution = REPLICATED]
+        │   Layout: [count_7:bigint, sum_8:double, name_5:varchar(25)]
+        │   Estimates: {rows: 4500 (132.19kB), cpu: 533.87k, memory: 6.18kB, network: 0B}
+        │   Distribution: REPLICATED
+        │   dynamicFilterAssignments = {custkey -> #df_546}
+        ├─ Aggregate[type = PARTIAL, keys = [custkey_1]]
+        │  │   Layout: [custkey_1:bigint, count_7:bigint, sum_8:double]
+        │  │   Estimates: {rows: 15000 (395.51kB), cpu: ?, memory: ?, network: ?}
+        │  │   count_7 := count(*)
+        │  │   sum_8 := sum(totalprice)
+        │  └─ ScanFilter[table = tpch:tiny:orders, dynamicFilters = {custkey_1 = #df_546}]
+        │         Layout: [custkey_1:bigint, totalprice:double]
+        │         Estimates: {rows: 15000 (263.67kB), cpu: 263.67k, memory: 0B, network: 0B}/{rows: 15000 (263.67kB), cpu: 263.67k, memory: 0B, network: 0B}
+        │         totalprice := tpch:totalprice
+        │         custkey_1 := tpch:custkey
+        │         tpch:orderstatus
+        │             :: [[F], [O], [P]]
+        └─ LocalExchange[partitioning = HASH, arguments = [custkey::bigint]]
+           │   Layout: [custkey:bigint, name_5:varchar(25)]
+           │   Estimates: {rows: 300 (6.18kB), cpu: 6.18k, memory: 0B, network: 0B}
+           └─ RemoteSource[sourceFragmentIds = [4]]
+                  Layout: [custkey:bigint, name_5:varchar(25)]
+
+ Fragment 4 [SOURCE]
+     Output layout: [custkey, name_5]
+     Output partitioning: BROADCAST []
+     InnerJoin[criteria = (nationkey = nationkey_4), distribution = REPLICATED]
+     │   Layout: [custkey:bigint, name_5:varchar(25)]
+     │   Estimates: {rows: 300 (6.18kB), cpu: 11.96k, memory: 527B, network: 0B}
+     │   Distribution: REPLICATED
+     │   dynamicFilterAssignments = {nationkey_4 -> #df_548}
+     ├─ ScanFilterProject[table = tpch:tiny:customer, filterPredicate = (mktsegment = varchar(10) 'BUILDING'), dynamicFilters = {nationkey = #df_548}]
+     │      Layout: [custkey:bigint, nationkey:bigint]
+     │      Estimates: {rows: 1500 (26.37kB), cpu: 33.74k, memory: 0B, network: 0B}/{rows: 300 (5.27kB), cpu: 33.74k, memory: 0B, network: 0B}/{rows: 300 (5.27kB), cpu: 5.27k, memory: 0B, network: 0B}
+     │      mktsegment := tpch:mktsegment
+     │      nationkey := tpch:nationkey
+     │      custkey := tpch:custkey
+     └─ LocalExchange[partitioning = SINGLE]
+        │   Layout: [nationkey_4:bigint, name_5:varchar(25)]
+        │   Estimates: {rows: 25 (527B), cpu: 0, memory: 0B, network: 0B}
+        └─ RemoteSource[sourceFragmentIds = [5]]
+               Layout: [nationkey_4:bigint, name_5:varchar(25)]
+
+ Fragment 5 [SOURCE]
+     Output layout: [nationkey_4, name_5]
+     Output partitioning: BROADCAST []
+     TableScan[table = tpch:tiny:nation]
+         Layout: [nationkey_4:bigint, name_5:varchar(25)]
+         Estimates: {rows: 25 (527B), cpu: 527, memory: 0B, network: 0B}
+         nationkey_4 := tpch:nationkey
+         name_5 := tpch:name
+
+
+(1 row)

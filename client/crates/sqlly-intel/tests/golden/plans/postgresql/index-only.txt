@@ -1,0 +1,13 @@
+                                                               QUERY PLAN                                                                
+-----------------------------------------------------------------------------------------------------------------------------------------
+ Index Only Scan using orders_customer_idx on orders  (cost=0.42..23.26 rows=848 width=4) (actual time=0.007..0.041 rows=792.00 loops=1)
+   Index Cond: (customer_id < 100)
+   Heap Fetches: 0
+   Index Searches: 1
+   Buffers: shared hit=5
+ Planning:
+   Buffers: shared hit=95
+ Planning Time: 0.191 ms
+ Execution Time: 0.073 ms
+(9 rows)
+

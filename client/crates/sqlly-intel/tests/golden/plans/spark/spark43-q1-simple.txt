@@ -1,0 +1,6 @@
+== Physical Plan ==
+*(1) Filter (((isnotnull(status#8) AND isnotnull(total#7)) AND (status#8 = paid)) AND (total#7 > 400.00))
++- *(1) ColumnarToRow
+   +- FileScan parquet spark_catalog.default.orders[id#5L,customer_id#6L,total#7,status#8] Batched: true, DataFilters: [isnotnull(status#8), isnotnull(total#7), (status#8 = paid), (total#7 > 400.00)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/tmp/spark-warehouse/orders], PartitionFilters: [], PushedFilters: [IsNotNull(status), IsNotNull(total), EqualTo(status,paid), GreaterThan(total,400.00)], ReadSchema: struct<id:bigint,customer_id:bigint,total:decimal(11,2),status:string>
+
+

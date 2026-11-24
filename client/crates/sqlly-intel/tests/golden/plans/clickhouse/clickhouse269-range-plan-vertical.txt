@@ -1,0 +1,139 @@
+Row 1:
+──────
+explain: Output: status, count()
+
+Row 2:
+──────
+explain: 
+
+Row 3:
+──────
+explain: Aggregating
+
+Row 4:
+──────
+explain: │  Keys: status
+
+Row 5:
+──────
+explain: │  Aggregates: count()
+
+Row 6:
+──────
+explain: │  Skip merging: 0
+
+Row 7:
+──────
+explain: └──ReadFromMergeTree (default.orders)
+
+Row 8:
+──────
+explain:       Read type: Default
+
+Row 9:
+───────
+explain:       Parts: 10 | Granules: 10
+
+Row 10:
+───────
+explain:       Output: status
+
+Row 11:
+───────
+explain:       Prewhere filter
+
+Row 12:
+───────
+explain:       Prewhere filter column:  customer_id <= 200 AND customer_id >= 100 AND total > 800
+
+Row 13:
+───────
+explain:       Indexes:
+
+Row 14:
+───────
+explain:         Min-Max
+
+Row 15:
+───────
+explain:           Condition: true
+
+Row 16:
+───────
+explain:           Parts: 10/10
+
+Row 17:
+───────
+explain:           Granules: 392/392
+
+Row 18:
+───────
+explain:         Partition
+
+Row 19:
+───────
+explain:           Condition: true
+
+Row 20:
+───────
+explain:           Parts: 10/10
+
+Row 21:
+───────
+explain:           Granules: 392/392
+
+Row 22:
+───────
+explain:         PrimaryKey
+
+Row 23:
+───────
+explain:           Keys:
+
+Row 24:
+───────
+explain:             customer_id
+
+Row 25:
+───────
+explain:           Condition: and((customer_id in (-Inf, 200]), (customer_id in [100, +Inf)))
+
+Row 26:
+───────
+explain:           Parts: 10/10
+
+Row 27:
+───────
+explain:           Granules: 10/392
+
+Row 28:
+───────
+explain:           Search Algorithm: binary search
+
+Row 29:
+───────
+explain:         Skip
+
+Row 30:
+───────
+explain:           Name: total_idx
+
+Row 31:
+───────
+explain:           Description: minmax GRANULARITY 4
+
+Row 32:
+───────
+explain:           Condition: (total in ('800', +Inf))
+
+Row 33:
+───────
+explain:           Parts: 10/10
+
+Row 34:
+───────
+explain:           Granules: 10/10
+
+Row 35:
+───────
+explain:         Ranges: 10

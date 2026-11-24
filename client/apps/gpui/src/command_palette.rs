@@ -386,6 +386,191 @@ impl CommandRegistry {
             keywords: vec!["notebook", "run", "all", "cells"],
         });
         reg.register(ShellCommand {
+            id: "query.openAsNotebook".to_string(),
+            title: crate::localization::text("notebook.shell.palette.open_as_notebook"),
+            category: CommandCategory::Query,
+            keywords: vec!["notebook", "open", "promote", "cells"],
+        });
+        reg.register(ShellCommand {
+            id: "query.openAsNotebookSplit".to_string(),
+            title: crate::localization::text("notebook.shell.palette.open_as_notebook_split"),
+            category: CommandCategory::Query,
+            keywords: vec!["notebook", "open", "promote", "split", "statements"],
+        });
+        reg.register(ShellCommand {
+            id: "notebook.convertToSqlScript".to_string(),
+            title: crate::localization::text("notebook.shell.palette.convert_to_sql_script"),
+            category: CommandCategory::Query,
+            keywords: vec!["notebook", "convert", "script", "sql"],
+        });
+        reg.register(ShellCommand {
+            id: "notebook.runCellAndAdvance".to_string(),
+            title: crate::localization::text("notebook.shell.palette.run_cell_and_advance"),
+            category: CommandCategory::Query,
+            keywords: vec!["notebook", "run", "advance", "next"],
+        });
+        reg.register(ShellCommand {
+            id: "notebook.runCellAndInsertBelow".to_string(),
+            title: crate::localization::text("notebook.shell.palette.run_cell_and_insert_below"),
+            category: CommandCategory::Query,
+            keywords: vec!["notebook", "run", "insert", "below"],
+        });
+        reg.register(ShellCommand {
+            id: "notebook.commandMode".to_string(),
+            title: crate::localization::text("notebook.shell.palette.command_mode"),
+            category: CommandCategory::Query,
+            keywords: vec!["notebook", "command", "mode", "escape"],
+        });
+        reg.register(ShellCommand {
+            id: "notebook.selectNextCell".to_string(),
+            title: crate::localization::text("notebook.shell.palette.select_next_cell"),
+            category: CommandCategory::Query,
+            keywords: vec!["notebook", "next", "cell", "down"],
+        });
+        reg.register(ShellCommand {
+            id: "notebook.selectPreviousCell".to_string(),
+            title: crate::localization::text("notebook.shell.palette.select_previous_cell"),
+            category: CommandCategory::Query,
+            keywords: vec!["notebook", "previous", "cell", "up"],
+        });
+        reg.register(ShellCommand {
+            id: "notebook.insertCellAbove".to_string(),
+            title: crate::localization::text("notebook.shell.palette.insert_cell_above"),
+            category: CommandCategory::Query,
+            keywords: vec!["notebook", "insert", "above", "cell"],
+        });
+        reg.register(ShellCommand {
+            id: "notebook.insertCellBelow".to_string(),
+            title: crate::localization::text("notebook.shell.palette.insert_cell_below"),
+            category: CommandCategory::Query,
+            keywords: vec!["notebook", "insert", "below", "cell"],
+        });
+        reg.register(ShellCommand {
+            id: "notebook.deleteCell".to_string(),
+            title: crate::localization::text("notebook.shell.palette.delete_cell"),
+            category: CommandCategory::Query,
+            keywords: vec!["notebook", "delete", "remove", "cell"],
+        });
+        reg.register(ShellCommand {
+            id: "notebook.convertToMarkdown".to_string(),
+            title: crate::localization::text("notebook.shell.palette.convert_to_markdown"),
+            category: CommandCategory::Query,
+            keywords: vec!["notebook", "markdown", "convert", "cell"],
+        });
+        reg.register(ShellCommand {
+            id: "notebook.convertToSql".to_string(),
+            title: crate::localization::text("notebook.shell.palette.convert_to_sql"),
+            category: CommandCategory::Query,
+            keywords: vec!["notebook", "sql", "convert", "cell"],
+        });
+        reg.register(ShellCommand {
+            id: "notebook.editCell".to_string(),
+            title: crate::localization::text("notebook.shell.palette.edit_cell"),
+            category: CommandCategory::Query,
+            keywords: vec!["notebook", "edit", "cell"],
+        });
+        reg.register(ShellCommand {
+            id: "notebook.stop".to_string(),
+            title: crate::localization::text("notebook.shell.palette.stop"),
+            category: CommandCategory::Query,
+            keywords: vec!["notebook", "stop", "cancel", "run"],
+        });
+        reg.register(ShellCommand {
+            id: "notebook.trust".to_string(),
+            title: crate::localization::text("notebook.shell.palette.trust"),
+            category: CommandCategory::Query,
+            keywords: vec!["notebook", "trust", "allow", "run"],
+        });
+        reg.register(ShellCommand {
+            id: "notebook.allowWrites".to_string(),
+            title: crate::localization::text("notebook.shell.palette.allow_writes"),
+            category: CommandCategory::Query,
+            keywords: vec!["notebook", "allow", "writes", "read-only", "elevate"],
+        });
+        reg.register(ShellCommand {
+            id: "notebook.materializeLocally".to_string(),
+            title: crate::localization::text("notebook.local.palette.materialize"),
+            category: CommandCategory::Query,
+            keywords: vec!["notebook", "materialize", "local", "duckdb", "copy"],
+        });
+        reg.register(ShellCommand {
+            id: "notebook.toggleLocalTarget".to_string(),
+            title: crate::localization::text("notebook.local.palette.toggle_local"),
+            category: CommandCategory::Query,
+            keywords: vec!["notebook", "local", "duckdb", "join", "connection"],
+        });
+        reg.register(ShellCommand {
+            id: "notebook.showLocalData".to_string(),
+            title: crate::localization::text("notebook.local.palette.show_data"),
+            category: CommandCategory::Query,
+            keywords: vec!["notebook", "local", "data", "tables", "duckdb"],
+        });
+        reg.register(ShellCommand {
+            id: "notebook.insertAttachment".to_string(),
+            title: crate::localization::text("notebook.local.palette.insert_attachment"),
+            category: CommandCategory::Query,
+            keywords: vec!["notebook", "attachment", "csv", "parquet", "file", "image"],
+        });
+        reg.register(ShellCommand {
+            id: "notebook.openDashboard".to_string(),
+            title: crate::localization::text("notebook.dashboard.palette.open_dashboard"),
+            category: CommandCategory::Query,
+            keywords: vec!["notebook", "dashboard", "layout", "tiles", "app"],
+        });
+        reg.register(ShellCommand {
+            id: "notebook.viewDashboard".to_string(),
+            title: crate::localization::text("notebook.dashboard.palette.view_dashboard"),
+            category: CommandCategory::Query,
+            keywords: vec!["notebook", "dashboard", "viewer", "view", "app"],
+        });
+        reg.register(ShellCommand {
+            id: "notebook.present".to_string(),
+            title: crate::localization::text("notebook.dashboard.palette.present"),
+            category: CommandCategory::Query,
+            keywords: vec![
+                "notebook",
+                "dashboard",
+                "present",
+                "presentation",
+                "slides",
+                "full screen",
+            ],
+        });
+        reg.register(ShellCommand {
+            id: "notebook.export".to_string(),
+            title: crate::localization::text("notebook.dashboard.palette.export"),
+            category: CommandCategory::Query,
+            keywords: vec!["notebook", "export", "report", "pdf", "html", "excel"],
+        });
+        reg.register(ShellCommand {
+            id: "notebook.toggleZen".to_string(),
+            title: crate::localization::text("notebook.dashboard.palette.toggle_zen"),
+            category: CommandCategory::Query,
+            keywords: vec!["notebook", "zen", "focus", "distraction"],
+        });
+        reg.register(ShellCommand {
+            id: "notebook.toggleDense".to_string(),
+            title: crate::localization::text("notebook.dashboard.palette.toggle_dense"),
+            category: CommandCategory::Query,
+            keywords: vec!["notebook", "dense", "compact", "spacing"],
+        });
+        for spec in crate::notebook::editing::keys::COMMANDS {
+            reg.register(ShellCommand {
+                id: spec.id.to_string(),
+                title: crate::localization::text(spec.title_key),
+                category: CommandCategory::Query,
+                keywords: spec.keywords.to_vec(),
+            });
+        }
+        for spec in crate::notebook::embedded::keys::COMMANDS {
+            reg.register(ShellCommand {
+                id: spec.id.to_string(),
+                title: crate::localization::text(spec.title_key),
+                category: CommandCategory::Query,
+                keywords: spec.keywords.to_vec(),
+            });
+        }
+        reg.register(ShellCommand {
             id: "query.executeNoRollback".to_string(),
             title: "Execute Without Rollback Wrap".to_string(),
             category: CommandCategory::Query,

@@ -1,0 +1,18 @@
+                                                               QUERY PLAN                                                                
+-----------------------------------------------------------------------------------------------------------------------------------------
+ Nested Loop  (cost=0.71..3661.92 rows=3060 width=18) (actual time=0.374..12.726 rows=2999.00 loops=1)
+   Buffers: shared hit=8896 read=135
+   ->  Index Scan using orders_pkey on orders o  (cost=0.42..140.97 rows=3060 width=8) (actual time=0.013..0.246 rows=2999.00 loops=1)
+         Index Cond: (id < 3000)
+         Index Searches: 1
+         Buffers: shared hit=34
+   ->  Index Scan using customers_pkey on customers c  (cost=0.29..1.15 rows=1 width=18) (actual time=0.004..0.004 rows=1.00 loops=2999)
+         Index Cond: (id = o.customer_id)
+         Index Searches: 2999
+         Buffers: shared hit=8862 read=135
+ Planning:
+   Buffers: shared hit=246
+ Planning Time: 0.356 ms
+ Execution Time: 12.830 ms
+(14 rows)
+

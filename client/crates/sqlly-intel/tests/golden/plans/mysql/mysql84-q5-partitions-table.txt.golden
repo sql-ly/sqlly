@@ -1,0 +1,21 @@
+format: mysql-table (Certain)
+statements: 1
+
+== statement 1
+dialect: "MySql"
+estimated_rows: 9602
+source_format: "mysql-table"
+statement_type: "EXPLAIN"
+operators: 2
+  #1 Query Block [Query Block]
+      properties: [{name="select_id" value="1"}, {name="select_type" value="SIMPLE"}]
+      subplan_name: "Select #1"
+    #2 Table: events [Access: ALL]
+        estimated_rows: 9602
+        estimated_rows_read: 9602
+        extra: ["Using where", "Using temporary"]
+        filtered_percent: 33.33
+        output_list: ["events"]
+        partitions: ["p2025"]
+        relation: "events"
+        warnings: [{TableScan={table="events"}}]

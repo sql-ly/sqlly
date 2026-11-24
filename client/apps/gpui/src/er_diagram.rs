@@ -3644,6 +3644,76 @@ mod tests {
         });
     }
 
+    // https://github.com/pgadmin-org/pgadmin4/issues/10728
+    #[gpui::test]
+    fn failed_diagram_queries_show_the_database_error_and_a_retry_clears_it(
+        cx: &mut gpui::TestAppContext,
+    ) {
+        let (view, cx) = open_view(cx);
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(60);
+        while std::time::Instant::now() < deadline {
+            cx.run_until_parked();
+            if view.read_with(cx, |view, _cx| !view.loading) {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(5));
+        }
+        let statuses = std::rc::Rc::new(std::cell::RefCell::new(Vec::<String>::new()));
+        let sink = statuses.clone();
+        cx.update(|_, cx| {
+            cx.subscribe(&view, move |_, event: &ErDiagramEvent, _| {
+                if let ErDiagramEvent::Status { message, .. } = event {
+                    sink.borrow_mut().push(message.clone());
+                }
+            })
+            .detach();
+        });
+
+        // Every query the diagram runs on open fails, the way the reporter's
+        // set-up query did: the real server error must reach the user.
+        let db_error = "permission denied for table pg_constraint";
+        view.update(cx, |view, cx| {
+            view.refresh_generation += 1;
+            let generation = view.refresh_generation;
+            view.loading = true;
+            view.apply_fetch(
+                generation,
+                FetchOutcome {
+                    fks: Err(db_error.to_string()),
+                    tables: Err(db_error.to_string()),
+                    columns: Err(db_error.to_string()),
+                },
+                cx,
+            );
+        });
+        cx.run_until_parked();
+        view.read_with(cx, |view, _cx| {
+            assert!(!view.loading, "a failed load must not spin forever");
+            assert_eq!(view.error.as_deref(), Some(db_error));
+            assert!(view.graph.is_none());
+        });
+        assert!(
+            statuses.borrow().iter().any(|m| m.contains(db_error)),
+            "status bar must carry the server's message, got {:?}",
+            statuses.borrow()
+        );
+
+        // Refresh (the retry after a failure) starts clean, and a good
+        // answer draws the diagram: the failure does not stick.
+        view.update(cx, |view, cx| {
+            view.refresh(cx);
+            assert!(view.error.is_none(), "refresh must clear the old error");
+            let generation = view.refresh_generation;
+            view.apply_fetch(
+                generation,
+                fk_fetch(vec![fk("fk", "s", "a", "x", "s", "b", "id")]),
+                cx,
+            );
+            assert!(view.error.is_none());
+            assert!(view.graph.is_some(), "the retry draws the diagram");
+        });
+    }
+
     #[gpui::test]
     fn stale_generation_fetch_is_ignored(cx: &mut gpui::TestAppContext) {
         let (view, cx) = open_view(cx);

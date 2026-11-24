@@ -1,0 +1,51 @@
+{
+  "query_block": {
+    "select_id": 1,
+    "cost_info": {
+      "query_cost": "24118.35"
+    },
+    "windowing": {
+      "windows": [
+        {
+          "name": "<unnamed window>",
+          "using_filesort": true,
+          "filesort_key": [
+            "count(0) desc"
+          ],
+          "functions": [
+            "rank"
+          ]
+        }
+      ],
+      "cost_info": {
+        "sort_cost": "20065.00"
+      },
+      "grouping_operation": {
+        "using_temporary_table": true,
+        "using_filesort": false,
+        "table": {
+          "table_name": "orders",
+          "access_type": "ALL",
+          "possible_keys": [
+            "orders_placed_idx"
+          ],
+          "rows_examined_per_scan": 40131,
+          "rows_produced_per_join": 20065,
+          "filtered": "50.00",
+          "cost_info": {
+            "read_cost": "2046.85",
+            "eval_cost": "2006.50",
+            "prefix_cost": "4053.35",
+            "data_read_per_join": "1M"
+          },
+          "used_columns": [
+            "id",
+            "status",
+            "placed_at"
+          ],
+          "attached_condition": "(`shop`.`orders`.`placed_at` > TIMESTAMP'2023-01-20 00:00:00')"
+        }
+      }
+    }
+  }
+}

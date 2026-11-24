@@ -154,6 +154,11 @@ pub fn connect_params_at(
                 "Auth-token sign-in applies to libSQL / Turso, not Oracle Database".into(),
             ));
         }
+        AuthenticationType::PostgresOAuth { .. } => {
+            return Err(StudioError::InvalidProfile(
+                "PostgreSQL OAuth sign-in applies to PostgreSQL, not Oracle Database".into(),
+            ));
+        }
     };
     if profile.server.trim().is_empty() {
         return Err(StudioError::InvalidProfile(

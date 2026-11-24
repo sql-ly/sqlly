@@ -1,0 +1,10 @@
+shipped
+new
+paid
+cancelled
+QUERY PLAN
+|--CO-ROUTINE x
+|  `--SCAN order_items USING INDEX order_items_order_idx     (loops=1 rows=100000)
+|--SCAN x                                                    (loops=1 rows=40000)
+|--SEARCH o USING INTEGER PRIMARY KEY (rowid=?)              (loops=40000 rows=40000)
+`--USE TEMP B-TREE FOR DISTINCT

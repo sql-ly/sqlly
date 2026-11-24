@@ -1,0 +1,62 @@
+info
+distribution: local
+vectorized: true
+
+• union all
+│ columns: (name)
+│ estimated row count: 1,043
+│
+├── • project
+│   │ columns: (name)
+│   │
+│   └── • lookup join (anti)
+│       │ columns: (id, name)
+│       │ estimated row count: 0
+│       │ table: order_items@order_items_pkey
+│       │ equality: (id) = (order_id)
+│       │ pred: qty = 5
+│       │
+│       └── • hash join (semi)
+│           │ columns: (id, name)
+│           │ estimated row count: 80
+│           │ equality: (id) = (customer_id)
+│           │ left cols are key
+│           │
+│           ├── • scan
+│           │     columns: (id, name)
+│           │     estimated row count: 1,000 (100% of the table; stats collected 5 seconds ago)
+│           │     table: customers@customers_pkey
+│           │     spans: FULL SCAN
+│           │
+│           └── • filter
+│               │ columns: (customer_id, total)
+│               │ estimated row count: 84
+│               │ filter: total > 499
+│               │
+│               └── • scan
+│                     columns: (customer_id, total)
+│                     estimated row count: 20,000 (100% of the table; stats collected 5 seconds ago)
+│                     table: orders@orders_pkey
+│                     spans: FULL SCAN
+│
+└── • project
+"    │ columns: (sku)"
+"    │"
+"    └── • filter"
+"        │ columns: (sku, price)"
+"        │ estimated row count: 1,043"
+"        │ filter: price < 1"
+"        │"
+"        └── • scan"
+"              columns: (sku, price)"
+"              estimated row count: 60,000 (100% of the table; stats collected 4 seconds ago)"
+"              table: order_items@order_items_pkey"
+"              spans: FULL SCAN"
+
+index recommendations: 3
+1. type: index creation
+"   SQL command: CREATE INDEX ON shop.public.order_items (qty);"
+2. type: index creation
+"   SQL command: CREATE INDEX ON shop.public.order_items (price) STORING (sku);"
+3. type: index creation
+"   SQL command: CREATE INDEX ON shop.public.orders (total) STORING (customer_id);"

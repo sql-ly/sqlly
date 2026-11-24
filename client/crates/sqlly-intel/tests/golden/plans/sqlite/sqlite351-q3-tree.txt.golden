@@ -1,0 +1,28 @@
+format: sqlite-eqp (Certain)
+statements: 1
+
+== statement 1
+dialect: "Sqlite"
+source_format: "sqlite-eqp"
+statement_type: "EXPLAIN QUERY PLAN"
+operators: 8
+  #1 CO-ROUTINE r [CO-ROUTINE]
+      subplan_name: "r"
+    #2 SETUP [SETUP]
+      #3 SCAN CONSTANT ROW [SCAN]
+    #4 RECURSIVE STEP [RECURSIVE]
+      #5 SCAN r [SCAN]
+          output_list: ["r"]
+          relation: "r"
+  #6 SCAN r [SCAN]
+      output_list: ["r"]
+      relation: "r"
+  #7 CORRELATED SCALAR SUBQUERY 3 [CORRELATED]
+      subplan_name: "CORRELATED SCALAR SUBQUERY 3"
+    #8 SEARCH orders USING COVERING INDEX orders_customer_idx (customer_id=?) [SEARCH]
+        extra: ["COVERING INDEX"]
+        index_cond: "customer_id=?"
+        index_name: "orders_customer_idx"
+        output_list: ["orders", "Index Cond: customer_id=?", "Index: orders_customer_idx"]
+        properties: [{name="Access" value="COVERING INDEX"}]
+        relation: "orders"

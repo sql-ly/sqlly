@@ -1,0 +1,106 @@
+format: sqlserver-xml (Certain)
+statements: 1
+
+== statement 1
+cardinality_estimator_version: 160
+cpu_time_ms: 348
+dialect: "SqlServer"
+estimated_rows: 1
+execution_time_ms: 407
+has_actuals: yes
+memory_grant: {desired_kb=69824 grant_wait_seconds=0 granted_kb=7320 max_query_memory_kb=353280 max_used_kb=6680 requested_kb=3224 required_kb=3224 serial_desired_kb=69824 serial_required_kb=3224}
+non_parallel_reason: "MaxDOPSetToOne"
+notes: ["Plan retrieved from the plan cache", "Batch mode on rowstore used", "Compile CPU: 7 ms", "Compile memory: 232 kB", "Cached plan size: 32 kB", "Memory grant feedback adjusted: No: First Execution", "Wait RESERVED_MEMORY_ALLOCATION_EXT: 7 ms in 3275 waits"]
+optimization_level: "FULL"
+planning_time_ms: 7
+query_hash: "0x2318986CA0111D46"
+query_plan_hash: "0xC148FC623A4BC574"
+settings: [{name="QUOTED_IDENTIFIER" value="false"}, {name="ARITHABORT" value="false"}, {name="CONCAT_NULL_YIELDS_NULL" value="true"}, {name="ANSI_NULLS" value="true"}, {name="ANSI_PADDING" value="true"}, {name="ANSI_WARNINGS" value="true"}, {name="NUMERIC_ROUNDABORT" value="false"}]
+source_format: "sqlserver-xml"
+statement_text: "SELECT COUNT(*) FROM (SELECT TOP (250000) order_id, padding FROM dbo.orders ORDER BY total DESC, padding) x OPTION (MAXDOP 1, MAX_GRANT_PERCENT = 0.0)"
+statement_type: "SELECT"
+total_subtree_cost: 16.9515
+warnings: [{Other="Grant Increase: requested 3224 KB, granted 7320 KB, used 6680 KB"}, "SpillToTempDb", "RowGoal"]
+operators: 4
+  #0 Compute Scalar [Compute Scalar]
+      actual_rows: 1
+      actual_rows_total: 1
+      actual_time_ms: 404
+      buffers: {logical_reads=0 physical_reads=0 read_aheads=0}
+      estimated_cost: 16.9515
+      estimated_executions: 1
+      estimated_row_width: 11
+      estimated_rows: 1
+      execution_mode: "Batch"
+      loops: 1
+      output_columns: ["Expr1002"]
+      output_list: ["Expr1002"]
+      properties: [{name="Defined Values" value="Expr1002 = CONVERT_IMPLICIT(int,[Expr1005],0)"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}, {name="Actual Batches" value="1"}]
+      row_count: 1
+      warnings: [{Other="Grant Increase: requested 3224 KB, granted 7320 KB, used 6680 KB"}]
+    #1 Hash Match [Aggregate]
+        actual_cpu_ms: 2
+        actual_rows: 1
+        actual_rows_total: 1
+        actual_self_time_ms: 2
+        actual_time_ms: 404
+        buffers: {logical_reads=0 physical_reads=0 read_aheads=0}
+        estimated_cost: 16.9515
+        estimated_cpu: 0.021375
+        estimated_executions: 1
+        estimated_row_width: 11
+        estimated_rows: 1
+        execution_mode: "Batch"
+        loops: 1
+        output_columns: ["Expr1005"]
+        output_list: ["Expr1005"]
+        properties: [{name="Defined Values" value="Expr1005 = COUNT(*)"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}, {name="Memory Fraction Input" value="1"}, {name="Memory Fraction Output" value="1"}, {name="Actual Batches" value="1"}]
+        row_count: 1
+      #2 Sort [TopN Sort]
+          actual_cpu_ms: 321
+          actual_rows: 250000
+          actual_rows_total: 250000
+          actual_self_time_ms: 380
+          actual_time_ms: 402
+          buffers: {logical_reads=904 physical_reads=113 read_aheads=2216}
+          estimated_cost: 16.9041
+          estimated_cpu: 12.5271
+          estimated_executions: 1
+          estimated_io: 0.003754
+          estimated_row_width: 116
+          estimated_rows: 250000
+          execution_mode: "Batch"
+          loops: 1
+          output_columns: ["orders.total", "orders.padding"]
+          output_list: ["orders.total", "orders.padding"]
+          properties: [{name="Distinct" value="0"}, {name="Rows" value="250000"}, {name="EstimateRowsWithoutRowGoal" value="300000"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}, {name="Memory Fraction Input" value="0.99952"}, {name="Memory Fraction Output" value="0.99952"}, {name="Actual Scans" value="13"}, {name="Actual Batches" value="278"}, {name="Spill Granted Memory kB" value="3224"}, {name="Spill Used Memory kB" value="3232"}, {name="Spill Writes To TempDb" value="464"}, {name="Spill Reads From TempDb" value="464"}]
+          row_count: 250000
+          sort_keys: ["orders.total DESC", "orders.padding"]
+          spill: {kind="sort" level=8 threads=1 written_kb=3712}
+          warnings: ["SpillToTempDb", "RowGoal"]
+        #3 Clustered Index Scan [Clustered Index Scan]
+            actual_cpu_ms: 22
+            actual_rows: 300000
+            actual_rows_total: 300000
+            actual_self_time_ms: 22
+            actual_time_ms: 22
+            buffers: {logical_reads=5476 physical_reads=0 read_aheads=0}
+            database: "Shop"
+            estimated_cost: 4.37328
+            estimated_cpu: 0.330157
+            estimated_executions: 1
+            estimated_io: 4.04312
+            estimated_row_width: 116
+            estimated_rows: 300000
+            estimated_rows_read: 300000
+            execution_mode: "Batch"
+            index_name: "PK__orders__46596229A6DBB338"
+            loops: 1
+            output_columns: ["orders.total", "orders.padding"]
+            output_list: ["orders.total", "orders.padding"]
+            properties: [{name="Ordered" value="0"}, {name="ForcedIndex" value="0"}, {name="ForceSeek" value="0"}, {name="ForceScan" value="0"}, {name="NoExpandHint" value="0"}, {name="Storage" value="RowStore"}, {name="TableCardinality" value="300000"}, {name="EstimateRowsWithoutRowGoal" value="300000"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}, {name="IndexKind" value="Clustered"}, {name="Storage" value="RowStore"}, {name="Actual Scans" value="1"}, {name="Actual Batches" value="334"}]
+            relation: "orders"
+            row_count: 300000
+            rows_read: 300000
+            schema: "dbo"
+            table_cardinality: 300000

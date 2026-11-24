@@ -1,0 +1,154 @@
+
+┌─────────────────────────────┐
+│┌───────────────────────────┐│
+││       Physical Plan       ││
+│└───────────────────────────┘│
+└─────────────────────────────┘
+[
+    {
+        "name": "PROJECTION",
+        "children": [
+            {
+                "name": "ORDER_BY",
+                "children": [
+                    {
+                        "name": "PROJECTION",
+                        "children": [
+                            {
+                                "name": "PROJECTION",
+                                "children": [
+                                    {
+                                        "name": "HASH_GROUP_BY",
+                                        "children": [
+                                            {
+                                                "name": "PROJECTION",
+                                                "children": [
+                                                    {
+                                                        "name": "PROJECTION",
+                                                        "children": [
+                                                            {
+                                                                "name": "HASH_JOIN",
+                                                                "children": [
+                                                                    {
+                                                                        "name": "SEQ_SCAN ",
+                                                                        "children": [],
+                                                                        "extra_info": {
+                                                                            "Table": "order_items",
+                                                                            "Type": "Sequential Scan",
+                                                                            "Projections": [
+                                                                                "order_id",
+                                                                                "quantity",
+                                                                                "unit_price"
+                                                                            ],
+                                                                            "Estimated Cardinality": "1200000"
+                                                                        }
+                                                                    },
+                                                                    {
+                                                                        "name": "HASH_JOIN",
+                                                                        "children": [
+                                                                            {
+                                                                                "name": "SEQ_SCAN ",
+                                                                                "children": [],
+                                                                                "extra_info": {
+                                                                                    "Table": "orders",
+                                                                                    "Type": "Sequential Scan",
+                                                                                    "Projections": [
+                                                                                        "id",
+                                                                                        "customer_id"
+                                                                                    ],
+                                                                                    "Filters": "status='paid'",
+                                                                                    "Estimated Cardinality": "100000"
+                                                                                }
+                                                                            },
+                                                                            {
+                                                                                "name": "SEQ_SCAN ",
+                                                                                "children": [],
+                                                                                "extra_info": {
+                                                                                    "Table": "customers",
+                                                                                    "Type": "Sequential Scan",
+                                                                                    "Projections": [
+                                                                                        "id",
+                                                                                        "country"
+                                                                                    ],
+                                                                                    "Estimated Cardinality": "50000"
+                                                                                }
+                                                                            }
+                                                                        ],
+                                                                        "extra_info": {
+                                                                            "Join Type": "INNER",
+                                                                            "Conditions": "customer_id = id",
+                                                                            "Estimated Cardinality": "83777"
+                                                                        }
+                                                                    }
+                                                                ],
+                                                                "extra_info": {
+                                                                    "Join Type": "INNER",
+                                                                    "Conditions": "order_id = id",
+                                                                    "Estimated Cardinality": "96231"
+                                                                }
+                                                            }
+                                                        ],
+                                                        "extra_info": {
+                                                            "Projections": [
+                                                                "#0",
+                                                                "#1",
+                                                                "__internal_compress_string_uinteger(#2)"
+                                                            ],
+                                                            "Estimated Cardinality": "96231"
+                                                        }
+                                                    }
+                                                ],
+                                                "extra_info": {
+                                                    "Projections": [
+                                                        "country",
+                                                        "(CAST(quantity AS DECIMAL(38,0)) * unit_price)"
+                                                    ],
+                                                    "Estimated Cardinality": "96231"
+                                                }
+                                            }
+                                        ],
+                                        "extra_info": {
+                                            "Groups": "#0",
+                                            "Aggregates": [
+                                                "count_star()",
+                                                "sum(#1)"
+                                            ],
+                                            "Estimated Cardinality": "5"
+                                        }
+                                    }
+                                ],
+                                "extra_info": {
+                                    "Projections": [
+                                        "__internal_decompress_string(#0)",
+                                        "#1",
+                                        "#2"
+                                    ],
+                                    "Estimated Cardinality": "5"
+                                }
+                            }
+                        ],
+                        "extra_info": {
+                            "Projections": [
+                                "__internal_compress_string_uinteger(#0)",
+                                "#1",
+                                "#2"
+                            ],
+                            "Estimated Cardinality": "5"
+                        }
+                    }
+                ],
+                "extra_info": {
+                    "Order By": "sum((oi.quantity * oi.unit_price)) DESC"
+                }
+            }
+        ],
+        "extra_info": {
+            "Projections": [
+                "__internal_decompress_string(#0)",
+                "#1",
+                "#2"
+            ],
+            "Estimated Cardinality": "0"
+        }
+    }
+]

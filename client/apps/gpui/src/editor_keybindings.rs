@@ -123,6 +123,7 @@ pub const KNOWN_ACTIONS: &[&str] = &[
     "ToggleLineComment",
     "AddLineComment",
     "RemoveLineComment",
+    "ToggleBlockComment",
     "MoveWordLeft",
     "MoveWordRight",
     "SelectWordLeft",
@@ -235,6 +236,7 @@ pub fn default_bindings() -> EditorKeybindingMap {
         // VS Code's comment chords: cmd-k cmd-c comments, cmd-k cmd-u uncomments.
         m.insert("AddLineComment".into(), vec!["cmd-k cmd-c".into()]);
         m.insert("RemoveLineComment".into(), vec!["cmd-k cmd-u".into()]);
+        m.insert("ToggleBlockComment".into(), vec!["cmd-shift-/".into()]);
         // macOS line-edge nav via cmd-arrows (in addition to home/end), plus
         // the NSTextView Emacs-style ctrl-a / ctrl-e every Mac text field has.
         m.insert(
@@ -353,6 +355,7 @@ pub fn default_bindings() -> EditorKeybindingMap {
         // VS Code's comment chords: ctrl-k ctrl-c comments, ctrl-k ctrl-u uncomments.
         m.insert("AddLineComment".into(), vec!["ctrl-k ctrl-c".into()]);
         m.insert("RemoveLineComment".into(), vec!["ctrl-k ctrl-u".into()]);
+        m.insert("ToggleBlockComment".into(), vec!["ctrl-shift-/".into()]);
         // Word nav: ctrl. Hump (camelCase) nav: alt.
         m.insert("MoveWordLeft".into(), vec!["ctrl-left".into()]);
         m.insert("MoveWordRight".into(), vec!["ctrl-right".into()]);
@@ -669,6 +672,9 @@ pub fn editor_action_display_name(name: &str) -> String {
         "RemoveLineComment" => {
             crate::localization::text("settings.keybindings.editor_action.remove_line_comment")
         }
+        "ToggleBlockComment" => {
+            crate::localization::text("settings.keybindings.editor_action.toggle_block_comment")
+        }
         "MoveWordLeft" => {
             crate::localization::text("settings.keybindings.editor_action.move_word_left")
         }
@@ -861,6 +867,7 @@ fn binding_for(name: &str, stroke: &str, cx: &App) -> Option<KeyBinding> {
         "ToggleLineComment" => load_binding(stroke, ToggleLineComment, ctx, cx)?,
         "AddLineComment" => load_binding(stroke, AddLineComment, ctx, cx)?,
         "RemoveLineComment" => load_binding(stroke, RemoveLineComment, ctx, cx)?,
+        "ToggleBlockComment" => load_binding(stroke, ToggleBlockComment, ctx, cx)?,
         "MoveWordLeft" => load_binding(stroke, MoveWordLeft, ctx, cx)?,
         "MoveWordRight" => load_binding(stroke, MoveWordRight, ctx, cx)?,
         "SelectWordLeft" => load_binding(stroke, SelectWordLeft, ctx, cx)?,

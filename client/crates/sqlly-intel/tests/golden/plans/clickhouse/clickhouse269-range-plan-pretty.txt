@@ -1,0 +1,37 @@
+    ┌─explain──────────────────────────────────────────────────────────────────────────────────┐
+ 1. │ Output: status, count()                                                                  │
+ 2. │                                                                                          │
+ 3. │ Aggregating                                                                              │
+ 4. │ │  Keys: status                                                                          │
+ 5. │ │  Aggregates: count()                                                                   │
+ 6. │ │  Skip merging: 0                                                                       │
+ 7. │ └──ReadFromMergeTree (default.orders)                                                    │
+ 8. │       Read type: Default                                                                 │
+ 9. │       Parts: 10 | Granules: 10                                                           │
+10. │       Output: status                                                                     │
+11. │       Prewhere filter                                                                    │
+12. │       Prewhere filter column:  customer_id <= 200 AND customer_id >= 100 AND total > 800 │
+13. │       Indexes:                                                                           │
+14. │         Min-Max                                                                          │
+15. │           Condition: true                                                                │
+16. │           Parts: 10/10                                                                   │
+17. │           Granules: 392/392                                                              │
+18. │         Partition                                                                        │
+19. │           Condition: true                                                                │
+20. │           Parts: 10/10                                                                   │
+21. │           Granules: 392/392                                                              │
+22. │         PrimaryKey                                                                       │
+23. │           Keys:                                                                          │
+24. │             customer_id                                                                  │
+25. │           Condition: and((customer_id in (-Inf, 200]), (customer_id in [100, +Inf)))     │
+26. │           Parts: 10/10                                                                   │
+27. │           Granules: 10/392                                                               │
+28. │           Search Algorithm: binary search                                                │
+29. │         Skip                                                                             │
+30. │           Name: total_idx                                                                │
+31. │           Description: minmax GRANULARITY 4                                              │
+32. │           Condition: (total in ('800', +Inf))                                            │
+33. │           Parts: 10/10                                                                   │
+34. │           Granules: 10/10                                                                │
+35. │         Ranges: 10                                                                       │
+    └──────────────────────────────────────────────────────────────────────────────────────────┘

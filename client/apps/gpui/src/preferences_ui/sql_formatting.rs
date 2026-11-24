@@ -302,17 +302,6 @@ impl PreferencesWindow {
                 "settings.sql_formatting.section_header.identifier_formatting",
             )),
             self.labeled_row(
-                &crate::localization::text("settings.sql_formatting.labeled_row.identifier_case"),
-                self.sql_enum(
-                    "sql_id_case",
-                    s.identifier_case,
-                    IdentifierCase::all().to_vec(),
-                    |s, v| s.identifier_case = v,
-                    window,
-                    cx,
-                ),
-            ),
-            self.labeled_row(
                 &crate::localization::text("settings.sql_formatting.labeled_row.quoting"),
                 self.sql_enum(
                     "sql_id_quote",

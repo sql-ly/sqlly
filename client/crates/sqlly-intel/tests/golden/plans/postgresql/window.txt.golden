@@ -1,0 +1,76 @@
+format: postgresql-text (Certain)
+statements: 1
+
+== statement 1
+dialect: "Postgres"
+estimated_rows: 4249
+execution_time_ms: 5.478
+has_actuals: yes
+notes: ["Planning buffers: shared hit=112"]
+planning_time_ms: 0.187
+source_format: "postgresql-text"
+statement_type: "EXPLAIN ANALYZE"
+total_subtree_cost: 3669.33
+operators: 4
+  #1 WindowAgg [WindowAgg]
+      actual_rows: 3992
+      actual_rows_total: 3992
+      actual_self_time_ms: 0.442
+      actual_startup_ms: 4.794
+      actual_time_ms: 5.329
+      buffers: {logical_reads=3068 physical_reads=4 shared_hit=3064 shared_read=4}
+      estimated_cost: 3669.33
+      estimated_row_width: 24
+      estimated_rows: 4249
+      estimated_startup_cost: 3584.35
+      loops: 1
+      properties: [{name="Storage" value="Memory Maximum Storage: 17kB"}, {name="Window" value="w1 AS (PARTITION BY customer_id ORDER BY placed_at ROWS UNBOUNDED PRECEDING)"}]
+    #2 Sort [Sort]
+        actual_rows: 3992
+        actual_rows_total: 3992
+        actual_self_time_ms: 0.638
+        actual_startup_ms: 4.789
+        actual_time_ms: 4.887
+        buffers: {logical_reads=3068 physical_reads=4 shared_hit=3064 shared_read=4}
+        estimated_cost: 3594.98
+        estimated_row_width: 16
+        estimated_rows: 4249
+        estimated_startup_cost: 3584.35
+        loops: 1
+        parent_relationship: "Outer"
+        sort_keys: ["customer_id", "placed_at"]
+        sort_method: "quicksort"
+        sort_space_kb: 221
+        sort_space_type: "Memory"
+      #3 Bitmap Heap Scan [Bitmap Heap Scan]
+          actual_rows: 3992
+          actual_rows_total: 3992
+          actual_self_time_ms: 3.36
+          actual_startup_ms: 1.114
+          actual_time_ms: 4.249
+          buffers: {logical_reads=3062 physical_reads=4 shared_hit=3058 shared_read=4}
+          estimated_cost: 3328.29
+          estimated_row_width: 16
+          estimated_rows: 4249
+          estimated_startup_cost: 61.35
+          exact_heap_blocks: 3054
+          index_cond: "(customer_id < 500)"
+          loops: 1
+          output_list: ["orders", "Recheck Cond: (customer_id < 500)"]
+          parent_relationship: "Outer"
+          relation: "orders"
+        #4 Bitmap Index Scan [Bitmap Index Scan]
+            actual_rows: 3992
+            actual_rows_total: 3992
+            actual_self_time_ms: 0.889
+            actual_startup_ms: 0.889
+            actual_time_ms: 0.889
+            buffers: {logical_reads=8 physical_reads=4 shared_hit=4 shared_read=4}
+            estimated_cost: 60.29
+            estimated_rows: 4249
+            index_cond: "(customer_id < 500)"
+            index_name: "orders_customer_idx"
+            loops: 1
+            output_list: ["Index Cond: (customer_id < 500)", "Index: orders_customer_idx"]
+            parent_relationship: "Outer"
+            properties: [{name="Index Searches" value="1"}]

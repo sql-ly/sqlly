@@ -25,7 +25,7 @@ pub mod transport;
 pub use client::{TdsCancelHandle, TdsClient, cancel_handle, open_client};
 pub use execute::{
     ExecuteOutcome, execute_batch_on_client, execute_on_client, execute_on_client_keep_transaction,
-    execute_params_on_client, query_rows_on_client,
+    execute_params_on_client, planned_batches, policied_batch, query_rows_on_client,
 };
 pub use transport::{ConnectionService, SqlServerTransport, TiberiusTransport};
 

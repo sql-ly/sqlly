@@ -1,0 +1,236 @@
+format: sqlserver-text (Certain)
+statements: 5
+
+== statement 1
+dialect: "SqlServer"
+estimated_rows: 2000
+source_format: "sqlserver-text"
+statement_text: "DECLARE @t TABLE (id INT PRIMARY KEY, v INT); INSERT @t SELECT TOP (2000) order_id, customer_id FROM dbo.orders;"
+statement_type: "INSERT"
+total_subtree_cost: 0.062589
+operators: 3
+  #1 Clustered Index Insert [Insert]
+      estimated_cost: 0.062589
+      estimated_cpu: 0.002
+      estimated_executions: 1
+      estimated_io: 0.027987
+      estimated_row_width: 9
+      estimated_rows: 2000
+      properties: [{name="SET" value="[id] = [Shop].[dbo].[orders].[order_id],[v] = [Shop].[dbo].[orders].[customer_id]"}, {name="TableVariable" value="true"}, {name="NodeId" value="2"}, {name="EstimateRows" value="2000.0"}]
+      relation: "@t"
+    #2 Top [Top]
+        estimated_cost: 0.032602
+        estimated_cpu: 0.0002
+        estimated_executions: 1
+        estimated_row_width: 15
+        estimated_rows: 2000
+        output_columns: ["orders.order_id", "orders.customer_id"]
+        output_list: ["orders.order_id", "orders.customer_id"]
+        properties: [{name="TOP EXPRESSION" value="(2000)"}, {name="NodeId" value="3"}, {name="EstimateRows" value="2000.0"}]
+      #3 Clustered Index Scan [Clustered Index Scan]
+          database: "Shop"
+          estimated_cost: 0.032402
+          estimated_cpu: 0.330157
+          estimated_executions: 1
+          estimated_io: 4.043125
+          estimated_row_width: 15
+          estimated_rows: 2000
+          extra: ["ORDERED FORWARD"]
+          index_name: "PK__orders__46596229A6DBB338"
+          output_columns: ["orders.order_id", "orders.customer_id"]
+          output_list: ["orders.order_id", "orders.customer_id"]
+          properties: [{name="Defined Values" value="[Shop].[dbo].[orders].[order_id], [Shop].[dbo].[orders].[customer_id]"}, {name="NodeId" value="4"}, {name="EstimateRows" value="2000.0"}]
+          relation: "orders"
+          schema: "dbo"
+
+== statement 2
+dialect: "SqlServer"
+estimated_rows: 1
+source_format: "sqlserver-text"
+statement_text: "SELECT COUNT(*) FROM @t t JOIN dbo.orders o ON o.order_id = t.id;"
+statement_type: "SELECT"
+total_subtree_cost: 2.14162
+operators: 5
+  #1 Compute Scalar [Compute Scalar]
+      estimated_cost: 2.14162
+      estimated_executions: 1
+      estimated_row_width: 11
+      estimated_rows: 1
+      output_columns: ["Expr1002"]
+      output_list: ["Expr1002"]
+      properties: [{name="DEFINE" value="[Expr1002]=CONVERT_IMPLICIT(int,[Expr1005],0)"}, {name="Defined Values" value="[Expr1002]=CONVERT_IMPLICIT(int,[Expr1005],0)"}, {name="NodeId" value="6"}, {name="EstimateRows" value="1.0"}]
+    #2 Stream Aggregate [Aggregate]
+        estimated_cost: 2.14162
+        estimated_cpu: 0.0012
+        estimated_executions: 1
+        estimated_row_width: 11
+        estimated_rows: 1
+        output_columns: ["Expr1005"]
+        output_list: ["Expr1005"]
+        properties: [{name="DEFINE" value="[Expr1005]=Count(*)"}, {name="Defined Values" value="[Expr1005]=Count(*)"}, {name="NodeId" value="7"}, {name="EstimateRows" value="1.0"}]
+      #3 Hash Match [Inner Join]
+          estimated_cost: 2.14042
+          estimated_cpu: 1.411282
+          estimated_executions: 1
+          estimated_row_width: 9
+          estimated_rows: 2000
+          join_predicate: "t.id = o.order_id"
+          join_type: "Inner"
+          properties: [{name="NodeId" value="8"}, {name="EstimateRows" value="2000.0"}]
+        #4 Clustered Index Scan [Clustered Index Scan]
+            alias: "t"
+            estimated_cost: 0.008445
+            estimated_cpu: 0.002357
+            estimated_executions: 1
+            estimated_io: 0.006088
+            estimated_row_width: 11
+            estimated_rows: 2000
+            output_columns: ["t.id"]
+            output_list: ["t.id"]
+            properties: [{name="TableVariable" value="true"}, {name="Defined Values" value="[t].[id]"}, {name="NodeId" value="9"}, {name="EstimateRows" value="2000.0"}]
+            relation: "@t"
+        #5 Index Scan [Index Scan]
+            alias: "o"
+            database: "Shop"
+            estimated_cost: 0.720689
+            estimated_cpu: 0.330157
+            estimated_executions: 1
+            estimated_io: 0.390532
+            estimated_row_width: 11
+            estimated_rows: 300000
+            index_name: "IX_orders_customer"
+            output_columns: ["o.order_id"]
+            output_list: ["o.order_id"]
+            properties: [{name="Defined Values" value="[o].[order_id]"}, {name="NodeId" value="10"}, {name="EstimateRows" value="300000.0"}]
+            relation: "orders"
+            schema: "dbo"
+
+== statement 3
+dialect: "SqlServer"
+estimated_rows: 5
+source_format: "sqlserver-text"
+statement_text: "SELECT TOP (5) order_id, dbo.fn_tax(total) AS tax FROM dbo.orders ORDER BY order_id;"
+statement_type: "SELECT"
+total_subtree_cost: 0.003342
+operators: 3
+  #1 Compute Scalar [Compute Scalar]
+      estimated_cost: 0.003342
+      estimated_cpu: 0.000001
+      estimated_executions: 1
+      estimated_row_width: 20
+      estimated_rows: 5
+      output_columns: ["orders.order_id", "Expr1002"]
+      output_list: ["orders.order_id", "Expr1002"]
+      properties: [{name="DEFINE" value="[Expr1002]=[Shop].[dbo].[fn_tax]([Shop].[dbo].[orders].[total])"}, {name="Defined Values" value="[Expr1002]=[Shop].[dbo].[fn_tax]([Shop].[dbo].[orders].[total])"}, {name="NodeId" value="12"}, {name="EstimateRows" value="5.0"}]
+    #2 Top [Top]
+        estimated_cost: 0.003342
+        estimated_cpu: 0.000001
+        estimated_executions: 1
+        estimated_row_width: 20
+        estimated_rows: 5
+        output_columns: ["orders.order_id", "orders.total"]
+        output_list: ["orders.order_id", "orders.total"]
+        properties: [{name="TOP EXPRESSION" value="(5)"}, {name="NodeId" value="13"}, {name="EstimateRows" value="5.0"}]
+      #3 Clustered Index Scan [Clustered Index Scan]
+          database: "Shop"
+          estimated_cost: 0.003341
+          estimated_cpu: 0.330157
+          estimated_executions: 1
+          estimated_io: 4.043125
+          estimated_row_width: 20
+          estimated_rows: 5
+          extra: ["ORDERED FORWARD"]
+          index_name: "PK__orders__46596229A6DBB338"
+          output_columns: ["orders.order_id", "orders.total"]
+          output_list: ["orders.order_id", "orders.total"]
+          properties: [{name="Defined Values" value="[Shop].[dbo].[orders].[order_id], [Shop].[dbo].[orders].[total]"}, {name="NodeId" value="14"}, {name="EstimateRows" value="5.0"}]
+          relation: "orders"
+          schema: "dbo"
+
+== statement 4
+dialect: "SqlServer"
+estimated_rows: 1
+source_format: "sqlserver-text"
+statement_text: "IF EXISTS (SELECT 1 FROM dbo.customers WHERE country = 'JP')"
+statement_type: "COND WITH QUERY"
+total_subtree_cost: 0.003313
+warnings: [{TableScan={schema="dbo" table="customers"}}]
+operators: 4
+  #1 Compute Scalar [Compute Scalar]
+      estimated_cost: 0.003313
+      estimated_cpu: 0
+      estimated_executions: 1
+      estimated_row_width: 11
+      estimated_rows: 1
+      output_columns: ["Expr1003"]
+      output_list: ["Expr1003"]
+      properties: [{name="DEFINE" value="[Expr1003]=CASE WHEN [Expr1004] THEN (1) ELSE (0) END"}, {name="Defined Values" value="[Expr1003]=CASE WHEN [Expr1004] THEN (1) ELSE (0) END"}, {name="NodeId" value="19"}, {name="EstimateRows" value="1.0"}]
+    #2 Nested Loops [Left Semi Join]
+        estimated_cost: 0.003313
+        estimated_cpu: 0.000004
+        estimated_executions: 1
+        estimated_row_width: 9
+        estimated_rows: 1
+        join_type: "Left Semi"
+        output_columns: ["Expr1004"]
+        output_list: ["Expr1004"]
+        properties: [{name="DEFINE" value="[Expr1004] = [PROBE VALUE]"}, {name="Defined Values" value="[Expr1004] = [PROBE VALUE]"}, {name="NodeId" value="20"}, {name="EstimateRows" value="1.0"}]
+      #3 Constant Scan [Constant Scan]
+          estimated_cost: 0.000001
+          estimated_cpu: 0.000001
+          estimated_executions: 1
+          estimated_row_width: 9
+          estimated_rows: 1
+          properties: [{name="NodeId" value="21"}, {name="EstimateRows" value="1.0"}]
+      #4 Clustered Index Scan [Clustered Index Scan]
+          database: "Shop"
+          estimated_cost: 0.003305
+          estimated_cpu: 0.055157
+          estimated_executions: 1
+          estimated_io: 0.222384
+          estimated_row_width: 9
+          estimated_rows: 1
+          filter: "[Shop].[dbo].[customers].[country]='JP'"
+          index_name: "PK__customer__CD65CB850EC2D984"
+          properties: [{name="NodeId" value="22"}, {name="EstimateRows" value="1.0"}]
+          relation: "customers"
+          schema: "dbo"
+          warnings: [{TableScan={schema="dbo" table="customers"}}]
+
+== statement 5
+dialect: "SqlServer"
+estimated_rows: 1
+source_format: "sqlserver-text"
+statement_text: "SELECT COUNT(*) FROM dbo.customers;"
+statement_type: "SELECT"
+total_subtree_cost: 0.249764
+operators: 3
+  #1 Compute Scalar [Compute Scalar]
+      estimated_cost: 0.249764
+      estimated_executions: 1
+      estimated_row_width: 11
+      estimated_rows: 1
+      output_columns: ["Expr1002"]
+      output_list: ["Expr1002"]
+      properties: [{name="DEFINE" value="[Expr1002]=CONVERT_IMPLICIT(int,[Expr1003],0)"}, {name="Defined Values" value="[Expr1002]=CONVERT_IMPLICIT(int,[Expr1003],0)"}, {name="NodeId" value="24"}, {name="EstimateRows" value="1.0"}]
+    #2 Stream Aggregate [Aggregate]
+        estimated_cost: 0.249764
+        estimated_cpu: 0.030001
+        estimated_executions: 1
+        estimated_row_width: 11
+        estimated_rows: 1
+        output_columns: ["Expr1003"]
+        output_list: ["Expr1003"]
+        properties: [{name="DEFINE" value="[Expr1003]=Count(*)"}, {name="Defined Values" value="[Expr1003]=Count(*)"}, {name="NodeId" value="25"}, {name="EstimateRows" value="1.0"}]
+      #3 Index Scan [Index Scan]
+          database: "Shop"
+          estimated_cost: 0.219763
+          estimated_cpu: 0.055157
+          estimated_executions: 1
+          estimated_io: 0.164606
+          estimated_row_width: 9
+          estimated_rows: 50000
+          index_name: "IX_customers_email"
+          properties: [{name="NodeId" value="26"}, {name="EstimateRows" value="50000.0"}]
+          relation: "customers"
+          schema: "dbo"

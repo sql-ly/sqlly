@@ -1,0 +1,60 @@
+format: spark-text (Certain)
+statements: 1
+
+== statement 1
+estimated_rows: 2
+source_format: "spark-text"
+statement_type: "EXPLAIN"
+operators: 14
+  #1 Sort [Sort]
+      estimated_rows: 2
+      properties: [{name="Arguments" value="[revenue#221 DESC NULLS LAST], true, 0"}, {name="Codegen stage" value="4"}, {name="Optimized plan statistics" value="sizeInBytes=98.0 B, rowCount=2"}]
+      sort_keys: ["revenue#221 DESC NULLS LAST"]
+    #2 Exchange [Exchange]
+        properties: [{name="Arguments" value="rangepartitioning(revenue#221 DESC NULLS LAST, 200), ENSURE_REQUIREMENTS, [plan_id=1489]"}]
+      #3 HashAggregate [HashAggregate]
+          group_keys: ["region#33"]
+          output_columns: ["region#33", "n#220L", "revenue#221"]
+          properties: [{name="functions" value="[count(1), sum(total#15)]"}, {name="Codegen stage" value="3"}]
+        #4 Exchange [Exchange]
+            properties: [{name="Arguments" value="hashpartitioning(region#33, 200), ENSURE_REQUIREMENTS, [plan_id=1485]"}]
+          #5 HashAggregate [HashAggregate]
+              group_keys: ["region#33"]
+              output_columns: ["region#33", "count#231L", "sum#232", "isEmpty#233"]
+              properties: [{name="functions" value="[partial_count(1), partial_sum(total#15)]"}, {name="Codegen stage" value="2"}]
+            #6 Project [Project]
+                output_columns: ["region#33", "total#15"]
+                properties: [{name="Codegen stage" value="2"}]
+              #7 BroadcastHashJoin [BroadcastHashJoin]
+                  join_predicate: "id#31L = customer_id#14L"
+                  join_type: "Inner"
+                  output_list: ["Condition: id#31L = customer_id#14L"]
+                  properties: [{name="Arguments" value="[id#31L], [customer_id#14L], Inner, BuildLeft, false, false"}, {name="Codegen stage" value="2"}]
+                #8 BroadcastExchange [BroadcastExchange]
+                    properties: [{name="Arguments" value="HashedRelationBroadcastMode(List(input[0, bigint, false]),false), [plan_id=1476]"}]
+                  #9 Filter [Filter]
+                      filter: "region#33 IN (east,west) AND isnotnull(id#31L)"
+                      output_list: ["Filter: region#33 IN (east,west) AND isnotnull(id#31L)"]
+                      properties: [{name="Codegen stage" value="1"}]
+                    #10 ColumnarToRow [ColumnarToRow]
+                        properties: [{name="Codegen stage" value="1"}]
+                      #11 FileScan parquet [FileScan parquet]
+                          database: "spark_catalog"
+                          output_columns: ["id#31L", "region#33"]
+                          output_list: ["customers"]
+                          properties: [{name="Batched" value="true"}, {name="DataFilters" value="[region#33 IN (east,west), isnotnull(id#31L)]"}, {name="Format" value="Parquet"}, {name="Location" value="InMemoryFileIndex(1 paths)[file:/tmp/spark-warehouse/customers]"}, {name="PartitionFilters" value="[]"}, {name="PushedFilters" value="[In(region, [east,west]), IsNotNull(id)]"}, {name="ReadSchema" value="struct<id:bigint,region:string>"}]
+                          relation: "customers"
+                          schema: "default"
+                #12 Filter [Filter]
+                    filter: "isnotnull(customer_id#14L)"
+                    output_list: ["Filter: isnotnull(customer_id#14L)"]
+                    properties: [{name="Codegen stage" value="2"}]
+                  #13 ColumnarToRow [ColumnarToRow]
+                      properties: [{name="Codegen stage" value="2"}]
+                    #14 FileScan parquet [FileScan parquet]
+                        database: "spark_catalog"
+                        output_columns: ["customer_id#14L", "total#15"]
+                        output_list: ["orders"]
+                        properties: [{name="Batched" value="true"}, {name="DataFilters" value="[isnotnull(customer_id#14L)]"}, {name="Format" value="Parquet"}, {name="Location" value="InMemoryFileIndex(1 paths)[file:/tmp/spark-warehouse/orders]"}, {name="PartitionFilters" value="[]"}, {name="PushedFilters" value="[IsNotNull(customer_id)]"}, {name="ReadSchema" value="struct<customer_id:bigint,total:decimal(11,2)>"}]
+                        relation: "orders"
+                        schema: "default"

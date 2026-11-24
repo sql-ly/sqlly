@@ -1,0 +1,147 @@
+format: sqlserver-xml (Certain)
+statements: 1
+
+== statement 1
+cardinality_estimator_version: 160
+cpu_time_ms: 32
+degree_of_parallelism: 1
+dialect: "SqlServer"
+early_abort_reason: "GoodEnoughPlanFound"
+estimated_rows: 1
+execution_time_ms: 37
+has_actuals: yes
+memory_grant: {desired_kb=1040 grant_wait_seconds=0 granted_kb=1040 max_query_memory_kb=755960 max_used_kb=904 requested_kb=1040 required_kb=1024 serial_desired_kb=1040 serial_required_kb=1024}
+notes: ["Compile CPU: 2 ms", "Compile memory: 272 kB", "Cached plan size: 40 kB", "Memory grant feedback adjusted: No: First Execution"]
+optimization_level: "FULL"
+planning_time_ms: 2
+query_hash: "0x922338A825521232"
+query_plan_hash: "0x07FDA802756108AF"
+settings: [{name="QUOTED_IDENTIFIER" value="false"}, {name="ARITHABORT" value="false"}, {name="CONCAT_NULL_YIELDS_NULL" value="true"}, {name="ANSI_NULLS" value="true"}, {name="ANSI_PADDING" value="true"}, {name="ANSI_WARNINGS" value="true"}, {name="NUMERIC_ROUNDABORT" value="false"}]
+source_format: "sqlserver-xml"
+statement_text: "SELECT COUNT(*) AS n FROM dbo.nostats2 n JOIN dbo.customers c ON c.customer_id = n.grp WHERE n.amt > 100 OPTION (RECOMPILE)"
+statement_type: "SELECT"
+total_subtree_cost: 0.352491
+warnings: ["SpillToTempDb", {TableScan={schema="dbo" table="nostats2"}}, "CardinalityEstimation", {MissingIndex={database="[Shop]" impact=18.2557 included_columns=["grp"] inequality_columns=["amt"] schema="[dbo]" table="[nostats2]"}}]
+operators: 6
+  #1 Compute Scalar [Compute Scalar]
+      estimated_cost: 0.352491
+      estimated_cpu: 0
+      estimated_executions: 1
+      estimated_row_width: 11
+      estimated_rows: 1
+      execution_mode: "Row"
+      output_columns: ["Expr1003"]
+      output_list: ["Expr1003"]
+      properties: [{name="Defined Values" value="Expr1003 = CONVERT_IMPLICIT(int,[globalagg1005],0)"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}]
+    #2 Stream Aggregate [Aggregate]
+        actual_cpu_ms: 32
+        actual_rows: 1
+        actual_rows_total: 1
+        actual_self_time_ms: 1
+        actual_time_ms: 36
+        estimated_cost: 0.352491
+        estimated_cpu: 0.000047
+        estimated_executions: 1
+        estimated_row_width: 15
+        estimated_rows: 1
+        execution_mode: "Row"
+        loops: 1
+        output_columns: ["globalagg1005"]
+        output_list: ["globalagg1005"]
+        properties: [{name="Defined Values" value="globalagg1005 = SUM([partialagg1004])"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}]
+        row_count: 1
+      #3 Nested Loops [Inner Join]
+          actual_cpu_ms: 30
+          actual_rows: 18601
+          actual_rows_total: 18601
+          actual_self_time_ms: 6
+          actual_time_ms: 35
+          estimated_cost: 0.352444
+          estimated_cpu: 0.000324
+          estimated_executions: 1
+          estimated_row_width: 15
+          estimated_rows: 77.4597
+          execution_mode: "Row"
+          join_type: "Inner"
+          loops: 1
+          output_columns: ["partialagg1004"]
+          output_list: ["partialagg1004"]
+          properties: [{name="Outer References" value="n.grp, Expr1006"}, {name="Optimized" value="0"}, {name="WithUnorderedPrefetch" value="1"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}]
+          row_count: 18601
+        #5 Hash Match [Aggregate]
+            actual_cpu_ms: 10
+            actual_rows: 18601
+            actual_rows_total: 18601
+            actual_self_time_ms: 12
+            actual_time_ms: 14
+            buffers: {logical_reads=0 physical_reads=0 read_aheads=16}
+            estimated_cost: 0.128904
+            estimated_cpu: 0.046615
+            estimated_executions: 1
+            estimated_row_width: 19
+            estimated_rows: 77.4597
+            execution_mode: "Row"
+            group_keys: ["n.grp"]
+            loops: 1
+            output_columns: ["n.grp", "partialagg1004"]
+            output_list: ["n.grp", "partialagg1004"]
+            peak_memory_kb: 904
+            properties: [{name="Defined Values" value="partialagg1004 = COUNT(*)"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}, {name="Memory Fraction Input" value="1"}, {name="Memory Fraction Output" value="1"}, {name="Actual Scans" value="1"}, {name="Input Memory Grant kB" value="1040"}, {name="Output Memory Grant kB" value="1040"}, {name="Spill Granted Memory kB" value="1024"}, {name="Spill Used Memory kB" value="904"}, {name="Spill Writes To TempDb" value="16"}, {name="Spill Reads From TempDb" value="16"}]
+            row_count: 18601
+            spill: {kind="hash" level=1 threads=1 written_kb=128}
+            warnings: ["SpillToTempDb"]
+          #6 Table Scan [Table Scan]
+              actual_cpu_ms: 2
+              actual_rows: 18601
+              actual_rows_total: 18601
+              actual_self_time_ms: 2
+              actual_time_ms: 2
+              alias: "n"
+              buffers: {logical_reads=65 physical_reads=0 read_aheads=0}
+              columns_without_statistics: ["n.grp"]
+              database: "Shop"
+              estimated_cost: 0.072689
+              estimated_cpu: 0.022157
+              estimated_executions: 1
+              estimated_io: 0.050532
+              estimated_row_width: 20
+              estimated_rows: 6000
+              estimated_rows_read: 20000
+              execution_mode: "Row"
+              filter: "[Shop].[dbo].[nostats2].[amt] as [n].[amt]>(100.00)"
+              loops: 1
+              output_columns: ["n.grp"]
+              output_list: ["n.grp"]
+              properties: [{name="Ordered" value="0"}, {name="ForcedIndex" value="0"}, {name="ForceScan" value="0"}, {name="NoExpandHint" value="0"}, {name="Storage" value="RowStore"}, {name="TableCardinality" value="20000"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}, {name="IndexKind" value="Heap"}, {name="Storage" value="RowStore"}, {name="Actual Scans" value="1"}]
+              relation: "nostats2"
+              row_count: 18601
+              rows_read: 20000
+              schema: "dbo"
+              table_cardinality: 20000
+              warnings: [{TableScan={schema="dbo" table="nostats2"}}, "CardinalityEstimation", {MissingIndex={database="[Shop]" impact=18.2557 included_columns=["grp"] inequality_columns=["amt"] schema="[dbo]" table="[nostats2]"}}]
+        #7 Clustered Index Seek [Clustered Index Seek]
+            actual_cpu_ms: 15
+            actual_rows: 18601
+            actual_rows_total: 18601
+            actual_self_time_ms: 15
+            actual_time_ms: 15
+            alias: "c"
+            buffers: {logical_reads=36031 physical_reads=0 read_aheads=0}
+            database: "Shop"
+            estimated_cost: 0.223216
+            estimated_cpu: 0.000158
+            estimated_executions: 77.4597
+            estimated_io: 0.003125
+            estimated_row_width: 9
+            estimated_rows: 77.4597
+            estimated_rows_read: 1
+            execution_mode: "Row"
+            index_cond: "c.customer_id = [Shop].[dbo].[nostats2].[grp] as [n].[grp]"
+            index_name: "PK__customer__CD65CB850EC2D984"
+            loops: 18601
+            properties: [{name="Ordered" value="1"}, {name="ScanDirection" value="FORWARD"}, {name="ForcedIndex" value="0"}, {name="ForceSeek" value="0"}, {name="ForceScan" value="0"}, {name="NoExpandHint" value="0"}, {name="Storage" value="RowStore"}, {name="TableCardinality" value="50000"}, {name="EstimateRebinds" value="76.4597"}, {name="EstimateRewinds" value="0"}, {name="EstimateRows" value="1"}, {name="IndexKind" value="Clustered"}, {name="Storage" value="RowStore"}]
+            relation: "customers"
+            row_count: 18601
+            rows_read: 18601
+            schema: "dbo"
+            table_cardinality: 50000

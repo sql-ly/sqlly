@@ -1,0 +1,13 @@
+QUERY PLAN
+`--MERGE (UNION ALL)
+   |--LEFT
+   |  |--SEARCH c USING INTEGER PRIMARY KEY (rowid=?)
+   |  |--LIST SUBQUERY 2
+   |  |  |--SCAN orders
+   |  |  `--CREATE BLOOM FILTER
+   |  |--CORRELATED SCALAR SUBQUERY 1
+   |  |  `--SEARCH o USING INDEX orders_customer_idx (customer_id=?)
+   |  `--USE TEMP B-TREE FOR ORDER BY
+   `--RIGHT
+      |--SCAN customers
+      `--USE TEMP B-TREE FOR ORDER BY

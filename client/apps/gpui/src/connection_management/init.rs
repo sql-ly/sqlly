@@ -96,6 +96,21 @@ impl ConnectionManagement {
         });
         let username_input = cx.new(|cx| InputState::new(window, cx).placeholder("sa"));
         let aws_region_input = cx.new(|cx| InputState::new(window, cx).placeholder("us-west-2"));
+        let pg_oauth_issuer_input = cx.new(|cx| {
+            InputState::new(window, cx).placeholder(crate::localization::input_placeholder(
+                window,
+                cx,
+                "connections.management.pg_oauth_issuer_placeholder",
+            ))
+        });
+        let pg_oauth_client_id_input = cx.new(|cx| InputState::new(window, cx));
+        let pg_oauth_scope_input = cx.new(|cx| {
+            InputState::new(window, cx).placeholder(crate::localization::input_placeholder(
+                window,
+                cx,
+                "connections.management.pg_oauth_scope_placeholder",
+            ))
+        });
         #[cfg(not(target_arch = "wasm32"))]
         let aws_profile_select = cx.new(|cx| {
             SelectState::new(
@@ -247,6 +262,24 @@ impl ConnectionManagement {
             Self::text_sync(&aws_region_input, window, cx, |this, text| {
                 if this.aws_region != text {
                     this.aws_region = text;
+                    this.mark_dirty();
+                }
+            }),
+            Self::text_sync(&pg_oauth_issuer_input, window, cx, |this, text| {
+                if this.pg_oauth_issuer != text {
+                    this.pg_oauth_issuer = text;
+                    this.mark_dirty();
+                }
+            }),
+            Self::text_sync(&pg_oauth_client_id_input, window, cx, |this, text| {
+                if this.pg_oauth_client_id != text {
+                    this.pg_oauth_client_id = text;
+                    this.mark_dirty();
+                }
+            }),
+            Self::text_sync(&pg_oauth_scope_input, window, cx, |this, text| {
+                if this.pg_oauth_scope != text {
+                    this.pg_oauth_scope = text;
                     this.mark_dirty();
                 }
             }),
@@ -518,6 +551,9 @@ impl ConnectionManagement {
             username: String::new(),
             aws_region: String::new(),
             aws_profile: String::new(),
+            pg_oauth_issuer: String::new(),
+            pg_oauth_client_id: String::new(),
+            pg_oauth_scope: String::new(),
             #[cfg(not(target_arch = "wasm32"))]
             gcp_adc_status: String::new(),
             password,
@@ -575,6 +611,9 @@ impl ConnectionManagement {
             database_input,
             username_input,
             aws_region_input,
+            pg_oauth_issuer_input,
+            pg_oauth_client_id_input,
+            pg_oauth_scope_input,
             #[cfg(not(target_arch = "wasm32"))]
             aws_profile_select,
             #[cfg(not(target_arch = "wasm32"))]

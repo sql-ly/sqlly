@@ -7194,6 +7194,8 @@ mod tests {
         /// test can prove the `ForeignKeyCache` collapses N table expansions into
         /// one database-wide fetch.
         fk_calls: std::sync::Arc<std::sync::atomic::AtomicUsize>,
+        /// When set, `list_tables` fails with this server message.
+        tables_error: Option<String>,
     }
 
     impl FakeMetadata {
@@ -7227,6 +7229,9 @@ mod tests {
             _: &str,
             schema: Option<&str>,
         ) -> sqlly_core::StudioResult<Vec<sqlly_services::metadata::MetadataNode>> {
+            if let Some(message) = &self.tables_error {
+                return Err(sqlly_core::StudioError::QueryExecution(message.clone()));
+            }
             Ok(self
                 .tables
                 .iter()
@@ -7344,6 +7349,7 @@ mod tests {
             constraints: Vec::new(),
             foreign_keys: Vec::new(),
             fk_calls: std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0)),
+            tables_error: None,
         }
     }
 
@@ -7405,6 +7411,88 @@ mod tests {
             &ForeignKeyCache::default(),
             None,
         ))
+    }
+
+    // https://github.com/beekeeper-studio/beekeeper-studio/issues/4994
+    #[gpui::test]
+    fn hidden_information_schema_fails_only_the_tables_folder(cx: &mut gpui::TestAppContext) {
+        let hidden = "denied: schema/table information_schema.tables is hidden";
+        let mut fake = fake_metadata();
+        fake.tables_error = Some(hidden.to_string());
+        let services = fake.services();
+        let mut profile = test_profile();
+        profile.database_type = sqlly_core::DatabaseType::TiDb;
+        let server_id = format!("srv:{}", profile.id.0);
+        let db_id = format!("{server_id}:db:appdb");
+        let tables_id = format!("{db_id}:tables");
+
+        let failures = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
+        let tree = cx.update(|cx| {
+            let log =
+                crate::log_console::DiagnosticLog::new(crate::log_console::DiagnosticLogLevel::Off);
+            let tree = cx.new(|cx| SchemaTree::new(services, log, cx));
+            let seen = failures.clone();
+            cx.subscribe(&tree, move |_, event: &SchemaTreeEvent, _| {
+                if let SchemaTreeEvent::LoadFailed {
+                    server_node,
+                    message,
+                    ..
+                } = event
+                {
+                    seen.borrow_mut().push((*server_node, message.clone()));
+                }
+            })
+            .detach();
+            tree.update(cx, |tree, cx| {
+                tree.set_connections(vec![profile.clone()], cx);
+                // Connected, with the database list already loaded from
+                // SHOW DATABASES.
+                tree.set_connection_state(profile.id.0, ConnectionState::Connected, cx);
+                let server = find_server_node_mut(&mut tree.roots, &server_id).expect("server");
+                let mut db = TreeNode::new(&db_id, "appdb", NodeKind::Database("appdb".into()), 1);
+                db.load_state = LoadState::Loaded;
+                db.expanded = true;
+                db.children.push(TreeNode::new(
+                    &tables_id,
+                    "Tables",
+                    NodeKind::TablesFolder,
+                    2,
+                ));
+                server.children = vec![db];
+                server.load_state = LoadState::Loaded;
+                server.expanded = true;
+                // Expanding Tables runs the information_schema.tables listing.
+                tree.load_children(&tables_id, cx);
+            });
+            tree
+        });
+        cx.run_until_parked();
+
+        let failures = failures.borrow();
+        assert_eq!(failures.len(), 1, "{failures:?}");
+        let (server_node, message) = &failures[0];
+        assert!(
+            !server_node,
+            "reported as a deeper node's failure, not the server's"
+        );
+        assert!(message.contains(hidden), "{message}");
+        cx.update(|cx| {
+            let tree = tree.read(cx);
+            let tables = find_node_any(&tree.roots, &tables_id).expect("tables folder");
+            assert!(
+                matches!(&tables.load_state, LoadState::Failed(m) if m.contains("is hidden")),
+                "{:?}",
+                tables.load_state
+            );
+            let server = find_server_node(&tree.roots, &server_id).expect("server");
+            assert_eq!(server.load_state, LoadState::Loaded);
+            assert_eq!(server.children.len(), 1, "the database list stays");
+            assert_eq!(
+                tree.connection_state(profile.id.0),
+                ConnectionState::Connected,
+                "a metadata failure does not disconnect the server"
+            );
+        });
     }
 
     fn hidden_staging_profile() -> ConnectionProfile {

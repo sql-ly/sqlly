@@ -1,0 +1,64 @@
+format: postgresql-json (Certain)
+statements: 1
+
+== statement 1
+dialect: "Postgres"
+estimated_rows: 8
+execution_time_ms: 0.035
+has_actuals: yes
+notes: ["Planning buffers: shared hit=275"]
+planning_time_ms: 0.323
+source_format: "postgresql-json"
+statement_type: "EXPLAIN ANALYZE"
+total_subtree_cost: 43.87
+operators: 4
+  #1 Nested Loop [Nested Loop]
+      actual_self_time_ms: 0.003
+      actual_startup_ms: 0.009
+      actual_time_ms: 0.012
+      buffers: {local_dirtied=0 local_hit=0 local_read=0 local_written=0 logical_reads=3 physical_reads=0 shared_dirtied=0 shared_hit=3 shared_read=0 shared_written=0 temp_read=0 temp_written=0 writes=0}
+      estimated_cost: 43.87
+      estimated_row_width: 19
+      estimated_rows: 8
+      estimated_startup_cost: 4.9
+      join_type: "Inner"
+      loops: 1
+    #2 Index Scan [Index Scan]
+        actual_self_time_ms: 0.009
+        actual_startup_ms: 0.009
+        actual_time_ms: 0.009
+        alias: "c"
+        buffers: {local_dirtied=0 local_hit=0 local_read=0 local_written=0 logical_reads=3 physical_reads=0 shared_dirtied=0 shared_hit=3 shared_read=0 shared_written=0 temp_read=0 temp_written=0 writes=0}
+        estimated_cost: 8.43
+        estimated_row_width: 18
+        estimated_rows: 1
+        estimated_startup_cost: 0.41
+        index_cond: "(email = 'nobody@example.com'::text)"
+        index_name: "customers_email_idx"
+        loops: 1
+        output_list: ["customers", "Index Cond: (email = 'nobody@example.com'::text)", "Index: customers_email_idx"]
+        parent_relationship: "Outer"
+        properties: [{name="Index Searches" value="1"}]
+        relation: "customers"
+    #3 Bitmap Heap Scan [Bitmap Heap Scan]
+        alias: "o"
+        buffers: {local_dirtied=0 local_hit=0 local_read=0 local_written=0 logical_reads=0 physical_reads=0 shared_dirtied=0 shared_hit=0 shared_read=0 shared_written=0 temp_read=0 temp_written=0 writes=0}
+        estimated_cost: 35.36
+        estimated_row_width: 9
+        estimated_rows: 8
+        estimated_startup_cost: 4.48
+        index_cond: "(c.id = customer_id)"
+        never_executed: yes
+        output_list: ["orders", "Recheck Cond: (c.id = customer_id)"]
+        parent_relationship: "Inner"
+        relation: "orders"
+      #4 Bitmap Index Scan [Bitmap Index Scan]
+          buffers: {local_dirtied=0 local_hit=0 local_read=0 local_written=0 logical_reads=0 physical_reads=0 shared_dirtied=0 shared_hit=0 shared_read=0 shared_written=0 temp_read=0 temp_written=0 writes=0}
+          estimated_cost: 4.48
+          estimated_rows: 8
+          index_cond: "(customer_id = c.id)"
+          index_name: "orders_customer_idx"
+          never_executed: yes
+          output_list: ["Index Cond: (customer_id = c.id)", "Index: orders_customer_idx"]
+          parent_relationship: "Outer"
+          properties: [{name="Index Searches" value="0"}]

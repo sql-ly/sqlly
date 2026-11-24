@@ -15,25 +15,12 @@ use std::collections::{HashMap, HashSet};
 /// response before it crosses the wire.
 const FK_JOIN_BOOST: i32 = 100;
 
-/// Generate a short, collision-free alias for a candidate table: the first
-/// letter (lowercased), optionally suffixed with a counter.
-fn join_alias(table_name: &str, used: &HashSet<String>) -> String {
-    let base = table_name
-        .chars()
-        .next()
-        .map(|c| c.to_ascii_lowercase().to_string())
-        .unwrap_or_else(|| "t".to_string());
-    if !used.contains(&base) {
-        return base;
-    }
-    let mut n = 2;
-    loop {
-        let candidate = format!("{base}{n}");
-        if !used.contains(&candidate) {
-            return candidate;
-        }
-        n += 1;
-    }
+/// Collision-free alias for a candidate table, in the user's join alias
+/// style (first letter or capital letters, see
+/// [`crate::intellisense::join_alias_style`]).
+fn join_alias(qualified_name: &str, used: &HashSet<String>) -> String {
+    let used: Vec<String> = used.iter().cloned().collect();
+    crate::intellisense::join_alias_for(qualified_name, &used)
 }
 
 /// Render the equality pairs for a join ON clause. When `new_qualifier` is
@@ -156,7 +143,7 @@ pub(crate) fn fk_join_candidates(
                 else {
                     continue;
                 };
-                let alias = join_alias(target_entry.reference.name.spelling(), &used_aliases);
+                let alias = join_alias(&target_display, &used_aliases);
                 used_aliases.insert(alias.clone());
                 let new_cols: Vec<&str> = fk.target_columns.iter().map(|c| c.spelling()).collect();
                 let existing_cols: Vec<&str> = fk.columns.iter().map(|c| c.spelling()).collect();
@@ -205,7 +192,7 @@ pub(crate) fn fk_join_candidates(
                 let Some(score) = fuzzy::score(prefix, entry.reference.name.spelling()) else {
                     continue;
                 };
-                let alias = join_alias(entry.reference.name.spelling(), &used_aliases);
+                let alias = join_alias(&owner_display, &used_aliases);
                 used_aliases.insert(alias.clone());
                 let new_cols: Vec<&str> = fk.columns.iter().map(|c| c.spelling()).collect();
                 let existing_cols: Vec<&str> =

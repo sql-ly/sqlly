@@ -1,0 +1,46 @@
+format: mysql-json (Certain)
+statements: 1
+
+== statement 1
+dialect: "MySql"
+estimated_rows: 40131
+source_format: "mysql-json"
+statement_type: "EXPLAIN"
+operators: 6
+  #1 Query Block [Query Block]
+    #2 Union result [Union result]
+        extra: ["Using temporary"]
+        output_list: ["<union1,2>"]
+        properties: [{name="access_type" value="ALL"}, {name="select_id" value="3"}, {name="table_name" value="<union1,2>"}, {name="using_temporary_table" value="true"}]
+      #3 Query Block [Query Block]
+          estimated_cost: 502.8
+          properties: [{name="cost_info.query_cost" value="502.80"}, {name="select_id" value="1"}, {name="cacheable" value="true"}, {name="dependent" value="false"}]
+          subplan_name: "Select #1"
+        #4 Table: customers [Access: ALL]
+            estimated_cost: 502.8
+            estimated_io: 453.07
+            estimated_rows: 4973
+            estimated_rows_read: 4973
+            filter: "(`shop`.`customers`.`country` = 'US')"
+            filtered_percent: 10
+            output_columns: ["id", "country"]
+            output_list: ["customers", "Condition: (`shop`.`customers`.`country` = 'US')"]
+            properties: [{name="cost_info.data_read_per_join" value="283K"}, {name="cost_info.eval_cost" value="49.73"}, {name="cost_info.prefix_cost" value="502.80"}, {name="cost_info.read_cost" value="453.07"}, {name="rows_produced_per_join" value="497"}]
+            relation: "customers"
+            warnings: [{TableScan={table="customers"}}]
+      #5 Query Block [Query Block]
+          estimated_cost: 4053.35
+          properties: [{name="cost_info.query_cost" value="4053.35"}, {name="select_id" value="2"}, {name="cacheable" value="true"}, {name="dependent" value="false"}]
+          subplan_name: "Select #2"
+        #6 Table: orders [Access: ALL]
+            estimated_cost: 4053.35
+            estimated_io: 2715.78
+            estimated_rows: 40131
+            estimated_rows_read: 40131
+            filter: "(`shop`.`orders`.`total` < 12.00)"
+            filtered_percent: 33.33
+            output_columns: ["customer_id", "total"]
+            output_list: ["orders", "Condition: (`shop`.`orders`.`total` < 12.00)"]
+            properties: [{name="cost_info.data_read_per_join" value="940K"}, {name="cost_info.eval_cost" value="1337.57"}, {name="cost_info.prefix_cost" value="4053.35"}, {name="cost_info.read_cost" value="2715.78"}, {name="rows_produced_per_join" value="13375"}]
+            relation: "orders"
+            warnings: [{TableScan={table="orders"}}]

@@ -1,0 +1,9 @@
+QUERY PLAN
+|--CO-ROUTINE r
+|  |--SETUP
+|  |  `--SCAN CONSTANT ROW
+|  `--RECURSIVE STEP
+|     `--SCAN r
+|--SCAN r
+`--CORRELATED SCALAR SUBQUERY 3
+   `--SEARCH orders USING COVERING INDEX orders_customer_idx (customer_id=?)

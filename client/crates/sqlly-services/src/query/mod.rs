@@ -180,9 +180,8 @@ pub trait QueryExecutor: Send + Sync {
     /// rows until the consumer catches up.
     ///
     /// The default body falls back to [`Self::execute_in_session`]: a port
-    /// that cannot deliver full values (the browser preview, a remote
-    /// engine behind a relay) still cuts previews and may still withhold
-    /// rows into a spill file, so callers must keep handling
+    /// that cannot deliver full values still cuts previews and may still
+    /// withhold rows into a spill file, so callers must keep handling
     /// `TruncatedCells` and `SpillManifest`.
     async fn execute_full_values(
         &self,

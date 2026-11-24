@@ -1,0 +1,12 @@
+"Trino version: 435
+Output[columnNames = [nationkey, name, regionkey, comment]]
+│   Layout: [nationkey:bigint, name:varchar(25), regionkey:bigint, comment:varchar(152)]
+│   Estimates: {rows: 5 (547B), cpu: 0, memory: 0B, network: 0B}
+└─ ScanFilter[table = tpch:tiny:nation, filterPredicate = (""regionkey"" = BIGINT '1')]
+       Layout: [nationkey:bigint, name:varchar(25), regionkey:bigint, comment:varchar(152)]
+       Estimates: {rows: 25 (2.67kB), cpu: 2.67k, memory: 0B, network: 0B}/{rows: 5 (547B), cpu: 2.67k, memory: 0B, network: 0B}
+       nationkey := tpch:nationkey
+       regionkey := tpch:regionkey
+       name := tpch:name
+       comment := tpch:comment
+"

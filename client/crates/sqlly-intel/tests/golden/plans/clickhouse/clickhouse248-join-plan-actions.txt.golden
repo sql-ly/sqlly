@@ -1,0 +1,42 @@
+format: clickhouse-text (Certain)
+statements: 1
+
+== statement 1
+dialect: "ClickHouse"
+estimated_rows: 49152
+source_format: "clickhouse-text"
+statement_type: "EXPLAIN"
+operators: 11
+  #1 Expression Project names [Expression]
+      properties: [{name="Actions" value="INPUT :: 0 -> count() UInt64 : 0 INPUT : 1 -> sum(__table2.total) Decimal(38, 2) : 1 INPUT : 2 -> __table1.country LowCardinality(String) : 2 ALIAS sum(__table2..."}, {name="Positions" value="1 0 3"}]
+    #2 Limit preliminary LIMIT (without OFFSET) [Limit]
+        properties: [{name="Limit" value="5"}, {name="Offset" value="0"}]
+      #3 Sorting Sorting for ORDER BY [Sorting]
+          properties: [{name="Limit" value="5"}]
+          sort_keys: ["sum(__table2.total) DESC"]
+        #4 Expression (Before ORDER BY + Projection) [Expression]
+            properties: [{name="Actions" value="INPUT :: 0 -> count() UInt64 : 0 INPUT :: 1 -> sum(__table2.total) Decimal(38, 2) : 1 INPUT :: 2 -> __table1.country LowCardinality(String) : 2"}, {name="Positions" value="1 0 2"}]
+          #5 Aggregating [Aggregating]
+              group_keys: ["__table1.country"]
+              properties: [{name="Aggregates" value="count(), sum(__table2.total)"}, {name="Skip merging" value="0"}]
+            #6 Expression (Before GROUP BY + ) [Expression]
+                properties: [{name="Actions" value="INPUT :: 0 -> __table1.country LowCardinality(String) : 0 INPUT :: 1 -> __table1.id UInt32 : 1 INPUT :: 2 -> __table2.total Decimal(12, 2) : 2 INPUT :: 3 -> __t..."}, {name="Positions" value="0 2"}]
+              #7 Join JOIN FillRightFirst [Join]
+                  join_predicate: "[(__table1.id) = (__table2.customer_id)]"
+                  join_type: "INNER"
+                  properties: [{name="Strictness" value="ALL"}, {name="Algorithm" value="HashJoin"}]
+                #8 Expression (JOIN actions + Change column names to column identifiers) [Expression]
+                    properties: [{name="Actions" value="INPUT : 0 -> country LowCardinality(String) : 0 INPUT : 1 -> id UInt32 : 1 ALIAS country :: 0 -> __table1.country LowCardinality(String) : 2 ALIAS id :: 1 -> __..."}, {name="Positions" value="2 0"}]
+                  #9 ReadFromMergeTree default.customers [ReadFromMergeTree]
+                      estimated_rows: 49152
+                      properties: [{name="Read type" value="Default"}, {name="Parts" value="1"}, {name="Granules" value="6"}]
+                      relation: "customers"
+                      schema: "default"
+                #10 Expression [Expression]
+                    properties: [{name="Actions" value="INPUT : 0 -> total Decimal(12, 2) : 0 INPUT : 1 -> customer_id UInt32 : 1 INPUT : 2 -> placed_at DateTime : 2 INPUT : 3 -> status LowCardinality(String) : 3 ALI..."}, {name="Positions" value="4 0 1 2"}]
+                  #11 ReadFromMergeTree default.orders [ReadFromMergeTree]
+                      estimated_rows: 1589248
+                      filter: "and(greaterOrEquals(__table2.placed_at, '2023-06-01 00:00:00'_String), equals(__table2.status, 'paid'_String))"
+                      properties: [{name="Read type" value="Default"}, {name="Parts" value="5"}, {name="Granules" value="194"}, {name="Need filter" value="1"}, {name="Actions" value="INPUT : 0 -> placed_at DateTime : 0 INPUT : 1 -> status LowCardinality(String) : 1 COLUMN Const(String) -> 'paid'_String String : 2 COLUMN Const(String) -> '202..."}, {name="Positions" value="0 1 3"}]
+                      relation: "orders"
+                      schema: "default"

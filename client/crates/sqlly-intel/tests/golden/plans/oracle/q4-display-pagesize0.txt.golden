@@ -1,0 +1,56 @@
+format: oracle-xplan (Certain)
+statements: 1
+
+== statement 1
+dialect: "Oracle"
+estimated_rows: 1000
+query_plan_hash: "3160566349"
+source_format: "oracle-xplan"
+statement_type: "EXPLAIN PLAN"
+total_subtree_cost: 3105
+operators: 7
+  #0 SELECT STATEMENT [SELECT STATEMENT]
+      estimated_cost: 3105
+      estimated_row_width: 25
+      estimated_rows: 1000
+      properties: [{name="Bytes" value="25000"}, {name="Cost %CPU" value="1"}, {name="Time" value="00:00:01"}]
+    #1 SORT ORDER BY [SORT]
+        estimated_cost: 3105
+        estimated_row_width: 25
+        estimated_rows: 1000
+        properties: [{name="Bytes" value="25000"}, {name="Cost %CPU" value="1"}, {name="Time" value="00:00:01"}]
+      #2 HASH GROUP BY [HASH]
+          estimated_cost: 3105
+          estimated_row_width: 25
+          estimated_rows: 1000
+          properties: [{name="Bytes" value="25000"}, {name="Cost %CPU" value="1"}, {name="Time" value="00:00:01"}]
+        #3 HASH JOIN [HASH JOIN]
+            estimated_cost: 3099
+            estimated_row_width: 25.088
+            estimated_rows: 148000
+            join_predicate: "\"ITEM_1\"=\"OI\".\"ORDER_ID\""
+            join_type: "INNER"
+            output_list: ["access: \"ITEM_1\"=\"OI\".\"ORDER_ID\""]
+            properties: [{name="Bytes" value="3713024"}, {name="Cost %CPU" value="1"}, {name="TempSpc" value="16M"}, {name="Time" value="00:00:01"}]
+          #4 TABLE ACCESS FULL ORDER_ITEMS [TABLE ACCESS]
+              estimated_cost: 610
+              estimated_row_width: 16.9984
+              estimated_rows: 600000
+              properties: [{name="Bytes" value="10199040"}, {name="Cost %CPU" value="1"}, {name="Time" value="00:00:01"}]
+              relation: "ORDER_ITEMS"
+              warnings: [{TableScan={table="ORDER_ITEMS"}}]
+          #5 VIEW VW_GBF_5 [VIEW]
+              estimated_cost: 1593
+              estimated_row_width: 7.9872
+              estimated_rows: 75000
+              properties: [{name="Bytes" value="599040"}, {name="Cost %CPU" value="1"}, {name="Time" value="00:00:01"}]
+              relation: "VW_GBF_5"
+            #6 TABLE ACCESS FULL ORDERS [TABLE ACCESS]
+                estimated_cost: 1593
+                estimated_row_width: 13.994667
+                estimated_rows: 75000
+                filter: "\"O\".\"STATUS\"='shipped'"
+                output_list: ["filter: \"O\".\"STATUS\"='shipped'"]
+                properties: [{name="Bytes" value="1049600"}, {name="Cost %CPU" value="1"}, {name="Time" value="00:00:01"}]
+                relation: "ORDERS"
+                warnings: [{TableScan={table="ORDERS"}}]

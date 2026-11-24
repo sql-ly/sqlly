@@ -13,4 +13,8 @@ regexes = [
   '''E00641F75A8FFC2E7AF00CC29732DB6E''',
   # Random UUID used as a keychain lookup key in a Redis Sentinel test.
   '''4b5c0b51-4f5e-4f0b-9b55-7f1d57b8a8a1''',
+  # Fake tokens in the notebook secret-redaction tests (2026-11-23).
+  '''0123456789abcdefghijABCDEFGHIJ012345''',
+  '''pl4nted-row-secret''',
+  '''eyJhbGciOiJIUzI1NiJ9\.eyJzdWIiOiIxMjM0NTY3ODkwIn0\.dozjgNryP4J3jVmNHl0w5N''',
 ]

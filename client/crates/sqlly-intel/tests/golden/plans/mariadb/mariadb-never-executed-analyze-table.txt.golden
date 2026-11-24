@@ -1,0 +1,31 @@
+format: mariadb-table (Certain)
+statements: 1
+
+== statement 1
+dialect: "MariaDb"
+estimated_rows: 8
+has_actuals: yes
+source_format: "mariadb-table"
+statement_type: "ANALYZE"
+operators: 3
+  #1 Query Block [Query Block]
+      properties: [{name="select_id" value="1"}, {name="select_type" value="SIMPLE"}]
+      subplan_name: "Select #1"
+    #2 Table: c [Access: ref]
+        estimated_rows: 1
+        estimated_rows_read: 1
+        extra: ["Using index condition"]
+        filtered_percent: 100
+        index_name: "customers_email_idx"
+        output_list: ["c", "Key: customers_email_idx"]
+        properties: [{name="possible_keys" value="PRIMARY,customers_email_idx"}, {name="key_len" value="322"}, {name="ref" value="const"}, {name="r_filtered" value="100.00"}]
+        relation: "c"
+    #3 Table: o [Access: ref]
+        estimated_rows: 8
+        estimated_rows_read: 8
+        filtered_percent: 100
+        index_name: "orders_customer_idx"
+        never_executed: yes
+        output_list: ["o", "Key: orders_customer_idx"]
+        properties: [{name="possible_keys" value="orders_customer_idx"}, {name="key_len" value="4"}, {name="ref" value="shop.c.id"}]
+        relation: "o"

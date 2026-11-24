@@ -1,0 +1,45 @@
+format: clickhouse-text (Certain)
+statements: 1
+
+== statement 1
+dialect: "ClickHouse"
+source_format: "clickhouse-text"
+statement_type: "EXPLAIN"
+operators: 11
+  #1 Expression Project names [Expression]
+      output_columns: ["country", "count()", "sum(total)"]
+      properties: [{name="Header" value="country LowCardinality(String) count() UInt64 sum(total) Decimal(38, 2)"}]
+    #2 Limit preliminary LIMIT (without OFFSET) [Limit]
+        output_columns: ["sum(__table2.total)", "count()", "__table1.country"]
+        properties: [{name="Header" value="sum(__table2.total) Decimal(38, 2) count() UInt64 __table1.country LowCardinality(String)"}]
+      #3 Sorting Sorting for ORDER BY [Sorting]
+          output_columns: ["sum(__table2.total)", "count()", "__table1.country"]
+          properties: [{name="Header" value="sum(__table2.total) Decimal(38, 2) count() UInt64 __table1.country LowCardinality(String)"}]
+        #4 Expression (Before ORDER BY + Projection) [Expression]
+            output_columns: ["sum(__table2.total)", "count()", "__table1.country"]
+            properties: [{name="Header" value="sum(__table2.total) Decimal(38, 2) count() UInt64 __table1.country LowCardinality(String)"}]
+          #5 Aggregating [Aggregating]
+              output_columns: ["__table1.country", "count()", "sum(__table2.total)"]
+              properties: [{name="Header" value="__table1.country LowCardinality(String) count() UInt64 sum(__table2.total) Decimal(38, 2)"}]
+            #6 Expression (Before GROUP BY + ) [Expression]
+                output_columns: ["__table1.country", "__table2.total"]
+                properties: [{name="Header" value="__table1.country LowCardinality(String) __table2.total Decimal(12, 2)"}]
+              #7 Join JOIN FillRightFirst [Join]
+                  output_columns: ["__table1.country", "__table1.id", "__table2.total", "__table2.placed_at", "__table2.status"]
+                  properties: [{name="Header" value="__table1.country LowCardinality(String) __table1.id UInt32 __table2.total Decimal(12, 2) __table2.placed_at DateTime __table2.status LowCardinality(String)"}]
+                #8 Expression (JOIN actions + Change column names to column identifiers) [Expression]
+                    output_columns: ["__table1.country", "__table1.id"]
+                    properties: [{name="Header" value="__table1.country LowCardinality(String) __table1.id UInt32"}]
+                  #9 ReadFromMergeTree default.customers [ReadFromMergeTree]
+                      output_columns: ["country", "id"]
+                      properties: [{name="Header" value="country LowCardinality(String) id UInt32"}]
+                      relation: "customers"
+                      schema: "default"
+                #10 Expression [Expression]
+                    output_columns: ["__table2.total", "__table2.customer_id", "__table2.placed_at", "__table2.status"]
+                    properties: [{name="Header" value="__table2.total Decimal(12, 2) __table2.customer_id UInt32 __table2.placed_at DateTime __table2.status LowCardinality(String)"}]
+                  #11 ReadFromMergeTree default.orders [ReadFromMergeTree]
+                      output_columns: ["placed_at", "status", "total", "customer_id"]
+                      properties: [{name="Header" value="placed_at DateTime status LowCardinality(String) total Decimal(12, 2) customer_id UInt32"}]
+                      relation: "orders"
+                      schema: "default"

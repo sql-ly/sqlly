@@ -1,0 +1,105 @@
+
+PLAN_TABLE_OUTPUT
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+SQL_ID  2v19r9z7r76qw, child number 1
+-------------------------------------
+SELECT /*+ GATHER_PLAN_STATISTICS PARALLEL(4) */ oi.product_id,
+SUM(oi.quantity * oi.price) AS revenue FROM order_items oi JOIN orders
+o ON o.id = oi.order_id WHERE o.status = 'shipped' GROUP BY
+oi.product_id ORDER BY revenue DESC
+
+Plan hash value: 3160566349
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| Id  | Operation             | Name        | Starts | E-Rows |E-Bytes|E-Temp | Cost (%CPU)| E-Time   | A-Rows |   A-Time   | Buffers |  OMem |  1Mem | Used-Mem |
+------------------------------------------------------------------------------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT      |             |      1 |        |       |       |  3211 (100)|          |    600 |00:00:00.08 |    7971 |       |       |          |
+|   1 |  SORT ORDER BY        |             |      1 |   1000 | 25000 |       |  3211   (1)| 00:00:01 |    600 |00:00:00.08 |    7971 | 68608 | 68608 |61440  (0)|
+|   2 |   HASH GROUP BY       |             |      1 |   1000 | 25000 |       |  3211   (1)| 00:00:01 |    600 |00:00:00.08 |    7971 |  1186K|  1186K| 1542K (0)|
+|*  3 |    HASH JOIN          |             |      1 |    356K|  8702K|    16M|  3200   (1)| 00:00:01 |    360K|00:00:00.07 |    7971 |    39M|  7868K|   56M (0)|
+|   4 |     TABLE ACCESS FULL | ORDER_ITEMS |      1 |    600K|  9960K|       |   610   (1)| 00:00:01 |    600K|00:00:00.01 |    2198 |       |       |          |
+|   5 |     VIEW              | VW_GBF_5    |      1 |    180K|  1406K|       |  1593   (1)| 00:00:01 |    180K|00:00:00.02 |    5773 |       |       |          |
+|*  6 |      TABLE ACCESS FULL| ORDERS      |      1 |    180K|  2460K|       |  1593   (1)| 00:00:01 |    180K|00:00:00.02 |    5773 |       |       |          |
+------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Query Block Name / Object Alias (identified by operation id):
+-------------------------------------------------------------
+
+   1 - SEL$C4C0C15C
+   4 - SEL$C4C0C15C / "OI"@"SEL$1"
+   5 - SEL$5F76B39F / "VW_GBF_5"@"SEL$9E8AE3DA"
+   6 - SEL$5F76B39F / "O"@"SEL$1"
+
+Outline Data
+-------------
+
+  /*+
+      BEGIN_OUTLINE_DATA
+      IGNORE_OPTIM_EMBEDDED_HINTS
+      OPTIMIZER_FEATURES_ENABLE('23.1.0')
+      DB_VERSION('23.1.0')
+      ALL_ROWS
+      OUTLINE_LEAF(@"SEL$5F76B39F")
+      ELIM_GROUPBY(@"SEL$4D6B9A45")
+      OUTLINE_LEAF(@"SEL$C4C0C15C")
+      PLACE_GROUP_BY(@"SEL$58A6D7F6" ( "O"@"SEL$1" ) 5)
+      OUTLINE(@"SEL$4D6B9A45")
+      ELIM_GROUPBY(@"SEL$433063BA")
+      OUTLINE(@"SEL$58A6D7F6")
+      MERGE(@"SEL$1" >"SEL$2")
+      OUTLINE(@"SEL$433063BA")
+      OUTLINE(@"SEL$2")
+      OUTLINE(@"SEL$1")
+      OUTLINE(@"SEL$9E8AE3DA")
+      FULL(@"SEL$C4C0C15C" "OI"@"SEL$1")
+      NO_ACCESS(@"SEL$C4C0C15C" "VW_GBF_5"@"SEL$9E8AE3DA")
+      LEADING(@"SEL$C4C0C15C" "OI"@"SEL$1" "VW_GBF_5"@"SEL$9E8AE3DA")
+      USE_HASH(@"SEL$C4C0C15C" "VW_GBF_5"@"SEL$9E8AE3DA")
+      USE_HASH_AGGREGATION(@"SEL$C4C0C15C" GROUP_BY)
+      FULL(@"SEL$5F76B39F" "O"@"SEL$1")
+      END_OUTLINE_DATA
+  */
+
+Predicate Information (identified by operation id):
+---------------------------------------------------
+
+   3 - access("ITEM_1"="OI"."ORDER_ID")
+   6 - filter("O"."STATUS"='shipped')
+
+Column Projection Information (identified by operation id):
+-----------------------------------------------------------
+
+   1 - (#keys=1; rowset=256) SUM("OI"."QUANTITY"*"OI"."PRICE"*"ITEM_2")[22], "OI"."PRODUCT_ID"[NUMBER,22]
+   2 - (#keys=1; rowset=256) "OI"."PRODUCT_ID"[NUMBER,22], SUM("OI"."QUANTITY"*"OI"."PRICE"*"ITEM_2")[22]
+   3 - (#keys=1; rowset=256) "OI"."PRICE"[NUMBER,22], "OI"."PRODUCT_ID"[NUMBER,22], "OI"."QUANTITY"[NUMBER,22], "ITEM_2"[NUMBER,2]
+   4 - (rowset=256) "OI"."ORDER_ID"[NUMBER,22], "OI"."PRODUCT_ID"[NUMBER,22], "OI"."QUANTITY"[NUMBER,22], "OI"."PRICE"[NUMBER,22]
+   5 - (rowset=256) "ITEM_1"[NUMBER,22], "ITEM_2"[NUMBER,2]
+   6 - (rowset=256) "O"."ID"[NUMBER,22]
+
+Hint Report (identified by operation id / Query Block Name / Object Alias):
+Total hints for statement: 1 (U - Unused (1))
+---------------------------------------------------------------------------
+
+   0 -  STATEMENT
+         U -  PARALLEL(4)
+
+Note
+-----
+   - statistics feedback used for this statement
+
+Query Block Registry:
+---------------------
+
+  SEL$1 (PARSER)
+  SEL$2 (PARSER)
+    SEL$58A6D7F6 (VIEW MERGE SEL$2 ; SEL$1)
+      SEL$9E8AE3DA (QUERY BLOCK TABLES CHANGED SEL$58A6D7F6)
+        SEL$433063BA (SPLIT/MERGE QUERY BLOCKS SEL$9E8AE3DA)
+          SEL$4D6B9A45 (ELIMINATION OF GROUP BY SEL$433063BA)
+            SEL$5F76B39F (ELIMINATION OF GROUP BY SEL$4D6B9A45) [FINAL]
+      SEL$C4C0C15C (PLACE GROUP BY SEL$58A6D7F6) [FINAL]
+
+
+
+99 rows selected.
+

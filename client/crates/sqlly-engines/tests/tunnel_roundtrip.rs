@@ -230,6 +230,65 @@ async fn password_auth_tunnel_echoes() {
     echo_through_tunnel(&cfg, echo_port).await.unwrap();
 }
 
+// https://github.com/jakob/Postico/issues/917
+#[tokio::test]
+#[allow(clippy::await_holding_lock)] // serialized on SERIAL; see its doc comment
+async fn encrypted_key_file_is_read_from_its_path_on_every_connect() {
+    let _serial = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+    install_recording_decider();
+    let known_hosts = temp_known_hosts();
+    set_known_hosts_path_for_tests(known_hosts.path().to_path_buf());
+
+    let client_key = PrivateKey::random(&mut rng(), Algorithm::Ed25519).unwrap();
+    let echo_port = start_echo_server().await;
+    let ssh_port = start_ssh_server(client_key.public_key(), None).await;
+    let key_file = NamedTempFile::new().unwrap();
+    let write_encrypted = |passphrase: &str| {
+        let encrypted = client_key.encrypt(&mut rng(), passphrase).unwrap();
+        std::fs::write(
+            key_file.path(),
+            encrypted.to_openssh(ssh_key::LineEnding::LF).unwrap(),
+        )
+        .unwrap();
+    };
+    // The profile holds the key's path and a passphrase reference, never the
+    // key itself.
+    let cfg = |passphrase: &str| SshTunnelConfig {
+        target: SshHop {
+            host: "127.0.0.1".to_string(),
+            port: ssh_port,
+            username: "test".to_string(),
+            auth: SshAuth::KeyFile {
+                path: key_file.path().to_string_lossy().into_owned(),
+                passphrase: Some(SecretRef {
+                    provider: SecretProvider::InMemory,
+                    key: passphrase.to_string(),
+                }),
+            },
+        },
+        jump: None,
+        keepalive: Default::default(),
+    };
+
+    write_encrypted("first passphrase");
+    echo_through_tunnel(&cfg("first passphrase"), echo_port)
+        .await
+        .unwrap();
+
+    // The key is re-encrypted on disk (ssh-keygen -p): the next connect reads
+    // the new file with the new passphrase; nothing cached from the first
+    // connect stands in the way.
+    write_encrypted("second passphrase");
+    echo_through_tunnel(&cfg("second passphrase"), echo_port)
+        .await
+        .unwrap();
+    let stale = echo_through_tunnel(&cfg("first passphrase"), echo_port).await;
+    assert!(
+        stale.is_err(),
+        "the old passphrase no longer opens the file"
+    );
+}
+
 #[tokio::test]
 async fn load_secret_key_roundtrip_from_openssh_file() {
     let key = PrivateKey::random(&mut rng(), Algorithm::Ed25519).unwrap();

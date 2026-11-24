@@ -20,6 +20,7 @@ pub mod context;
 pub mod hints;
 pub mod joins;
 pub mod model_build;
+mod partitions;
 pub mod policy;
 pub mod procedures;
 pub mod rules;
@@ -364,6 +365,14 @@ fn enriched_pipeline<S: IntellisenseService + ?Sized>(
         .database_type
         .map(|t| t.family())
         .unwrap_or(sqlly_lang::sqlmodel::Dialect::SqlServer);
+    if let Some(model) = req.model {
+        partitions::hide_child_partitions(
+            &mut items,
+            model,
+            dialect,
+            current_prefix(req.sql, req.cursor),
+        );
+    }
     if let Some(system_names) = sqlly_intel::intellisense::at_at_items(dialect, req.sql, req.cursor)
     {
         // After `@@` only the dialect's system functions / variables make

@@ -189,9 +189,15 @@ impl ServicesToolHost {
         if columns.is_empty() {
             return "(no columns)".into();
         }
-        let mut lines = vec![columns.join(" | ")];
+        let mut lines = vec![
+            columns
+                .iter()
+                .map(|c| pipe_cell(c))
+                .collect::<Vec<_>>()
+                .join(" | "),
+        ];
         for row in rows {
-            let mut cells = row.clone();
+            let mut cells: Vec<String> = row.iter().map(|v| pipe_cell(v)).collect();
             while cells.len() < columns.len() {
                 cells.push(String::new());
             }
@@ -205,6 +211,15 @@ impl ServicesToolHost {
         lines.push(trailer);
         lines.join("\n")
     }
+}
+
+/// One pipe-table cell on one line: `|` and line breaks escaped, so a value
+/// can never shift the columns after it or start a row of its own.
+pub fn pipe_cell(text: &str) -> String {
+    text.replace('\\', "\\\\")
+        .replace('|', "\\|")
+        .replace('\r', "\\r")
+        .replace('\n', "\\n")
 }
 
 #[async_trait]

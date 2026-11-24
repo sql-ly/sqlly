@@ -1,0 +1,74 @@
+format: duckdb-text (Certain)
+statements: 1
+
+== statement 1
+dialect: "DuckDb"
+estimated_rows: 5
+source_format: "duckdb-text"
+statement_type: "EXPLAIN"
+total_subtree_cost: 1722485
+operators: 12
+  #1 PROJECTION [PROJECTION]
+      output_columns: ["__internal_decompress_string(#0)", "#1", "#2"]
+      output_list: ["__internal_decompress_string(#0)", "#1", "#2"]
+    #2 ORDER_BY [ORDER_BY]
+        sort_keys: ["sum((oi.quantity * oi.unit_price)) DESC"]
+      #3 PROJECTION [PROJECTION]
+          estimated_cost: 5
+          estimated_rows: 5
+          output_columns: ["__internal_compress_string_uinteger(#0)", "#1", "#2"]
+          output_list: ["__internal_compress_string_uinteger(#0)", "#1", "#2"]
+        #4 PROJECTION [PROJECTION]
+            estimated_cost: 5
+            estimated_rows: 5
+            output_columns: ["__internal_decompress_string(#0)", "#1", "#2"]
+            output_list: ["__internal_decompress_string(#0)", "#1", "#2"]
+          #5 HASH_GROUP_BY [HASH_GROUP_BY]
+              estimated_cost: 5
+              estimated_rows: 5
+              group_keys: ["#0"]
+              properties: [{name="Aggregates" value="count_star(), sum(#1)"}]
+            #6 PROJECTION [PROJECTION]
+                estimated_cost: 96231
+                estimated_rows: 96231
+                output_columns: ["country", "(CAST(quantity AS DECIMAL(38,0)) * unit_price)"]
+                output_list: ["country", "(CAST(quantity AS DECIMAL(38,0)) * unit_price)"]
+              #7 PROJECTION [PROJECTION]
+                  estimated_cost: 96231
+                  estimated_rows: 96231
+                  output_columns: ["#0", "#1", "__internal_compress_string_uinteger(#2)"]
+                  output_list: ["#0", "#1", "__internal_compress_string_uinteger(#2)"]
+                #8 HASH_JOIN [HASH_JOIN]
+                    estimated_cost: 96231
+                    estimated_rows: 96231
+                    join_predicate: "order_id = id"
+                    join_type: "INNER"
+                  #9 SEQ_SCAN order_items [SEQ_SCAN]
+                      estimated_cost: 1200000
+                      estimated_rows: 1200000
+                      output_columns: ["order_id", "quantity", "unit_price"]
+                      output_list: ["order_id", "quantity", "unit_price"]
+                      properties: [{name="Type" value="Sequential Scan"}]
+                      relation: "order_items"
+                      warnings: [{TableScan={table="order_items"}}]
+                  #10 HASH_JOIN [HASH_JOIN]
+                      estimated_cost: 83777
+                      estimated_rows: 83777
+                      join_predicate: "customer_id = id"
+                      join_type: "INNER"
+                    #11 SEQ_SCAN orders [SEQ_SCAN]
+                        estimated_cost: 100000
+                        estimated_rows: 100000
+                        filter: "status='paid'"
+                        output_columns: ["id", "customer_id"]
+                        output_list: ["id", "customer_id"]
+                        properties: [{name="Type" value="Sequential Scan"}]
+                        relation: "orders"
+                    #12 SEQ_SCAN customers [SEQ_SCAN]
+                        estimated_cost: 50000
+                        estimated_rows: 50000
+                        output_columns: ["id", "country"]
+                        output_list: ["id", "country"]
+                        properties: [{name="Type" value="Sequential Scan"}]
+                        relation: "customers"
+                        warnings: [{TableScan={table="customers"}}]

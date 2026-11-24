@@ -41,7 +41,10 @@ pub use signature::{
     CallContext, SignatureHelp, call_context_at, signature_help_at, signature_help_for,
 };
 
-pub use alias::{AliasStyle, is_reserved_alias_word, suggest_alias};
+pub use alias::{
+    AliasStyle, is_reserved_alias_word, join_alias_for, join_alias_style, set_join_alias_style,
+    suggest_alias, with_join_alias_style,
+};
 pub use catalog::{CompletionCatalog, LiveMetadataSnapshot, SymbolSnapshot, map_object_kind};
 pub use clause_insert::{
     FROM_CLAUSE_DETAIL, REQUIRED_GROUP_BY_DETAIL, WHERE_CLAUSE_DETAIL, after_select_list_keywords,

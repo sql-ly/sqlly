@@ -1,0 +1,4 @@
+-> Nested loop inner join  (cost=3.17 rows=8.06) (actual time=0.00896..0.00896 rows=0 loops=1)
+    -> Index lookup on c using customers_email_idx (email='nobody@example.com')  (cost=0.35 rows=1) (actual time=0.00625..0.00625 rows=0 loops=1)
+    -> Index lookup on o using orders_customer_idx (customer_id=c.id)  (cost=2.82 rows=8.06) (never executed)
+

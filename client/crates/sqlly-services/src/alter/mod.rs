@@ -1,9 +1,11 @@
 #![forbid(unsafe_code)]
 
+pub mod default_literal;
 pub mod diff;
 pub mod script;
 pub mod snapshot;
 
+pub use default_literal::{column_default_sql, normalize_draft_defaults};
 pub use diff::{Change, ChangeSet, TableRef, diff, order_key, touches_columns};
 pub use script::comments::{
     self, CommentChange, CommentObjectKind, render_comment_change, supports_comments,
@@ -16,5 +18,5 @@ pub use script::create::{
 pub use script::{AlterError, AlterScript, MysqlAlgorithm, MysqlLock, RenderOptions, render};
 pub use snapshot::{
     CheckConstraintDef, ColumnDef, ColumnExtras, DependentView, DraftColumn, ForeignKeyDef,
-    GeneratedColumn, IndexDef, TableDraft, TableSnapshot, TableStorage,
+    GeneratedColumn, IndexDef, PartitionDef, PartitionOf, TableDraft, TableSnapshot, TableStorage,
 };

@@ -1,0 +1,43 @@
+format: mariadb-table (Certain)
+statements: 1
+
+== statement 1
+dialect: "MariaDb"
+estimated_rows: 40131
+has_actuals: yes
+source_format: "mariadb-table"
+statement_type: "ANALYZE"
+operators: 5
+  #1 Query Block [Query Block]
+      properties: [{name="select_id" value="1"}, {name="select_type" value="PRIMARY"}]
+      subplan_name: "Select #1"
+    #2 Table: c [Access: ALL]
+        actual_rows: 5000
+        estimated_rows: 4989
+        estimated_rows_read: 4989
+        filtered_percent: 100
+        output_list: ["c"]
+        properties: [{name="possible_keys" value="PRIMARY"}, {name="r_filtered" value="100.00"}]
+        relation: "c"
+        warnings: [{TableScan={table="c"}}]
+    #3 Table: <derived2> [Access: ref]
+        estimated_rows: 10
+        estimated_rows_read: 10
+        extra: ["Using where"]
+        filtered_percent: 100
+        index_name: "key0"
+        output_list: ["<derived2>", "Key: key0"]
+        properties: [{name="possible_keys" value="key0"}, {name="key_len" value="4"}, {name="ref" value="shop.c.id"}, {name="r_filtered" value="100.00"}]
+      #4 Query Block [Query Block]
+          properties: [{name="select_id" value="2"}, {name="select_type" value="DERIVED"}]
+          subplan_name: "Select #2"
+        #5 Table: orders [Access: ALL]
+            actual_rows: 40000
+            estimated_rows: 40131
+            estimated_rows_read: 40131
+            extra: ["Using temporary", "Using filesort"]
+            filtered_percent: 100
+            output_list: ["orders"]
+            properties: [{name="possible_keys" value="orders_customer_idx"}, {name="r_filtered" value="100.00"}]
+            relation: "orders"
+            warnings: [{TableScan={table="orders"}}]

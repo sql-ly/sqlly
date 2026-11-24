@@ -54,6 +54,44 @@ pub enum AuthenticationType {
     AuthToken {
         secret_ref: SecretRef,
     },
+    /// PostgreSQL 18 `oauth` sign-in (SASL OAUTHBEARER) with an OpenID
+    /// Connect provider. The access token is session state: it rides in
+    /// `ConnectionProfile::runtime_cloud_iam_token`, minted by the app's
+    /// device-code flow (or read from `secret_ref` for
+    /// [`PgOAuthFlow::BearerToken`]) and never persisted with the profile.
+    PostgresOAuth {
+        /// Database role named in the startup packet.
+        username: String,
+        /// Issuer URL (or its discovery document URL). Empty = use the one
+        /// the server advertises.
+        #[serde(default, skip_serializing_if = "String::is_empty")]
+        issuer: String,
+        /// OAuth client id registered with the provider (device-code flow).
+        #[serde(default, skip_serializing_if = "String::is_empty")]
+        client_id: String,
+        /// Requested scope. Empty = the scope the server advertises.
+        #[serde(default, skip_serializing_if = "String::is_empty")]
+        scope: String,
+        #[serde(default)]
+        flow: PgOAuthFlow,
+        /// Keyring reference to the optional client secret (device-code
+        /// flow) or to the bearer token itself ([`PgOAuthFlow::BearerToken`]).
+        /// An empty in-memory reference means "none".
+        #[serde(default = "SecretRef::empty_in_memory")]
+        secret_ref: SecretRef,
+    },
+}
+
+/// How a [`AuthenticationType::PostgresOAuth`] connection gets its token.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PgOAuthFlow {
+    /// OAuth 2.0 Device Authorization Grant (RFC 8628) in the browser,
+    /// with tokens cached and refreshed through the OS keyring.
+    #[default]
+    DeviceCode,
+    /// A token the user supplies; stored like a password.
+    BearerToken,
 }
 
 impl AuthenticationType {
@@ -64,11 +102,29 @@ impl AuthenticationType {
         )
     }
 
+    /// PostgreSQL 18 OAuth (OAUTHBEARER) sign-in.
+    pub fn is_pg_oauth(&self) -> bool {
+        matches!(self, AuthenticationType::PostgresOAuth { .. })
+    }
+
+    /// PostgreSQL OAuth through the device-code flow, whose token the app
+    /// mints before connecting (as opposed to a stored bearer token).
+    pub fn is_pg_oauth_device_flow(&self) -> bool {
+        matches!(
+            self,
+            AuthenticationType::PostgresOAuth {
+                flow: PgOAuthFlow::DeviceCode,
+                ..
+            }
+        )
+    }
+
     pub fn username(&self) -> Option<&str> {
         match self {
             AuthenticationType::SqlLogin { username, .. }
             | AuthenticationType::AwsRdsIam { username, .. }
-            | AuthenticationType::GcpCloudSqlIam { username } => Some(username),
+            | AuthenticationType::GcpCloudSqlIam { username }
+            | AuthenticationType::PostgresOAuth { username, .. } => Some(username),
             AuthenticationType::Integrated
             | AuthenticationType::EntraDeviceCode
             | AuthenticationType::EntraBrowser
@@ -81,7 +137,8 @@ impl AuthenticationType {
     pub fn secret_ref(&self) -> Option<&SecretRef> {
         match self {
             AuthenticationType::SqlLogin { secret_ref, .. }
-            | AuthenticationType::AuthToken { secret_ref } => Some(secret_ref),
+            | AuthenticationType::AuthToken { secret_ref }
+            | AuthenticationType::PostgresOAuth { secret_ref, .. } => Some(secret_ref),
             _ => None,
         }
     }
@@ -91,13 +148,15 @@ impl AuthenticationType {
     pub fn secret_ref_mut(&mut self) -> Option<&mut SecretRef> {
         match self {
             AuthenticationType::SqlLogin { secret_ref, .. }
-            | AuthenticationType::AuthToken { secret_ref } => Some(secret_ref),
+            | AuthenticationType::AuthToken { secret_ref }
+            | AuthenticationType::PostgresOAuth { secret_ref, .. } => Some(secret_ref),
             _ => None,
         }
     }
 
+    /// Token-as-credential sign-ins never travel in plaintext.
     pub fn requires_tls(&self) -> bool {
-        self.is_cloud_iam()
+        self.is_cloud_iam() || self.is_pg_oauth()
     }
 }
 
@@ -366,6 +425,19 @@ impl SecretRef {
     /// login failure instead of the real local problem.
     pub fn resolve(&self) -> crate::StudioResult<String> {
         crate::secret_resolver::resolve_secret(self)
+    }
+
+    /// An in-memory reference holding nothing: "no secret".
+    pub fn empty_in_memory() -> Self {
+        Self {
+            provider: SecretProvider::InMemory,
+            key: String::new(),
+        }
+    }
+
+    /// Whether this is an in-memory reference holding nothing.
+    pub fn is_empty_in_memory(&self) -> bool {
+        self.provider == SecretProvider::InMemory && self.key.is_empty()
     }
 }
 
@@ -1519,6 +1591,30 @@ impl ConnectionProfile {
         )
     }
 
+    /// A PostgreSQL 18 OAuth profile whose token is supplied at runtime
+    /// (`runtime_cloud_iam_token`), as the CLI and the engine protocol do.
+    pub fn postgres_oauth(
+        name: impl Into<String>,
+        server: impl Into<String>,
+        port: u16,
+        username: impl Into<String>,
+    ) -> Self {
+        Self::cloud_iam_profile(
+            name,
+            server,
+            port,
+            DatabaseType::Postgres,
+            AuthenticationType::PostgresOAuth {
+                username: username.into(),
+                issuer: String::new(),
+                client_id: String::new(),
+                scope: String::new(),
+                flow: PgOAuthFlow::DeviceCode,
+                secret_ref: SecretRef::empty_in_memory(),
+            },
+        )
+    }
+
     fn cloud_iam_profile(
         name: impl Into<String>,
         server: impl Into<String>,
@@ -1640,6 +1736,7 @@ impl ConnectionProfile {
                 format!("gcp-cloud-sql-iam:{username}")
             }
             AuthenticationType::AuthToken { .. } => "auth-token".to_string(),
+            AuthenticationType::PostgresOAuth { username, .. } => format!("pg-oauth:{username}"),
         };
         format!(
             "{}|{}|{}|{}|{}|{}",
@@ -1711,6 +1808,10 @@ impl ConnectionProfile {
                     "Auth token".to_string()
                 }
             }
+            AuthenticationType::PostgresOAuth { username, flow, .. } => match flow {
+                PgOAuthFlow::DeviceCode => format!("OAuth device code ({username})"),
+                PgOAuthFlow::BearerToken => format!("OAuth bearer token ({username})"),
+            },
         };
 
         let mut warnings = Vec::new();
@@ -1957,6 +2058,21 @@ impl ConnectionProfile {
                 secret_ref: duplicate_secret_ref(secret_ref, &mut secrets),
             },
             AuthenticationType::AuthToken { secret_ref } => AuthenticationType::AuthToken {
+                secret_ref: duplicate_secret_ref(secret_ref, &mut secrets),
+            },
+            AuthenticationType::PostgresOAuth {
+                username,
+                issuer,
+                client_id,
+                scope,
+                flow,
+                secret_ref,
+            } => AuthenticationType::PostgresOAuth {
+                username: username.clone(),
+                issuer: issuer.clone(),
+                client_id: client_id.clone(),
+                scope: scope.clone(),
+                flow: *flow,
                 secret_ref: duplicate_secret_ref(secret_ref, &mut secrets),
             },
             other => other.clone(),
@@ -3415,6 +3531,86 @@ mod tests {
         let chain = profile.inline_transport();
         assert_eq!(chain.ssh, Some(tunnel));
         assert!(chain.proxy.is_none());
+    }
+
+    fn pg_oauth_profile(flow: PgOAuthFlow, secret: &str) -> ConnectionProfile {
+        let mut profile = ConnectionProfile::sql_login(
+            "pg18",
+            "db.example.com",
+            "alice",
+            SecretRef::empty_in_memory(),
+        );
+        profile.database_type = DatabaseType::Postgres;
+        profile.port = 5432;
+        profile.authentication = AuthenticationType::PostgresOAuth {
+            username: "alice".to_string(),
+            issuer: "https://idp.example.com".to_string(),
+            client_id: "sqlly".to_string(),
+            scope: "openid postgres".to_string(),
+            flow,
+            secret_ref: SecretRef {
+                provider: SecretProvider::InMemory,
+                key: secret.to_string(),
+            },
+        };
+        profile
+    }
+
+    #[test]
+    fn pg_oauth_round_trips_json_without_runtime_token() {
+        let mut profile = pg_oauth_profile(PgOAuthFlow::DeviceCode, "");
+        profile.runtime_cloud_iam_token = Some("access-token".to_string());
+        let json = serde_json::to_string(&profile).unwrap();
+        assert!(!json.contains("access-token"));
+        let restored: ConnectionProfile = serde_json::from_str(&json).unwrap();
+        assert_eq!(restored.runtime_cloud_iam_token, None);
+        assert_eq!(restored.authentication, profile.authentication);
+    }
+
+    #[test]
+    fn pg_oauth_minimal_json_defaults_to_device_code() {
+        let auth: AuthenticationType =
+            serde_json::from_str(r#"{"PostgresOAuth":{"username":"alice"}}"#).unwrap();
+        assert_eq!(
+            auth,
+            AuthenticationType::PostgresOAuth {
+                username: "alice".to_string(),
+                issuer: String::new(),
+                client_id: String::new(),
+                scope: String::new(),
+                flow: PgOAuthFlow::DeviceCode,
+                secret_ref: SecretRef::empty_in_memory(),
+            }
+        );
+        assert!(auth.is_pg_oauth_device_flow());
+        assert!(auth.requires_tls());
+        assert_eq!(auth.username(), Some("alice"));
+    }
+
+    #[test]
+    fn pg_oauth_bearer_flow_keeps_its_secret_reference_and_is_not_device_flow() {
+        let profile = pg_oauth_profile(PgOAuthFlow::BearerToken, "tok");
+        assert!(profile.authentication.is_pg_oauth());
+        assert!(!profile.authentication.is_pg_oauth_device_flow());
+        assert_eq!(
+            profile.authentication.secret_ref().map(|r| r.key.as_str()),
+            Some("tok")
+        );
+        assert!(profile.preview().authentication.contains("bearer"));
+    }
+
+    #[test]
+    fn duplicating_pg_oauth_re_mints_the_keyring_secret() {
+        let mut profile = pg_oauth_profile(PgOAuthFlow::DeviceCode, "");
+        let original = Uuid::new_v4().to_string();
+        profile.authentication.secret_ref_mut().unwrap().provider = SecretProvider::MacOsKeychain;
+        profile.authentication.secret_ref_mut().unwrap().key = original.clone();
+        let copy = profile.duplicate_named("copy");
+        let copied = copy.profile.authentication.secret_ref().unwrap();
+        assert_eq!(copied.provider, SecretProvider::MacOsKeychain);
+        assert_ne!(copied.key, original);
+        assert_eq!(copy.secrets.len(), 1);
+        assert!(copy.profile.authentication.is_pg_oauth_device_flow());
     }
 
     #[test]

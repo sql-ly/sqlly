@@ -1,7 +1,79 @@
+use std::cell::Cell;
+use std::sync::atomic::{AtomicU8, Ordering};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AliasStyle {
     CapitalLetters { include_schema: bool },
     FirstLetter,
+}
+
+/// The style FK-join suggestions name the joined table with. Like
+/// [`crate::matching`], the host sets it once from the user's alias rule
+/// instead of threading it through every completion request; both completion
+/// engines read it when they synthesize a join alias (feedback ifb_6da8).
+static JOIN_ALIAS_STYLE: AtomicU8 = AtomicU8::new(FIRST_LETTER);
+
+const FIRST_LETTER: u8 = 0;
+const CAPITALS: u8 = 1;
+const CAPITALS_WITH_SCHEMA: u8 = 2;
+
+thread_local! {
+    static JOIN_ALIAS_OVERRIDE: Cell<Option<AliasStyle>> = const { Cell::new(None) };
+}
+
+pub fn set_join_alias_style(style: AliasStyle) {
+    let encoded = match style {
+        AliasStyle::FirstLetter => FIRST_LETTER,
+        AliasStyle::CapitalLetters {
+            include_schema: false,
+        } => CAPITALS,
+        AliasStyle::CapitalLetters {
+            include_schema: true,
+        } => CAPITALS_WITH_SCHEMA,
+    };
+    JOIN_ALIAS_STYLE.store(encoded, Ordering::Relaxed);
+}
+
+pub fn join_alias_style() -> AliasStyle {
+    JOIN_ALIAS_OVERRIDE.with(Cell::get).unwrap_or_else(|| {
+        match JOIN_ALIAS_STYLE.load(Ordering::Relaxed) {
+            CAPITALS => AliasStyle::CapitalLetters {
+                include_schema: false,
+            },
+            CAPITALS_WITH_SCHEMA => AliasStyle::CapitalLetters {
+                include_schema: true,
+            },
+            _ => AliasStyle::FirstLetter,
+        }
+    })
+}
+
+/// Run `f` with `style` as the join alias style on this thread only, so tests
+/// can pin it without racing each other through the global.
+pub fn with_join_alias_style<R>(style: AliasStyle, f: impl FnOnce() -> R) -> R {
+    struct Restore(Option<AliasStyle>);
+    impl Drop for Restore {
+        fn drop(&mut self) {
+            JOIN_ALIAS_OVERRIDE.with(|o| o.set(self.0));
+        }
+    }
+    let _restore = Restore(JOIN_ALIAS_OVERRIDE.with(|o| o.replace(Some(style))));
+    f()
+}
+
+/// Alias for a table an FK-join suggestion adds, in the configured
+/// [`join_alias_style`], avoiding every alias in `used` (compared without
+/// case). Always yields an alias: the ON clause needs one to refer to.
+pub fn join_alias_for(qualified_name: &str, used: &[String]) -> String {
+    suggest_alias(qualified_name, join_alias_style(), used).unwrap_or_else(|| {
+        let mut alias = "t".to_string();
+        let mut suffix = 2;
+        while used.iter().any(|u| u.eq_ignore_ascii_case(&alias)) {
+            alias = format!("t{suffix}");
+            suffix += 1;
+        }
+        alias
+    })
 }
 
 /// Words a generated alias must never be: a table alias equal to one of these

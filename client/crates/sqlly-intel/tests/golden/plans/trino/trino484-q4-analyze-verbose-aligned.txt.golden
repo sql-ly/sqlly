@@ -1,0 +1,131 @@
+format: trino-text (Certain)
+statements: 1
+
+== statement 1
+execution_time_ms: 178.81
+has_actuals: yes
+notes: ["Trino version: 484", "Queued: 169.58us, Analysis: 1.51ms, Planning: 16.79ms, Execution: 178.81ms, Finishing: 0.00ns"]
+planning_time_ms: 16.79
+source_format: "trino-text"
+statement_type: "EXPLAIN ANALYZE"
+operators: 11
+  #1 RemoteSource [RemoteSource]
+      actual_rows: 26
+      actual_rows_total: 26
+      actual_self_time_ms: 1
+      actual_time_ms: 101
+      output_columns: ["name:varchar(25)"]
+      properties: [{name="sourceFragmentIds" value="[2, 5]"}, {name="Fragment" value="1 [SINGLE]"}, {name="Fragment CPU" value="1.47ms, Scheduled: 1.88ms, Blocked 318.31ms (Input: 322.16ms, Output: 0.00ns), Input: 26 rows (598B); per task: avg.: 26.00 std.dev.: 0.00, Output: 26 rows (598..."}, {name="Fragment Peak Memory" value="480B, Tasks count: 1; per task: max: 480B"}, {name="Fragment Output buffer active time" value="52.97ms, buffer utilization distribution (%): {p01=0.00, p05=0.00, p10=0.00, p25=0.00, p50=0.00, p75=0.00, p90=0.00, p95=0.00, p99=0.00, min=0.00, max=0.00}"}, {name="Fragment Task output distribution" value="{count=1.00, p01=598B, p05=598B, p10=598B, p25=598B, p50=598B, p75=598B, p90=598B, p95=598B, p99=598B, max=598B}"}, {name="Fragment Task input distribution" value="{count=1.00, p01=598B, p05=598B, p10=598B, p25=598B, p50=598B, p75=598B, p90=598B, p95=598B, p99=598B, max=598B}"}, {name="Fragment Output layout" value="[name]"}, {name="Fragment Output partitioning" value="SINGLE []"}, {name="CPU" value="0.00ns (0.00%)"}, {name="Scheduled" value="1.00ms (0.99%)"}, {name="Blocked" value="322.00ms (29.60%)"}, {name="Output" value="26 rows (598B)"}, {name="metrics"}, {name="'Blocked time distribution (s)'" value="{count=8, p01=0.03, p05=0.03, p10=0.03, p25=0.04, p50=0.04, p75=0.04, p90=0.05, p95=0.05, p99=0.05, min=0.03, max=0.05}"}, {name="'CPU and scheduled time usage over time'" value="ResourceUsageTimeSeriesSnapshot{startTimeEpochSeconds=1795474778, bucketWidthSeconds=1, cpuNanosBuckets=[409960], wallNanosBuckets=[617458]}"}, {name="'CPU time distribution (s)'" value="{count=8, p01=0.00, p05=0.00, p10=0.00, p25=0.00, p50=0.00, p75=0.00, p90=0.00, p95=0.00, p99=0.00, min=0.00, max=0.00}"}, {name="'Input rows distribution'" value="{count=8, p01=0.00, p05=0.00, p10=0.00, p25=0.00, p50=4.00, p75=6.00, p90=9.00, p95=9.00, p99=9.00, min=0.00, max=9.00}"}, {name="'Scheduled time distribution (s)'" value="{count=8, p01=0.00, p05=0.00, p10=0.00, p25=0.00, p50=0.00, p75=0.00, p90=0.00, p95=0.00, p99=0.00, min=0.00, max=0.00}"}, {name="Input avg." value="3.25 rows"}, {name="Input std.dev." value="95.77%"}]
+    #2 InnerJoin [InnerJoin]
+        actual_rows: 15
+        actual_rows_total: 15
+        actual_self_time_ms: 2
+        actual_time_ms: 97
+        estimated_cpu: 78130
+        estimated_rows: 1000
+        join_predicate: "custkey = custkey_2"
+        join_type: "Inner"
+        output_columns: ["name_0:varchar(25)"]
+        output_list: ["Condition: custkey = custkey_2"]
+        properties: [{name="distribution" value="REPLICATED"}, {name="Fragment" value="2 [SOURCE]"}, {name="Fragment CPU" value="15.54ms, Scheduled: 23.63ms, Blocked 449.86ms (Input: 297.81ms, Output: 0.00ns), Input: 1515 rows (47.01kB); per task: avg.: 1515.00 std.dev.: 0.00, Output: 15 ..."}, {name="Fragment Peak Memory" value="128kB, Tasks count: 1; per task: max: 128kB"}, {name="Fragment Output buffer active time" value="53.89ms, buffer utilization distribution (%): {p01=0.00, p05=0.00, p10=0.00, p25=0.00, p50=0.00, p75=0.00, p90=0.00, p95=0.00, p99=0.00, min=0.00, max=0.00}"}, {name="Fragment Task output distribution" value="{count=1.00, p01=405B, p05=405B, p10=405B, p25=405B, p50=405B, p75=405B, p90=405B, p95=405B, p99=405B, max=405B}"}, {name="Fragment Task input distribution" value="{count=1.00, p01=47.01kB, p05=47.01kB, p10=47.01kB, p25=47.01kB, p50=47.01kB, p75=47.01kB, p90=47.01kB, p95=47.01kB, p99=47.01kB, max=47.01kB}"}, {name="Fragment Output layout" value="[name_0]"}, {name="Fragment Output partitioning" value="SINGLE []"}, {name="Reorder joins cost" value="{rows: 1000 (22.46kB), cpu: 735.96k, memory: 17.58kB, network: 27.50kB}"}, {name="Estimates" value="{rows: 1000 (22.46kB), cpu: 78.13k, memory: 8.79kB, network: 0B}"}, {name="CPU" value="0.00ns (0.00%)"}, {name="Scheduled" value="2.00ms (1.98%)"}, {name="Blocked" value="115.00ms (10.57%)"}, {name="Output" value="15 rows (405B)"}, {name="Left (probe) metrics"}, {name="'Left (probe) Blocked time distribution (s)'" value="{count=4, p01=0.02, p05=0.02, p10=0.02, p25=0.02, p50=0.03, p75=0.03, p90=0.03, p95=0.03, p99=0.03, min=0.02, max=0.03}"}, {name="'Left (probe) CPU and scheduled time usage over time'" value="ResourceUsageTimeSeriesSnapshot{startTimeEpochSeconds=1795474778, bucketWidthSeconds=1, cpuNanosBuckets=[510666], wallNanosBuckets=[693667]}"}, {name="'Left (probe) CPU time distribution (s)'" value="{count=4, p01=0.00, p05=0.00, p10=0.00, p25=0.00, p50=0.00, p75=0.00, p90=0.00, p95=0.00, p99=0.00, min=0.00, max=0.00}"}, {name="'Left (probe) Input rows distribution'" value="{count=4, p01=375.00, p05=375.00, p10=375.00, p25=375.00, p50=375.00, p75=375.00, p90=375.00, p95=375.00, p99=375.00, min=375.00, max=375.00}"}, {name="'Left (probe) Scheduled time distribution (s)'" value="{count=4, p01=0.00, p05=0.00, p10=0.00, p25=0.00, p50=0.00, p75=0.00, p90=0.00, p95=0.00, p99=0.00, min=0.00, max=0.00}"}, {name="Right (build) metrics"}, {name="'Right (build) Blocked time distribution (s)'" value="{count=1, p01=0.01, p05=0.01, p10=0.01, p25=0.01, p50=0.01, p75=0.01, p90=0.01, p95=0.01, p99=0.01, min=0.01, max=0.01}"}, {name="'Right (build) CPU and scheduled time usage over time'" value="ResourceUsageTimeSeriesSnapshot{startTimeEpochSeconds=1795474778, bucketWidthSeconds=1, cpuNanosBuckets=[198291], wallNanosBuckets=[262416]}"}, {name="'Right (build) CPU time distribution (s)'" value="{count=1, p01=0.00, p05=0.00, p10=0.00, p25=0.00, p50=0.00, p75=0.00, p90=0.00, p95=0.00, p99=0.00, min=0.00, max=0.00}"}, {name="'Right (build) Input rows distribution'" value="{count=1, p01=15.00, p05=15.00, p10=15.00, p25=15.00, p50=15.00, p75=15.00, p90=15.00, p95=15.00, p99=15.00, min=15.00, max=15.00}"}, {name="'Right (build) Scheduled time distribution (s)'" value="{count=1, p01=0.00, p05=0.00, p10=0.00, p25=0.00, p50=0.00, p75=0.00, p90=0.00, p95=0.00, p99=0.00, min=0.00, max=0.00}"}, {name="Left (probe) Input avg." value="375.00 rows"}, {name="Input std.dev." value="0.00%"}, {name="Right (build) Input avg." value="15.00 rows"}, {name="Input std.dev." value="0.00%"}, {name="Distribution" value="REPLICATED"}, {name="dynamicFilterAssignments" value="{custkey_2 -> #df_618}"}]
+      #3 ScanFilter [ScanFilter]
+          actual_cpu_ms: 13
+          actual_rows: 1500
+          actual_rows_total: 1500
+          actual_self_time_ms: 20
+          actual_time_ms: 20
+          database: "tpch"
+          estimated_cpu: 46880
+          estimated_rows: 1500
+          estimated_rows_read: 1500
+          output_columns: ["custkey:bigint", "name_0:varchar(25)"]
+          output_list: ["customer"]
+          properties: [{name="table" value="tpch:tiny:customer"}, {name="dynamicFilters" value="{custkey = #df_618}"}, {name="Estimates" value="{rows: 1500 (46.88kB), cpu: 46.88k, memory: 0B, network: 0B}/{rows: 1500 (46.88kB), cpu: 46.88k, memory: 0B, network: 0B}"}, {name="CPU" value="13.00ms (27.66%)"}, {name="Scheduled" value="20.00ms (19.80%)"}, {name="Blocked" value="0.00ns (0.00%)"}, {name="Output" value="1500 rows (46.88kB)"}, {name="metrics"}, {name="'CPU and scheduled time usage over time'" value="ResourceUsageTimeSeriesSnapshot{startTimeEpochSeconds=1795474778, bucketWidthSeconds=1, cpuNanosBuckets=[12770794], wallNanosBuckets=[20132167]}"}, {name="'CPU time distribution (s)'" value="{count=4, p01=0.00, p05=0.00, p10=0.00, p25=0.00, p50=0.00, p75=0.00, p90=0.00, p95=0.00, p99=0.00, min=0.00, max=0.00}"}, {name="'Dynamic Filter CPU time'" value="{duration=0.00ns}"}, {name="'Dynamic Filter output positions'" value="LongCount{total=1500}"}, {name="'Input rows distribution'" value="{count=4, p01=375.00, p05=375.00, p10=375.00, p25=375.00, p50=375.00, p75=375.00, p90=375.00, p95=375.00, p99=375.00, min=375.00, max=375.00}"}, {name="'Projection CPU time'" value="{duration=10.29us}"}, {name="'Scheduled time distribution (s)'" value="{count=4, p01=0.00, p05=0.00, p10=0.00, p25=0.00, p50=0.01, p75=0.01, p90=0.01, p95=0.01, p99=0.01, min=0.00, max=0.01}"}, {name="Input avg." value="375.00 rows"}, {name="Input std.dev." value="0.00%"}, {name="name_0" value="tpch:name"}, {name="custkey" value="tpch:custkey"}, {name="Input" value="1500 rows (46.88kB)"}, {name="Filtered" value="0.00%"}, {name="Splits" value="4"}, {name="Splits generation wait time" value="0.00ms"}, {name="Dynamic filters" value="- df_618, [ SortedRangeSet[type=bigint, ranges=15, {[85], ..., [1279]}] ], collection time=49.73ms"}]
+          relation: "customer"
+          rows_read: 1500
+          schema: "tiny"
+      #4 LocalExchange [LocalExchange]
+          actual_rows: 15
+          actual_rows_total: 15
+          actual_time_ms: 75
+          estimated_rows: 1000
+          output_columns: ["custkey_2:bigint"]
+          properties: [{name="partitioning" value="SINGLE"}, {name="Estimates" value="{rows: 1000 (8.79kB), cpu: 0, memory: 0B, network: 0B}"}, {name="CPU" value="0.00ns (0.00%)"}, {name="Scheduled" value="0.00ns (0.00%)"}, {name="Blocked" value="38.00ms (3.49%)"}, {name="Output" value="15 rows (135B)"}, {name="metrics"}, {name="'CPU and scheduled time usage over time'" value="ResourceUsageTimeSeriesSnapshot{startTimeEpochSeconds=1795474778, bucketWidthSeconds=1, cpuNanosBuckets=[179832], wallNanosBuckets=[207084]}"}, {name="'CPU time distribution (s)'" value="{count=8, p01=0.00, p05=0.00, p10=0.00, p25=0.00, p50=0.00, p75=0.00, p90=0.00, p95=0.00, p99=0.00, min=0.00, max=0.00}"}, {name="'Input rows distribution'" value="{count=8, p01=0.00, p05=0.00, p10=0.00, p25=0.00, p50=1.00, p75=3.00, p90=9.00, p95=9.00, p99=9.00, min=0.00, max=9.00}"}, {name="'Scheduled time distribution (s)'" value="{count=8, p01=0.00, p05=0.00, p10=0.00, p25=0.00, p50=0.00, p75=0.00, p90=0.00, p95=0.00, p99=0.00, min=0.00, max=0.00}"}, {name="Input avg." value="1.88 rows"}, {name="Input std.dev." value="154.20%"}]
+        #5 RemoteSource [RemoteSource]
+            actual_rows: 15
+            actual_rows_total: 15
+            actual_time_ms: 75
+            output_columns: ["custkey_2:bigint"]
+            properties: [{name="sourceFragmentIds" value="[3]"}, {name="CPU" value="0.00ns (0.00%)"}, {name="Scheduled" value="0.00ns (0.00%)"}, {name="Blocked" value="298.00ms (27.39%)"}, {name="Output" value="15 rows (135B)"}, {name="metrics"}, {name="'Blocked time distribution (s)'" value="{count=8, p01=0.04, p05=0.04, p10=0.04, p25=0.04, p50=0.04, p75=0.04, p90=0.04, p95=0.04, p99=0.04, min=0.04, max=0.04}"}, {name="'CPU and scheduled time usage over time'" value="ResourceUsageTimeSeriesSnapshot{startTimeEpochSeconds=1795474778, bucketWidthSeconds=1, cpuNanosBuckets=[427291], wallNanosBuckets=[435082]}"}, {name="'CPU time distribution (s)'" value="{count=8, p01=0.00, p05=0.00, p10=0.00, p25=0.00, p50=0.00, p75=0.00, p90=0.00, p95=0.00, p99=0.00, min=0.00, max=0.00}"}, {name="'Input rows distribution'" value="{count=8, p01=0.00, p05=0.00, p10=0.00, p25=0.00, p50=1.00, p75=3.00, p90=9.00, p95=9.00, p99=9.00, min=0.00, max=9.00}"}, {name="'Scheduled time distribution (s)'" value="{count=8, p01=0.00, p05=0.00, p10=0.00, p25=0.00, p50=0.00, p75=0.00, p90=0.00, p95=0.00, p99=0.00, min=0.00, max=0.00}"}, {name="Input avg." value="1.88 rows"}, {name="Input std.dev." value="154.20%"}]
+          #6 Aggregate [Aggregate]
+              actual_cpu_ms: 1
+              actual_rows: 15
+              actual_rows_total: 15
+              actual_self_time_ms: 2
+              actual_time_ms: 75
+              estimated_cpu: 18710
+              estimated_rows: 1000
+              group_keys: ["custkey_2"]
+              output_columns: ["custkey_2:bigint"]
+              properties: [{name="type" value="FINAL"}, {name="Fragment" value="3 [HASH]"}, {name="Fragment CPU" value="3.72ms, Scheduled: 5.68ms, Blocked 313.82ms (Input: 155.81ms, Output: 0.00ns), Input: 15 rows (135B); per task: avg.: 15.00 std.dev.: 0.00, Output: 15 rows (135..."}, {name="Fragment Peak Memory" value="808B, Tasks count: 1; per task: max: 808B"}, {name="Fragment Output buffer active time" value="37.46ms, buffer utilization distribution (%): {p01=0.00, p05=0.00, p10=0.00, p25=0.00, p50=0.00, p75=0.00, p90=0.00, p95=0.00, p99=0.00, min=0.00, max=0.00}"}, {name="Fragment Task output distribution" value="{count=1.00, p01=135B, p05=135B, p10=135B, p25=135B, p50=135B, p75=135B, p90=135B, p95=135B, p99=135B, max=135B}"}, {name="Fragment Task input distribution" value="{count=1.00, p01=135B, p05=135B, p10=135B, p25=135B, p50=135B, p75=135B, p90=135B, p95=135B, p99=135B, max=135B}"}, {name="Fragment Output layout" value="[custkey_2]"}, {name="Fragment Output partitioning" value="BROADCAST []"}, {name="Estimates" value="{rows: 1000 (8.79kB), cpu: 18.71k, memory: 8.79kB, network: 0B}"}, {name="CPU" value="1.00ms (2.13%)"}, {name="Scheduled" value="2.00ms (1.98%)"}, {name="Blocked" value="0.00ns (0.00%)"}, {name="Output" value="15 rows (135B)"}, {name="metrics"}, {name="'Accumulator update CPU time'" value="{duration=0.00ns}"}, {name="'CPU and scheduled time usage over time'" value="ResourceUsageTimeSeriesSnapshot{startTimeEpochSeconds=1795474778, bucketWidthSeconds=1, cpuNanosBuckets=[1756379], wallNanosBuckets=[2330169]}"}, {name="'CPU time distribution (s)'" value="{count=8, p01=0.00, p05=0.00, p10=0.00, p25=0.00, p50=0.00, p75=0.00, p90=0.00, p95=0.00, p99=0.00, min=0.00, max=0.00}"}, {name="'Group by hash update CPU time'" value="{duration=22.29us}"}, {name="'Input rows distribution'" value="{count=8, p01=1.00, p05=1.00, p10=1.00, p25=1.00, p50=2.00, p75=2.00, p90=4.00, p95=4.00, p99=4.00, min=1.00, max=4.00}"}, {name="'Input rows processed without partial aggregation enabled'" value="LongCount{total=0}"}, {name="'Scheduled time distribution (s)'" value="{count=8, p01=0.00, p05=0.00, p10=0.00, p25=0.00, p50=0.00, p75=0.00, p90=0.00, p95=0.00, p99=0.00, min=0.00, max=0.00}"}, {name="Input avg." value="1.88 rows"}, {name="Input std.dev." value="49.44%"}]
+            #7 LocalExchange [LocalExchange]
+                actual_rows: 15
+                actual_rows_total: 15
+                actual_self_time_ms: 1
+                actual_time_ms: 73
+                estimated_cpu: 18710
+                estimated_rows: 2128
+                output_columns: ["custkey_2:bigint"]
+                properties: [{name="partitioning" value="HASH"}, {name="arguments" value="[custkey_2::bigint]"}, {name="Estimates" value="{rows: 2128 (18.71kB), cpu: 18.71k, memory: 0B, network: 0B}"}, {name="CPU" value="0.00ns (0.00%)"}, {name="Scheduled" value="1.00ms (0.99%)"}, {name="Blocked" value="159.00ms (14.61%)"}, {name="Output" value="15 rows (135B)"}, {name="metrics"}, {name="'CPU and scheduled time usage over time'" value="ResourceUsageTimeSeriesSnapshot{startTimeEpochSeconds=1795474778, bucketWidthSeconds=1, cpuNanosBuckets=[398086], wallNanosBuckets=[1543166]}"}, {name="'CPU time distribution (s)'" value="{count=8, p01=0.00, p05=0.00, p10=0.00, p25=0.00, p50=0.00, p75=0.00, p90=0.00, p95=0.00, p99=0.00, min=0.00, max=0.00}"}, {name="'Input rows distribution'" value="{count=8, p01=0.00, p05=0.00, p10=0.00, p25=0.00, p50=3.00, p75=4.00, p90=5.00, p95=5.00, p99=5.00, min=0.00, max=5.00}"}, {name="'Scheduled time distribution (s)'" value="{count=8, p01=0.00, p05=0.00, p10=0.00, p25=0.00, p50=0.00, p75=0.00, p90=0.00, p95=0.00, p99=0.00, min=0.00, max=0.00}"}, {name="Input avg." value="1.88 rows"}, {name="Input std.dev." value="104.77%"}]
+              #8 RemoteSource [RemoteSource]
+                  actual_rows: 15
+                  actual_rows_total: 15
+                  actual_time_ms: 72
+                  output_columns: ["custkey_2:bigint"]
+                  properties: [{name="sourceFragmentIds" value="[4]"}, {name="CPU" value="0.00ns (0.00%)"}, {name="Scheduled" value="0.00ns (0.00%)"}, {name="Blocked" value="156.00ms (14.34%)"}, {name="Output" value="15 rows (135B)"}, {name="metrics"}, {name="'Blocked time distribution (s)'" value="{count=8, p01=0.02, p05=0.02, p10=0.02, p25=0.02, p50=0.02, p75=0.03, p90=0.03, p95=0.03, p99=0.03, min=0.02, max=0.03}"}, {name="'CPU and scheduled time usage over time'" value="ResourceUsageTimeSeriesSnapshot{startTimeEpochSeconds=1795474778, bucketWidthSeconds=1, cpuNanosBuckets=[279918], wallNanosBuckets=[298292]}"}, {name="'CPU time distribution (s)'" value="{count=8, p01=0.00, p05=0.00, p10=0.00, p25=0.00, p50=0.00, p75=0.00, p90=0.00, p95=0.00, p99=0.00, min=0.00, max=0.00}"}, {name="'Input rows distribution'" value="{count=8, p01=0.00, p05=0.00, p10=0.00, p25=0.00, p50=3.00, p75=4.00, p90=5.00, p95=5.00, p99=5.00, min=0.00, max=5.00}"}, {name="'Scheduled time distribution (s)'" value="{count=8, p01=0.00, p05=0.00, p10=0.00, p25=0.00, p50=0.00, p75=0.00, p90=0.00, p95=0.00, p99=0.00, min=0.00, max=0.00}"}, {name="Input avg." value="1.88 rows"}, {name="Input std.dev." value="104.77%"}]
+                #9 Aggregate [Aggregate]
+                    actual_cpu_ms: 1
+                    actual_rows: 15
+                    actual_rows_total: 15
+                    actual_self_time_ms: 1
+                    actual_time_ms: 72
+                    estimated_rows: 2128
+                    group_keys: ["custkey_2"]
+                    output_columns: ["custkey_2:bigint"]
+                    properties: [{name="type" value="PARTIAL"}, {name="Fragment" value="4 [tpch:orders:15000]"}, {name="Fragment CPU" value="32.38ms, Scheduled: 72.81ms, Blocked 0.00ns (Input: 0.00ns, Output: 0.00ns), Input: 15000 rows (263.67kB); per task: avg.: 15000.00 std.dev.: 0.00, Output: 15 r..."}, {name="Fragment Peak Memory" value="184B, Tasks count: 1; per task: max: 184B"}, {name="Fragment Output buffer active time" value="32.39ms, buffer utilization distribution (%): {p01=0.00, p05=0.00, p10=0.00, p25=0.00, p50=0.00, p75=0.00, p90=0.00, p95=0.00, p99=0.00, min=0.00, max=0.00}"}, {name="Fragment Task output distribution" value="{count=1.00, p01=135B, p05=135B, p10=135B, p25=135B, p50=135B, p75=135B, p90=135B, p95=135B, p99=135B, max=135B}"}, {name="Fragment Task input distribution" value="{count=1.00, p01=263.67kB, p05=263.67kB, p10=263.67kB, p25=263.67kB, p50=263.67kB, p75=263.67kB, p90=263.67kB, p95=263.67kB, p99=263.67kB, max=263.67kB}"}, {name="Fragment Output layout" value="[custkey_2]"}, {name="Fragment Output partitioning" value="HASH [custkey_2]"}, {name="Estimates" value="{rows: 2128 (18.71kB), cpu: ?, memory: ?, network: ?}"}, {name="CPU" value="1.00ms (2.13%)"}, {name="Scheduled" value="1.00ms (0.99%)"}, {name="Blocked" value="0.00ns (0.00%)"}, {name="Output" value="15 rows (135B)"}, {name="metrics"}, {name="'Accumulator update CPU time'" value="{duration=0.00ns}"}, {name="'CPU and scheduled time usage over time'" value="ResourceUsageTimeSeriesSnapshot{startTimeEpochSeconds=1795474778, bucketWidthSeconds=1, cpuNanosBuckets=[744957], wallNanosBuckets=[889414]}"}, {name="'CPU time distribution (s)'" value="{count=4, p01=0.00, p05=0.00, p10=0.00, p25=0.00, p50=0.00, p75=0.00, p90=0.00, p95=0.00, p99=0.00, min=0.00, max=0.00}"}, {name="'Group by hash update CPU time'" value="{duration=8.00us}"}, {name="'Input rows distribution'" value="{count=4, p01=3.00, p05=3.00, p10=3.00, p25=3.00, p50=4.00, p75=6.00, p90=6.00, p95=6.00, p99=6.00, min=3.00, max=6.00}"}, {name="'Input rows processed without partial aggregation enabled'" value="LongCount{total=0}"}, {name="'Scheduled time distribution (s)'" value="{count=4, p01=0.00, p05=0.00, p10=0.00, p25=0.00, p50=0.00, p75=0.00, p90=0.00, p95=0.00, p99=0.00, min=0.00, max=0.00}"}, {name="Input avg." value="4.00 rows"}, {name="Input std.dev." value="30.62%"}]
+                  #10 ScanFilterProject [ScanFilterProject]
+                      actual_cpu_ms: 31
+                      actual_rows: 16
+                      actual_rows_total: 16
+                      actual_self_time_ms: 71
+                      actual_time_ms: 71
+                      database: "tpch"
+                      estimated_cpu: 18710
+                      estimated_rows: 2128
+                      estimated_rows_read: 15000
+                      filter: "double '400000.0' < totalprice"
+                      output_columns: ["custkey_2:bigint"]
+                      output_list: ["orders", "Filter: double '400000.0' < totalprice"]
+                      properties: [{name="table" value="tpch:tiny:orders"}, {name="Estimates" value="{rows: 15000 (131.84kB), cpu: 263.67k, memory: 0B, network: 0B}/{rows: 2128 (18.71kB), cpu: 263.67k, memory: 0B, network: 0B}/{rows: 2128 (18.71kB), cpu: 18.71k..."}, {name="CPU" value="31.00ms (65.96%)"}, {name="Scheduled" value="71.00ms (70.30%)"}, {name="Blocked" value="0.00ns (0.00%)"}, {name="Output" value="16 rows (144B)"}, {name="metrics"}, {name="'CPU and scheduled time usage over time'" value="ResourceUsageTimeSeriesSnapshot{startTimeEpochSeconds=1795474778, bucketWidthSeconds=1, cpuNanosBuckets=[31140415], wallNanosBuckets=[71426458]}"}, {name="'CPU time distribution (s)'" value="{count=4, p01=0.01, p05=0.01, p10=0.01, p25=0.01, p50=0.01, p75=0.01, p90=0.01, p95=0.01, p99=0.01, min=0.01, max=0.01}"}, {name="'Filter CPU time'" value="{duration=2.16ms}"}, {name="'Input rows distribution'" value="{count=4, p01=3750.00, p05=3750.00, p10=3750.00, p25=3750.00, p50=3750.00, p75=3750.00, p90=3750.00, p95=3750.00, p99=3750.00, min=3750.00, max=3750.00}"}, {name="'Projection CPU time'" value="{duration=18.83us}"}, {name="'Scheduled time distribution (s)'" value="{count=4, p01=0.01, p05=0.01, p10=0.01, p25=0.02, p50=0.02, p75=0.03, p90=0.03, p95=0.03, p99=0.03, min=0.01, max=0.03}"}, {name="Input avg." value="3750.00 rows"}, {name="Input std.dev." value="0.00%"}, {name="totalprice" value="tpch:totalprice"}, {name="custkey_2" value="tpch:custkey"}, {name="tpch:orderstatus" value=":: [[F], [O], [P]]"}, {name="Input" value="15000 rows (263.67kB)"}, {name="Filtered" value="99.89%"}, {name="Splits" value="4"}, {name="Splits generation wait time" value="0.00ms"}]
+                      relation: "orders"
+                      rows_read: 15000
+                      rows_removed_by_filter: 14984
+                      schema: "tiny"
+    #11 ScanFilterProject [ScanFilterProject]
+        actual_cpu_ms: 1
+        actual_rows: 11
+        actual_rows_total: 11
+        actual_self_time_ms: 3
+        actual_time_ms: 3
+        database: "tpch"
+        estimated_cpu: 204
+        estimated_rows: 9
+        estimated_rows_read: 100
+        filter: "acctbal_9 < double '0.0'"
+        output_columns: ["name_5:varchar(25)"]
+        output_list: ["supplier", "Filter: acctbal_9 < double '0.0'"]
+        properties: [{name="table" value="tpch:tiny:supplier"}, {name="Fragment" value="5 [SOURCE]"}, {name="Fragment CPU" value="1.57ms, Scheduled: 3.60ms, Blocked 0.00ns (Input: 0.00ns, Output: 0.00ns), Input: 100 rows (3.13kB); per task: avg.: 100.00 std.dev.: 0.00, Output: 11 rows (253..."}, {name="Fragment Peak Memory" value="608B, Tasks count: 1; per task: max: 608B"}, {name="Fragment Output buffer active time" value="22.14ms, buffer utilization distribution (%): {p01=0.00, p05=0.00, p10=0.00, p25=0.00, p50=0.00, p75=0.00, p90=0.00, p95=0.00, p99=0.00, min=0.00, max=0.00}"}, {name="Fragment Task output distribution" value="{count=1.00, p01=253B, p05=253B, p10=253B, p25=253B, p50=253B, p75=253B, p90=253B, p95=253B, p99=253B, max=253B}"}, {name="Fragment Task input distribution" value="{count=1.00, p01=3.13kB, p05=3.13kB, p10=3.13kB, p25=3.13kB, p50=3.13kB, p75=3.13kB, p90=3.13kB, p95=3.13kB, p99=3.13kB, max=3.13kB}"}, {name="Fragment Output layout" value="[name_5]"}, {name="Fragment Output partitioning" value="SINGLE []"}, {name="Estimates" value="{rows: 100 (2.25kB), cpu: 3.13k, memory: 0B, network: 0B}/{rows: 9 (204B), cpu: 3.13k, memory: 0B, network: 0B}/{rows: 9 (204B), cpu: 204, memory: 0B, network: ..."}, {name="CPU" value="1.00ms (2.13%)"}, {name="Scheduled" value="3.00ms (2.97%)"}, {name="Blocked" value="0.00ns (0.00%)"}, {name="Output" value="11 rows (253B)"}, {name="metrics"}, {name="'CPU and scheduled time usage over time'" value="ResourceUsageTimeSeriesSnapshot{startTimeEpochSeconds=1795474778, bucketWidthSeconds=1, cpuNanosBuckets=[1240001], wallNanosBuckets=[3275250]}"}, {name="'CPU time distribution (s)'" value="{count=4, p01=0.00, p05=0.00, p10=0.00, p25=0.00, p50=0.00, p75=0.00, p90=0.00, p95=0.00, p99=0.00, min=0.00, max=0.00}"}, {name="'Filter CPU time'" value="{duration=297.71us}"}, {name="'Input rows distribution'" value="{count=4, p01=25.00, p05=25.00, p10=25.00, p25=25.00, p50=25.00, p75=25.00, p90=25.00, p95=25.00, p99=25.00, min=25.00, max=25.00}"}, {name="'Projection CPU time'" value="{duration=27.17us}"}, {name="'Scheduled time distribution (s)'" value="{count=4, p01=0.00, p05=0.00, p10=0.00, p25=0.00, p50=0.00, p75=0.00, p90=0.00, p95=0.00, p99=0.00, min=0.00, max=0.00}"}, {name="Input avg." value="25.00 rows"}, {name="Input std.dev." value="0.00%"}, {name="name_5" value="tpch:name"}, {name="acctbal_9" value="tpch:acctbal"}, {name="Input" value="100 rows (3.13kB)"}, {name="Filtered" value="89.00%"}, {name="Splits" value="4"}, {name="Splits generation wait time" value="0.00ms"}]
+        relation: "supplier"
+        rows_read: 100
+        rows_removed_by_filter: 89
+        schema: "tiny"

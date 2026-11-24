@@ -1,0 +1,81 @@
+                QUERY PLAN                 
+-------------------------------------------
+ [                                        +
+   {                                      +
+     "Plan": {                            +
+       "Node Type": "Sort",               +
+       "Parallel Aware": false,           +
+       "Async Capable": false,            +
+       "Startup Cost": 82563.28,          +
+       "Total Cost": 83563.28,            +
+       "Plan Rows": 400000,               +
+       "Plan Width": 27,                  +
+       "Actual Startup Time": 174.866,    +
+       "Actual Total Time": 214.567,      +
+       "Actual Rows": 400000.00,          +
+       "Actual Loops": 1,                 +
+       "Disabled": false,                 +
+       "Sort Key": ["total", "placed_at"],+
+       "Sort Method": "external merge",   +
+       "Sort Space Used": 16128,          +
+       "Sort Space Type": "Disk",         +
+       "Shared Hit Blocks": 3060,         +
+       "Shared Read Blocks": 0,           +
+       "Shared Dirtied Blocks": 0,        +
+       "Shared Written Blocks": 0,        +
+       "Local Hit Blocks": 0,             +
+       "Local Read Blocks": 0,            +
+       "Local Dirtied Blocks": 0,         +
+       "Local Written Blocks": 0,         +
+       "Temp Read Blocks": 8039,          +
+       "Temp Written Blocks": 8526,       +
+       "Plans": [                         +
+         {                                +
+           "Node Type": "Seq Scan",       +
+           "Parent Relationship": "Outer",+
+           "Parallel Aware": false,       +
+           "Async Capable": false,        +
+           "Relation Name": "orders",     +
+           "Alias": "orders",             +
+           "Startup Cost": 0.00,          +
+           "Total Cost": 7054.00,         +
+           "Plan Rows": 400000,           +
+           "Plan Width": 27,              +
+           "Actual Startup Time": 0.010,  +
+           "Actual Total Time": 12.582,   +
+           "Actual Rows": 400000.00,      +
+           "Actual Loops": 1,             +
+           "Disabled": false,             +
+           "Shared Hit Blocks": 3054,     +
+           "Shared Read Blocks": 0,       +
+           "Shared Dirtied Blocks": 0,    +
+           "Shared Written Blocks": 0,    +
+           "Local Hit Blocks": 0,         +
+           "Local Read Blocks": 0,        +
+           "Local Dirtied Blocks": 0,     +
+           "Local Written Blocks": 0,     +
+           "Temp Read Blocks": 0,         +
+           "Temp Written Blocks": 0       +
+         }                                +
+       ]                                  +
+     },                                   +
+     "Planning": {                        +
+       "Shared Hit Blocks": 129,          +
+       "Shared Read Blocks": 0,           +
+       "Shared Dirtied Blocks": 0,        +
+       "Shared Written Blocks": 0,        +
+       "Local Hit Blocks": 0,             +
+       "Local Read Blocks": 0,            +
+       "Local Dirtied Blocks": 0,         +
+       "Local Written Blocks": 0,         +
+       "Temp Read Blocks": 0,             +
+       "Temp Written Blocks": 0           +
+     },                                   +
+     "Planning Time": 0.164,              +
+     "Triggers": [                        +
+     ],                                   +
+     "Execution Time": 223.770            +
+   }                                      +
+ ]
+(1 row)
+

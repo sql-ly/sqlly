@@ -8,8 +8,8 @@ use std::collections::HashMap;
 
 use gpui::App;
 use sqlly_core::{CellValue, ResultColumn};
+use sqlly_datatable::TextCase;
 use sqlly_datatable::pivot::state::{VisibleColKind, VisibleRowKind};
-use sqlly_datatable::{ConditionalKind, TextCase};
 
 use crate::computed_columns::Slot;
 use crate::formula::{self, ExcelRefContext};
@@ -304,12 +304,12 @@ impl ResultsView {
             .iter()
             .enumerate()
             .filter_map(|(pos, &c)| {
-                let rules: Vec<ConditionalKind> = self
+                let rules: Vec<_> = self
                     .conditional_directives
                     .iter()
                     .chain(saved.iter())
                     .filter(|r| r.column.eq_ignore_ascii_case(&columns[c].name))
-                    .map(|r| r.kind.clone())
+                    .map(|r| xlsx_workbook::conditional(&r.kind))
                     .collect();
                 (!rules.is_empty()).then_some(ConditionalBlock { column: pos, rules })
             })

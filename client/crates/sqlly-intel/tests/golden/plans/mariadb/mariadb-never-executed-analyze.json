@@ -1,0 +1,60 @@
+{
+  "query_optimization": {
+    "r_total_time_ms": 0.092482324
+  },
+  "query_block": {
+    "select_id": 1,
+    "cost": 0.0196056,
+    "r_loops": 1,
+    "r_total_time_ms": 0.010581311,
+    "nested_loop": [
+      {
+        "table": {
+          "table_name": "c",
+          "access_type": "ref",
+          "possible_keys": ["PRIMARY", "customers_email_idx"],
+          "key": "customers_email_idx",
+          "key_length": "322",
+          "used_key_parts": ["email"],
+          "ref": ["const"],
+          "loops": 1,
+          "r_loops": 1,
+          "rows": 1,
+          "r_index_rows": 0,
+          "r_rows": 0,
+          "cost": 0.00345856,
+          "r_table_time_ms": 0.004999045,
+          "r_other_time_ms": 0.002666157,
+          "r_engine_stats": {
+            "pages_accessed": 4
+          },
+          "filtered": 100,
+          "r_total_filtered": 100,
+          "index_condition": "c.email = 'nobody@example.com'",
+          "r_icp_filtered": 0,
+          "r_filtered": 100
+        }
+      },
+      {
+        "table": {
+          "table_name": "o",
+          "access_type": "ref",
+          "possible_keys": ["orders_customer_idx"],
+          "key": "orders_customer_idx",
+          "key_length": "4",
+          "used_key_parts": ["customer_id"],
+          "ref": ["shop.c.id"],
+          "loops": 1,
+          "r_loops": 0,
+          "rows": 8,
+          "r_rows": null,
+          "cost": 0.01614704,
+          "r_engine_stats": {},
+          "filtered": 100,
+          "r_total_filtered": null,
+          "r_filtered": null
+        }
+      }
+    ]
+  }
+}

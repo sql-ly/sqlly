@@ -1,0 +1,21 @@
+format: mysql-table (Certain)
+statements: 1
+
+== statement 1
+dialect: "MySql"
+estimated_rows: 2
+source_format: "mysql-table"
+statement_type: "EXPLAIN"
+operators: 2
+  #1 Query Block [Query Block]
+      properties: [{name="select_id" value="1"}, {name="select_type" value="DELETE"}]
+      subplan_name: "Select #1"
+    #2 Table: order_items [Access: range]
+        estimated_rows: 2
+        estimated_rows_read: 2
+        extra: ["Using where"]
+        filtered_percent: 100
+        index_name: "order_items_order_idx"
+        output_list: ["order_items", "Key: order_items_order_idx"]
+        properties: [{name="possible_keys" value="order_items_order_idx"}, {name="key_len" value="4"}, {name="ref" value="const"}]
+        relation: "order_items"

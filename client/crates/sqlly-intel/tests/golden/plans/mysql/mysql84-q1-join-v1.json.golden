@@ -1,0 +1,54 @@
+format: mysql-json (Certain)
+statements: 1
+
+== statement 1
+dialect: "MySql"
+estimated_rows: 40131
+source_format: "mysql-json"
+statement_type: "EXPLAIN"
+total_subtree_cost: 8959.45
+operators: 6
+  #1 Query Block [Query Block]
+      estimated_cost: 8959.45
+      properties: [{name="cost_info.query_cost" value="8959.45"}, {name="select_id" value="1"}]
+      subplan_name: "Select #1"
+    #2 Ordering operation [Ordering operation]
+        extra: ["Using filesort"]
+        properties: [{name="using_filesort" value="true"}]
+      #3 Grouping operation [Grouping operation]
+          extra: ["Using temporary"]
+          properties: [{name="using_filesort" value="false"}, {name="using_temporary_table" value="true"}]
+        #4 Table: o [Access: ALL]
+            estimated_cost: 4053.35
+            estimated_io: 3652.04
+            estimated_rows: 40131
+            estimated_rows_read: 40131
+            filter: "(`shop`.`o`.`status` = 'paid')"
+            filtered_percent: 10
+            output_columns: ["id", "customer_id", "status"]
+            output_list: ["o", "Condition: (`shop`.`o`.`status` = 'paid')"]
+            properties: [{name="cost_info.data_read_per_join" value="282K"}, {name="cost_info.eval_cost" value="401.31"}, {name="cost_info.prefix_cost" value="4053.35"}, {name="cost_info.read_cost" value="3652.04"}, {name="possible_keys" value="PRIMARY, orders_customer_idx"}, {name="rows_produced_per_join" value="4013"}]
+            relation: "o"
+            warnings: [{TableScan={table="o"}}]
+        #5 Table: c [Access: eq_ref]
+            estimated_cost: 5457.94
+            estimated_io: 1003.28
+            estimated_rows: 1
+            estimated_rows_read: 1
+            filtered_percent: 100
+            index_name: "PRIMARY"
+            output_columns: ["id", "country"]
+            output_list: ["c", "Key: PRIMARY"]
+            properties: [{name="cost_info.data_read_per_join" value="2M"}, {name="cost_info.eval_cost" value="401.31"}, {name="cost_info.prefix_cost" value="5457.94"}, {name="cost_info.read_cost" value="1003.28"}, {name="key_length" value="4"}, {name="possible_keys" value="PRIMARY"}, {name="ref" value="shop.o.customer_id"}, {name="rows_produced_per_join" value="4013"}, {name="used_key_parts" value="id"}]
+            relation: "c"
+        #6 Table: oi [Access: ref]
+            estimated_cost: 8959.45
+            estimated_io: 2501.08
+            estimated_rows: 2
+            estimated_rows_read: 2
+            filtered_percent: 100
+            index_name: "order_items_order_idx"
+            output_columns: ["id", "order_id", "quantity", "unit_price"]
+            output_list: ["oi", "Key: order_items_order_idx"]
+            properties: [{name="cost_info.data_read_per_join" value="312K"}, {name="cost_info.eval_cost" value="1000.43"}, {name="cost_info.prefix_cost" value="8959.45"}, {name="cost_info.read_cost" value="2501.08"}, {name="key_length" value="4"}, {name="possible_keys" value="order_items_order_idx"}, {name="ref" value="shop.o.id"}, {name="rows_produced_per_join" value="10004"}, {name="used_key_parts" value="order_id"}]
+            relation: "oi"

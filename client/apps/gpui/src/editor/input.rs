@@ -75,11 +75,20 @@ impl EntityInputHandler for SqlEditor {
         {
             return;
         }
+        // Markdown: pairs and step-overs; none of the SQL typing aids below.
+        if self.is_markdown() {
+            if range.is_none()
+                && self.marked_range.is_none()
+                && self.extra_cursors.is_empty()
+                && self.markdown_type(text, cx)
+            {
+                return;
+            }
         // Dot-segment completion: with the suggestion popup open, typing `.`
         // accepts the next dotted-path segment (`Acc|` → `Accounting.|`)
         // instead of inserting a literal dot. Never during IME composition or
         // for range-targeted host edits — those fall through unchanged.
-        if text == "."
+        } else if text == "."
             && range.is_none()
             && self.marked_range.is_none()
             && self.try_advance_completion_to_dot(cx)
@@ -91,13 +100,15 @@ impl EntityInputHandler for SqlEditor {
         // detect the space keystroke when the previous char is a comma. Never
         // during IME composition — the space may be a candidate-page key —
         // and never in multi-cursor mode, where the space fans out instead.
-        if self.marked_range.is_none()
+        if !self.is_markdown()
+            && self.marked_range.is_none()
             && (self.try_automagic_comma_repair(text, range.as_ref(), cx)
                 || self.try_automagic_connector_repair(text, range.as_ref(), cx))
         {
             return;
         }
-        if self.marked_range.is_none()
+        if !self.is_markdown()
+            && self.marked_range.is_none()
             && self.extra_cursors.is_empty()
             && self.try_comma_space_expansion(text, range.as_ref(), cx)
         {

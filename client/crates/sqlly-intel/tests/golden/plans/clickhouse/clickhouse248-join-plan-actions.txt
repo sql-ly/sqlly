@@ -1,0 +1,76 @@
+Expression (Project names)
+Actions: INPUT :: 0 -> count() UInt64 : 0
+         INPUT : 1 -> sum(__table2.total) Decimal(38, 2) : 1
+         INPUT : 2 -> __table1.country LowCardinality(String) : 2
+         ALIAS sum(__table2.total) :: 1 -> sum(total) Decimal(38, 2) : 3
+         ALIAS __table1.country :: 2 -> country LowCardinality(String) : 1
+Positions: 1 0 3
+  Limit (preliminary LIMIT (without OFFSET))
+  Limit 5
+  Offset 0
+    Sorting (Sorting for ORDER BY)
+    Sort description: sum(__table2.total) DESC
+    Limit 5
+      Expression ((Before ORDER BY + Projection))
+      Actions: INPUT :: 0 -> count() UInt64 : 0
+               INPUT :: 1 -> sum(__table2.total) Decimal(38, 2) : 1
+               INPUT :: 2 -> __table1.country LowCardinality(String) : 2
+      Positions: 1 0 2
+        Aggregating
+        Keys: __table1.country
+        Aggregates:
+            count()
+              Function: count() → UInt64
+              Arguments: none
+            sum(__table2.total)
+              Function: sum(Decimal(12, 2)) → Decimal(38, 2)
+              Arguments: __table2.total
+        Skip merging: 0
+          Expression ((Before GROUP BY + ))
+          Actions: INPUT :: 0 -> __table1.country LowCardinality(String) : 0
+                   INPUT :: 1 -> __table1.id UInt32 : 1
+                   INPUT :: 2 -> __table2.total Decimal(12, 2) : 2
+                   INPUT :: 3 -> __table2.placed_at DateTime : 3
+                   INPUT :: 4 -> __table2.status LowCardinality(String) : 4
+          Positions: 0 2
+            Join (JOIN FillRightFirst)
+            Type: INNER
+            Strictness: ALL
+            Algorithm: HashJoin
+            Clauses: [(__table1.id) = (__table2.customer_id)]
+              Expression ((JOIN actions + Change column names to column identifiers))
+              Actions: INPUT : 0 -> country LowCardinality(String) : 0
+                       INPUT : 1 -> id UInt32 : 1
+                       ALIAS country :: 0 -> __table1.country LowCardinality(String) : 2
+                       ALIAS id :: 1 -> __table1.id UInt32 : 0
+              Positions: 2 0
+                ReadFromMergeTree (default.customers)
+                ReadType: Default
+                Parts: 1
+                Granules: 6
+              Expression
+              Actions: INPUT : 0 -> total Decimal(12, 2) : 0
+                       INPUT : 1 -> customer_id UInt32 : 1
+                       INPUT : 2 -> placed_at DateTime : 2
+                       INPUT : 3 -> status LowCardinality(String) : 3
+                       ALIAS total :: 0 -> __table2.total Decimal(12, 2) : 4
+                       ALIAS customer_id :: 1 -> __table2.customer_id UInt32 : 0
+                       ALIAS placed_at :: 2 -> __table2.placed_at DateTime : 1
+                       ALIAS status :: 3 -> __table2.status LowCardinality(String) : 2
+              Positions: 4 0 1 2
+                ReadFromMergeTree (default.orders)
+                ReadType: Default
+                Parts: 5
+                Granules: 194
+                Prewhere info
+                Need filter: 1
+                  Prewhere filter
+                  Prewhere filter column: and(greaterOrEquals(__table2.placed_at, \'2023-06-01 00:00:00\'_String), equals(__table2.status, \'paid\'_String)) (removed)
+                  Actions: INPUT : 0 -> placed_at DateTime : 0
+                           INPUT : 1 -> status LowCardinality(String) : 1
+                           COLUMN Const(String) -> \'paid\'_String String : 2
+                           COLUMN Const(String) -> \'2023-06-01 00:00:00\'_String String : 3
+                           FUNCTION equals(status : 1, \'paid\'_String :: 2) -> equals(__table2.status, \'paid\'_String) LowCardinality(UInt8) : 4
+                           FUNCTION greaterOrEquals(placed_at : 0, \'2023-06-01 00:00:00\'_String :: 3) -> greaterOrEquals(__table2.placed_at, \'2023-06-01 00:00:00\'_String) UInt8 : 2
+                           FUNCTION and(greaterOrEquals(__table2.placed_at, \'2023-06-01 00:00:00\'_String) :: 2, equals(__table2.status, \'paid\'_String) :: 4) -> and(greaterOrEquals(__table2.placed_at, \'2023-06-01 00:00:00\'_String), equals(__table2.status, \'paid\'_String)) UInt8 : 3
+                  Positions: 0 1 3

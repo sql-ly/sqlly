@@ -1,0 +1,157 @@
+{
+  "query": "/* select#1 */ select `c`.`country` AS `country`,count(0) AS `orders`,sum((`oi`.`quantity` * `oi`.`unit_price`)) AS `revenue` from `shop`.`order_items` `oi` join `shop`.`orders` `o` join `shop`.`customers` `c` where ((`oi`.`order_id` = `o`.`id`) and (`c`.`id` = `o`.`customer_id`) and (`o`.`status` = 'paid')) group by `shop`.`c`.`country` order by `revenue` desc",
+  "query_plan": {
+    "inputs": [
+      {
+        "inputs": [
+          {
+            "inputs": [
+              {
+                "inputs": [
+                  {
+                    "inputs": [
+                      {
+                        "inputs": [
+                          {
+                            "alias": "o",
+                            "operation": "Table scan on o",
+                            "table_name": "orders",
+                            "access_type": "table",
+                            "actual_rows": 40000.0,
+                            "schema_name": "shop",
+                            "actual_loops": 1,
+                            "used_columns": [
+                              "id",
+                              "customer_id",
+                              "status"
+                            ],
+                            "estimated_rows": 40131.0,
+                            "actual_last_row_ms": 4.22309,
+                            "actual_first_row_ms": 0.113416,
+                            "estimated_total_cost": 4053.35
+                          }
+                        ],
+                        "condition": "(o.`status` = 'paid')",
+                        "operation": "Filter: (o.`status` = 'paid')",
+                        "access_type": "filter",
+                        "actual_rows": 10000.0,
+                        "actual_loops": 1,
+                        "estimated_rows": 4013.10005979985,
+                        "filter_columns": [
+                          "o.`status`"
+                        ],
+                        "actual_last_row_ms": 6.070176,
+                        "actual_first_row_ms": 0.114834,
+                        "estimated_total_cost": 4053.35
+                      },
+                      {
+                        "alias": "c",
+                        "covering": false,
+                        "operation": "Single-row index lookup on c using PRIMARY (id = o.customer_id)",
+                        "index_name": "PRIMARY",
+                        "table_name": "customers",
+                        "access_type": "index",
+                        "actual_rows": 1.0,
+                        "key_columns": [
+                          "id"
+                        ],
+                        "schema_name": "shop",
+                        "actual_loops": 10000,
+                        "used_columns": [
+                          "id",
+                          "country"
+                        ],
+                        "estimated_rows": 1.0,
+                        "lookup_condition": "id = o.customer_id",
+                        "index_access_type": "index_lookup",
+                        "lookup_references": [
+                          "shop.o.customer_id"
+                        ],
+                        "actual_last_row_ms": 0.0006521063,
+                        "actual_first_row_ms": 0.0006155978,
+                        "estimated_total_cost": 0.250024918391894
+                      }
+                    ],
+                    "join_type": "inner join",
+                    "operation": "Nested loop inner join",
+                    "access_type": "join",
+                    "actual_rows": 10000.0,
+                    "actual_loops": 1,
+                    "estimated_rows": 4013.10005979985,
+                    "join_algorithm": "nested_loop",
+                    "actual_last_row_ms": 13.528020999999999,
+                    "actual_first_row_ms": 0.12283300000000001,
+                    "estimated_total_cost": 5457.935020929948
+                  },
+                  {
+                    "alias": "oi",
+                    "covering": false,
+                    "operation": "Index lookup on oi using order_items_order_idx (order_id = o.id)",
+                    "index_name": "order_items_order_idx",
+                    "table_name": "order_items",
+                    "access_type": "index",
+                    "actual_rows": 2.5,
+                    "key_columns": [
+                      "order_id"
+                    ],
+                    "schema_name": "shop",
+                    "actual_loops": 10000,
+                    "used_columns": [
+                      "id",
+                      "order_id",
+                      "quantity",
+                      "unit_price"
+                    ],
+                    "estimated_rows": 2.3828818798065186,
+                    "lookup_condition": "order_id = o.id",
+                    "index_access_type": "index_lookup",
+                    "lookup_references": [
+                      "shop.o.id"
+                    ],
+                    "actual_last_row_ms": 0.0022092328,
+                    "actual_first_row_ms": 0.0020202879,
+                    "estimated_total_cost": 0.5957798475361479
+                  }
+                ],
+                "join_type": "inner join",
+                "operation": "Nested loop inner join",
+                "access_type": "join",
+                "actual_rows": 25000.0,
+                "actual_loops": 1,
+                "estimated_rows": 9562.743414347518,
+                "join_algorithm": "nested_loop",
+                "actual_last_row_ms": 37.239632,
+                "actual_first_row_ms": 0.134709,
+                "estimated_total_cost": 8804.89521595158
+              }
+            ],
+            "operation": "Aggregate using temporary table",
+            "access_type": "temp_table_aggregate",
+            "actual_rows": 2.0,
+            "actual_loops": 1,
+            "actual_last_row_ms": 42.784709,
+            "actual_first_row_ms": 42.784709
+          }
+        ],
+        "operation": "Table scan on <temporary>",
+        "table_name": "<temporary>",
+        "access_type": "table",
+        "actual_rows": 2.0,
+        "actual_loops": 1,
+        "actual_last_row_ms": 42.785958,
+        "actual_first_row_ms": 42.785792
+      }
+    ],
+    "operation": "Sort: revenue DESC",
+    "access_type": "sort",
+    "actual_rows": 2.0,
+    "sort_fields": [
+      "revenue DESC"
+    ],
+    "actual_loops": 1,
+    "actual_last_row_ms": 42.800751,
+    "actual_first_row_ms": 42.800626
+  },
+  "query_type": "select",
+  "json_schema_version": "2.0"
+}

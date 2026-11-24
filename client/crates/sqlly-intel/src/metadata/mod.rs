@@ -9,7 +9,10 @@ pub mod error;
 pub mod explorer;
 pub mod node;
 
-pub use dialect::{MetadataDialect, MetadataUnsupported, sql_for_dialect, sql_for_engine};
+pub use dialect::{
+    MetadataDialect, MetadataUnsupported, sql_for_dialect, sql_for_engine,
+    tables_partition_of_column,
+};
 
 use serde::{Deserialize, Serialize};
 use sqlly_core::{ObjectKind, ObjectNode, ScriptAction, ServerCapability, ServerCapabilityProfile};

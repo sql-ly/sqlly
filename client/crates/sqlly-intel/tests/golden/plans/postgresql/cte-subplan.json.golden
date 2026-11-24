@@ -1,0 +1,205 @@
+format: postgresql-json (Certain)
+statements: 1
+
+== statement 1
+dialect: "Postgres"
+estimated_rows: 50
+execution_time_ms: 99.013
+has_actuals: yes
+notes: ["Planning buffers: shared hit=208"]
+planning_time_ms: 0.344
+source_format: "postgresql-json"
+statement_type: "EXPLAIN ANALYZE"
+total_subtree_cost: 16641.21
+operators: 12
+  #1 Limit [Limit]
+      actual_rows: 50
+      actual_rows_total: 50
+      actual_startup_ms: 98.477
+      actual_time_ms: 98.589
+      buffers: {local_dirtied=0 local_hit=0 local_read=0 local_written=0 logical_reads=14936 physical_reads=0 shared_dirtied=0 shared_hit=14936 shared_read=0 shared_written=0 temp_read=0 temp_written=0 writes=0}
+      estimated_cost: 16641.21
+      estimated_row_width: 37
+      estimated_rows: 50
+      estimated_startup_cost: 15813.5
+      loops: 1
+    #2 Index Scan [Index Scan]
+        actual_rows: 50
+        actual_rows_total: 50
+        actual_self_time_ms: 0.02
+        actual_startup_ms: 0.014
+        actual_time_ms: 0.02
+        buffers: {local_dirtied=0 local_hit=0 local_read=0 local_written=0 logical_reads=4 physical_reads=0 shared_dirtied=0 shared_hit=4 shared_read=0 shared_written=0 temp_read=0 temp_written=0 writes=0}
+        cte_name: "recent"
+        estimated_cost: 1822.69
+        estimated_row_width: 27
+        estimated_rows: 50244
+        estimated_startup_cost: 0.42
+        index_cond: "(placed_at > '2023-09-01 00:00:00+00'::timestamp with time zone)"
+        index_name: "orders_placed_idx"
+        loops: 1
+        output_list: ["orders", "Index Cond: (placed_at > '2023-09-01 00:00:00+00'::timestamp with time zone)", "Index: orders_placed_idx"]
+        parent_relationship: "InitPlan"
+        properties: [{name="Index Searches" value="1"}]
+        relation: "orders"
+        subplan_name: "CTE recent"
+    #3 Aggregate [Finalize Aggregate]
+        actual_rows: 1
+        actual_rows_total: 1
+        actual_self_time_ms: 0.004
+        actual_startup_ms: 18.042
+        actual_time_ms: 18.105
+        buffers: {local_dirtied=0 local_hit=0 local_read=0 local_written=0 logical_reads=3054 physical_reads=0 shared_dirtied=0 shared_hit=3054 shared_read=0 shared_written=0 temp_read=0 temp_written=0 writes=0}
+        estimated_cost: 6995.4
+        estimated_row_width: 32
+        estimated_rows: 1
+        estimated_startup_cost: 6995.39
+        loops: 1
+        parent_relationship: "InitPlan"
+        properties: [{name="Partial Mode" value="Finalize"}]
+        subplan_name: "InitPlan 2"
+      #4 Gather [Gather]
+          actual_rows: 2
+          actual_rows_total: 2
+          actual_self_time_ms: 1.074
+          actual_startup_ms: 17.985
+          actual_time_ms: 18.101
+          buffers: {local_dirtied=0 local_hit=0 local_read=0 local_written=0 logical_reads=3054 physical_reads=0 shared_dirtied=0 shared_hit=3054 shared_read=0 shared_written=0 temp_read=0 temp_written=0 writes=0}
+          estimated_cost: 6995.39
+          estimated_row_width: 32
+          estimated_rows: 2
+          estimated_startup_cost: 6995.18
+          loops: 1
+          parent_relationship: "Outer"
+          workers_launched: 1
+          workers_planned: 1
+        #5 Aggregate [Partial Aggregate]
+            actual_rows: 1
+            actual_rows_total: 2
+            actual_self_time_ms: 9.402
+            actual_startup_ms: 17.027
+            actual_time_ms: 17.027
+            buffers: {local_dirtied=0 local_hit=0 local_read=0 local_written=0 logical_reads=3054 physical_reads=0 shared_dirtied=0 shared_hit=3054 shared_read=0 shared_written=0 temp_read=0 temp_written=0 writes=0}
+            estimated_cost: 5995.19
+            estimated_row_width: 32
+            estimated_rows: 1
+            estimated_startup_cost: 5995.18
+            loops: 2
+            parent_relationship: "Outer"
+            properties: [{name="Partial Mode" value="Partial"}]
+          #6 Seq Scan [Parallel Seq Scan]
+              actual_rows: 200000
+              actual_rows_total: 400000
+              actual_self_time_ms: 7.625
+              actual_startup_ms: 0.004
+              actual_time_ms: 7.625
+              alias: "orders_1"
+              buffers: {local_dirtied=0 local_hit=0 local_read=0 local_written=0 logical_reads=3054 physical_reads=0 shared_dirtied=0 shared_hit=3054 shared_read=0 shared_written=0 temp_read=0 temp_written=0 writes=0}
+              estimated_cost: 5406.94
+              estimated_row_width: 5
+              estimated_rows: 235294
+              loops: 2
+              output_list: ["orders"]
+              parallel: yes
+              parent_relationship: "Outer"
+              relation: "orders"
+              warnings: [{TableScan={table="orders"}}]
+    #7 Aggregate [Finalize Aggregate]
+        actual_rows: 1
+        actual_rows_total: 1
+        actual_self_time_ms: 0.008
+        actual_startup_ms: 18.709
+        actual_time_ms: 18.73
+        buffers: {local_dirtied=0 local_hit=0 local_read=0 local_written=0 logical_reads=3054 physical_reads=0 shared_dirtied=0 shared_hit=3054 shared_read=0 shared_written=0 temp_read=0 temp_written=0 writes=0}
+        estimated_cost: 6995.41
+        estimated_row_width: 32
+        estimated_rows: 1
+        estimated_startup_cost: 6995.4
+        loops: 1
+        parent_relationship: "InitPlan"
+        properties: [{name="Partial Mode" value="Finalize"}]
+        subplan_name: "InitPlan 5"
+      #8 Gather [Gather]
+          actual_rows: 2
+          actual_rows_total: 2
+          actual_self_time_ms: 0.857
+          actual_startup_ms: 18.646
+          actual_time_ms: 18.722
+          buffers: {local_dirtied=0 local_hit=0 local_read=0 local_written=0 logical_reads=3054 physical_reads=0 shared_dirtied=0 shared_hit=3054 shared_read=0 shared_written=0 temp_read=0 temp_written=0 writes=0}
+          estimated_cost: 6995.39
+          estimated_row_width: 32
+          estimated_rows: 2
+          estimated_startup_cost: 6995.18
+          loops: 1
+          parent_relationship: "Outer"
+          workers_launched: 1
+          workers_planned: 1
+        #9 Aggregate [Partial Aggregate]
+            actual_rows: 1
+            actual_rows_total: 2
+            actual_self_time_ms: 9.921
+            actual_startup_ms: 17.865
+            actual_time_ms: 17.865
+            buffers: {local_dirtied=0 local_hit=0 local_read=0 local_written=0 logical_reads=3054 physical_reads=0 shared_dirtied=0 shared_hit=3054 shared_read=0 shared_written=0 temp_read=0 temp_written=0 writes=0}
+            estimated_cost: 5995.19
+            estimated_row_width: 32
+            estimated_rows: 1
+            estimated_startup_cost: 5995.18
+            loops: 2
+            parent_relationship: "Outer"
+            properties: [{name="Partial Mode" value="Partial"}]
+          #10 Seq Scan [Parallel Seq Scan]
+              actual_rows: 200000
+              actual_rows_total: 400000
+              actual_self_time_ms: 7.944
+              actual_startup_ms: 0.004
+              actual_time_ms: 7.944
+              alias: "orders_2"
+              buffers: {local_dirtied=0 local_hit=0 local_read=0 local_written=0 logical_reads=3054 physical_reads=0 shared_dirtied=0 shared_hit=3054 shared_read=0 shared_written=0 temp_read=0 temp_written=0 writes=0}
+              estimated_cost: 5406.94
+              estimated_row_width: 5
+              estimated_rows: 235294
+              loops: 2
+              output_list: ["orders"]
+              parallel: yes
+              parent_relationship: "Outer"
+              relation: "orders"
+              warnings: [{TableScan={table="orders"}}]
+    #11 CTE Scan [CTE Scan]
+        actual_rows: 50
+        actual_rows_total: 50
+        actual_self_time_ms: 63.267
+        actual_startup_ms: 98.476
+        actual_time_ms: 98.502
+        alias: "r"
+        buffers: {local_dirtied=0 local_hit=0 local_read=0 local_written=0 logical_reads=14936 physical_reads=0 shared_dirtied=0 shared_hit=14936 shared_read=0 shared_written=0 temp_read=0 temp_written=0 writes=0}
+        cte_name: "recent"
+        estimated_cost: 277247.53
+        estimated_row_width: 37
+        estimated_rows: 16748
+        filter: "(total > (InitPlan 5).col1)"
+        loops: 1
+        output_list: ["Filter: (total > (InitPlan 5).col1)"]
+        parent_relationship: "Outer"
+        properties: [{name="Maximum Storage" value="19"}, {name="Storage" value="Memory"}]
+        rows_read: 50
+      #12 Seq Scan [Seq Scan]
+          actual_rows: 240000
+          actual_rows_total: 240000
+          actual_self_time_ms: 35.215
+          actual_startup_ms: 0.02
+          actual_time_ms: 35.215
+          alias: "oi"
+          buffers: {local_dirtied=0 local_hit=0 local_read=0 local_written=0 logical_reads=8824 physical_reads=0 shared_dirtied=0 shared_hit=8824 shared_read=0 shared_written=0 temp_read=0 temp_written=0 writes=0}
+          estimated_cost: 23824
+          estimated_row_width: 4
+          estimated_rows: 240360
+          filter: "(quantity > 4)"
+          loops: 1
+          output_list: ["order_items", "Filter: (quantity > 4)"]
+          parent_relationship: "SubPlan"
+          relation: "order_items"
+          rows_read: 1200000
+          rows_removed_by_filter: 960000
+          subplan_name: "SubPlan 4"
+          warnings: [{TableScan={table="order_items"}}]

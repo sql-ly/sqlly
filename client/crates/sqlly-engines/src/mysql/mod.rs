@@ -93,6 +93,11 @@ pub fn opts_from_profile(
                 "Auth-token sign-in applies to libSQL / Turso, not MySQL".into(),
             ));
         }
+        AuthenticationType::PostgresOAuth { .. } => {
+            return Err(StudioError::InvalidProfile(
+                "PostgreSQL OAuth sign-in applies to PostgreSQL, not MySQL".into(),
+            ));
+        }
     };
     let database = profile
         .database

@@ -1,0 +1,53 @@
+format: mysql-json-v2 (Certain)
+statements: 1
+
+== statement 1
+dialect: "MySql"
+estimated_rows: 8.064912
+execution_time_ms: 0.012542
+has_actuals: yes
+settings: [{name="query_type" value="select"}, {name="json_schema_version" value="2.0"}]
+source_format: "mysql-json-v2"
+statement_text: "/* select#1 */ select `c`.`name` AS `name`,`o`.`total` AS `total` from `shop`.`customers` `c` join `shop`.`orders` `o` where ((`o`.`customer_id` = `c`.`id`) and..."
+statement_type: "EXPLAIN ANALYZE"
+total_subtree_cost: 3.172719
+operators: 3
+  #1 Nested loop inner join [Nested loop inner join]
+      actual_self_time_ms: 0.000959
+      actual_startup_ms: 0.012542
+      actual_time_ms: 0.012542
+      estimated_cost: 3.172719
+      estimated_rows: 8.064912
+      join_type: "Inner"
+      loops: 1
+      output_list: ["Actual time: 0.012542 ms"]
+      properties: [{name="access_type" value="join"}, {name="join_algorithm" value="nested_loop"}]
+    #2 Index lookup on c using customers_email_idx (email = 'nobody@example.com') [Index lookup on c using customers_email_idx (email = 'nobody@example.com')]
+        actual_self_time_ms: 0.011583
+        actual_startup_ms: 0.011583
+        actual_time_ms: 0.011583
+        alias: "c"
+        estimated_cost: 0.35
+        estimated_rows: 1
+        index_cond: "email = 'nobody@example.com'"
+        index_name: "customers_email_idx"
+        loops: 1
+        output_columns: ["id", "name", "email"]
+        output_list: ["Actual time: 0.011583 ms", "customers", "Key: customers_email_idx"]
+        properties: [{name="access_type" value="index"}, {name="covering" value="false"}, {name="index_access_type" value="index_lookup"}, {name="key_columns" value="email"}, {name="lookup_references" value="const"}]
+        relation: "customers"
+        relation_resolved: yes
+        schema: "shop"
+    #3 Index lookup on o using orders_customer_idx (customer_id = c.id) [Index lookup on o using orders_customer_idx (customer_id = c.id)]
+        alias: "o"
+        estimated_cost: 2.822719
+        estimated_rows: 8.064912
+        index_cond: "customer_id = c.id"
+        index_name: "orders_customer_idx"
+        never_executed: yes
+        output_columns: ["customer_id", "total"]
+        output_list: ["orders", "Key: orders_customer_idx"]
+        properties: [{name="access_type" value="index"}, {name="covering" value="false"}, {name="index_access_type" value="index_lookup"}, {name="key_columns" value="customer_id"}, {name="lookup_references" value="shop.c.id"}]
+        relation: "orders"
+        relation_resolved: yes
+        schema: "shop"

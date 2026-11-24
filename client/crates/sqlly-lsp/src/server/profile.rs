@@ -48,7 +48,7 @@ fn default_port_for(db: sqlly_lang::sqlmodel::DatabaseType) -> u16 {
     use sqlly_lang::sqlmodel::DatabaseType::*;
     match db {
         SqlServer | AzureSqlDatabase => 1433,
-        Postgres | CockroachDb | YugabyteDb => 5432,
+        Postgres | CockroachDb | YugabyteDb | WarehousePg => 5432,
         MySql | MariaDb | AmazonAurora | AmazonRds => 3306,
         Oracle => 1521,
         Db2 => 50000,
@@ -187,6 +187,10 @@ mod tests {
         assert_eq!(p.port, 3306);
         let p = build_profile(params(Some("MariaDB"), None)).unwrap();
         assert_eq!(p.database_type, DatabaseType::MariaDb);
+        let p = build_profile(params(Some("WarehousePG"), None)).unwrap();
+        assert_eq!(p.database_type, DatabaseType::WarehousePg);
+        assert_eq!(p.port, 5432);
+        assert_eq!(p.database_type.family(), Dialect::Postgres);
 
         // Omitted keeps the historical SQL Server default.
         let p = build_profile(params(None, None)).unwrap();

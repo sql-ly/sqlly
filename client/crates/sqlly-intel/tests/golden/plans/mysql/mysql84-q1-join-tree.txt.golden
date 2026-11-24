@@ -1,0 +1,45 @@
+format: mysql-tree (Certain)
+statements: 1
+
+== statement 1
+dialect: "MySql"
+source_format: "mysql-tree"
+statement_type: "EXPLAIN"
+operators: 9
+  #1 Sort: revenue DESC [Sort: revenue DESC]
+      sort_keys: ["revenue DESC"]
+    #2 Table scan on <temporary> [Table scan on <temporary>]
+        output_list: ["<temporary>"]
+      #3 Aggregate using temporary table [Aggregate using temporary table]
+        #4 Nested loop inner join [Nested loop inner join]
+            estimated_cost: 8959
+            estimated_rows: 10004
+            join_type: "Inner"
+          #5 Nested loop inner join [Nested loop inner join]
+              estimated_cost: 5458
+              estimated_rows: 4013
+              join_type: "Inner"
+            #6 Filter: (o.`status` = 'paid') [Filter: (o.`status` = 'paid')]
+                estimated_cost: 4053
+                estimated_rows: 4013
+                filter: "o.`status` = 'paid'"
+              #7 Table scan on o [Table scan on o]
+                  estimated_cost: 4053
+                  estimated_rows: 40131
+                  output_list: ["o"]
+                  relation: "o"
+                  warnings: [{TableScan={table="o"}}]
+            #8 Single-row index lookup on c using PRIMARY (id=o.customer_id) [Single-row index lookup on c using PRIMARY (id=o.customer_id)]
+                estimated_cost: 0.25
+                estimated_rows: 1
+                index_cond: "id=o.customer_id"
+                index_name: "PRIMARY"
+                output_list: ["c", "Key: PRIMARY"]
+                relation: "c"
+          #9 Index lookup on oi using order_items_order_idx (order_id=o.id) [Index lookup on oi using order_items_order_idx (order_id=o.id)]
+              estimated_cost: 0.623
+              estimated_rows: 2.49
+              index_cond: "order_id=o.id"
+              index_name: "order_items_order_idx"
+              output_list: ["oi", "Key: order_items_order_idx"]
+              relation: "oi"

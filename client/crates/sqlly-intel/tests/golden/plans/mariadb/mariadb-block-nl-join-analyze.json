@@ -1,0 +1,63 @@
+{
+  "query_optimization": {
+    "r_total_time_ms": 0.05436461
+  },
+  "query_block": {
+    "select_id": 1,
+    "cost": 927.9243858,
+    "r_loops": 1,
+    "r_total_time_ms": 197.4568027,
+    "nested_loop": [
+      {
+        "table": {
+          "table_name": "p",
+          "access_type": "ALL",
+          "loops": 1,
+          "r_loops": 1,
+          "rows": 2000,
+          "r_rows": 2000,
+          "cost": 0.3436932,
+          "r_table_time_ms": 0.107562775,
+          "r_other_time_ms": 0.070319893,
+          "r_engine_stats": {
+            "pages_accessed": 9
+          },
+          "filtered": 100,
+          "r_total_filtered": 80,
+          "attached_condition": "p.price > 100",
+          "r_filtered": 80
+        }
+      },
+      {
+        "block-nl-join": {
+          "table": {
+            "table_name": "c",
+            "access_type": "ALL",
+            "loops": 2000,
+            "r_loops": 1,
+            "rows": 4989,
+            "r_rows": 5000,
+            "cost": 927.5806926,
+            "r_table_time_ms": 0.394466274,
+            "r_other_time_ms": 0.049948787,
+            "r_engine_stats": {
+              "pages_accessed": 22
+            },
+            "filtered": 100,
+            "r_total_filtered": 100,
+            "r_filtered": 100
+          },
+          "buffer_type": "flat",
+          "buffer_size": "256KiB",
+          "join_type": "BNL",
+          "attached_condition": "c.`name` = p.`name`",
+          "r_loops": 1600,
+          "r_filtered": 0,
+          "r_unpack_time_ms": 73.0368325,
+          "r_other_time_ms": 123.7942565,
+          "r_effective_rows": 5000
+        }
+      }
+    ]
+  }
+}

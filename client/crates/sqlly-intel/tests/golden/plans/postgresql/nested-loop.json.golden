@@ -1,0 +1,68 @@
+format: postgresql-json (Certain)
+statements: 1
+
+== statement 1
+dialect: "Postgres"
+estimated_rows: 156
+execution_time_ms: 0.844
+has_actuals: yes
+notes: ["Planning buffers: shared hit=277"]
+planning_time_ms: 0.379
+source_format: "postgresql-json"
+statement_type: "EXPLAIN ANALYZE"
+total_subtree_cost: 1507.86
+operators: 3
+  #1 Nested Loop [Nested Loop]
+      actual_rows: 148
+      actual_rows_total: 148
+      actual_self_time_ms: 0.038
+      actual_startup_ms: 0.022
+      actual_time_ms: 0.828
+      buffers: {local_dirtied=0 local_hit=0 local_read=0 local_written=0 logical_reads=455 physical_reads=0 shared_dirtied=0 shared_hit=455 shared_read=0 shared_written=0 temp_read=0 temp_written=0 writes=0}
+      estimated_cost: 1507.86
+      estimated_row_width: 23
+      estimated_rows: 156
+      estimated_startup_cost: 0.71
+      join_type: "Inner"
+      loops: 1
+    #2 Index Scan [Index Scan]
+        actual_rows: 41
+        actual_rows_total: 41
+        actual_self_time_ms: 0.011
+        actual_startup_ms: 0.005
+        actual_time_ms: 0.011
+        alias: "c"
+        buffers: {local_dirtied=0 local_hit=0 local_read=0 local_written=0 logical_reads=4 physical_reads=0 shared_dirtied=0 shared_hit=4 shared_read=0 shared_written=0 temp_read=0 temp_written=0 writes=0}
+        estimated_cost: 9.15
+        estimated_row_width: 18
+        estimated_rows: 43
+        estimated_startup_cost: 0.29
+        index_cond: "((id >= 100) AND (id <= 140))"
+        index_name: "customers_pkey"
+        loops: 1
+        output_list: ["customers", "Index Cond: ((id >= 100) AND (id <= 140))", "Index: customers_pkey"]
+        parent_relationship: "Outer"
+        properties: [{name="Index Searches" value="1"}]
+        relation: "customers"
+    #3 Index Scan [Index Scan]
+        actual_rows: 3.61
+        actual_rows_total: 148.01
+        actual_self_time_ms: 0.779
+        actual_startup_ms: 0.004
+        actual_time_ms: 0.779
+        alias: "o"
+        buffers: {local_dirtied=0 local_hit=0 local_read=0 local_written=0 logical_reads=451 physical_reads=0 shared_dirtied=0 shared_hit=451 shared_read=0 shared_written=0 temp_read=0 temp_written=0 writes=0}
+        estimated_cost: 34.81
+        estimated_row_width: 13
+        estimated_rows: 4
+        estimated_startup_cost: 0.42
+        filter: "(total > '500'::numeric)"
+        index_cond: "(customer_id = c.id)"
+        index_name: "orders_customer_idx"
+        loops: 41
+        output_list: ["orders", "Filter: (total > '500'::numeric)", "Index Cond: (customer_id = c.id)", "Index: orders_customer_idx"]
+        parent_relationship: "Inner"
+        properties: [{name="Index Searches" value="41"}]
+        relation: "orders"
+        rows_read: 312.01
+        rows_removed_by_filter: 164

@@ -1,0 +1,6 @@
+QUERY PLAN
+|--SCAN o
+|--SEARCH c USING INTEGER PRIMARY KEY (rowid=?)
+|--SEARCH oi USING INDEX order_items_order_idx (order_id=?)
+|--USE TEMP B-TREE FOR GROUP BY
+`--USE TEMP B-TREE FOR ORDER BY

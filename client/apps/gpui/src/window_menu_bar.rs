@@ -18,7 +18,7 @@ use gpui::{
     MouseDownEvent, MouseMoveEvent, OwnedMenu, OwnedMenuItem, Pixels, Point, Render, Styled,
     Window, WindowControlArea, anchored, deferred, div, img, point, prelude::*, px,
 };
-use gpui_component::Icon;
+use gpui_component::{Icon, IconName};
 
 use crate::icon_catalog::AppIcon;
 use crate::theme::Theme;
@@ -99,6 +99,13 @@ pub fn menu_action_names(items: &[OwnedMenuItem]) -> Vec<String> {
     let mut names = Vec::new();
     collect_action_names(items, &mut names);
     names
+}
+
+/// Whether any action directly in `items` carries a checkmark.
+fn has_checked_item(items: &[OwnedMenuItem]) -> bool {
+    items
+        .iter()
+        .any(|item| matches!(item, OwnedMenuItem::Action { checked: true, .. }))
 }
 
 fn collect_action_names(items: &[OwnedMenuItem], names: &mut Vec<String>) {
@@ -299,12 +306,14 @@ impl WindowMenuBar {
     }
 
     /// One row of a dropdown. Separators become hairlines; submenus flatten
-    /// into a dim section header followed by their items (the current menu
-    /// set has no submenus on Windows, but degrade gracefully); OS-managed
-    /// system menus only exist on macOS and are skipped.
+    /// into a dim section header followed by their items (View ▸ Theme is
+    /// one); OS-managed system menus only exist on macOS and are skipped.
+    /// `check_column` reserves a leading checkmark slot so a list with
+    /// checked items keeps its labels aligned.
     fn render_item(
         &self,
         item: &OwnedMenuItem,
+        check_column: bool,
         window: &Window,
         cx: &mut Context<Self>,
     ) -> Vec<AnyElement> {
@@ -332,12 +341,18 @@ impl WindowMenuBar {
                         .child(submenu.name.to_string())
                         .into_any_element(),
                 ];
+                let check_column = has_checked_item(&submenu.items);
                 for child in &submenu.items {
-                    out.extend(self.render_item(child, window, cx));
+                    out.extend(self.render_item(child, check_column, window, cx));
                 }
                 out
             }
-            OwnedMenuItem::Action { name, action, .. } => {
+            OwnedMenuItem::Action {
+                name,
+                action,
+                checked,
+                ..
+            } => {
                 if let Some(reason) = self.disabled_actions.get(action.name()).cloned() {
                     // Engine-gated action unavailable on the active
                     // connection: dimmed, inert, with the capability reason
@@ -409,7 +424,26 @@ impl WindowMenuBar {
                             self.focused_action_name().as_deref() == Some(name.as_ref()),
                             |d| d.bg(Theme::row_hover()),
                         )
-                        .child(name.to_string())
+                        .child(
+                            div()
+                                .flex()
+                                .flex_row()
+                                .items_center()
+                                .when(check_column, |d| {
+                                    d.child(
+                                        div()
+                                            .w(px(Theme::inline_icon_size() + s(6.0)))
+                                            .flex_none()
+                                            .when(*checked, |d| {
+                                                d.child(
+                                                    Icon::new(IconName::Check)
+                                                        .size(px(Theme::inline_icon_size())),
+                                                )
+                                            }),
+                                    )
+                                })
+                                .child(name.to_string()),
+                        )
                         .children(shortcut.map(|text| {
                             div()
                                 // Shortcut hint, a hair under body (see the
@@ -655,10 +689,11 @@ impl Render for WindowMenuBar {
                     let is_open = open == Some(i);
 
                     let dropdown: Option<AnyElement> = if is_open {
+                        let check_column = has_checked_item(&menu.items);
                         let items: Vec<AnyElement> = menu
                             .items
                             .iter()
-                            .flat_map(|item| self.render_item(item, window, cx))
+                            .flat_map(|item| self.render_item(item, check_column, window, cx))
                             .collect();
                         let dismiss = cx.entity();
                         Some(

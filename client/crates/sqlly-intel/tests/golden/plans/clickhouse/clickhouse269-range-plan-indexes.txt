@@ -1,0 +1,35 @@
+Output: status, count()
+
+Aggregating
+│  Keys: status
+│  Aggregates: count()
+│  Skip merging: 0
+└──ReadFromMergeTree (default.orders)
+      Read type: Default
+      Parts: 10 | Granules: 10
+      Output: status
+      Prewhere filter
+      Prewhere filter column:  customer_id <= 200 AND customer_id >= 100 AND total > 800
+      Indexes:
+        Min-Max
+          Condition: true
+          Parts: 10/10
+          Granules: 392/392
+        Partition
+          Condition: true
+          Parts: 10/10
+          Granules: 392/392
+        PrimaryKey
+          Keys:
+            customer_id
+          Condition: and((customer_id in (-Inf, 200]), (customer_id in [100, +Inf)))
+          Parts: 10/10
+          Granules: 10/392
+          Search Algorithm: binary search
+        Skip
+          Name: total_idx
+          Description: minmax GRANULARITY 4
+          Condition: (total in (\'800\', +Inf))
+          Parts: 10/10
+          Granules: 10/10
+        Ranges: 10

@@ -1,0 +1,95 @@
+{
+  "notebook": [
+    {
+      "field": "title",
+      "before": "Refund review",
+      "after": "Refund review (EU)"
+    }
+  ],
+  "parameters": [
+    {
+      "id": "region",
+      "change": "changed",
+      "fields": [
+        {
+          "field": "default",
+          "before": "EU",
+          "after": "US"
+        }
+      ]
+    },
+    {
+      "id": "day",
+      "change": "added"
+    }
+  ],
+  "connections": [
+    {
+      "id": "primary",
+      "change": "changed",
+      "fields": [
+        {
+          "field": "database",
+          "after": "sales"
+        },
+        {
+          "field": "label",
+          "before": "Sales",
+          "after": "Sales EU"
+        }
+      ]
+    }
+  ],
+  "cells": [
+    {
+      "id": "c_tmp",
+      "label": "scratch",
+      "kind": "sql",
+      "change": "removed",
+      "position": 3,
+      "source_diff": "@@ -1 +0,0 @@\n-SELECT 1\n"
+    },
+    {
+      "id": "c_check",
+      "label": "c_check",
+      "kind": "assertion",
+      "change": "changed",
+      "fields": [
+        {
+          "field": "spec.min",
+          "before": 1,
+          "after": 10
+        }
+      ]
+    },
+    {
+      "id": "c_orders",
+      "label": "all_orders",
+      "kind": "sql",
+      "change": "changed",
+      "moved": [
+        2,
+        3
+      ],
+      "fields": [
+        {
+          "field": "execution_policy.timeout_seconds",
+          "after": 30
+        },
+        {
+          "field": "name",
+          "before": "orders",
+          "after": "all_orders"
+        }
+      ],
+      "source_diff": "@@ -1,3 +1,3 @@\n-SELECT id, total\n+SELECT id, total, refund_total\n FROM orders\n WHERE region = :region\n"
+    },
+    {
+      "id": "c_kpi",
+      "label": "refund_rate",
+      "kind": "kpi",
+      "change": "added",
+      "position": 4
+    }
+  ]
+}

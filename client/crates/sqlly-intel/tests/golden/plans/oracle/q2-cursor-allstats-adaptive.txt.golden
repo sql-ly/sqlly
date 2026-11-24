@@ -1,0 +1,118 @@
+format: oracle-xplan (Certain)
+statements: 1
+
+== statement 1
+dialect: "Oracle"
+execution_time_ms: 10
+has_actuals: yes
+notes: ["child number 0", "this is an adaptive plan (rows marked '-' are inactive)", "4 inactive rows of the adaptive plan are left out"]
+query_hash: "bm8y9hp0cway1"
+query_plan_hash: "1938300530"
+source_format: "oracle-xplan"
+statement_text: "SELECT /*+ GATHER_PLAN_STATISTICS */ c.email, o.id, o.total FROM customers c JOIN orders o ON o.customer_id = c.id WHERE c.id BETWEEN 100 AND 105 AND o.total > ..."
+statement_type: "ACTUAL PLAN"
+total_subtree_cost: 18
+operators: 7
+  #0 SELECT STATEMENT [SELECT STATEMENT]
+      actual_rebinds: 1
+      actual_rows: 36
+      actual_rows_total: 36
+      actual_time_ms: 10
+      buffers: {logical_reads=62}
+      estimated_cost: 18
+      loops: 1
+      output_list: ["actual: 36 rows, 1 starts, 10.000 ms"]
+      properties: [{name="Cost %CPU" value="100"}]
+    #2 NESTED LOOPS [NESTED LOOPS]
+        actual_rebinds: 1
+        actual_rows: 36
+        actual_rows_total: 36
+        actual_time_ms: 10
+        buffers: {logical_reads=62}
+        estimated_cost: 18
+        estimated_row_width: 42
+        estimated_rows: 7
+        join_type: "INNER"
+        loops: 1
+        output_columns: ["\"C\".\"ID\"", "\"C\".\"EMAIL\"", "\"O\".\"ID\"", "\"O\".\"TOTAL\""]
+        output_list: ["actual: 36 rows, 1 starts, 10.000 ms"]
+        properties: [{name="Bytes" value="294"}, {name="Cost %CPU" value="0"}]
+      #3 NESTED LOOPS [NESTED LOOPS]
+          actual_rebinds: 1
+          actual_rows: 36
+          actual_rows_total: 36
+          actual_time_ms: 10
+          buffers: {logical_reads=25}
+          estimated_cost: 18
+          estimated_row_width: 42
+          estimated_rows: 7
+          join_type: "INNER"
+          loops: 1
+          output_columns: ["\"C\".\"ID\"", "\"C\".\"EMAIL\"", "\"O\".ROWID"]
+          output_list: ["actual: 36 rows, 1 starts, 10.000 ms"]
+          properties: [{name="Bytes" value="294"}, {name="Cost %CPU" value="0"}]
+        #5 TABLE ACCESS BY INDEX ROWID BATCHED CUSTOMERS [TABLE ACCESS]
+            actual_rebinds: 1
+            actual_rows: 6
+            actual_rows_total: 6
+            actual_time_ms: 10
+            alias: "C"
+            buffers: {logical_reads=8}
+            estimated_cost: 3
+            estimated_row_width: 27
+            estimated_rows: 7
+            loops: 1
+            output_columns: ["\"C\".\"ID\"", "\"C\".\"EMAIL\""]
+            output_list: ["actual: 6 rows, 1 starts, 10.000 ms"]
+            properties: [{name="Bytes" value="189"}, {name="Cost %CPU" value="0"}, {name="Query Block" value="SEL$58A6D7F6"}, {name="Object Alias" value="\"C\"@\"SEL$1\""}]
+            relation: "CUSTOMERS"
+          #6 INDEX RANGE SCAN SYS_C008926 [INDEX]
+              actual_rebinds: 1
+              actual_rows: 6
+              actual_rows_total: 6
+              actual_self_time_ms: 10
+              actual_time_ms: 10
+              alias: "C"
+              buffers: {logical_reads=5}
+              estimated_cost: 2
+              estimated_rows: 7
+              index_cond: "\"C\".\"ID\">=100 AND \"C\".\"ID\"<=105"
+              index_name: "SYS_C008926"
+              loops: 1
+              output_columns: ["\"C\".ROWID", "\"C\".\"ID\""]
+              output_list: ["access: \"C\".\"ID\">=100 AND \"C\".\"ID\"<=105", "actual: 6 rows, 1 starts, 10.000 ms"]
+              properties: [{name="Cost %CPU" value="0"}, {name="Query Block" value="SEL$58A6D7F6"}, {name="Object Alias" value="\"C\"@\"SEL$1\""}]
+        #7 INDEX RANGE SCAN IX_ORDERS_CUSTOMER [INDEX]
+            actual_rebinds: 6
+            actual_rows: 36
+            actual_rows_total: 36
+            actual_self_time_ms: 10
+            actual_time_ms: 10
+            alias: "O"
+            buffers: {logical_reads=17}
+            estimated_cost: 2
+            estimated_rows: 1
+            filter: "(\"O\".\"CUSTOMER_ID\"<=105 AND \"O\".\"CUSTOMER_ID\">=100)"
+            index_cond: "\"O\".\"CUSTOMER_ID\"=\"C\".\"ID\""
+            index_name: "IX_ORDERS_CUSTOMER"
+            loops: 6
+            output_columns: ["\"O\".ROWID"]
+            output_list: ["access: \"O\".\"CUSTOMER_ID\"=\"C\".\"ID\"", "filter: (\"O\".\"CUSTOMER_ID\"<=105 AND \"O\".\"CUSTOMER_ID\">=100)", "actual: 36 rows, 6 starts, 10.000 ms"]
+            properties: [{name="Cost %CPU" value="0"}, {name="Query Block" value="SEL$58A6D7F6"}, {name="Object Alias" value="\"O\"@\"SEL$1\""}]
+      #8 TABLE ACCESS BY INDEX ROWID ORDERS [TABLE ACCESS]
+          actual_rebinds: 36
+          actual_rows: 36
+          actual_rows_total: 36
+          actual_self_time_ms: 10
+          actual_time_ms: 10
+          alias: "O"
+          buffers: {logical_reads=37}
+          estimated_cost: 3
+          estimated_row_width: 15
+          estimated_rows: 1
+          filter: "\"O\".\"TOTAL\">50"
+          loops: 36
+          output_columns: ["\"O\".\"ID\"", "\"O\".\"TOTAL\""]
+          output_list: ["filter: \"O\".\"TOTAL\">50", "actual: 36 rows, 36 starts, 10.000 ms"]
+          properties: [{name="Bytes" value="15"}, {name="Cost %CPU" value="0"}, {name="Query Block" value="SEL$58A6D7F6"}, {name="Object Alias" value="\"O\"@\"SEL$1\""}]
+          relation: "ORDERS"

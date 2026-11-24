@@ -1,7 +1,9 @@
 //! Per-dialect ALTER script rendering from a [`ChangeSet`].
 //!
 //! Default expressions and PostgreSQL `USING` clauses are inserted verbatim —
-//! the generated script is always reviewed in the editor before execution.
+//! the generated script is always reviewed in the editor before execution —
+//! except that a plain value typed as a text, ENUM or SET column's default is
+//! written as a string literal (see `default_literal`).
 
 mod clickhouse;
 pub mod comments;
@@ -17,8 +19,9 @@ use std::collections::BTreeMap;
 
 use sqlly_lang::sqlmodel::{ConnectionKind, DatabaseType, Dialect};
 
+use crate::alter::default_literal::{column_default_sql, normalize_draft_defaults};
 use crate::alter::diff::{Change, ChangeSet, touches_columns};
-use crate::alter::snapshot::{DependentView, TableDraft, TableSnapshot};
+use crate::alter::snapshot::{ColumnDef, DependentView, TableDraft, TableSnapshot};
 
 #[derive(Debug, Clone, Default)]
 pub struct RenderOptions {
@@ -77,6 +80,11 @@ pub fn render(
     set: &ChangeSet,
     opts: &RenderOptions,
 ) -> Result<AlterScript, AlterError> {
+    // A plain value typed as a text/ENUM/SET default becomes a string literal.
+    let mut normalized_draft = draft.clone();
+    normalize_draft_defaults(db, &mut normalized_draft);
+    let draft = &normalized_draft;
+    let set = &normalize_change_defaults(db, draft, set);
     // DuckDB parses as PostgreSQL but alters tables on its own terms.
     if db == DatabaseType::DuckDb {
         return duckdb::render(db, snapshot, draft, set, opts);
@@ -93,6 +101,30 @@ pub fn render(
         Dialect::Sqlite => sqlite::render(db, snapshot, draft, set, opts),
         Dialect::Oracle => oracle::render(db, snapshot, draft, set, opts),
     }
+}
+
+/// [`column_default_sql`] over every default a change carries; a
+/// `SetDefault` takes its column type from the (normalized) draft.
+fn normalize_change_defaults(db: DatabaseType, draft: &TableDraft, set: &ChangeSet) -> ChangeSet {
+    let fix_col = |col: &mut ColumnDef| {
+        if let Some(def) = col.default.as_mut() {
+            *def = column_default_sql(db, &col.data_type, def);
+        }
+    };
+    let mut out = set.clone();
+    for change in &mut out.changes {
+        match change {
+            Change::AddColumn(col) => fix_col(col),
+            Change::AlterColumnType { to, .. } => fix_col(to),
+            Change::SetDefault { name, to, .. } => {
+                if let (Some(def), Some(col)) = (to.as_mut(), find_draft_column(draft, name)) {
+                    *def = column_default_sql(db, &col.data_type, def);
+                }
+            }
+            _ => {}
+        }
+    }
+    out
 }
 
 pub(crate) fn qualified_table(db: DatabaseType, schema: Option<&str>, table: &str) -> String {

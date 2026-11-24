@@ -1,0 +1,71 @@
+format: sqlserver-text (Certain)
+statements: 1
+
+== statement 1
+dialect: "SqlServer"
+estimated_rows: 6
+has_actuals: yes
+source_format: "sqlserver-text"
+statement_text: "SELECT [o].[order_id],[o].[total],[o].[status] FROM [dbo].[orders] [o] WHERE [o].[customer_id]=@1"
+statement_type: "SELECT"
+table_io: [{lob_logical_reads=0 lob_physical_reads=0 logical_reads=21 physical_reads=0 read_ahead_reads=0 scan_count=1 table="orders"}]
+total_subtree_cost: 0.019882
+warnings: [{KeyLookup={index="PK__orders__46596229A6DBB338" table="orders"}}]
+operators: 3
+  #1 Nested Loops [Inner Join]
+      actual_rows: 6
+      actual_rows_total: 6
+      estimated_cost: 0.019882
+      estimated_cpu: 0.000025
+      estimated_executions: 1
+      estimated_row_width: 34
+      estimated_rows: 6
+      join_type: "Inner"
+      loops: 1
+      output_columns: ["o.order_id", "o.status", "o.total"]
+      output_list: ["o.order_id", "o.status", "o.total"]
+      properties: [{name="OUTER REFERENCES" value="[o].[order_id]"}, {name="NodeId" value="2"}, {name="EstimateRows" value="6.0"}]
+      row_count: 6
+    #2 Index Seek [Index Seek]
+        actual_rows: 6
+        actual_rows_total: 6
+        alias: "o"
+        database: "Shop"
+        estimated_cost: 0.003289
+        estimated_cpu: 0.000164
+        estimated_executions: 1
+        estimated_io: 0.003125
+        estimated_row_width: 11
+        estimated_rows: 6
+        extra: ["ORDERED FORWARD"]
+        index_cond: "[o].[customer_id]=(4242)"
+        index_name: "IX_orders_customer"
+        loops: 1
+        output_columns: ["o.order_id"]
+        output_list: ["o.order_id"]
+        properties: [{name="Defined Values" value="[o].[order_id]"}, {name="NodeId" value="3"}, {name="EstimateRows" value="6.0"}]
+        relation: "orders"
+        row_count: 6
+        schema: "dbo"
+    #3 Clustered Index Seek [Clustered Index Seek]
+        actual_rows: 6
+        actual_rows_total: 6
+        alias: "o"
+        database: "Shop"
+        estimated_cost: 0.016568
+        estimated_cpu: 0.000158
+        estimated_executions: 6
+        estimated_io: 0.003125
+        estimated_row_width: 30
+        estimated_rows: 6
+        extra: ["LOOKUP ORDERED FORWARD"]
+        index_cond: "[o].[order_id]=[Shop].[dbo].[orders].[order_id] as [o].[order_id]"
+        index_name: "PK__orders__46596229A6DBB338"
+        loops: 6
+        output_columns: ["o.status", "o.total"]
+        output_list: ["o.status", "o.total"]
+        properties: [{name="Defined Values" value="[o].[status], [o].[total]"}, {name="NodeId" value="5"}, {name="EstimateRows" value="1.0"}]
+        relation: "orders"
+        row_count: 6
+        schema: "dbo"
+        warnings: [{KeyLookup={index="PK__orders__46596229A6DBB338" table="orders"}}]

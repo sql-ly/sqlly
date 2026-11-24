@@ -1,0 +1,121 @@
+format: oracle-xplan (Certain)
+statements: 1
+
+== statement 1
+dialect: "Oracle"
+execution_time_ms: 80
+has_actuals: yes
+notes: ["child number 1", "statistics feedback used for this statement"]
+query_hash: "2v19r9z7r76qw"
+query_plan_hash: "3160566349"
+source_format: "oracle-xplan"
+statement_text: "SELECT /*+ GATHER_PLAN_STATISTICS PARALLEL(4) */ oi.product_id, SUM(oi.quantity * oi.price) AS revenue FROM order_items oi JOIN orders o ON o.id = oi.order_id W..."
+statement_type: "ACTUAL PLAN"
+total_subtree_cost: 3211
+operators: 7
+  #0 SELECT STATEMENT [SELECT STATEMENT]
+      actual_rebinds: 1
+      actual_rows: 600
+      actual_rows_total: 600
+      actual_time_ms: 80
+      buffers: {logical_reads=7971}
+      estimated_cost: 3211
+      loops: 1
+      output_list: ["actual: 600 rows, 1 starts, 80.000 ms"]
+      properties: [{name="Cost %CPU" value="100"}]
+    #1 SORT ORDER BY [SORT]
+        actual_rebinds: 1
+        actual_rows: 600
+        actual_rows_total: 600
+        actual_time_ms: 80
+        buffers: {logical_reads=7971}
+        estimated_cost: 3211
+        estimated_row_width: 25
+        estimated_rows: 1000
+        loops: 1
+        output_columns: ["SUM(\"OI\".\"QUANTITY\"*\"OI\".\"PRICE\"*\"ITEM_2\")", "\"OI\".\"PRODUCT_ID\""]
+        output_list: ["actual: 600 rows, 1 starts, 80.000 ms"]
+        peak_memory_kb: 60
+        properties: [{name="Bytes" value="25000"}, {name="Cost %CPU" value="1"}, {name="E-Time" value="00:00:01"}, {name="OMem" value="68608"}, {name="1Mem" value="68608"}, {name="Used-Mem" value="61440 (0)"}, {name="Passes" value="0"}, {name="Query Block" value="SEL$C4C0C15C"}, {name="Projection" value="#keys=1; rowset=256"}]
+      #2 HASH GROUP BY [HASH]
+          actual_rebinds: 1
+          actual_rows: 600
+          actual_rows_total: 600
+          actual_self_time_ms: 10
+          actual_time_ms: 80
+          buffers: {logical_reads=7971}
+          estimated_cost: 3211
+          estimated_row_width: 25
+          estimated_rows: 1000
+          loops: 1
+          output_columns: ["\"OI\".\"PRODUCT_ID\"", "SUM(\"OI\".\"QUANTITY\"*\"OI\".\"PRICE\"*\"ITEM_2\")"]
+          output_list: ["actual: 600 rows, 1 starts, 80.000 ms"]
+          peak_memory_kb: 1542
+          properties: [{name="Bytes" value="25000"}, {name="Cost %CPU" value="1"}, {name="E-Time" value="00:00:01"}, {name="OMem" value="1186K"}, {name="1Mem" value="1186K"}, {name="Used-Mem" value="1542K (0)"}, {name="Passes" value="0"}, {name="Projection" value="#keys=1; rowset=256"}]
+        #3 HASH JOIN [HASH JOIN]
+            actual_rebinds: 1
+            actual_rows: 360000
+            actual_rows_total: 360000
+            actual_self_time_ms: 40
+            actual_time_ms: 70
+            buffers: {logical_reads=7971}
+            estimated_cost: 3200
+            estimated_row_width: 25.030472
+            estimated_rows: 356000
+            join_predicate: "\"ITEM_1\"=\"OI\".\"ORDER_ID\""
+            join_type: "INNER"
+            loops: 1
+            output_columns: ["\"OI\".\"PRICE\"", "\"OI\".\"PRODUCT_ID\"", "\"OI\".\"QUANTITY\"", "\"ITEM_2\""]
+            output_list: ["access: \"ITEM_1\"=\"OI\".\"ORDER_ID\"", "actual: 360000 rows, 1 starts, 70.000 ms"]
+            peak_memory_kb: 57344
+            properties: [{name="Bytes" value="8910848"}, {name="Cost %CPU" value="1"}, {name="E-Temp" value="16M"}, {name="E-Time" value="00:00:01"}, {name="OMem" value="39M"}, {name="1Mem" value="7868K"}, {name="Used-Mem" value="56M (0)"}, {name="Passes" value="0"}, {name="Projection" value="#keys=1; rowset=256"}]
+          #4 TABLE ACCESS FULL ORDER_ITEMS [TABLE ACCESS]
+              actual_rebinds: 1
+              actual_rows: 600000
+              actual_rows_total: 600000
+              actual_self_time_ms: 10
+              actual_time_ms: 10
+              alias: "OI"
+              buffers: {logical_reads=2198}
+              estimated_cost: 610
+              estimated_row_width: 16.9984
+              estimated_rows: 600000
+              loops: 1
+              output_columns: ["\"OI\".\"ORDER_ID\"", "\"OI\".\"PRODUCT_ID\"", "\"OI\".\"QUANTITY\"", "\"OI\".\"PRICE\""]
+              output_list: ["actual: 600000 rows, 1 starts, 10.000 ms"]
+              properties: [{name="Bytes" value="10199040"}, {name="Cost %CPU" value="1"}, {name="E-Time" value="00:00:01"}, {name="Query Block" value="SEL$C4C0C15C"}, {name="Object Alias" value="\"OI\"@\"SEL$1\""}, {name="Projection" value="rowset=256"}]
+              relation: "ORDER_ITEMS"
+              warnings: [{TableScan={table="ORDER_ITEMS"}}]
+          #5 VIEW VW_GBF_5 [VIEW]
+              actual_rebinds: 1
+              actual_rows: 180000
+              actual_rows_total: 180000
+              actual_time_ms: 20
+              alias: "VW_GBF_5"
+              buffers: {logical_reads=5773}
+              estimated_cost: 1593
+              estimated_row_width: 7.998578
+              estimated_rows: 180000
+              loops: 1
+              output_columns: ["\"ITEM_1\"", "\"ITEM_2\""]
+              output_list: ["actual: 180000 rows, 1 starts, 20.000 ms"]
+              properties: [{name="Bytes" value="1439744"}, {name="Cost %CPU" value="1"}, {name="E-Time" value="00:00:01"}, {name="Query Block" value="SEL$5F76B39F"}, {name="Object Alias" value="\"VW_GBF_5\"@\"SEL$9E8AE3DA\""}, {name="Projection" value="rowset=256"}]
+              relation: "VW_GBF_5"
+            #6 TABLE ACCESS FULL ORDERS [TABLE ACCESS]
+                actual_rebinds: 1
+                actual_rows: 180000
+                actual_rows_total: 180000
+                actual_self_time_ms: 20
+                actual_time_ms: 20
+                alias: "O"
+                buffers: {logical_reads=5773}
+                estimated_cost: 1593
+                estimated_row_width: 13.994667
+                estimated_rows: 180000
+                filter: "\"O\".\"STATUS\"='shipped'"
+                loops: 1
+                output_columns: ["\"O\".\"ID\""]
+                output_list: ["filter: \"O\".\"STATUS\"='shipped'", "actual: 180000 rows, 1 starts, 20.000 ms"]
+                properties: [{name="Bytes" value="2519040"}, {name="Cost %CPU" value="1"}, {name="E-Time" value="00:00:01"}, {name="Query Block" value="SEL$5F76B39F"}, {name="Object Alias" value="\"O\"@\"SEL$1\""}, {name="Projection" value="rowset=256"}]
+                relation: "ORDERS"
+                warnings: [{TableScan={table="ORDERS"}}]

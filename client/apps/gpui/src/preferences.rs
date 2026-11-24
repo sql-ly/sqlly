@@ -1072,10 +1072,10 @@ fn sql_formatting_prefs_cache() -> &'static RwLock<Option<SqlFormattingPreferenc
 
 pub use sqlly_lang::sqlformat::{
     BooleanOperatorPlacement, CaseExpressionStyle, ClauseBodyPlacement, CommaStyle, CommentStyle,
-    CteStyle, DdlStyle, DmlStyle, FunctionArgStyle, FunctionCase, IdentifierCase,
-    IdentifierQuoting, InListStyle, IndentStyle, JoinLayout, KeywordCase, KeywordGroupCasing,
-    MajorClausePlacement, OnClausePlacement, OrderGroupLayout, Preset, SelectListStyle,
-    SemicolonStyle, SqlDialect, SqlFormattingPreferences, SubqueryStyle, ValuesStyle,
+    CteStyle, DdlStyle, DmlStyle, FunctionArgStyle, FunctionCase, IdentifierQuoting, InListStyle,
+    IndentStyle, JoinLayout, KeywordCase, KeywordGroupCasing, MajorClausePlacement,
+    OnClausePlacement, OrderGroupLayout, Preset, SelectListStyle, SemicolonStyle, SqlDialect,
+    SqlFormattingPreferences, SubqueryStyle, ValuesStyle,
 };
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1155,7 +1155,7 @@ pub struct EditorPreferences {
     pub alias_as_keyword: bool,
     /// Camel-hump / acronym completion matching (`SoTa` → `SomeTable`).
     /// When off, completions match case-insensitive prefixes and substrings.
-    /// Pushed to the engine by [`EditorPreferences::apply_match_options`].
+    /// Pushed to the engine by [`EditorPreferences::apply_completion_options`].
     #[serde(default = "default_true")]
     pub hump_matching: bool,
     /// Search schema-qualified names too, so `dbom` finds `dbo.Make`.
@@ -1397,11 +1397,29 @@ impl EditorPreferences {
 
     /// Apply the completion-matching settings to the IntelliSense engine.
     /// They are process-wide, so every editor and connection shares them.
-    pub fn apply_match_options(&self) {
+    /// Push the completion settings both engines read process-wide: prefix
+    /// matching, and the alias style FK-join suggestions name tables with.
+    pub fn apply_completion_options(&self) {
         sqlly_intel::matching::set_match_options(sqlly_intel::matching::MatchOptions {
             hump_matching: self.hump_matching,
             schema_in_search: self.schema_in_search,
         });
+        sqlly_intel::intellisense::set_join_alias_style(self.join_alias_style());
+    }
+
+    /// The alias style for FK-join suggestions. A join needs an alias for
+    /// its ON clause, so "do not suggest" falls back to the first letter.
+    pub fn join_alias_style(&self) -> sqlly_intel::intellisense::AliasStyle {
+        match self.alias_generation {
+            AliasGeneration::CapitalLettersLowercase => {
+                sqlly_intel::intellisense::AliasStyle::CapitalLetters {
+                    include_schema: self.include_schema_in_alias,
+                }
+            }
+            AliasGeneration::AutoBasedOnJoin | AliasGeneration::DoNotSuggest => {
+                sqlly_intel::intellisense::AliasStyle::FirstLetter
+            }
+        }
     }
 
     /// `table` followed by `alias`, with or without `AS` per the user's choice.
@@ -1627,6 +1645,25 @@ impl AppearancePreferences {
                 self.theme_mode = ThemeModePreference::Dark;
                 self.dark_theme = crate::theme::ColorTheme::HighContrastDark;
             }
+        }
+    }
+
+    /// View → Theme → High Contrast while it is already on: back to the
+    /// default palette for the same slots [`Self::apply_high_contrast_shortcut`]
+    /// sets, so a High Contrast palette picked in Settings for the mode not
+    /// in use (Dark's while in Light, say) survives the toggle.
+    pub fn clear_high_contrast(&mut self) {
+        self.migrate_high_contrast_mode();
+        let (light, dark) = match self.theme_mode {
+            ThemeModePreference::Light => (true, false),
+            ThemeModePreference::Dark | ThemeModePreference::HighContrast => (false, true),
+            ThemeModePreference::System => (true, true),
+        };
+        if light && self.light_theme == crate::theme::ColorTheme::HighContrastLight {
+            self.light_theme = crate::theme::ColorTheme::Light;
+        }
+        if dark && self.dark_theme == crate::theme::ColorTheme::HighContrastDark {
+            self.dark_theme = crate::theme::ColorTheme::Dark;
         }
     }
 
@@ -2449,6 +2486,17 @@ pub struct ResultFormattingPreferences {
     /// confirmed by each value's range) as dates.
     #[serde(default)]
     pub epoch_auto_detect: EpochAutoDetect,
+    /// Record each filter expression applied in the Filter rows dialog in
+    /// the per-table Recent filters list (`recent_filters.rs`).
+    #[serde(default = "default_true")]
+    pub remember_recent_filters: bool,
+    /// How many recent filter expressions each table keeps.
+    #[serde(default = "crate::recent_filters::default_limit")]
+    pub recent_filters_limit: u32,
+
+    /// How an edited JSON value is written back (minified, pretty, as typed).
+    #[serde(default)]
+    pub json_edit_storage: crate::json_edit_format::JsonEditStorage,
 }
 
 /// The kinds "Color cells by data type" distinguishes.
@@ -2599,6 +2647,10 @@ impl Default for ResultFormattingPreferences {
             type_colors: BTreeMap::new(),
             syntax_color_structured: false,
             epoch_auto_detect: EpochAutoDetect::Off,
+            remember_recent_filters: true,
+            recent_filters_limit: crate::recent_filters::DEFAULT_LIMIT,
+
+            json_edit_storage: Default::default(),
         }
     }
 }
@@ -4658,7 +4710,7 @@ impl PreferencesStore {
     }
 
     pub fn set_editor(&self, prefs: EditorPreferences) {
-        prefs.apply_match_options();
+        prefs.apply_completion_options();
         self.inner.write().editor = prefs.clone();
         prefs.save();
     }
@@ -5512,6 +5564,51 @@ mod tests {
     }
 
     #[test]
+    fn clearing_high_contrast_restores_default_palettes_and_keeps_others() {
+        let mut system = AppearancePreferences::default();
+        system.apply_high_contrast_shortcut();
+        system.clear_high_contrast();
+        assert_eq!(system.theme_mode, ThemeModePreference::System);
+        assert_eq!(system.light_theme, crate::theme::ColorTheme::Light);
+        assert_eq!(system.dark_theme, crate::theme::ColorTheme::Dark);
+
+        let mut dark = AppearancePreferences {
+            theme_mode: ThemeModePreference::Dark,
+            light_theme: crate::theme::ColorTheme::SepiaLight,
+            dark_theme: crate::theme::ColorTheme::HighContrastDark,
+            ..Default::default()
+        };
+        dark.clear_high_contrast();
+        assert_eq!(dark.dark_theme, crate::theme::ColorTheme::Dark);
+        assert_eq!(dark.light_theme, crate::theme::ColorTheme::SepiaLight);
+
+        // Toggling on and off in Light keeps a Dark High Contrast palette
+        // chosen in Settings.
+        let mut light = AppearancePreferences {
+            theme_mode: ThemeModePreference::Light,
+            dark_theme: crate::theme::ColorTheme::HighContrastDark,
+            ..Default::default()
+        };
+        light.apply_high_contrast_shortcut();
+        assert_eq!(
+            light.light_theme,
+            crate::theme::ColorTheme::HighContrastLight
+        );
+        light.clear_high_contrast();
+        assert_eq!(light.light_theme, crate::theme::ColorTheme::Light);
+        assert_eq!(light.dark_theme, crate::theme::ColorTheme::HighContrastDark);
+
+        // Legacy High Contrast mode migrates to Dark, then clears.
+        let mut legacy = AppearancePreferences {
+            theme_mode: ThemeModePreference::HighContrast,
+            ..Default::default()
+        };
+        legacy.clear_high_contrast();
+        assert_eq!(legacy.theme_mode, ThemeModePreference::Dark);
+        assert_eq!(legacy.dark_theme, crate::theme::ColorTheme::Dark);
+    }
+
+    #[test]
     fn high_contrast_shortcut_keeps_light_dark_system_mode() {
         let mut light = AppearancePreferences {
             theme_mode: ThemeModePreference::Light,
@@ -5789,7 +5886,6 @@ mod tests {
         assert_eq!(p.preset, Preset::Default);
         assert_eq!(p.keyword_case, KeywordCase::Uppercase);
         assert!(!p.keyword_group_casing.enabled);
-        assert_eq!(p.identifier_case, IdentifierCase::Preserve);
         assert_eq!(p.identifier_quoting, IdentifierQuoting::PreserveExisting);
         assert_eq!(
             p.major_clause_placement,
@@ -5991,7 +6087,6 @@ mod tests {
         let p = SqlFormattingPreferences::for_preset(Preset::PreserveExisting);
         assert_eq!(p.preset, Preset::PreserveExisting);
         assert_eq!(p.keyword_case, KeywordCase::Preserve);
-        assert_eq!(p.identifier_case, IdentifierCase::Preserve);
         assert_eq!(p.identifier_quoting, IdentifierQuoting::PreserveExisting);
         assert_eq!(
             p.major_clause_placement,
@@ -6024,7 +6119,6 @@ mod tests {
         assert_eq!(d.function_case, FunctionCase::Uppercase);
         assert_eq!(d.identifier_quoting, IdentifierQuoting::PreserveExisting);
         assert_eq!(d.dialect, SqlDialect::AutoDetect);
-        assert_eq!(d.identifier_case, IdentifierCase::Preserve);
     }
 
     #[test]
@@ -6048,9 +6142,6 @@ mod tests {
 
         assert_eq!(KeywordCase::all().len(), 5);
         assert!(KeywordCase::all().contains(&KeywordCase::MatchSurroundingStyle));
-
-        assert_eq!(IdentifierCase::all().len(), 4);
-        assert!(IdentifierCase::all().contains(&IdentifierCase::PascalCase));
 
         assert_eq!(IdentifierQuoting::all().len(), 4);
         for v in [
@@ -6122,7 +6213,6 @@ mod tests {
         assert_titled!(
             Preset,
             KeywordCase,
-            IdentifierCase,
             IdentifierQuoting,
             MajorClausePlacement,
             SelectListStyle,
@@ -6213,7 +6303,6 @@ mod tests {
     fn sql_formatting_codable_round_trip() {
         let p = SqlFormattingPreferences {
             keyword_case: KeywordCase::Lowercase,
-            identifier_case: IdentifierCase::Lowercase,
             identifier_quoting: IdentifierQuoting::AlwaysQuote,
             major_clause_placement: MajorClausePlacement::CompactWhenShort,
             select_column_layout: SelectListStyle::OneLineWhenShort,
@@ -6289,12 +6378,13 @@ mod tests {
 
     #[test]
     fn sql_formatting_partial_json_decodes_with_defaults() {
-        let decoded: SqlFormattingPreferences =
-            serde_json::from_str(r#"{"keywordCase": "lowercase", "maxLineLength": 100}"#).unwrap();
+        let decoded: SqlFormattingPreferences = serde_json::from_str(
+            r#"{"keywordCase": "lowercase", "identifierCase": "pascalCase", "maxLineLength": 100}"#,
+        )
+        .unwrap();
         let d = SqlFormattingPreferences::default();
         assert_eq!(decoded.keyword_case, KeywordCase::Lowercase);
         assert_eq!(decoded.max_line_length_raw, 100);
-        assert_eq!(decoded.identifier_case, d.identifier_case);
         assert_eq!(decoded.comma_style, d.comma_style);
         assert_eq!(decoded.dialect, d.dialect);
         assert_eq!(decoded.preset, d.preset);

@@ -535,6 +535,10 @@ pub(crate) fn server_tooltip(
             &[("username", username)],
         ),
         Auth::AuthToken { .. } => crate::localization::text("explorer.schema_render.auth_token"),
+        Auth::PostgresOAuth { username, .. } => crate::localization::format(
+            "explorer.schema_render.auth_pg_oauth",
+            &[("username", username)],
+        ),
     };
     let mut lines = vec![
         profile.name.clone(),
@@ -617,6 +621,16 @@ pub(crate) fn is_folder_kind(kind: &NodeKind) -> bool {
             | NodeKind::PinnedFolder { .. }
             | NodeKind::RedisKeyFolder { .. }
     )
+}
+
+/// Place the explorer's context menu at a window-space click point. The
+/// menu flips to the other side of the click when it would overflow and is
+/// snapped back inside the window, so it never starts above the top edge.
+pub(crate) fn context_menu_placement(
+    position: gpui::Point<gpui::Pixels>,
+    menu: impl IntoElement,
+) -> impl IntoElement {
+    anchored().position(position).child(menu)
 }
 
 /// The drop shadow painted under the explorer's context menu.
@@ -1990,23 +2004,20 @@ impl Render for SchemaTree {
             // submenu is open) and emits `DismissEvent`, which the tree
             // subscribes to (`schema_tree`), so dismissal still works without a
             // second, submenu-unaware handler here.
-            let overlay = deferred(
-                anchored()
-                    .position(point(menu.position.x, menu.position.y))
-                    .child(
-                        div()
-                            .occlude()
-                            // The popup paints gpui-component's own shadcn
-                            // `shadow-md`, which barely separates a menu from a
-                            // dense tree of rows behind it. This wrapper hugs
-                            // the popup and paints a deeper, wider drop shadow
-                            // underneath it; the popup's own shadow still draws
-                            // on top, so the near-edge stays crisp.
-                            .rounded(px(Theme::scaled(4.0)))
-                            .shadow(context_menu_shadow())
-                            .child(menu_view),
-                    ),
-            )
+            let overlay = deferred(context_menu_placement(
+                point(menu.position.x, menu.position.y),
+                div()
+                    .occlude()
+                    // The popup paints gpui-component's own shadcn
+                    // `shadow-md`, which barely separates a menu from a
+                    // dense tree of rows behind it. This wrapper hugs
+                    // the popup and paints a deeper, wider drop shadow
+                    // underneath it; the popup's own shadow still draws
+                    // on top, so the near-edge stays crisp.
+                    .rounded(px(Theme::scaled(4.0)))
+                    .shadow(context_menu_shadow())
+                    .child(menu_view),
+            ))
             .with_priority(1);
 
             div()
@@ -2582,6 +2593,136 @@ pub(crate) mod render_tests {
                 (tree.scroll.bounds().size, max),
                 "rendered from the current scroll geometry"
             );
+        });
+    }
+
+    /// Paints a menu-sized box through [`context_menu_placement`] and records
+    /// where it landed in window coordinates.
+    struct PlacedMenuHost {
+        click: gpui::Point<gpui::Pixels>,
+        menu: gpui::Size<gpui::Pixels>,
+        landed: Rc<std::cell::Cell<Option<gpui::Bounds<gpui::Pixels>>>>,
+    }
+
+    impl Render for PlacedMenuHost {
+        fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+            let landed = self.landed.clone();
+            div().size_full().child(deferred(context_menu_placement(
+                self.click,
+                div().w(self.menu.width).h(self.menu.height).child(
+                    gpui::canvas(
+                        move |bounds, _, _| landed.set(Some(bounds)),
+                        |_, _, _, _| {},
+                    )
+                    .size_full(),
+                ),
+            )))
+        }
+    }
+
+    // https://github.com/beekeeper-studio/beekeeper-studio/issues/5010
+    #[gpui::test]
+    fn explorer_context_menu_never_runs_off_the_window(cx: &mut gpui::TestAppContext) {
+        let window = gpui::size(px(800.0), px(600.0));
+        // (click y, menu height, expected top when it can't simply open below)
+        let cases: [(f32, f32, Option<f32>); 5] = [
+            (20.0, 400.0, Some(20.0)),   // near the top: opens below the click
+            (150.0, 400.0, Some(150.0)), // middle-up row: still fits below
+            (300.0, 400.0, None),        // no room either side: pushed up, kept inside
+            (580.0, 400.0, Some(180.0)), // near the bottom: flips above the click
+            (100.0, 700.0, Some(0.0)),   // taller than the window: pinned to the top
+        ];
+        for (click_y, menu_h, expected_top) in cases {
+            let landed = Rc::new(std::cell::Cell::new(None));
+            let host_landed = landed.clone();
+            let (_host, vcx) = cx.add_window_view(move |_window, _cx| PlacedMenuHost {
+                click: point(px(120.0), px(click_y)),
+                menu: gpui::size(px(220.0), px(menu_h)),
+                landed: host_landed,
+            });
+            vcx.simulate_resize(window);
+            vcx.run_until_parked();
+            vcx.update(|window, _| window.refresh());
+            vcx.run_until_parked();
+            let bounds = landed.get().expect("the menu was painted");
+            let (top, bottom) = (f32::from(bounds.top()), f32::from(bounds.bottom()));
+            assert!(
+                top >= 0.0,
+                "click at {click_y}: menu starts above the window ({top})"
+            );
+            if menu_h <= f32::from(window.height) {
+                assert!(
+                    bottom <= f32::from(window.height),
+                    "click at {click_y}: menu runs past the bottom ({bottom})"
+                );
+            }
+            if let Some(expected) = expected_top {
+                assert_eq!(top, expected, "click at {click_y}");
+            }
+        }
+    }
+
+    // https://github.com/RedisInsight/RedisInsight/issues/5835
+    #[gpui::test]
+    fn a_long_list_of_saved_redis_databases_scrolls_and_filters(cx: &mut gpui::TestAppContext) {
+        use sqlly_core::{SecretProvider, SecretRef};
+        let profiles: Vec<ConnectionProfile> = (0..300)
+            .map(|i| {
+                let mut p = ConnectionProfile::sql_login(
+                    format!("redis-{i:03}"),
+                    "127.0.0.1",
+                    "default",
+                    SecretRef {
+                        provider: SecretProvider::InMemory,
+                        key: format!("k{i}"),
+                    },
+                );
+                p.database_type = sqlly_lang::sqlmodel::DatabaseType::Redis;
+                p.port = 6379;
+                p
+            })
+            .collect();
+        ensure_components_initialized(cx);
+        let (tree, cx) = cx.add_window_view(|_window, cx| {
+            let log =
+                crate::log_console::DiagnosticLog::new(crate::log_console::DiagnosticLogLevel::Off);
+            let mut tree = SchemaTree::new(Services::new(), log, cx);
+            tree.set_connections(profiles, cx);
+            tree
+        });
+        cx.run_until_parked();
+        let max = tree.read_with(cx, |tree, _| tree.scroll.max_offset());
+        assert!(max.y > px(0.0), "300 databases overflow the sidebar");
+
+        // A mouse-wheel / trackpad scroll over the list moves it.
+        cx.simulate_event(gpui::ScrollEvent {
+            position: point(px(80.0), px(200.0)),
+            delta: gpui::ScrollDelta::Pixels(point(px(0.0), px(-100_000.0))),
+            ..Default::default()
+        });
+        cx.run_until_parked();
+        tree.read_with(cx, |tree, _| {
+            let offset = tree.scroll.offset().y;
+            assert!(offset < px(0.0), "the list scrolled");
+            let rows = tree.visible_rows().len();
+            let (_, end) = viewport_window(
+                rows,
+                f32::from(tree.scroll.bounds().size.height),
+                f32::from(offset),
+                Theme::row_height(),
+            );
+            assert_eq!(end, rows, "a long scroll reaches the last database");
+        });
+
+        // Typing a filter narrows the list to the match.
+        tree.update(cx, |tree, cx| tree.set_filter_text("redis-299".into(), cx));
+        tree.read_with(cx, |tree, _| {
+            let titles: Vec<String> = tree
+                .visible_rows()
+                .iter()
+                .map(|r| r.title.to_string())
+                .collect();
+            assert_eq!(titles, vec!["redis-299"]);
         });
     }
 }

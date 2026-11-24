@@ -1,0 +1,24 @@
+format: trino-text (Certain)
+statements: 1
+
+== statement 1
+estimated_rows: 5
+notes: ["Trino version: 435"]
+source_format: "trino-text"
+statement_type: "EXPLAIN"
+operators: 2
+  #1 Output [Output]
+      estimated_rows: 5
+      output_columns: ["nationkey:bigint", "name:varchar(25)", "regionkey:bigint", "comment:varchar(152)"]
+      properties: [{name="columnNames" value="[nationkey, name, regionkey, comment]"}, {name="Estimates" value="{rows: 5 (547B), cpu: 0, memory: 0B, network: 0B}"}]
+    #2 ScanFilter [ScanFilter]
+        database: "tpch"
+        estimated_cpu: 2670
+        estimated_rows: 5
+        estimated_rows_read: 25
+        filter: "\"regionkey\" = BIGINT '1'"
+        output_columns: ["nationkey:bigint", "name:varchar(25)", "regionkey:bigint", "comment:varchar(152)"]
+        output_list: ["nation", "Filter: \"regionkey\" = BIGINT '1'"]
+        properties: [{name="table" value="tpch:tiny:nation"}, {name="Estimates" value="{rows: 25 (2.67kB), cpu: 2.67k, memory: 0B, network: 0B}/{rows: 5 (547B), cpu: 2.67k, memory: 0B, network: 0B}"}, {name="nationkey" value="tpch:nationkey"}, {name="regionkey" value="tpch:regionkey"}, {name="name" value="tpch:name"}, {name="comment" value="tpch:comment"}]
+        relation: "nation"
+        schema: "tiny"

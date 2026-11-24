@@ -1,0 +1,136 @@
+format: duckdb-json (Certain)
+statements: 1
+
+== statement 1
+dialect: "DuckDb"
+estimated_rows: 5
+has_actuals: yes
+source_format: "duckdb-json"
+statement_type: "EXPLAIN ANALYZE"
+total_subtree_cost: 0.063916
+operators: 13
+  #1 QUERY [QUERY]
+      actual_time_ms: 63.916
+    #2 PROJECTION [PROJECTION]
+        actual_rows: 2
+        actual_rows_total: 2
+        actual_self_time_ms: 0.002
+        actual_time_ms: 63.916
+        estimated_cost: 0.000002
+        estimated_rows: 5
+        output_columns: ["__internal_decompress_string(#0)", "#1", "#2"]
+        output_list: ["__internal_decompress_string(#0)", "#1", "#2"]
+        properties: [{name="result_set_size" value="80"}]
+      #3 ORDER_BY [ORDER_BY]
+          actual_rows: 2
+          actual_rows_total: 2
+          actual_self_time_ms: 0.299
+          actual_time_ms: 63.914
+          estimated_cost: 0.000299
+          properties: [{name="result_set_size" value="56"}]
+          sort_keys: ["sum((oi.quantity * oi.unit_price)) DESC"]
+        #4 PROJECTION [PROJECTION]
+            actual_rows: 2
+            actual_rows_total: 2
+            actual_self_time_ms: 0.002
+            actual_time_ms: 63.615
+            estimated_cost: 0.000002
+            estimated_rows: 5
+            output_columns: ["__internal_compress_string_uinteger(#0)", "#1", "#2"]
+            output_list: ["__internal_compress_string_uinteger(#0)", "#1", "#2"]
+            properties: [{name="result_set_size" value="56"}]
+          #5 PROJECTION [PROJECTION]
+              actual_rows: 2
+              actual_rows_total: 2
+              actual_self_time_ms: 0.002
+              actual_time_ms: 63.613
+              estimated_cost: 0.000002
+              estimated_rows: 5
+              output_columns: ["__internal_decompress_string(#0)", "#1", "#2"]
+              output_list: ["__internal_decompress_string(#0)", "#1", "#2"]
+              properties: [{name="result_set_size" value="80"}]
+            #6 HASH_GROUP_BY [HASH_GROUP_BY]
+                actual_rows: 2
+                actual_rows_total: 2
+                actual_self_time_ms: 5.877
+                actual_time_ms: 63.611
+                estimated_cost: 0.005877
+                estimated_rows: 5
+                group_keys: ["#0"]
+                properties: [{name="Aggregates" value="count_star(), sum(#1)"}, {name="result_set_size" value="56"}]
+              #7 PROJECTION [PROJECTION]
+                  actual_rows: 300000
+                  actual_rows_total: 300000
+                  actual_self_time_ms: 3.661
+                  actual_time_ms: 57.734
+                  estimated_cost: 0.003661
+                  estimated_rows: 96231
+                  output_columns: ["country", "(CAST(quantity AS DECIMAL(38,0)) * unit_price)"]
+                  output_list: ["country", "(CAST(quantity AS DECIMAL(38,0)) * unit_price)"]
+                  properties: [{name="result_set_size" value="6000000"}]
+                #8 PROJECTION [PROJECTION]
+                    actual_rows: 300000
+                    actual_rows_total: 300000
+                    actual_self_time_ms: 3.463
+                    actual_time_ms: 54.073
+                    estimated_cost: 0.003463
+                    estimated_rows: 96231
+                    output_columns: ["__internal_compress_integral_uinteger(#0, 1)", "#1", "#2", "__internal_compress_integral_uinteger(#3, 1)", "__internal_compress_string_uinteger(#4)"]
+                    output_list: ["__internal_compress_integral_uinteger(#0, 1)", "#1", "#2", "__internal_compress_integral_uinteger(#3, 1)", "__internal_compress_string_uinteger(#4)"]
+                    properties: [{name="result_set_size" value="10800000"}]
+                  #9 HASH_JOIN [HASH_JOIN]
+                      actual_rows: 300000
+                      actual_rows_total: 300000
+                      actual_self_time_ms: 4.091
+                      actual_time_ms: 50.61
+                      estimated_cost: 0.004091
+                      estimated_rows: 96231
+                      join_predicate: "order_id = id"
+                      join_type: "INNER"
+                      properties: [{name="Build Max" value="400000"}, {name="Build Min" value="1"}, {name="result_set_size" value="16800000"}]
+                    #10 TABLE_SCAN order_items [TABLE_SCAN]
+                        actual_rows: 1199991
+                        actual_rows_total: 1199991
+                        actual_self_time_ms: 44.254
+                        actual_time_ms: 44.254
+                        estimated_cost: 0.044254
+                        estimated_rows: 1200000
+                        output_columns: ["order_id", "quantity", "unit_price"]
+                        output_list: ["order_id", "quantity", "unit_price"]
+                        properties: [{name="operator_rows_scanned" value="12000000"}, {name="result_set_size" value="38399712"}]
+                        relation: "order_items"
+                        warnings: [{TableScan={table="order_items"}}]
+                    #11 HASH_JOIN [HASH_JOIN]
+                        actual_rows: 100000
+                        actual_rows_total: 100000
+                        actual_self_time_ms: 0.907
+                        actual_time_ms: 2.265
+                        estimated_cost: 0.000907
+                        estimated_rows: 83777
+                        join_predicate: "customer_id = id"
+                        join_type: "INNER"
+                        properties: [{name="Build Max" value="50000"}, {name="Build Min" value="1"}, {name="result_set_size" value="4000000"}]
+                      #12 TABLE_SCAN orders [TABLE_SCAN]
+                          actual_rows: 100000
+                          actual_rows_total: 100000
+                          actual_self_time_ms: 1.273
+                          actual_time_ms: 1.273
+                          estimated_cost: 0.001273
+                          estimated_rows: 100000
+                          filter: "status='paid' AND status IS NOT NULL"
+                          output_columns: ["id", "customer_id"]
+                          output_list: ["id", "customer_id"]
+                          properties: [{name="operator_rows_scanned" value="1600000"}, {name="result_set_size" value="1600000"}]
+                          relation: "orders"
+                      #13 TABLE_SCAN customers [TABLE_SCAN]
+                          actual_rows: 50000
+                          actual_rows_total: 50000
+                          actual_self_time_ms: 0.085
+                          actual_time_ms: 0.085
+                          estimated_cost: 0.000085
+                          estimated_rows: 50000
+                          output_columns: ["id", "country"]
+                          output_list: ["id", "country"]
+                          properties: [{name="operator_rows_scanned" value="50000"}, {name="result_set_size" value="1200000"}]
+                          relation: "customers"
+                          warnings: [{TableScan={table="customers"}}]

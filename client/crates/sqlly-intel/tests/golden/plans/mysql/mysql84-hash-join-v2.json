@@ -1,0 +1,61 @@
+{
+  "query": "/* select#1 */ select count(0) AS `COUNT(*)` from `shop`.`customers` `c` join `shop`.`products` `p` where ((`c`.`name` = `p`.`name`) and (`p`.`price` > 100.00))",
+  "inputs": [
+    {
+      "inputs": [
+        {
+          "alias": "c",
+          "operation": "Table scan on c",
+          "table_name": "customers",
+          "access_type": "table",
+          "schema_name": "shop",
+          "used_columns": [
+            "name"
+          ],
+          "estimated_rows": 4973.0,
+          "estimated_total_cost": 0.08801457321558617
+        },
+        {
+          "inputs": [
+            {
+              "alias": "p",
+              "operation": "Table scan on p",
+              "table_name": "products",
+              "access_type": "table",
+              "schema_name": "shop",
+              "used_columns": [
+                "name",
+                "price"
+              ],
+              "estimated_rows": 2000.0,
+              "estimated_total_cost": 202.25
+            }
+          ],
+          "heading": "Hash",
+          "condition": "(p.price > 100.00)",
+          "operation": "Filter: (p.price > 100.00)",
+          "access_type": "filter",
+          "estimated_rows": 666.5999889373779,
+          "estimated_total_cost": 202.25
+        }
+      ],
+      "join_type": "inner join",
+      "operation": "Inner hash join (c.`name` = p.`name`)",
+      "access_type": "join",
+      "estimated_rows": 331500.1794382956,
+      "hash_condition": [
+        "(c.`name` = p.`name`)"
+      ],
+      "join_algorithm": "hash",
+      "estimated_total_cost": 331711.36501134885
+    }
+  ],
+  "functions": [
+    "count(0)"
+  ],
+  "operation": "Aggregate: count(0)",
+  "query_type": "select",
+  "access_type": "aggregate",
+  "estimated_rows": 1.0,
+  "estimated_total_cost": 364861.3829551784
+}

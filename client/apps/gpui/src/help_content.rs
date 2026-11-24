@@ -30,6 +30,7 @@ const EDITOR_HELP_ACTIONS: &[&str] = &[
     "ToggleLineComment",
     "AddLineComment",
     "RemoveLineComment",
+    "ToggleBlockComment",
     "Find",
     "Replace",
     "FindNext",

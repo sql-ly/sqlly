@@ -20,6 +20,8 @@ pub(super) struct ShapeProbe {
     /// Address of the data-model name set bold resolves against, so a new
     /// catalog reshapes every line.
     pub(super) names: usize,
+    /// Markdown colouring instead of SQL.
+    pub(super) markdown: bool,
 }
 
 impl ShapeProbe {
@@ -49,7 +51,13 @@ impl ShapeProbe {
             ],
             bold: crate::preferences::SyntaxBoldPreferences::default(),
             names: 0,
+            markdown: false,
         }
+    }
+
+    pub(super) fn with_markdown(mut self, markdown: bool) -> Self {
+        self.markdown = markdown;
+        self
     }
 
     pub(super) fn with_bold(

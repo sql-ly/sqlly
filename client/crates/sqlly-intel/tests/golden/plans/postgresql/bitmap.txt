@@ -1,0 +1,22 @@
+                                                                QUERY PLAN                                                                
+------------------------------------------------------------------------------------------------------------------------------------------
+ Bitmap Heap Scan on orders  (cost=45.63..2613.25 rows=1492 width=27) (actual time=0.155..0.298 rows=1463.00 loops=1)
+   Recheck Cond: ((customer_id = ANY ('{1,2,3}'::integer[])) OR (placed_at < '2023-01-02 00:00:00+00'::timestamp with time zone))
+   Heap Blocks: exact=35
+   Buffers: shared hit=41 read=3
+   ->  BitmapOr  (cost=45.63..45.63 rows=1492 width=0) (actual time=0.142..0.143 rows=0.00 loops=1)
+         Buffers: shared hit=6 read=3
+         ->  Bitmap Index Scan on orders_customer_idx  (cost=0.00..13.45 rows=24 width=0) (actual time=0.010..0.010 rows=24.00 loops=1)
+               Index Cond: (customer_id = ANY ('{1,2,3}'::integer[]))
+               Index Searches: 1
+               Buffers: shared hit=3
+         ->  Bitmap Index Scan on orders_placed_idx  (cost=0.00..31.43 rows=1468 width=0) (actual time=0.132..0.132 rows=1439.00 loops=1)
+               Index Cond: (placed_at < '2023-01-02 00:00:00+00'::timestamp with time zone)
+               Index Searches: 1
+               Buffers: shared hit=3 read=3
+ Planning:
+   Buffers: shared hit=152 read=2
+ Planning Time: 0.878 ms
+ Execution Time: 0.343 ms
+(18 rows)
+

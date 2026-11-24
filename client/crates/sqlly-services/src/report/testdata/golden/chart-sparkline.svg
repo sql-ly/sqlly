@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360" role="img" aria-labelledby="sparkline-title sparkline-desc" font-family="&apos;Noto Sans&apos;, -apple-system, &apos;Segoe UI&apos;, &apos;Helvetica Neue&apos;, Arial, sans-serif">
+<title id="sparkline-title">revenue, month</title>
+<desc id="sparkline-desc">sparkline · month, revenue · 12</desc>
+<rect width="640" height="360" fill="#ffffff"/>
+<path d="M2.5 357.5 L60.23 338.34 L117.95 319.18 L175.68 300.01 L233.41 280.85 L291.14 261.69 L348.86 242.53 L406.59 223.37 L464.32 2.5 L522.05 185.04 L579.77 165.88 L637.5 146.72 L637.5 360 L2.5 360 Z" fill="#1a5fb4" fill-opacity="0.15"/>
+<path d="M2.5 357.5 L60.23 338.34 L117.95 319.18 L175.68 300.01 L233.41 280.85 L291.14 261.69 L348.86 242.53 L406.59 223.37 L464.32 2.5 L522.05 185.04 L579.77 165.88 L637.5 146.72" fill="none" stroke="#1a5fb4" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="637.5" cy="146.72" r="2.2" fill="#1a5fb4"/>
+</svg>

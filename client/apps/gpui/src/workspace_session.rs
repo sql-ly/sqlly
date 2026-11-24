@@ -152,6 +152,10 @@ pub struct TabState {
     /// are not persisted. Backward-compatible: absent → `None`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub notebook_path: Option<String>,
+    /// Id of an unsaved notebook, restored from its recovery autosave.
+    /// Backward-compatible: absent → `None`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub notebook_id: Option<String>,
     /// Values entered in the tab's `-- sqlly param:` strip, restored onto
     /// the parameters the buffer still declares with the same name and type.
     /// Backward-compatible: absent in old sessions → none.
@@ -269,6 +273,9 @@ pub struct LayoutState {
     /// Height of the bottom Cell Details dock in logical pixels.
     #[serde(default = "default_cell_detail_height")]
     pub cell_detail_height: f32,
+    /// Notebook rail and panel sizes. Backward-compatible: absent → defaults.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub notebook_layout: Option<crate::notebook::layout::NotebookLayout>,
 }
 
 impl Default for LayoutState {
@@ -295,6 +302,7 @@ impl Default for LayoutState {
             cell_detail_visible: false,
             cell_detail_width: DEFAULT_CELL_DETAIL_WIDTH,
             cell_detail_height: DEFAULT_CELL_DETAIL_HEIGHT,
+            notebook_layout: None,
         }
     }
 }
@@ -855,9 +863,33 @@ fn valid_workspace_name(name: &str) -> std::io::Result<String> {
     Ok(name.to_string())
 }
 
+#[cfg(test)]
+thread_local! {
+    static TEST_SESSION_FILE: std::cell::RefCell<Option<std::path::PathBuf>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+/// Test-only: point [`session_file`] (and the result cache beside it) at
+/// `path` on this thread, so a test can launch an `AppView` against a session
+/// it wrote itself without touching the real session or cache.
+#[cfg(test)]
+pub(crate) fn set_test_session_file(path: Option<std::path::PathBuf>) {
+    TEST_SESSION_FILE.with(|cell| *cell.borrow_mut() = path);
+}
+
+/// Test-only: the session file set by [`set_test_session_file`], if any.
+#[cfg(test)]
+pub(crate) fn test_session_file() -> Option<std::path::PathBuf> {
+    TEST_SESSION_FILE.with(|cell| cell.borrow().clone())
+}
+
 /// Default session file path: `<data_dir>/SQLLY/workspace-session.json`.
 /// Mirrors the Swift `WorkspaceSession.storeURL`.
 pub fn session_file() -> std::path::PathBuf {
+    #[cfg(test)]
+    if let Some(path) = test_session_file() {
+        return path;
+    }
     #[cfg(not(target_arch = "wasm32"))]
     let mut p = dirs::data_dir().unwrap_or_else(std::env::temp_dir);
     // Browser build: nominal path only — load/save above use localStorage.
@@ -963,6 +995,45 @@ mod tests {
             filter_tabs_for_restore(&tabs, 0, crate::preferences::TabRestorePolicy::None);
         assert!(out.is_empty());
         assert_eq!(sel, 0);
+    }
+
+    // https://github.com/dbgate/dbgate/issues/1603
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn open_tabs_live_in_each_users_own_session_file() {
+        let home = dirs::home_dir().expect("a home directory");
+        let path = session_file();
+        assert!(
+            path.starts_with(&home),
+            "{} must sit under the user's own home {}",
+            path.display(),
+            home.display()
+        );
+        assert!(path.ends_with("SQLLY/workspace-session.json"));
+
+        // Two installs with their own data dirs never reopen each other's
+        // tabs or database.
+        let root =
+            std::env::temp_dir().join(format!("sqlly-test-sessions-{}", uuid::Uuid::new_v4()));
+        let session = |tab: &str, db: &str| WorkspaceSession {
+            tabs: vec![restore_tab(tab, false)],
+            layout: LayoutState {
+                active_database: Some(db.into()),
+                ..Default::default()
+            },
+            ..WorkspaceSession::new()
+        };
+        let a = root.join("a/SQLLY/workspace-session.json");
+        let b = root.join("b/SQLLY/workspace-session.json");
+        save_session(&session("orders.sql", "Sales"), &a).unwrap();
+        save_session(&session("payroll.sql", "HR"), &b).unwrap();
+        for (path, tab, db) in [(&a, "orders.sql", "Sales"), (&b, "payroll.sql", "HR")] {
+            let loaded = load_session(path);
+            let titles: Vec<&str> = loaded.tabs.iter().map(|t| t.title.as_str()).collect();
+            assert_eq!(titles, [tab]);
+            assert_eq!(loaded.layout.active_database.as_deref(), Some(db));
+        }
+        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]
@@ -1664,6 +1735,7 @@ mod tests {
                 auto_number: None,
                 result_cache_key: Some(key.clone()),
                 notebook_path: None,
+                notebook_id: None,
                 query_params: Vec::new(),
             }],
             selected_tab: 0,

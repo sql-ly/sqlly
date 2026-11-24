@@ -1474,6 +1474,63 @@ mod tests {
         assert_eq!(nodes[0].detail.as_deref(), Some("2 keys"));
     }
 
+    // https://github.com/RedisInsight/RedisInsight/issues/6379
+    #[test]
+    fn sibling_hash_keys_sharing_a_deep_prefix_all_reach_the_tree() {
+        let names = [
+            "monthcard:double:active:129:h:s",
+            "monthcard:double:popWindow:129:h:s",
+        ];
+        let keys: Vec<ScannedKey> = names.iter().map(|n| key(n, "hash", None)).collect();
+        // Expand every folder the way the tree does: each folder's own walk
+        // lists the keys under its prefix and folds them one level deeper.
+        let mut pending = vec![(String::from("srv:x:db:0"), String::new(), 2usize)];
+        let mut leaves: Vec<(String, String)> = Vec::new();
+        let mut folders_by_parent: Vec<(String, Vec<String>)> = Vec::new();
+        while let Some((parent_id, prefix, depth)) = pending.pop() {
+            let mut listing = listing_of(
+                keys.iter()
+                    .filter(|k| k.key.starts_with(&prefix))
+                    .cloned()
+                    .collect(),
+                None,
+                TREE_WINDOW,
+            );
+            listing.parent_prefix = prefix.clone();
+            let nodes = nodes_for_window(&parent_id, depth, ":", listing);
+            let mut labels = Vec::new();
+            for node in nodes {
+                match &node.kind {
+                    NodeKind::RedisKeyFolder { prefix } => {
+                        labels.push(node.title.to_string());
+                        pending.push((node.id.clone(), prefix.clone(), depth + 1));
+                    }
+                    NodeKind::RedisKey { key, kind, .. } => {
+                        leaves.push((key.clone(), kind.clone()));
+                    }
+                    other => panic!("a complete, unclipped walk has no {other:?} row"),
+                }
+            }
+            folders_by_parent.push((prefix, labels));
+        }
+        let (_, at_double) = folders_by_parent
+            .iter()
+            .find(|(prefix, _)| prefix == "monthcard:double:")
+            .expect("the shared prefix is a folder");
+        let mut at_double = at_double.clone();
+        at_double.sort();
+        assert_eq!(at_double, ["active", "popWindow"], "both branches show");
+        leaves.sort();
+        assert_eq!(
+            leaves,
+            names
+                .iter()
+                .map(|n| (n.to_string(), "hash".to_string()))
+                .collect::<Vec<_>>(),
+            "every hash key ends up as a leaf of the tree"
+        );
+    }
+
     #[test]
     fn database_detail_counts_keys_and_expiries() {
         assert_eq!(database_detail(0, 0), "empty");

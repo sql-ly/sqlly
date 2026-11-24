@@ -1,0 +1,137 @@
+[
+  {
+    "Plan": {
+      "Node Type": "Expression",
+      "Node Id": "Expression_12",
+      "Description": "Project names",
+      "Plans": [
+        {
+          "Node Type": "Limit",
+          "Node Id": "Limit_11",
+          "Description": "preliminary LIMIT",
+          "Plans": [
+            {
+              "Node Type": "Sorting",
+              "Node Id": "Sorting_10",
+              "Description": "Sorting for ORDER BY",
+              "Plans": [
+                {
+                  "Node Type": "Expression",
+                  "Node Id": "Expression_17",
+                  "Description": "(Before ORDER BY + Projection)",
+                  "Plans": [
+                    {
+                      "Node Type": "Aggregating",
+                      "Node Id": "Aggregating_7",
+                      "Plans": [
+                        {
+                          "Node Type": "Expression",
+                          "Node Id": "Expression_25",
+                          "Description": "((Before GROUP BY + ) + Post Join Actions)",
+                          "Plans": [
+                            {
+                              "Node Type": "Join",
+                              "Node Id": "Join_23",
+                              "Description": "JOIN FillRightFirst",
+                              "Plans": [
+                                {
+                                  "Node Type": "Expression",
+                                  "Node Id": "Expression_21",
+                                  "Description": "Left Pre Join Actions",
+                                  "Plans": [
+                                    {
+                                      "Node Type": "Expression",
+                                      "Node Id": "Expression_27",
+                                      "Description": "(Apply runtime join filter + Change column names to column identifiers)",
+                                      "Plans": [
+                                        {
+                                          "Node Type": "ReadFromMergeTree",
+                                          "Node Id": "ReadFromMergeTree_2",
+                                          "Description": "default.customers",
+                                          "Indexes": [
+                                            {
+                                              "Type": "PrimaryKey",
+                                              "Condition": "true",
+                                              "Initial Parts": 1,
+                                              "Selected Parts": 1,
+                                              "Initial Granules": 6,
+                                              "Selected Granules": 6
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "Node Type": "Expression",
+                                  "Node Id": "Expression_22",
+                                  "Description": "Right Pre Join Actions",
+                                  "Plans": [
+                                    {
+                                      "Node Type": "BuildRuntimeFilter",
+                                      "Node Id": "BuildRuntimeFilter_19",
+                                      "Description": "Build runtime join filter on __table1.customer_id",
+                                      "Plans": [
+                                        {
+                                          "Node Type": "Expression",
+                                          "Node Id": "Expression_28",
+                                          "Description": "(WHERE + Change column names to column identifiers)",
+                                          "Plans": [
+                                            {
+                                              "Node Type": "ReadFromMergeTree",
+                                              "Node Id": "ReadFromMergeTree_0",
+                                              "Description": "default.orders",
+                                              "Indexes": [
+                                                {
+                                                  "Type": "Min-Max",
+                                                  "Keys": ["placed_at"],
+                                                  "Condition": "(placed_at in [1685577600, +Inf))",
+                                                  "Initial Parts": 10,
+                                                  "Selected Parts": 5,
+                                                  "Initial Granules": 392,
+                                                  "Selected Granules": 179
+                                                },
+                                                {
+                                                  "Type": "Partition",
+                                                  "Keys": ["toYYYYMM(placed_at)"],
+                                                  "Condition": "(toYYYYMM(placed_at) in [202306, +Inf))",
+                                                  "Initial Parts": 5,
+                                                  "Selected Parts": 5,
+                                                  "Initial Granules": 179,
+                                                  "Selected Granules": 179
+                                                },
+                                                {
+                                                  "Type": "PrimaryKey",
+                                                  "Keys": ["placed_at"],
+                                                  "Condition": "(placed_at in [1685577600, +Inf))",
+                                                  "Search Algorithm": "generic exclusion search",
+                                                  "Initial Parts": 5,
+                                                  "Selected Parts": 5,
+                                                  "Initial Granules": 179,
+                                                  "Selected Granules": 179
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

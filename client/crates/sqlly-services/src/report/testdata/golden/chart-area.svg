@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360" role="img" aria-labelledby="area-title area-desc" font-family="&apos;Noto Sans&apos;, -apple-system, &apos;Segoe UI&apos;, &apos;Helvetica Neue&apos;, Arial, sans-serif">
+<title id="area-title">area chart</title>
+<desc id="area-desc">area · month, revenue, low, high · 12</desc>
+<rect width="640" height="360" fill="#ffffff"/>
+<text x="12" y="26" font-size="14" fill="#0f2544" font-weight="600">area chart</text>
+<line x1="51.28" y1="332" x2="624" y2="332" stroke="#c6d9ef" stroke-width="1"/>
+<text x="45.28" y="335.5" font-size="10" fill="#3c5a85" text-anchor="end">$0</text>
+<line x1="51.28" y1="234.67" x2="624" y2="234.67" stroke="#e3edf9" stroke-width="1"/>
+<text x="45.28" y="238.17" font-size="10" fill="#3c5a85" text-anchor="end">$1,000</text>
+<line x1="51.28" y1="137.33" x2="624" y2="137.33" stroke="#e3edf9" stroke-width="1"/>
+<text x="45.28" y="140.83" font-size="10" fill="#3c5a85" text-anchor="end">$2,000</text>
+<line x1="51.28" y1="40" x2="624" y2="40" stroke="#e3edf9" stroke-width="1"/>
+<text x="45.28" y="43.5" font-size="10" fill="#3c5a85" text-anchor="end">$3,000</text>
+<line x1="51.28" y1="332" x2="51.28" y2="335" stroke="#c6d9ef" stroke-width="1"/>
+<text x="51.28" y="346" font-size="10" fill="#3c5a85" text-anchor="middle">2026-01</text>
+<line x1="152.45" y1="332" x2="152.45" y2="335" stroke="#c6d9ef" stroke-width="1"/>
+<text x="152.45" y="346" font-size="10" fill="#3c5a85" text-anchor="middle">2026-03</text>
+<line x1="257.05" y1="332" x2="257.05" y2="335" stroke="#c6d9ef" stroke-width="1"/>
+<text x="257.05" y="346" font-size="10" fill="#3c5a85" text-anchor="middle">2026-05</text>
+<line x1="361.65" y1="332" x2="361.65" y2="335" stroke="#c6d9ef" stroke-width="1"/>
+<text x="361.65" y="346" font-size="10" fill="#3c5a85" text-anchor="middle">2026-07</text>
+<line x1="467.96" y1="332" x2="467.96" y2="335" stroke="#c6d9ef" stroke-width="1"/>
+<text x="467.96" y="346" font-size="10" fill="#3c5a85" text-anchor="middle">2026-09</text>
+<line x1="572.56" y1="332" x2="572.56" y2="335" stroke="#c6d9ef" stroke-width="1"/>
+<text x="572.56" y="346" font-size="10" fill="#3c5a85" text-anchor="middle">2026-11</text>
+<path d="M51.28 236.91 L104.44 229.42 L152.45 221.93 L205.61 214.44 L257.05 206.95 L310.2 199.46 L361.65 191.97 L414.8 184.48 L467.96 98.15 L519.4 169.5 L572.56 162.01 L624 154.52 L624 115.08 L572.56 124.24 L519.4 133.39 L467.96 46.19 L414.8 151.7 L361.65 160.85 L310.2 170.01 L257.05 179.16 L205.61 188.32 L152.45 197.47 L104.44 206.62 L51.28 215.78 Z" fill="#1a5fb4" fill-opacity="0.14"/>
+<path d="M51.28 226.34 L104.44 218.02 L152.45 209.7 L205.61 201.38 L257.05 193.06 L310.2 184.73 L361.65 176.41 L414.8 168.09 L467.96 72.17 L519.4 151.45 L572.56 143.12 L624 134.8 L624 332 L51.28 332 Z" fill="#1a5fb4" fill-opacity="0.22"/>
+<path d="M51.28 226.34 L104.44 218.02 L152.45 209.7 L205.61 201.38 L257.05 193.06 L310.2 184.73 L361.65 176.41 L414.8 168.09 L467.96 72.17 L519.4 151.45 L572.56 143.12 L624 134.8" fill="none" stroke="#1a5fb4" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>

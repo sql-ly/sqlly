@@ -1,0 +1,7 @@
+*************************** 1. row ***************************
+EXPLAIN: -> Nested loop inner join  (cost=124 rows=110) (actual time=0.0607..0.754 rows=149 loops=1)
+    -> Filter: (c.id between 100 and 140)  (cost=8.47 rows=41) (actual time=0.022..0.0366 rows=41 loops=1)
+        -> Index range scan on c using PRIMARY over (100 <= id <= 140)  (cost=8.47 rows=41) (actual time=0.0205..0.0315 rows=41 loops=1)
+    -> Filter: (o.total > 500.00)  (cost=2.02 rows=2.68) (actual time=0.0157..0.0171 rows=3.63 loops=41)
+        -> Index lookup on o using orders_customer_idx (customer_id=c.id)  (cost=2.02 rows=8.06) (actual time=0.0153..0.0161 rows=8 loops=41)
+

@@ -1,0 +1,18 @@
+== Physical Plan ==
+AdaptiveSparkPlan isFinalPlan=false
++- HashAggregate(keys=[status#8, sku#115], functions=[max(price#116)])
+   +- Exchange hashpartitioning(status#8, sku#115, 200), ENSURE_REQUIREMENTS, [plan_id=1445]
+      +- HashAggregate(keys=[status#8, sku#115], functions=[partial_max(price#116)])
+         +- Project [status#8, sku#115, price#116]
+            +- SortMergeJoin [id#5L], [order_id#114L], Inner
+               :- Sort [id#5L ASC NULLS FIRST], false, 0
+               :  +- Exchange hashpartitioning(id#5L, 200), ENSURE_REQUIREMENTS, [plan_id=1437]
+               :     +- Filter isnotnull(id#5L)
+               :        +- FileScan parquet spark_catalog.default.orders[id#5L,status#8] Batched: true, DataFilters: [isnotnull(id#5L)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/tmp/spark-warehouse/orders], PartitionFilters: [], PushedFilters: [IsNotNull(id)], ReadSchema: struct<id:bigint,status:string>
+               +- Sort [order_id#114L ASC NULLS FIRST], false, 0
+                  +- Exchange hashpartitioning(order_id#114L, 200), ENSURE_REQUIREMENTS, [plan_id=1438]
+                     +- Project [order_id#114L, sku#115, price#116]
+                        +- Filter isnotnull(order_id#114L)
+                           +- FileScan parquet spark_catalog.default.order_items[order_id#114L,sku#115,price#116,qty#117L] Batched: true, DataFilters: [isnotnull(order_id#114L)], Format: Parquet, Location: CatalogFileIndex(1 paths)[file:/tmp/spark-warehouse/order_items], PartitionFilters: [], PushedFilters: [IsNotNull(order_id)], ReadSchema: struct<order_id:bigint,sku:string,price:decimal(11,2)>
+
+

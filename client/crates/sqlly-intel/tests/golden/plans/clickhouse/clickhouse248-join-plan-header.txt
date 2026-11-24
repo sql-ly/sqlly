@@ -1,0 +1,45 @@
+Expression (Project names)
+Header: country LowCardinality(String)
+        count() UInt64
+        sum(total) Decimal(38, 2)
+  Limit (preliminary LIMIT (without OFFSET))
+  Header: sum(__table2.total) Decimal(38, 2)
+          count() UInt64
+          __table1.country LowCardinality(String)
+    Sorting (Sorting for ORDER BY)
+    Header: sum(__table2.total) Decimal(38, 2)
+            count() UInt64
+            __table1.country LowCardinality(String)
+      Expression ((Before ORDER BY + Projection))
+      Header: sum(__table2.total) Decimal(38, 2)
+              count() UInt64
+              __table1.country LowCardinality(String)
+        Aggregating
+        Header: __table1.country LowCardinality(String)
+                count() UInt64
+                sum(__table2.total) Decimal(38, 2)
+          Expression ((Before GROUP BY + ))
+          Header: __table1.country LowCardinality(String)
+                  __table2.total Decimal(12, 2)
+            Join (JOIN FillRightFirst)
+            Header: __table1.country LowCardinality(String)
+                    __table1.id UInt32
+                    __table2.total Decimal(12, 2)
+                    __table2.placed_at DateTime
+                    __table2.status LowCardinality(String)
+              Expression ((JOIN actions + Change column names to column identifiers))
+              Header: __table1.country LowCardinality(String)
+                      __table1.id UInt32
+                ReadFromMergeTree (default.customers)
+                Header: country LowCardinality(String)
+                        id UInt32
+              Expression
+              Header: __table2.total Decimal(12, 2)
+                      __table2.customer_id UInt32
+                      __table2.placed_at DateTime
+                      __table2.status LowCardinality(String)
+                ReadFromMergeTree (default.orders)
+                Header: placed_at DateTime
+                        status LowCardinality(String)
+                        total Decimal(12, 2)
+                        customer_id UInt32

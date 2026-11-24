@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+<meta name="color-scheme" content="light dark">
+<meta name="generator" content="SQLLY">
+<title>Quarterly revenue review</title>
+<style>
+:root{--bg:#ffffff;--surface:#f4f8ff;--text:#0f2544;--dim:#3c5a85;--border:#c6d9ef;--grid:#e3edf9;--accent:#1a5fb4;--good:#2c6a2f;--warn:#8a5a00;--bad:#ac1515;--s0:#1a5fb4;--s1:#c9500a;--s2:#00876a;--s3:#b5608f;--s4:#a86f00;--s5:#3a8fc7;--s6:#7a6a00;--s7:#5f6b78;color-scheme:light dark;}
+@media (prefers-color-scheme: dark){:root{--bg:#0a1a38;--surface:#102448;--text:#e4f1ff;--dim:#8ab4e0;--border:#2a4a7a;--grid:#163056;--accent:#8ec8ff;--good:#42d751;--warn:#f4a725;--bad:#ec6969;--s0:#8ec8ff;--s1:#ff8a5c;--s2:#3cc9a0;--s3:#e38fc0;--s4:#f0b040;--s5:#5fd3f3;--s6:#e8dc5a;--s7:#a9b4c2;}.chart-light{display:none}.chart-dark{display:block}}
+*{box-sizing:border-box}
+body{margin:0 auto;max-width:1040px;padding:32px 24px 48px;background:var(--bg);color:var(--text);font:15px/1.55 'Noto Sans',-apple-system,'Segoe UI','Helvetica Neue',Arial,sans-serif}
+h1{font-size:28px;line-height:1.2;margin:0 0 6px}
+h2{font-size:21px;margin:32px 0 10px}h3{font-size:17px;margin:24px 0 8px}h4,h5,h6{font-size:15px;margin:18px 0 6px}
+a{color:var(--accent)}
+p{margin:8px 0}
+.cover{border-bottom:1px solid var(--border);padding-bottom:16px;margin-bottom:20px}
+.subtitle{color:var(--dim);font-size:17px;margin:0 0 12px}
+.meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:6px 18px;margin:12px 0 0}
+.meta div{display:flex;gap:8px}.meta dt{color:var(--dim);min-width:96px}.meta dd{margin:0;overflow-wrap:anywhere}
+.toc{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 18px;margin:0 0 24px}
+.toc h2{font-size:15px;margin:8px 0}.toc ol{margin:0 0 8px;padding-left:20px}.toc-2{margin-left:14px}.toc-3{margin-left:28px}
+figure{margin:18px 0}
+figcaption{font-weight:600;margin-bottom:6px}
+.badge{display:inline-block;font-size:12px;font-weight:600;border:1px solid var(--warn);color:var(--warn);border-radius:10px;padding:0 8px;margin-left:8px;vertical-align:middle}
+.scroll{overflow-x:auto;border:1px solid var(--border);border-radius:6px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:5px 10px;border-bottom:1px solid var(--grid);text-align:left;vertical-align:top;overflow-wrap:anywhere}
+th{background:var(--surface);font-weight:600;position:sticky;top:0}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+td.null{color:var(--dim)}
+tbody tr:nth-child(even){background:var(--surface)}
+.note{color:var(--dim);font-size:13px}
+.withheld{color:var(--dim);font-style:italic}
+.chart svg,.kpi svg,.image img{max-width:100%;height:auto;display:block}
+.chart-dark{display:none}
+.kpi{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--border);border-radius:8px;padding:12px 14px;margin:10px 0}
+.kpi.good{border-left-color:var(--good)}.kpi.warning{border-left-color:var(--warn)}.kpi.critical{border-left-color:var(--bad)}
+.kpi-label{color:var(--dim);font-size:13px}.kpi-value{font-size:28px;font-weight:700;line-height:1.2;font-variant-numeric:tabular-nums}
+.kpi-delta,.kpi-status{font-size:13px}.up{color:var(--good)}.down{color:var(--bad)}.flat{color:var(--dim)}
+.kpi-status.good{color:var(--good)}.kpi-status.warning{color:var(--warn)}.kpi-status.critical{color:var(--bad)}
+.callout{border-left:4px solid var(--dim);background:var(--surface);border-radius:0 8px 8px 0;padding:8px 14px;margin:14px 0}
+.callout-kind{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin:0}
+.callout.fact{border-left-color:var(--accent)}.callout.derived{border-left-color:var(--s5)}.callout.hypothesis{border-left-color:var(--s3)}
+.callout.recommendation{border-left-color:var(--good)}.callout.warning{border-left-color:var(--warn)}
+.assertion{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--grid)}
+.pill{font-size:12px;font-weight:700;border-radius:10px;padding:1px 9px;color:var(--bg);background:var(--dim)}
+.pill.passed{background:var(--good)}.pill.failed,.pill.error{background:var(--bad)}.pill.warning{background:var(--warn)}
+pre{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 12px;overflow-x:auto;font:13px/1.45 'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;white-space:pre}
+code{font-family:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;font-size:.92em}
+blockquote{border-left:3px solid var(--border);margin:10px 0;padding:2px 14px;color:var(--dim)}
+.provenance{display:grid;grid-template-columns:max-content 1fr;gap:2px 14px;font-size:13px;color:var(--dim);margin:10px 0}
+.provenance dt{font-weight:600}.provenance dd{margin:0;overflow-wrap:anywhere}
+.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px;margin:14px 0}
+.grid>div{min-width:0}
+.span-1{grid-column:span 1}.span-2{grid-column:span 2}.span-3{grid-column:span 3}.span-4{grid-column:span 4}.span-5{grid-column:span 5}.span-6{grid-column:span 6}
+.span-7{grid-column:span 7}.span-8{grid-column:span 8}.span-9{grid-column:span 9}.span-10{grid-column:span 10}.span-11{grid-column:span 11}.span-12{grid-column:span 12}
+.appendix{border-top:1px solid var(--border);margin-top:36px}
+footer{color:var(--dim);font-size:12px;border-top:1px solid var(--border);margin-top:36px;padding-top:10px}
+@media (max-width:720px){.grid{grid-template-columns:1fr}.grid>div{grid-column:auto}body{padding:20px 16px}}
+@media print{:root{--bg:#ffffff;--surface:#f4f8ff;--text:#0f2544;--dim:#3c5a85;--border:#c6d9ef;--grid:#e3edf9;--accent:#1a5fb4;--good:#2c6a2f;--warn:#8a5a00;--bad:#ac1515;--s0:#1a5fb4;--s1:#c9500a;--s2:#00876a;--s3:#b5608f;--s4:#a86f00;--s5:#3a8fc7;--s6:#7a6a00;--s7:#5f6b78;}body{max-width:none;padding:0;font-size:11pt;background:#fff}.chart-light{display:block!important}.chart-dark{display:none!important}.scroll{overflow:visible;border:none}th{position:static}thead{display:table-header-group}tr,figure,.kpi,.callout,.assertion,pre{break-inside:avoid}h2,h3{break-after:avoid}.page-break{break-after:page}.toc{break-after:page}a{color:inherit}}
+@page{margin:18mm 16mm}
+</style>
+</head>
+<body>
+<header class="cover">
+<h1>Quarterly revenue review</h1>
+<p class="subtitle">Q3 2026, all regions</p>
+<dl class="meta">
+<div><dt>Prepared by</dt><dd>Finance analytics</dd></div>
+<div><dt>Generated</dt><dd>2026-11-18T09:30:00Z</dd></div>
+<div><dt>Notebook</dt><dd>nb_9f2c</dd></div>
+<div><dt>Version</dt><dd>sha256:4be1c0ffee</dd></div>
+<div><dt>Data sources</dt><dd>Warehouse · analytics · PostgreSQL · Production</dd></div>
+<div><dt>Parameters</dt><dd>quarter = 2026-Q3</dd></div>
+</dl>
+</header>
+<nav class="toc" aria-labelledby="toc-title">
+<h2 id="toc-title">Contents</h2>
+<ol>
+<li class="toc-1"><a href="#summary">Summary</a></li>
+<li class="toc-2"><a href="#trend">Trend</a></li>
+<li class="toc-1"><a href="#details">Details</a></li>
+</ol>
+</nav>
+<main>
+<h2 id="summary">Summary</h2>
+<div class="grid">
+<div class="span-6">
+<div class="kpi good">
+<div class="kpi-label">Revenue</div>
+<div class="kpi-value">$46,200</div>
+<div class="kpi-delta up">▲ +5.0% vs last quarter</div>
+<div class="kpi-status good">On track</div>
+<div class="chart-light"><svg xmlns="http://www.w3.org/2000/svg" width="220" height="36" viewBox="0 0 220 36" role="img" aria-labelledby="spark-1-l-title spark-1-l-desc" font-family="&apos;Noto Sans&apos;, -apple-system, &apos;Segoe UI&apos;, &apos;Helvetica Neue&apos;, Arial, sans-serif">
+<title id="spark-1-l-title"></title>
+<desc id="spark-1-l-desc"></desc>
+<path d="M2.5 33.5 L56.25 22.16 L110 27.83 L163.75 10.82 L217.5 2.5 L217.5 36 L2.5 36 Z" fill="#1a5fb4" fill-opacity="0.15"/>
+<path d="M2.5 33.5 L56.25 22.16 L110 27.83 L163.75 10.82 L217.5 2.5" fill="none" stroke="#1a5fb4" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="217.5" cy="2.5" r="2.2" fill="#1a5fb4"/>
+</svg>
+</div>
+<div class="chart-dark"><svg xmlns="http://www.w3.org/2000/svg" width="220" height="36" viewBox="0 0 220 36" role="img" aria-labelledby="spark-1-d-title spark-1-d-desc" font-family="&apos;Noto Sans&apos;, -apple-system, &apos;Segoe UI&apos;, &apos;Helvetica Neue&apos;, Arial, sans-serif">
+<title id="spark-1-d-title"></title>
+<desc id="spark-1-d-desc"></desc>
+<path d="M2.5 33.5 L56.25 22.16 L110 27.83 L163.75 10.82 L217.5 2.5 L217.5 36 L2.5 36 Z" fill="#8ec8ff" fill-opacity="0.15"/>
+<path d="M2.5 33.5 L56.25 22.16 L110 27.83 L163.75 10.82 L217.5 2.5" fill="none" stroke="#8ec8ff" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="217.5" cy="2.5" r="2.2" fill="#8ec8ff"/>
+</svg>
+</div>
+</div>
+</div>
+<div class="span-6">
+<div class="kpi critical">
+<div class="kpi-label">Refunds</div>
+<div class="kpi-value">$1,250</div>
+<div class="kpi-delta down">▲ +38.9% vs last quarter</div>
+<div class="kpi-status critical">Off track</div>
+<div class="chart-light"><svg xmlns="http://www.w3.org/2000/svg" width="220" height="36" viewBox="0 0 220 36" role="img" aria-labelledby="spark-2-l-title spark-2-l-desc" font-family="&apos;Noto Sans&apos;, -apple-system, &apos;Segoe UI&apos;, &apos;Helvetica Neue&apos;, Arial, sans-serif">
+<title id="spark-2-l-title"></title>
+<desc id="spark-2-l-desc"></desc>
+<path d="M2.5 33.5 L56.25 22.16 L110 27.83 L163.75 10.82 L217.5 2.5 L217.5 36 L2.5 36 Z" fill="#1a5fb4" fill-opacity="0.15"/>
+<path d="M2.5 33.5 L56.25 22.16 L110 27.83 L163.75 10.82 L217.5 2.5" fill="none" stroke="#1a5fb4" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="217.5" cy="2.5" r="2.2" fill="#1a5fb4"/>
+</svg>
+</div>
+<div class="chart-dark"><svg xmlns="http://www.w3.org/2000/svg" width="220" height="36" viewBox="0 0 220 36" role="img" aria-labelledby="spark-2-d-title spark-2-d-desc" font-family="&apos;Noto Sans&apos;, -apple-system, &apos;Segoe UI&apos;, &apos;Helvetica Neue&apos;, Arial, sans-serif">
+<title id="spark-2-d-title"></title>
+<desc id="spark-2-d-desc"></desc>
+<path d="M2.5 33.5 L56.25 22.16 L110 27.83 L163.75 10.82 L217.5 2.5 L217.5 36 L2.5 36 Z" fill="#8ec8ff" fill-opacity="0.15"/>
+<path d="M2.5 33.5 L56.25 22.16 L110 27.83 L163.75 10.82 L217.5 2.5" fill="none" stroke="#8ec8ff" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="217.5" cy="2.5" r="2.2" fill="#8ec8ff"/>
+</svg>
+</div>
+</div>
+</div>
+</div>
+<p>Revenue grew <strong>5%</strong> quarter over quarter. See <a href="https://sqlly.app/docs" rel="noopener noreferrer nofollow">the dashboard</a> and <code>orders</code> table.</p>
+<ul>
+<li>West led growth</li>
+<li>East was flat</li>
+</ul>
+<div class="scroll"><table>
+<thead><tr><th>Region</th><th class="num">Share</th></tr></thead>
+<tbody>
+<tr><td>West</td><td class="num">41%</td></tr>
+</tbody>
+</table></div>
+<aside class="callout fact">
+<p class="callout-kind">Fact</p>
+<p>September West revenue was 900 above trend.</p>
+<p class="note">Evidence: run_42</p>
+</aside>
+<aside class="callout hypothesis">
+<p class="callout-kind">Hypothesis</p>
+<p><strong>Promo effect</strong></p>
+<p>The spike lines up with the <em>autumn promo</em>.</p>
+</aside>
+<h3 id="trend">Trend</h3>
+<figure class="chart">
+<div class="chart-light"><svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360" role="img" aria-labelledby="chart-3-l-title chart-3-l-desc" font-family="&apos;Noto Sans&apos;, -apple-system, &apos;Segoe UI&apos;, &apos;Helvetica Neue&apos;, Arial, sans-serif">
+<title id="chart-3-l-title">line chart</title>
+<desc id="chart-3-l-desc">line · month, revenue, region · 36</desc>
+<rect width="640" height="360" fill="#ffffff"/>
+<text x="12" y="26" font-size="14" fill="#0f2544" font-weight="600">line chart</text>
+<rect x="12" y="333.5" width="9" height="9" fill="#1a5fb4"/>
+<text x="26" y="342" font-size="10.5" fill="#3c5a85">West</text>
+<rect x="64.51" y="333.5" width="9" height="9" fill="#c9500a"/>
+<text x="78.51" y="342" font-size="10.5" fill="#3c5a85">East</text>
+<rect x="113.06" y="333.5" width="9" height="9" fill="#00876a"/>
+<text x="127.06" y="342" font-size="10.5" fill="#3c5a85">North</text>
+<line x1="67.78" y1="309.5" x2="624" y2="309.5" stroke="#e3edf9" stroke-width="1"/>
+<text x="61.78" y="313" font-size="10" fill="#3c5a85" text-anchor="end">$1,000</text>
+<line x1="67.78" y1="242.13" x2="624" y2="242.13" stroke="#e3edf9" stroke-width="1"/>
+<text x="61.78" y="245.63" font-size="10" fill="#3c5a85" text-anchor="end">$2,000</text>
+<line x1="67.78" y1="174.75" x2="624" y2="174.75" stroke="#e3edf9" stroke-width="1"/>
+<text x="61.78" y="178.25" font-size="10" fill="#3c5a85" text-anchor="end">$3,000</text>
+<line x1="67.78" y1="107.38" x2="624" y2="107.38" stroke="#e3edf9" stroke-width="1"/>
+<text x="61.78" y="110.88" font-size="10" fill="#3c5a85" text-anchor="end">$4,000</text>
+<line x1="67.78" y1="40" x2="624" y2="40" stroke="#e3edf9" stroke-width="1"/>
+<text x="61.78" y="43.5" font-size="10" fill="#3c5a85" text-anchor="end">$5,000</text>
+<line x1="67.78" y1="309.5" x2="67.78" y2="312.5" stroke="#c6d9ef" stroke-width="1"/>
+<text x="67.78" y="323.5" font-size="10" fill="#3c5a85" text-anchor="middle">2026-01</text>
+<line x1="166.03" y1="309.5" x2="166.03" y2="312.5" stroke="#c6d9ef" stroke-width="1"/>
+<text x="166.03" y="323.5" font-size="10" fill="#3c5a85" text-anchor="middle">2026-03</text>
+<line x1="267.62" y1="309.5" x2="267.62" y2="312.5" stroke="#c6d9ef" stroke-width="1"/>
+<text x="267.62" y="323.5" font-size="10" fill="#3c5a85" text-anchor="middle">2026-05</text>
+<line x1="369.2" y1="309.5" x2="369.2" y2="312.5" stroke="#c6d9ef" stroke-width="1"/>
+<text x="369.2" y="323.5" font-size="10" fill="#3c5a85" text-anchor="middle">2026-07</text>
+<line x1="472.46" y1="309.5" x2="472.46" y2="312.5" stroke="#c6d9ef" stroke-width="1"/>
+<text x="472.46" y="323.5" font-size="10" fill="#3c5a85" text-anchor="middle">2026-09</text>
+<line x1="574.04" y1="309.5" x2="574.04" y2="312.5" stroke="#c6d9ef" stroke-width="1"/>
+<text x="574.04" y="323.5" font-size="10" fill="#3c5a85" text-anchor="middle">2026-11</text>
+<path d="M67.78 303.74 L119.41 297.98 L166.03 292.22 L217.66 286.46 L267.62 280.7 L319.24 274.94 L369.2 269.18 L420.83 263.42 L472.46 197.02 L522.41 251.89 L574.04 246.13 L624 240.37" fill="none" stroke="#1a5fb4" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="67.78" cy="303.74" r="2.6" fill="#1a5fb4"/>
+<circle cx="119.41" cy="297.98" r="2.6" fill="#1a5fb4"/>
+<circle cx="166.03" cy="292.22" r="2.6" fill="#1a5fb4"/>
+<circle cx="217.66" cy="286.46" r="2.6" fill="#1a5fb4"/>
+<circle cx="267.62" cy="280.7" r="2.6" fill="#1a5fb4"/>
+<circle cx="319.24" cy="274.94" r="2.6" fill="#1a5fb4"/>
+<circle cx="369.2" cy="269.18" r="2.6" fill="#1a5fb4"/>
+<circle cx="420.83" cy="263.42" r="2.6" fill="#1a5fb4"/>
+<circle cx="472.46" cy="197.02" r="2.6" fill="#1a5fb4"/>
+<circle cx="522.41" cy="251.89" r="2.6" fill="#1a5fb4"/>
+<circle cx="574.04" cy="246.13" r="2.6" fill="#1a5fb4"/>
+<circle cx="624" cy="240.37" r="2.6" fill="#1a5fb4"/>
+<path d="M67.78 297.98 L119.41 286.46 L166.03 274.94 L217.66 263.42 L267.62 251.89 L319.24 240.37 L369.2 228.85 L420.83 217.33 L472.46 205.81 L522.41 194.29 L574.04 182.77 L624 171.25" fill="none" stroke="#c9500a" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="67.78" cy="297.98" r="2.6" fill="#c9500a"/>
+<circle cx="119.41" cy="286.46" r="2.6" fill="#c9500a"/>
+<circle cx="166.03" cy="274.94" r="2.6" fill="#c9500a"/>
+<circle cx="217.66" cy="263.42" r="2.6" fill="#c9500a"/>
+<circle cx="267.62" cy="251.89" r="2.6" fill="#c9500a"/>
+<circle cx="319.24" cy="240.37" r="2.6" fill="#c9500a"/>
+<circle cx="369.2" cy="228.85" r="2.6" fill="#c9500a"/>
+<circle cx="420.83" cy="217.33" r="2.6" fill="#c9500a"/>
+<circle cx="472.46" cy="205.81" r="2.6" fill="#c9500a"/>
+<circle cx="522.41" cy="194.29" r="2.6" fill="#c9500a"/>
+<circle cx="574.04" cy="182.77" r="2.6" fill="#c9500a"/>
+<circle cx="624" cy="171.25" r="2.6" fill="#c9500a"/>
+<path d="M67.78 292.22 L119.41 274.94 L166.03 257.65 L217.66 240.37 L267.62 223.09 L319.24 205.81 L369.2 188.53 L420.83 171.25 L472.46 153.96 L522.41 136.68 L574.04 119.4 L624 102.12" fill="none" stroke="#00876a" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="67.78" cy="292.22" r="2.6" fill="#00876a"/>
+<circle cx="119.41" cy="274.94" r="2.6" fill="#00876a"/>
+<circle cx="166.03" cy="257.65" r="2.6" fill="#00876a"/>
+<circle cx="217.66" cy="240.37" r="2.6" fill="#00876a"/>
+<circle cx="267.62" cy="223.09" r="2.6" fill="#00876a"/>
+<circle cx="319.24" cy="205.81" r="2.6" fill="#00876a"/>
+<circle cx="369.2" cy="188.53" r="2.6" fill="#00876a"/>
+<circle cx="420.83" cy="171.25" r="2.6" fill="#00876a"/>
+<circle cx="472.46" cy="153.96" r="2.6" fill="#00876a"/>
+<circle cx="522.41" cy="136.68" r="2.6" fill="#00876a"/>
+<circle cx="574.04" cy="119.4" r="2.6" fill="#00876a"/>
+<circle cx="624" cy="102.12" r="2.6" fill="#00876a"/>
+<line x1="472.46" y1="40" x2="472.46" y2="309.5" stroke="#3c5a85" stroke-width="1" stroke-dasharray="2 3"/>
+<text x="469.46" y="50" font-size="10" fill="#0f2544" text-anchor="end">Promo</text>
+<text x="22.5" y="174.75" font-size="10.5" fill="#3c5a85" text-anchor="middle" transform="rotate(-90 22.5 174.75)">Revenue</text>
+</svg>
+</div>
+<div class="chart-dark"><svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360" role="img" aria-labelledby="chart-3-d-title chart-3-d-desc" font-family="&apos;Noto Sans&apos;, -apple-system, &apos;Segoe UI&apos;, &apos;Helvetica Neue&apos;, Arial, sans-serif">
+<title id="chart-3-d-title">line chart</title>
+<desc id="chart-3-d-desc">line · month, revenue, region · 36</desc>
+<rect width="640" height="360" fill="#0a1a38"/>
+<text x="12" y="26" font-size="14" fill="#e4f1ff" font-weight="600">line chart</text>
+<rect x="12" y="333.5" width="9" height="9" fill="#8ec8ff"/>
+<text x="26" y="342" font-size="10.5" fill="#8ab4e0">West</text>
+<rect x="64.51" y="333.5" width="9" height="9" fill="#ff8a5c"/>
+<text x="78.51" y="342" font-size="10.5" fill="#8ab4e0">East</text>
+<rect x="113.06" y="333.5" width="9" height="9" fill="#3cc9a0"/>
+<text x="127.06" y="342" font-size="10.5" fill="#8ab4e0">North</text>
+<line x1="67.78" y1="309.5" x2="624" y2="309.5" stroke="#163056" stroke-width="1"/>
+<text x="61.78" y="313" font-size="10" fill="#8ab4e0" text-anchor="end">$1,000</text>
+<line x1="67.78" y1="242.13" x2="624" y2="242.13" stroke="#163056" stroke-width="1"/>
+<text x="61.78" y="245.63" font-size="10" fill="#8ab4e0" text-anchor="end">$2,000</text>
+<line x1="67.78" y1="174.75" x2="624" y2="174.75" stroke="#163056" stroke-width="1"/>
+<text x="61.78" y="178.25" font-size="10" fill="#8ab4e0" text-anchor="end">$3,000</text>
+<line x1="67.78" y1="107.38" x2="624" y2="107.38" stroke="#163056" stroke-width="1"/>
+<text x="61.78" y="110.88" font-size="10" fill="#8ab4e0" text-anchor="end">$4,000</text>
+<line x1="67.78" y1="40" x2="624" y2="40" stroke="#163056" stroke-width="1"/>
+<text x="61.78" y="43.5" font-size="10" fill="#8ab4e0" text-anchor="end">$5,000</text>
+<line x1="67.78" y1="309.5" x2="67.78" y2="312.5" stroke="#2a4a7a" stroke-width="1"/>
+<text x="67.78" y="323.5" font-size="10" fill="#8ab4e0" text-anchor="middle">2026-01</text>
+<line x1="166.03" y1="309.5" x2="166.03" y2="312.5" stroke="#2a4a7a" stroke-width="1"/>
+<text x="166.03" y="323.5" font-size="10" fill="#8ab4e0" text-anchor="middle">2026-03</text>
+<line x1="267.62" y1="309.5" x2="267.62" y2="312.5" stroke="#2a4a7a" stroke-width="1"/>
+<text x="267.62" y="323.5" font-size="10" fill="#8ab4e0" text-anchor="middle">2026-05</text>
+<line x1="369.2" y1="309.5" x2="369.2" y2="312.5" stroke="#2a4a7a" stroke-width="1"/>
+<text x="369.2" y="323.5" font-size="10" fill="#8ab4e0" text-anchor="middle">2026-07</text>
+<line x1="472.46" y1="309.5" x2="472.46" y2="312.5" stroke="#2a4a7a" stroke-width="1"/>
+<text x="472.46" y="323.5" font-size="10" fill="#8ab4e0" text-anchor="middle">2026-09</text>
+<line x1="574.04" y1="309.5" x2="574.04" y2="312.5" stroke="#2a4a7a" stroke-width="1"/>
+<text x="574.04" y="323.5" font-size="10" fill="#8ab4e0" text-anchor="middle">2026-11</text>
+<path d="M67.78 303.74 L119.41 297.98 L166.03 292.22 L217.66 286.46 L267.62 280.7 L319.24 274.94 L369.2 269.18 L420.83 263.42 L472.46 197.02 L522.41 251.89 L574.04 246.13 L624 240.37" fill="none" stroke="#8ec8ff" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="67.78" cy="303.74" r="2.6" fill="#8ec8ff"/>
+<circle cx="119.41" cy="297.98" r="2.6" fill="#8ec8ff"/>
+<circle cx="166.03" cy="292.22" r="2.6" fill="#8ec8ff"/>
+<circle cx="217.66" cy="286.46" r="2.6" fill="#8ec8ff"/>
+<circle cx="267.62" cy="280.7" r="2.6" fill="#8ec8ff"/>
+<circle cx="319.24" cy="274.94" r="2.6" fill="#8ec8ff"/>
+<circle cx="369.2" cy="269.18" r="2.6" fill="#8ec8ff"/>
+<circle cx="420.83" cy="263.42" r="2.6" fill="#8ec8ff"/>
+<circle cx="472.46" cy="197.02" r="2.6" fill="#8ec8ff"/>
+<circle cx="522.41" cy="251.89" r="2.6" fill="#8ec8ff"/>
+<circle cx="574.04" cy="246.13" r="2.6" fill="#8ec8ff"/>
+<circle cx="624" cy="240.37" r="2.6" fill="#8ec8ff"/>
+<path d="M67.78 297.98 L119.41 286.46 L166.03 274.94 L217.66 263.42 L267.62 251.89 L319.24 240.37 L369.2 228.85 L420.83 217.33 L472.46 205.81 L522.41 194.29 L574.04 182.77 L624 171.25" fill="none" stroke="#ff8a5c" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="67.78" cy="297.98" r="2.6" fill="#ff8a5c"/>
+<circle cx="119.41" cy="286.46" r="2.6" fill="#ff8a5c"/>
+<circle cx="166.03" cy="274.94" r="2.6" fill="#ff8a5c"/>
+<circle cx="217.66" cy="263.42" r="2.6" fill="#ff8a5c"/>
+<circle cx="267.62" cy="251.89" r="2.6" fill="#ff8a5c"/>
+<circle cx="319.24" cy="240.37" r="2.6" fill="#ff8a5c"/>
+<circle cx="369.2" cy="228.85" r="2.6" fill="#ff8a5c"/>
+<circle cx="420.83" cy="217.33" r="2.6" fill="#ff8a5c"/>
+<circle cx="472.46" cy="205.81" r="2.6" fill="#ff8a5c"/>
+<circle cx="522.41" cy="194.29" r="2.6" fill="#ff8a5c"/>
+<circle cx="574.04" cy="182.77" r="2.6" fill="#ff8a5c"/>
+<circle cx="624" cy="171.25" r="2.6" fill="#ff8a5c"/>
+<path d="M67.78 292.22 L119.41 274.94 L166.03 257.65 L217.66 240.37 L267.62 223.09 L319.24 205.81 L369.2 188.53 L420.83 171.25 L472.46 153.96 L522.41 136.68 L574.04 119.4 L624 102.12" fill="none" stroke="#3cc9a0" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="67.78" cy="292.22" r="2.6" fill="#3cc9a0"/>
+<circle cx="119.41" cy="274.94" r="2.6" fill="#3cc9a0"/>
+<circle cx="166.03" cy="257.65" r="2.6" fill="#3cc9a0"/>
+<circle cx="217.66" cy="240.37" r="2.6" fill="#3cc9a0"/>
+<circle cx="267.62" cy="223.09" r="2.6" fill="#3cc9a0"/>
+<circle cx="319.24" cy="205.81" r="2.6" fill="#3cc9a0"/>
+<circle cx="369.2" cy="188.53" r="2.6" fill="#3cc9a0"/>
+<circle cx="420.83" cy="171.25" r="2.6" fill="#3cc9a0"/>
+<circle cx="472.46" cy="153.96" r="2.6" fill="#3cc9a0"/>
+<circle cx="522.41" cy="136.68" r="2.6" fill="#3cc9a0"/>
+<circle cx="574.04" cy="119.4" r="2.6" fill="#3cc9a0"/>
+<circle cx="624" cy="102.12" r="2.6" fill="#3cc9a0"/>
+<line x1="472.46" y1="40" x2="472.46" y2="309.5" stroke="#8ab4e0" stroke-width="1" stroke-dasharray="2 3"/>
+<text x="469.46" y="50" font-size="10" fill="#e4f1ff" text-anchor="end">Promo</text>
+<text x="22.5" y="174.75" font-size="10.5" fill="#8ab4e0" text-anchor="middle" transform="rotate(-90 22.5 174.75)">Revenue</text>
+</svg>
+</div>
+</figure>
+<figure class="table">
+<figcaption>Revenue by month</figcaption>
+<div class="scroll"><table>
+<thead><tr><th scope="col">month</th><th scope="col">region</th><th scope="col" class="num">revenue</th><th scope="col" class="num">orders</th><th scope="col" class="num">low</th><th scope="col" class="num">high</th></tr></thead>
+<tbody>
+<tr><td>2026-01-01</td><td>West</td><td class="num">$1,085.50</td><td class="num">43</td><td class="num">976.95</td><td class="num">1194.05</td></tr>
+<tr><td>2026-01-01</td><td>East</td><td class="num">$1,171.00</td><td class="num">48</td><td class="num">1053.9</td><td class="num">1288.1</td></tr>
+<tr><td>2026-01-01</td><td>North</td><td class="num">$1,256.50</td><td class="num">53</td><td class="num">1130.85</td><td class="num">1382.15</td></tr>
+<tr><td>2026-02-01</td><td>West</td><td class="num">$1,171.00</td><td class="num">46</td><td class="num">1053.9</td><td class="num">1288.1</td></tr>
+<tr><td>2026-02-01</td><td>East</td><td class="num">$1,342.00</td><td class="num">51</td><td class="num">1207.8</td><td class="num">1476.2</td></tr>
+<tr><td>2026-02-01</td><td>North</td><td class="num">$1,513.00</td><td class="num">56</td><td class="num">1361.7</td><td class="num">1664.3</td></tr>
+<tr><td>2026-03-01</td><td>West</td><td class="num">$1,256.50</td><td class="num">49</td><td class="num">1130.85</td><td class="num">1382.15</td></tr>
+<tr><td>2026-03-01</td><td>East</td><td class="num">$1,513.00</td><td class="num">54</td><td class="num">1361.7</td><td class="num">1664.3</td></tr>
+<tr><td>2026-03-01</td><td>North</td><td class="num">$1,769.50</td><td class="num">59</td><td class="num">1592.55</td><td class="num">1946.45</td></tr>
+<tr><td>2026-04-01</td><td>West</td><td class="num">$1,342.00</td><td class="num">52</td><td class="num">1207.8</td><td class="num">1476.2</td></tr>
+<tr><td>2026-04-01</td><td>East</td><td class="num">$1,684.00</td><td class="num">57</td><td class="num">1515.6</td><td class="num">1852.4</td></tr>
+<tr><td>2026-04-01</td><td>North</td><td class="num">$2,026.00</td><td class="num">62</td><td class="num">1823.4</td><td class="num">2228.6</td></tr>
+<tr><td>2026-05-01</td><td>West</td><td class="num">$1,427.50</td><td class="num">55</td><td class="num">1284.75</td><td class="num">1570.25</td></tr>
+<tr><td>2026-05-01</td><td>East</td><td class="num">$1,855.00</td><td class="num">60</td><td class="num">1669.5</td><td class="num">2040.5</td></tr>
+<tr><td>2026-05-01</td><td>North</td><td class="num">$2,282.50</td><td class="num">65</td><td class="num">2054.25</td><td class="num">2510.75</td></tr>
+<tr><td>2026-06-01</td><td>West</td><td class="num">$1,513.00</td><td class="num">41</td><td class="num">1361.7</td><td class="num">1664.3</td></tr>
+<tr><td>2026-06-01</td><td>East</td><td class="num">$2,026.00</td><td class="num">46</td><td class="num">1823.4</td><td class="num">2228.6</td></tr>
+<tr><td>2026-06-01</td><td>North</td><td class="num">$2,539.00</td><td class="num">51</td><td class="num">2285.1</td><td class="num">2792.9</td></tr>
+<tr><td>2026-07-01</td><td>West</td><td class="num">$1,598.50</td><td class="num">44</td><td class="num">1438.65</td><td class="num">1758.35</td></tr>
+<tr><td>2026-07-01</td><td>East</td><td class="num">$2,197.00</td><td class="num">49</td><td class="num">1977.3</td><td class="num">2416.7</td></tr>
+<tr><td>2026-07-01</td><td>North</td><td class="num">$2,795.50</td><td class="num">54</td><td class="num">2515.95</td><td class="num">3075.05</td></tr>
+<tr><td>2026-08-01</td><td>West</td><td class="num">$1,684.00</td><td class="num">47</td><td class="num">1515.6</td><td class="num">1852.4</td></tr>
+<tr><td>2026-08-01</td><td>East</td><td class="num">$2,368.00</td><td class="num">52</td><td class="num">2131.2</td><td class="num">2604.8</td></tr>
+<tr><td>2026-08-01</td><td>North</td><td class="num">$3,052.00</td><td class="num">57</td><td class="num">2746.8</td><td class="num">3357.2</td></tr>
+<tr><td>2026-09-01</td><td>West</td><td class="num">$2,669.50</td><td class="num">50</td><td class="num">2402.55</td><td class="num">2936.45</td></tr>
+<tr><td>2026-09-01</td><td>East</td><td class="num">$2,539.00</td><td class="num">55</td><td class="num">2285.1</td><td class="num">2792.9</td></tr>
+<tr><td>2026-09-01</td><td>North</td><td class="num">$3,308.50</td><td class="num">60</td><td class="num">2977.65</td><td class="num">3639.35</td></tr>
+<tr><td>2026-10-01</td><td>West</td><td class="num">$1,855.00</td><td class="num">53</td><td class="num">1669.5</td><td class="num">2040.5</td></tr>
+<tr><td>2026-10-01</td><td>East</td><td class="num">$2,710.00</td><td class="num">58</td><td class="num">2439</td><td class="num">2981</td></tr>
+<tr><td>2026-10-01</td><td>North</td><td class="num">$3,565.00</td><td class="num">63</td><td class="num">3208.5</td><td class="num">3921.5</td></tr>
+<tr><td>2026-11-01</td><td>West</td><td class="num">$1,940.50</td><td class="num">56</td><td class="num">1746.45</td><td class="num">2134.55</td></tr>
+<tr><td>2026-11-01</td><td>East</td><td class="num">$2,881.00</td><td class="num">61</td><td class="num">2592.9</td><td class="num">3169.1</td></tr>
+<tr><td>2026-11-01</td><td>North</td><td class="num">$3,821.50</td><td class="num">66</td><td class="num">3439.35</td><td class="num">4203.65</td></tr>
+<tr><td>2026-12-01</td><td>West</td><td class="num">$2,026.00</td><td class="num">42</td><td class="num">1823.4</td><td class="num">2228.6</td></tr>
+<tr><td>2026-12-01</td><td>East</td><td class="num">$3,052.00</td><td class="num">47</td><td class="num">2746.8</td><td class="num">3357.2</td></tr>
+<tr><td>2026-12-01</td><td>North</td><td class="num">$4,078.00</td><td class="num">52</td><td class="num">3670.2</td><td class="num">4485.8</td></tr>
+</tbody>
+</table></div>
+</figure>
+<div class="assertion"><span class="pill passed">Passed</span><strong>No negative revenue</strong><span class="note">Expected: 0 rows</span><span class="note">Actual: 0 rows</span></div>
+<div class="assertion"><span class="pill failed">Failed</span><strong>Row count within range</strong><span class="note">Expected: 30..40</span><span class="note">Actual: 36</span><span>Late partition</span></div>
+<div class="page-break"></div>
+<section>
+<h2 id="details">Details</h2>
+<figure class="table">
+<figcaption>Typed values<span class="badge">Truncated at 2 rows</span></figcaption>
+<div class="scroll"><table>
+<thead><tr><th scope="col">sku</th><th scope="col" class="num">amount</th><th scope="col" class="num">big_id</th><th scope="col" class="num">huge</th><th scope="col">shipped</th><th scope="col">at</th><th scope="col">ok</th><th scope="col" class="num">ratio</th><th scope="col">note</th><th scope="col">blob</th></tr></thead>
+<tbody>
+<tr><td>00123</td><td class="num">12345.6789012345</td><td class="num">9007199254740993</td><td class="num">123456789012345678901234567890</td><td>2026-11-18</td><td>2026-11-18 14:30:15</td><td>true</td><td class="num">25.6%</td><td>=HYPERLINK(&quot;http://evil.example&quot;,&quot;click&quot;)</td><td>0xDEAD</td></tr>
+<tr><td>A-7</td><td class="num">-0.0000000001</td><td class="num">-42</td><td class="num">7</td><td class="null"></td><td>not a date</td><td>false</td><td class="num">NaN</td><td>+1 call me</td><td class="null"></td></tr>
+</tbody>
+</table></div>
+<p class="note">Showing 2 of 50000 rows</p>
+</figure>
+<figure class="code">
+<figcaption>c_revenue01</figcaption>
+<pre><code class="language-sql">SELECT month, region, sum(revenue) AS revenue
+FROM sales
+WHERE quarter = :quarter
+GROUP BY 1, 2;</code></pre>
+</figure>
+<dl class="provenance" aria-label="Provenance">
+<dt>Cell</dt><dd>c_revenue01</dd>
+<dt>Run</dt><dd>run_42</dd>
+<dt>Connection</dt><dd>Warehouse</dd>
+<dt>Database</dt><dd>analytics</dd>
+<dt>Environment</dt><dd>Production</dd>
+<dt>Extracted</dt><dd>2026-11-18T09:29:58Z</dd>
+<dt>SQL hash</dt><dd>9a0f3b</dd>
+<dt>Rows</dt><dd>36</dd>
+</dl>
+<figure class="image">
+<img alt="Logo" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAMCAYAAAB4MH11AAAAy0lEQVR4Ae3AA6AkWZbG8f937o3IzKdyS2Oubdu2bdu2bdu2bWmMnpZKr54yMyLu+Xa3anqmhztr1U8Pfu/fOj5y+FmY9zYc5z/GrUjffdd3v9nn6Mb3+vnfMrw2/wkkfY1ueK+fN/95btUN7/Xz5j8PuuG9ft7850E3vNfPm/886Ib3+nnznwfd8F4/b/7zoBve6+fNfx5043v//K7NMf4ziGfohvf+uc/G+iz+M8ifI4Ab3/sXvtr4rTEP4j+CeAb4u+/67rf47H8EqesxnMJXai8AAAAASUVORK5CYII=">
+<figcaption class="note">Brand mark</figcaption>
+</figure>
+</section>
+</main>
+<footer>Generated 2026-11-18T09:30:00Z · Version sha256:4be1c0ffee</footer>
+</body>
+</html>

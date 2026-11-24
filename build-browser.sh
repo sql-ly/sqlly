@@ -7,13 +7,13 @@
 # script is the optional full static-site bundle.
 #
 # Compiles the real gpui application stack to WebAssembly via gpui's web
-# platform backend (gpui_web, zed git tree — see [patch.crates-io] in
-# client/Cargo.toml) and assembles a self-contained static site in
+# platform backend, with the opt-in translator locator available to the
+# translation manager, and assembles a self-contained static site in
 # client/apps/browser/dist/:
 #   index.html                     (from client/apps/browser/www)
 #   sqlly_browser.js + sqlly_browser_bg.wasm   (wasm-bindgen output)
-#   assets/icons/*.svg             (gpui-component icon set, fetched at
-#                                   runtime by the wasm asset loader)
+#   fonts/NotoSans{JP,KR,TC}-*     (interface faces fetched when the
+#                                   language needs them)
 #
 # Serve dist/ from any static host; the wasm module must come over HTTP,
 # not file://.
@@ -69,8 +69,8 @@ if [ -n "${crate_bindgen:-}" ] && [ "$crate_bindgen" != "$cli_bindgen" ]; then
   exit 1
 fi
 
-echo "==> cargo $TOOLCHAIN build -p sqlly-browser --target $TARGET --profile $PROFILE"
-cargo "$TOOLCHAIN" build -p sqlly-browser --target "$TARGET" --profile "$PROFILE"
+echo "==> cargo $TOOLCHAIN build -p sqlly-browser --target $TARGET --profile $PROFILE --features translator-locator"
+cargo "$TOOLCHAIN" build -p sqlly-browser --target "$TARGET" --profile "$PROFILE" --features translator-locator
 
 # CI points CARGO_TARGET_DIR at a persistent tree outside the checkout (the
 # release pipeline's wasm job) so `checkout: clean` can't wipe it; honor it
@@ -95,8 +95,19 @@ cp apps/browser/www/index.html "$dist/"
 cp apps/browser/www/boot.js "$dist/"
 # The worker that keeps large results in browser storage (OPFS).
 cp apps/browser/www/spill-worker.js "$dist/"
+# Copy/Cut fallback for pages served over plain HTTP (no navigator.clipboard).
+cp apps/browser/www/clipboard-fallback.js "$dist/"
+# Notebook files in browser storage and on the user's computer.
+cp apps/browser/www/notebook-files.js "$dist/"
 # The loading screen shows the app logo before any wasm is available.
 cp "$repo_root/assets/sqlly2.svg" "$dist/"
+# Interface faces fetched when the language needs them (Japanese, Korean,
+# Traditional Chinese; see apps/browser/src/fonts.rs). The default faces are
+# compiled into the wasm instead.
+mkdir -p "$dist/fonts"
+for face in JP KR TC; do
+  cp "apps/browser/fonts/NotoSans$face-Regular-subset.ttf" "apps/browser/fonts/NotoSans$face-OFL.txt" "$dist/fonts/"
+done
 
 # NOTE: gpui-component's icon SVGs are embedded directly in the wasm binary
 # (apps/browser embeds apps/browser/assets/icons via include_dir), so there is

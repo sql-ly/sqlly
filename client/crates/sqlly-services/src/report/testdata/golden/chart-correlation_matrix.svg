@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360" role="img" aria-labelledby="correlation-matrix-title correlation-matrix-desc" font-family="&apos;Noto Sans&apos;, -apple-system, &apos;Segoe UI&apos;, &apos;Helvetica Neue&apos;, Arial, sans-serif">
+<title id="correlation-matrix-title">correlation_matrix chart</title>
+<desc id="correlation-matrix-desc">correlation_matrix · spend, signups, reach, churn · 40</desc>
+<rect width="640" height="360" fill="#ffffff"/>
+<text x="12" y="26" font-size="14" fill="#0f2544" font-weight="600">correlation_matrix chart</text>
+<text x="86.82" y="47" font-size="10" fill="#3c5a85" text-anchor="middle">spend</text>
+<text x="146.82" y="47" font-size="10" fill="#3c5a85" text-anchor="middle">signups</text>
+<text x="206.82" y="47" font-size="10" fill="#3c5a85" text-anchor="middle">reach</text>
+<text x="266.82" y="47" font-size="10" fill="#3c5a85" text-anchor="middle">churn</text>
+<text x="50.82" y="85.5" font-size="10" fill="#3c5a85" text-anchor="end">spend</text>
+<rect x="57.32" y="52.5" width="59" height="59" fill="#1a5fb4"/>
+<text x="86.82" y="85.5" font-size="10" fill="#ffffff" text-anchor="middle">1.00</text>
+<rect x="117.32" y="52.5" width="59" height="59" fill="#1c60b5"/>
+<text x="146.82" y="85.5" font-size="10" fill="#ffffff" text-anchor="middle">0.99</text>
+<rect x="177.32" y="52.5" width="59" height="59" fill="#eff5fd"/>
+<text x="206.82" y="85.5" font-size="10" fill="#0f2544" text-anchor="middle">0.02</text>
+<rect x="237.32" y="52.5" width="59" height="59" fill="#c9520d"/>
+<text x="266.82" y="85.5" font-size="10" fill="#ffffff" text-anchor="middle">-0.99</text>
+<text x="50.82" y="145.5" font-size="10" fill="#3c5a85" text-anchor="end">signups</text>
+<rect x="57.32" y="112.5" width="59" height="59" fill="#1c60b5"/>
+<text x="86.82" y="145.5" font-size="10" fill="#ffffff" text-anchor="middle">0.99</text>
+<rect x="117.32" y="112.5" width="59" height="59" fill="#1a5fb4"/>
+<text x="146.82" y="145.5" font-size="10" fill="#ffffff" text-anchor="middle">1.00</text>
+<rect x="177.32" y="112.5" width="59" height="59" fill="#f0f5fe"/>
+<text x="206.82" y="145.5" font-size="10" fill="#0f2544" text-anchor="middle">0.02</text>
+<rect x="237.32" y="112.5" width="59" height="59" fill="#ca5410"/>
+<text x="266.82" y="145.5" font-size="10" fill="#ffffff" text-anchor="middle">-0.98</text>
+<text x="50.82" y="205.5" font-size="10" fill="#3c5a85" text-anchor="end">reach</text>
+<rect x="57.32" y="172.5" width="59" height="59" fill="#eff5fd"/>
+<text x="86.82" y="205.5" font-size="10" fill="#0f2544" text-anchor="middle">0.02</text>
+<rect x="117.32" y="172.5" width="59" height="59" fill="#f0f5fe"/>
+<text x="146.82" y="205.5" font-size="10" fill="#0f2544" text-anchor="middle">0.02</text>
+<rect x="177.32" y="172.5" width="59" height="59" fill="#1a5fb4"/>
+<text x="206.82" y="205.5" font-size="10" fill="#ffffff" text-anchor="middle">1.00</text>
+<rect x="237.32" y="172.5" width="59" height="59" fill="#f3f2f7"/>
+<text x="266.82" y="205.5" font-size="10" fill="#0f2544" text-anchor="middle">-0.03</text>
+<text x="50.82" y="265.5" font-size="10" fill="#3c5a85" text-anchor="end">churn</text>
+<rect x="57.32" y="232.5" width="59" height="59" fill="#c9520d"/>
+<text x="86.82" y="265.5" font-size="10" fill="#ffffff" text-anchor="middle">-0.99</text>
+<rect x="117.32" y="232.5" width="59" height="59" fill="#ca5410"/>
+<text x="146.82" y="265.5" font-size="10" fill="#ffffff" text-anchor="middle">-0.98</text>
+<rect x="177.32" y="232.5" width="59" height="59" fill="#f3f2f7"/>
+<text x="206.82" y="265.5" font-size="10" fill="#0f2544" text-anchor="middle">-0.03</text>
+<rect x="237.32" y="232.5" width="59" height="59" fill="#1a5fb4"/>
+<text x="266.82" y="265.5" font-size="10" fill="#ffffff" text-anchor="middle">1.00</text>
+<text x="12" y="346.5" font-size="10" fill="#3c5a85">-1</text>
+<rect x="26.94" y="338" width="18" height="10" fill="#c9500a"/>
+<rect x="44.94" y="338" width="18" height="10" fill="#dfa485"/>
+<rect x="62.94" y="338" width="18" height="10" fill="#f4f8ff"/>
+<rect x="80.94" y="338" width="18" height="10" fill="#87acda"/>
+<rect x="98.94" y="338" width="18" height="10" fill="#1a5fb4"/>
+<text x="122.94" y="346.5" font-size="10" fill="#3c5a85">+1</text>
+</svg>

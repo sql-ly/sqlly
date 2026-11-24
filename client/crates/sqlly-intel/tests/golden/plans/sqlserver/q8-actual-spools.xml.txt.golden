@@ -1,0 +1,331 @@
+format: sqlserver-xml (Certain)
+statements: 2
+
+== statement 1
+cardinality_estimator_version: 160
+cpu_time_ms: 3
+degree_of_parallelism: 1
+dialect: "SqlServer"
+early_abort_reason: "GoodEnoughPlanFound"
+estimated_rows: 114
+execution_time_ms: 3
+has_actuals: yes
+memory_grant: {granted_kb=0 max_used_kb=0 serial_desired_kb=0 serial_required_kb=0}
+notes: ["Compile CPU: 8 ms", "Compile memory: 336 kB", "Cached plan size: 48 kB"]
+optimization_level: "FULL"
+parameters: [{compiled_value="1" data_type="int" name="@1" runtime_value="1"}, {compiled_value="20" data_type="tinyint" name="@2" runtime_value="20"}]
+planning_time_ms: 8
+query_hash: "0xE9034617F5B5C966"
+query_plan_hash: "0xF6F44DDB3EEACE7C"
+settings: [{name="QUOTED_IDENTIFIER" value="false"}, {name="ARITHABORT" value="false"}, {name="CONCAT_NULL_YIELDS_NULL" value="true"}, {name="ANSI_NULLS" value="true"}, {name="ANSI_PADDING" value="true"}, {name="ANSI_WARNINGS" value="true"}, {name="NUMERIC_ROUNDABORT" value="false"}]
+source_format: "sqlserver-xml"
+statement_text: "UPDATE [dbo].[orders] set [customer_id] = [customer_id]+@1 WHERE [customer_id]<@2"
+statement_type: "UPDATE"
+statistics_used: [{last_update="2026-11-23T23:03:31.64" modification_count=0 sampling_percent=100 schema="dbo" statistics="IX_orders_customer" table="orders"}]
+total_subtree_cost: 0.044174
+warnings: ["Spool"]
+operators: 6
+  #1 Clustered Index Update [Update]
+      actual_cpu_ms: 3
+      actual_rows: 114
+      actual_rows_total: 114
+      actual_self_time_ms: 2
+      actual_time_ms: 3
+      buffers: {logical_reads=310 physical_reads=0 read_aheads=0}
+      database: "Shop"
+      estimated_cost: 0.044174
+      estimated_cpu: 0.000228
+      estimated_executions: 1
+      estimated_io: 0.027249
+      estimated_row_width: 9
+      estimated_rows: 114
+      execution_mode: "Row"
+      index_name: "PK__orders__46596229A6DBB338"
+      loops: 1
+      properties: [{name="Set Predicate" value="[Shop].[dbo].[orders].[customer_id] = RaiseIfNullUpdate([Expr1002])"}, {name="WithUnorderedPrefetch" value="1"}, {name="DMLRequestSort" value="0"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}, {name="IndexKind" value="Clustered"}, {name="Storage" value="RowStore"}, {name="Object" value="dbo.orders.IX_orders_customer"}]
+      relation: "orders"
+      row_count: 114
+      rows_read: 114
+      schema: "dbo"
+    #2 Compute Scalar [Compute Scalar]
+        actual_cpu_ms: 1
+        actual_rows: 114
+        actual_rows_total: 114
+        actual_self_time_ms: 1
+        actual_time_ms: 1
+        estimated_cost: 0.016696
+        estimated_cpu: 0.000011
+        estimated_executions: 1
+        estimated_row_width: 19
+        estimated_rows: 114
+        execution_mode: "Row"
+        loops: 1
+        output_columns: ["orders.order_id", "Expr1002", "Expr1008", "Expr1009"]
+        output_list: ["orders.order_id", "Expr1002", "Expr1008", "Expr1009"]
+        properties: [{name="Defined Values" value="Expr1008 = [Expr1008]"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}]
+        row_count: 114
+      #4 Compute Scalar [Compute Scalar]
+          estimated_cost: 0.016696
+          estimated_cpu: 0.000011
+          estimated_executions: 1
+          estimated_row_width: 19
+          estimated_rows: 114
+          execution_mode: "Row"
+          output_columns: ["orders.order_id", "Expr1002", "Expr1008"]
+          output_list: ["orders.order_id", "Expr1002", "Expr1008"]
+          properties: [{name="Defined Values" value="Expr1008 = CASE WHEN [Expr1005] THEN (0) ELSE (1) END"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}]
+        #5 Compute Scalar [Compute Scalar]
+            estimated_cost: 0.016685
+            estimated_cpu: 0.000011
+            estimated_executions: 1
+            estimated_row_width: 16
+            estimated_rows: 114
+            execution_mode: "Row"
+            output_columns: ["orders.order_id", "Expr1002", "Expr1005"]
+            output_list: ["orders.order_id", "Expr1002", "Expr1005"]
+            properties: [{name="Defined Values" value="Expr1002 = [Shop].[dbo].[orders].[customer_id]+(1); Expr1005 = CASE WHEN [Shop].[dbo].[orders].[customer_id] = ([Shop].[dbo].[orders].[customer_id]+(1)) THEN (1..."}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}]
+          #6 Table Spool [Eager Spool]
+              actual_cpu_ms: 1
+              actual_rebinds: 1
+              actual_rows: 114
+              actual_rows_total: 114
+              actual_self_time_ms: 1
+              actual_time_ms: 1
+              buffers: {logical_reads=231 physical_reads=0 read_aheads=0}
+              estimated_cost: 0.016674
+              estimated_cpu: 0.000141
+              estimated_executions: 1
+              estimated_io: 0.013125
+              estimated_row_width: 15
+              estimated_rows: 114
+              execution_mode: "Row"
+              loops: 1
+              output_columns: ["orders.order_id", "orders.customer_id"]
+              output_list: ["orders.order_id", "orders.customer_id"]
+              properties: [{name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}, {name="Actual Scans" value="1"}]
+              row_count: 114
+              rows_read: 114
+              warnings: ["Spool"]
+            #7 Index Seek [Index Seek]
+                actual_rows: 114
+                actual_rows_total: 114
+                buffers: {logical_reads=3 physical_reads=0 read_aheads=0}
+                database: "Shop"
+                estimated_cost: 0.003407
+                estimated_cpu: 0.000282
+                estimated_executions: 1
+                estimated_io: 0.003125
+                estimated_row_width: 15
+                estimated_rows: 114
+                estimated_rows_read: 114
+                execution_mode: "Row"
+                index_cond: "orders.customer_id < (20)"
+                index_name: "IX_orders_customer"
+                loops: 1
+                output_columns: ["orders.order_id", "orders.customer_id"]
+                output_list: ["orders.order_id", "orders.customer_id"]
+                properties: [{name="Ordered" value="1"}, {name="ScanDirection" value="FORWARD"}, {name="ForcedIndex" value="0"}, {name="ForceSeek" value="0"}, {name="ForceScan" value="0"}, {name="NoExpandHint" value="0"}, {name="Storage" value="RowStore"}, {name="TableCardinality" value="300000"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}, {name="IndexKind" value="NonClustered"}, {name="Storage" value="RowStore"}, {name="Actual Scans" value="1"}]
+                relation: "orders"
+                row_count: 114
+                rows_read: 114
+                schema: "dbo"
+                table_cardinality: 300000
+
+== statement 2
+cardinality_estimator_version: 160
+cpu_time_ms: 1
+degree_of_parallelism: 1
+dialect: "SqlServer"
+early_abort_reason: "GoodEnoughPlanFound"
+estimated_rows: 1
+execution_time_ms: 1
+has_actuals: yes
+memory_grant: {granted_kb=0 max_used_kb=0 serial_desired_kb=0 serial_required_kb=0}
+notes: ["Plan retrieved from the plan cache", "Compile CPU: 3 ms", "Compile memory: 232 kB", "Cached plan size: 32 kB"]
+optimization_level: "FULL"
+planning_time_ms: 4
+query_hash: "0xA6FC237F3CB3A958"
+query_plan_hash: "0x89771A1F46423DDC"
+settings: [{name="QUOTED_IDENTIFIER" value="false"}, {name="ARITHABORT" value="false"}, {name="CONCAT_NULL_YIELDS_NULL" value="true"}, {name="ANSI_NULLS" value="true"}, {name="ANSI_PADDING" value="true"}, {name="ANSI_WARNINGS" value="true"}, {name="NUMERIC_ROUNDABORT" value="false"}]
+source_format: "sqlserver-xml"
+statement_text: "WITH r AS (SELECT 1 AS n UNION ALL SELECT n + 1 FROM r WHERE n < 50) SELECT COUNT(*) FROM r"
+statement_type: "SELECT"
+total_subtree_cost: 0.000012
+warnings: ["Spool", "Spool"]
+operators: 13
+  #0 Compute Scalar [Compute Scalar]
+      estimated_cost: 0.000012
+      estimated_executions: 1
+      estimated_row_width: 11
+      estimated_rows: 1
+      execution_mode: "Row"
+      output_columns: ["Expr1004"]
+      output_list: ["Expr1004"]
+      properties: [{name="Defined Values" value="Expr1004 = CONVERT_IMPLICIT(int,[Expr1011],0)"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}]
+    #1 Stream Aggregate [Aggregate]
+        actual_cpu_ms: 1
+        actual_rows: 1
+        actual_rows_total: 1
+        actual_time_ms: 1
+        estimated_cost: 0.000012
+        estimated_cpu: 0.000003
+        estimated_executions: 1
+        estimated_row_width: 11
+        estimated_rows: 1
+        execution_mode: "Row"
+        loops: 1
+        output_columns: ["Expr1011"]
+        output_list: ["Expr1011"]
+        properties: [{name="Defined Values" value="Expr1011 = Count(*)"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}]
+        row_count: 1
+      #2 Index Spool [Lazy Spool]
+          actual_cpu_ms: 1
+          actual_rebinds: 1
+          actual_rows: 50
+          actual_rows_total: 50
+          actual_self_time_ms: 1
+          actual_time_ms: 1
+          buffers: {logical_reads=101 physical_reads=0 read_aheads=0}
+          estimated_cost: 0.000009
+          estimated_cpu: 0
+          estimated_executions: 1
+          estimated_row_width: 9
+          estimated_rows: 4
+          execution_mode: "Row"
+          loops: 1
+          output_columns: ["Expr1010", "Recr1003"]
+          output_list: ["Expr1010", "Recr1003"]
+          properties: [{name="Stack" value="1"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}, {name="Actual Scans" value="1"}]
+          row_count: 50
+          warnings: ["Spool"]
+        #3 Concatenation [Concatenation]
+            actual_rows: 50
+            actual_rows_total: 50
+            estimated_cost: 0.000008
+            estimated_cpu: 0
+            estimated_executions: 1
+            estimated_row_width: 9
+            estimated_rows: 4
+            execution_mode: "Row"
+            loops: 1
+            output_columns: ["Expr1010", "Recr1003"]
+            output_list: ["Expr1010", "Recr1003"]
+            properties: [{name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}]
+            row_count: 50
+          #4 Compute Scalar [Compute Scalar]
+              estimated_cost: 0
+              estimated_cpu: 0
+              estimated_executions: 5
+              estimated_row_width: 9
+              estimated_rows: 1
+              execution_mode: "Row"
+              output_columns: ["Expr1007", "Expr1000"]
+              output_list: ["Expr1007", "Expr1000"]
+              properties: [{name="Defined Values" value="Expr1007 = (0)"}, {name="EstimateRebinds" value="4"}, {name="EstimateRewinds" value="0"}]
+            #5 Constant Scan [Constant Scan]
+                actual_rows: 1
+                actual_rows_total: 1
+                estimated_cost: 0.000001
+                estimated_cpu: 0.000001
+                estimated_executions: 1
+                estimated_row_width: 11
+                estimated_rows: 1
+                execution_mode: "Row"
+                loops: 1
+                output_columns: ["Expr1000"]
+                output_list: ["Expr1000"]
+                properties: [{name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}]
+                row_count: 1
+          #6 Assert [Assert]
+              actual_rows: 49
+              actual_rows_total: 49
+              estimated_cost: 0.000007
+              estimated_cpu: 0
+              estimated_executions: 5
+              estimated_row_width: 9
+              estimated_rows: 20
+              execution_mode: "Row"
+              filter: "CASE WHEN [Expr1009]>(100) THEN (0) ELSE NULL END"
+              loops: 1
+              output_columns: ["Expr1009", "Expr1002"]
+              output_list: ["Expr1009", "Expr1002"]
+              properties: [{name="StartupExpression" value="0"}, {name="EstimateRebinds" value="4"}, {name="EstimateRewinds" value="0"}, {name="EstimateRows" value="4"}]
+              row_count: 49
+            #7 Nested Loops [Inner Join]
+                actual_rows: 49
+                actual_rows_total: 49
+                estimated_cost: 0.000007
+                estimated_cpu: 0
+                estimated_executions: 5
+                estimated_row_width: 9
+                estimated_rows: 20
+                execution_mode: "Row"
+                join_type: "Inner"
+                loops: 1
+                output_columns: ["Expr1009", "Expr1002"]
+                output_list: ["Expr1009", "Expr1002"]
+                properties: [{name="Outer References" value="Expr1009, Recr1001"}, {name="Optimized" value="0"}, {name="EstimateRebinds" value="4"}, {name="EstimateRewinds" value="0"}, {name="EstimateRows" value="4"}]
+                row_count: 49
+              #8 Compute Scalar [Compute Scalar]
+                  estimated_cost: 0
+                  estimated_cpu: 0
+                  estimated_executions: 5
+                  estimated_row_width: 9
+                  estimated_rows: 1
+                  execution_mode: "Row"
+                  output_columns: ["Expr1009", "Recr1001"]
+                  output_list: ["Expr1009", "Recr1001"]
+                  properties: [{name="Defined Values" value="Expr1009 = [Expr1008]+(1)"}, {name="EstimateRebinds" value="4"}, {name="EstimateRewinds" value="0"}]
+                #9 Table Spool [Lazy Spool]
+                    actual_rebinds: 1
+                    actual_rows: 50
+                    actual_rows_total: 50
+                    buffers: {logical_reads=0 physical_reads=0 read_aheads=0}
+                    estimated_cost: 0
+                    estimated_cpu: 0
+                    estimated_executions: 5
+                    estimated_row_width: 9
+                    estimated_rows: 5
+                    execution_mode: "Row"
+                    loops: 1
+                    output_columns: ["Expr1008", "Recr1001"]
+                    output_list: ["Expr1008", "Recr1001"]
+                    properties: [{name="PrimaryNodeId" value="2"}, {name="Stack" value="1"}, {name="EstimateRebinds" value="4"}, {name="EstimateRewinds" value="0"}, {name="EstimateRows" value="1"}]
+                    row_count: 50
+                    warnings: ["Spool"]
+              #10 Compute Scalar [Compute Scalar]
+                  estimated_cost: 0.000006
+                  estimated_cpu: 0
+                  estimated_executions: 4
+                  estimated_row_width: 11
+                  estimated_rows: 1
+                  execution_mode: "Row"
+                  output_columns: ["Expr1002"]
+                  output_list: ["Expr1002"]
+                  properties: [{name="Defined Values" value="Expr1002 = [Recr1001]+(1)"}, {name="EstimateRebinds" value="3"}, {name="EstimateRewinds" value="0"}]
+                #11 Filter [Filter]
+                    actual_rebinds: 50
+                    actual_rows: 49
+                    actual_rows_total: 49
+                    estimated_cost: 0.000006
+                    estimated_cpu: 0
+                    estimated_executions: 4
+                    estimated_row_width: 9
+                    estimated_rows: 4
+                    execution_mode: "Row"
+                    filter: "[Recr1001]<(50)"
+                    loops: 50
+                    properties: [{name="StartupExpression" value="1"}, {name="EstimateRebinds" value="3"}, {name="EstimateRewinds" value="0"}, {name="EstimateRows" value="1"}]
+                    row_count: 49
+                  #12 Constant Scan [Constant Scan]
+                      actual_rows: 49
+                      actual_rows_total: 49
+                      estimated_cost: 0.000004
+                      estimated_cpu: 0.000001
+                      estimated_executions: 4
+                      estimated_row_width: 9
+                      estimated_rows: 4
+                      execution_mode: "Row"
+                      loops: 49
+                      properties: [{name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="3"}, {name="EstimateRows" value="1"}]
+                      row_count: 49

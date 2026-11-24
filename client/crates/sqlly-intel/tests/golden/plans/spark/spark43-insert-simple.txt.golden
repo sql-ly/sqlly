@@ -1,0 +1,15 @@
+format: spark-text (Certain)
+statements: 1
+
+== statement 1
+source_format: "spark-text"
+statement_type: "EXPLAIN"
+operators: 4
+  #1 Execute InsertIntoHadoopFsRelationCommand [Execute InsertIntoHadoopFsRelationCommand]
+      properties: [{name="Arguments" value="file:/tmp/spark-warehouse/customers, false, Parquet, [path=file:/tmp/spark-warehouse/customers], Append, `spark_catalog`.`default`.`customers`, org.apache.hadoo..."}]
+    #2 WriteFiles [WriteFiles]
+      #3 Project [Project]
+          output_columns: ["id#281L", "x AS name#285", "east AS region#286"]
+          properties: [{name="Codegen stage" value="1"}]
+        #4 Range [Range]
+            properties: [{name="Arguments" value="(0, 5, step=1, splits=7)"}, {name="Codegen stage" value="1"}]

@@ -1,0 +1,28 @@
+info
+distribution: local
+vectorized: true
+
+• limit
+│ count: 10
+│
+└── • lookup join
+"    │ estimated row count: 59"
+"    │ table: order_items@order_items_pkey"
+"    │ equality: (id) = (order_id)"
+"    │"
+"    └── • sort"
+"        │ estimated row count: 20"
+"        │ order: -total"
+"        │"
+"        └── • index join"
+"            │ estimated row count: 20"
+"            │ table: orders@orders_pkey"
+"            │"
+"            └── • scan"
+"                  estimated row count: 20 (0.10% of the table; stats collected 3 seconds ago)"
+"                  table: orders@orders_customer_idx"
+"                  spans: [/42 - /42]"
+
+index recommendations: 1
+1. type: index replacement
+"   SQL commands: CREATE INDEX ON shop.public.orders (customer_id) STORING (total) /* After successfully creating the replacement index, manually run: `ALTER INDEX shop.public.orders@orders_customer_idx NOT VISIBLE` and then, after verifying workload performance, manually run: `DROP INDEX shop.public.orders@orders_customer_idx` */;"

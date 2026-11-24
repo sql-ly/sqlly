@@ -27,6 +27,7 @@
 //! is `!Sync` — the service structs themselves stay zero-sized and `Send +
 //! Sync` as the ports require, which is fine on wasm's one thread.
 
+pub mod notebook_files;
 pub mod pglite;
 pub mod proxy;
 pub mod spill;
@@ -190,7 +191,7 @@ const SQLITE_BATCH_ROWS: usize = 4_096;
 
 /// Run a SQL batch against the active backend, handing every result set to
 /// `emit` as the [`QueryEvent`] sequence the streaming contract promises.
-fn execute_into(sql: &str, emit: &mut dyn FnMut(QueryEvent)) {
+fn execute_into(sql: &str, limits: &CellLimits, emit: &mut dyn FnMut(QueryEvent)) {
     let started = js_now_ms();
     emit(QueryEvent::Started);
     let result: StudioResult<()> = with_backend_mut(|backend| match backend {
@@ -215,7 +216,7 @@ fn execute_into(sql: &str, emit: &mut dyn FnMut(QueryEvent)) {
                     .map(|r| r.iter().map(fake_value_to_cell).collect())
                     .collect();
                 let count = rows.len() as u64;
-                let truncated = truncate_rows(&mut rows, 0, &CellLimits::default());
+                let truncated = truncate_rows(&mut rows, 0, limits);
                 emit(QueryEvent::Rows { index, rows });
                 if !truncated.is_empty() {
                     emit(QueryEvent::TruncatedCells {
@@ -268,7 +269,7 @@ fn execute_into(sql: &str, emit: &mut dyn FnMut(QueryEvent)) {
                 let mut batch: Vec<Vec<CellValue>> = Vec::new();
                 let mut flush = |batch: &mut Vec<Vec<CellValue>>, count: &mut usize| {
                     let mut rows = std::mem::take(batch);
-                    let truncated = truncate_rows(&mut rows, *count, &CellLimits::default());
+                    let truncated = truncate_rows(&mut rows, *count, limits);
                     *count += rows.len();
                     emit(QueryEvent::Rows { index, rows });
                     if !truncated.is_empty() {
@@ -348,11 +349,13 @@ impl BrowserQueryExecutor {
     /// Runs `sql` and buffers its whole event stream. A grid run (`grid`)
     /// passes the events through the spill stage ([`spill::stage`]), which moves the
     /// rows past the spill threshold to browser storage as they are read.
+    /// Cells longer than `limits` allows arrive as previews.
     async fn run(
         &self,
         profile: &ConnectionProfile,
         sql: &str,
         grid: bool,
+        limits: CellLimits,
     ) -> StudioResult<QueryHandle> {
         let task_id = format!(
             "browser-{}",
@@ -380,7 +383,7 @@ impl BrowserQueryExecutor {
                 emit(QueryEvent::Started);
                 match outcome {
                     Ok(results) => {
-                        for event in pglite::events_from_results(results) {
+                        for event in pglite::events_from_results(results, &limits) {
                             emit(event);
                         }
                         emit(QueryEvent::Completed {
@@ -393,7 +396,7 @@ impl BrowserQueryExecutor {
                 }
             })
         } else {
-            staged(grid, |emit| execute_into(sql, emit))
+            staged(grid, |emit| execute_into(sql, &limits, emit))
         };
         let (tx, rx) = mpsc::channel(events.len().max(1));
         for event in events {
@@ -426,7 +429,18 @@ impl QueryExecutor for BrowserQueryExecutor {
         sql: &str,
         _row_buffer: usize,
     ) -> StudioResult<QueryHandle> {
-        self.run(profile, sql, false).await
+        self.run(profile, sql, false, CellLimits::default()).await
+    }
+
+    async fn execute_full_values(
+        &self,
+        profile: &ConnectionProfile,
+        _session: Option<&str>,
+        sql: &str,
+        _row_buffer: usize,
+    ) -> StudioResult<QueryHandle> {
+        self.run(profile, sql, false, CellLimits::full_values())
+            .await
     }
 
     async fn execute_for_grid(
@@ -436,7 +450,7 @@ impl QueryExecutor for BrowserQueryExecutor {
         sql: &str,
         _row_buffer: usize,
     ) -> StudioResult<QueryHandle> {
-        self.run(profile, sql, true).await
+        self.run(profile, sql, true, CellLimits::default()).await
     }
 
     async fn cancel(&self, _task_id: &str) -> StudioResult<()> {

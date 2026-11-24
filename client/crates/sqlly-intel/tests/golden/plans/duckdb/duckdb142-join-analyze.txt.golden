@@ -1,0 +1,93 @@
+format: duckdb-text (Certain)
+statements: 1
+
+== statement 1
+dialect: "DuckDb"
+execution_time_ms: 19.8
+has_actuals: yes
+source_format: "duckdb-text"
+statement_text: "SELECT c.country, count(*) AS orders, sum(oi.quantity * oi.unit_price) AS revenue FROM order_items oi JOIN orders o ON o.id = oi.order_id JOIN customers c ON c...."
+statement_type: "EXPLAIN ANALYZE"
+total_subtree_cost: 0.07
+operators: 13
+  #1 QUERY [QUERY]
+      actual_time_ms: 70
+    #2 PROJECTION [PROJECTION]
+        actual_rows: 2
+        actual_rows_total: 2
+        actual_time_ms: 70
+        output_columns: ["__internal_decompress_string(#0)", "#1", "#2"]
+        output_list: ["__internal_decompress_string(#0)", "#1", "#2"]
+      #3 ORDER_BY [ORDER_BY]
+          actual_rows: 2
+          actual_rows_total: 2
+          actual_time_ms: 70
+          sort_keys: ["sum((oi.quantity * oi.unit_price)) DESC"]
+        #4 PROJECTION [PROJECTION]
+            actual_rows: 2
+            actual_rows_total: 2
+            actual_time_ms: 70
+            output_columns: ["__internal_compress_string_uinteger(#0)", "#1", "#2"]
+            output_list: ["__internal_compress_string_uinteger(#0)", "#1", "#2"]
+          #5 PROJECTION [PROJECTION]
+              actual_rows: 2
+              actual_rows_total: 2
+              actual_time_ms: 70
+              output_columns: ["__internal_decompress_string(#0)", "#1", "#2"]
+              output_list: ["__internal_decompress_string(#0)", "#1", "#2"]
+            #6 HASH_GROUP_BY [HASH_GROUP_BY]
+                actual_rows: 2
+                actual_rows_total: 2
+                actual_time_ms: 70
+                group_keys: ["#0"]
+                properties: [{name="Aggregates" value="count_star(), sum(#1)"}]
+              #7 PROJECTION [PROJECTION]
+                  actual_rows: 300000
+                  actual_rows_total: 300000
+                  actual_time_ms: 70
+                  output_columns: ["country", "(CAST(quantity AS DECIMAL(38,0)) * unit_price)"]
+                  output_list: ["country", "(CAST(quantity AS DECIMAL(38,0)) * unit_price)"]
+                #8 PROJECTION [PROJECTION]
+                    actual_rows: 300000
+                    actual_rows_total: 300000
+                    actual_time_ms: 70
+                    output_columns: ["#0", "#1", "__internal_compress_string_uinteger(#2)"]
+                    output_list: ["#0", "#1", "__internal_compress_string_uinteger(#2)"]
+                  #9 HASH_JOIN [HASH_JOIN]
+                      actual_rows: 300000
+                      actual_rows_total: 300000
+                      actual_time_ms: 70
+                      join_predicate: "order_id = id"
+                      join_type: "INNER"
+                    #10 TABLE_SCAN order_items [TABLE_SCAN]
+                        actual_rows: 1199991
+                        actual_rows_total: 1199991
+                        actual_self_time_ms: 70
+                        actual_time_ms: 70
+                        estimated_cost: 0.07
+                        output_columns: ["order_id", "quantity", "unit_price"]
+                        output_list: ["order_id", "quantity", "unit_price"]
+                        properties: [{name="Type" value="Sequential Scan"}]
+                        relation: "order_items"
+                        warnings: [{TableScan={table="order_items"}}]
+                    #11 HASH_JOIN [HASH_JOIN]
+                        actual_rows: 100000
+                        actual_rows_total: 100000
+                        join_predicate: "customer_id = id"
+                        join_type: "INNER"
+                      #12 TABLE_SCAN orders [TABLE_SCAN]
+                          actual_rows: 100000
+                          actual_rows_total: 100000
+                          filter: "status='paid'"
+                          output_columns: ["id", "customer_id"]
+                          output_list: ["id", "customer_id"]
+                          properties: [{name="Type" value="Sequential Scan"}]
+                          relation: "orders"
+                      #13 TABLE_SCAN customers [TABLE_SCAN]
+                          actual_rows: 50000
+                          actual_rows_total: 50000
+                          output_columns: ["id", "country"]
+                          output_list: ["id", "country"]
+                          properties: [{name="Type" value="Sequential Scan"}]
+                          relation: "customers"
+                          warnings: [{TableScan={table="customers"}}]

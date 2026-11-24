@@ -121,8 +121,23 @@ impl AppView {
 
     pub(super) fn new_notebook_tab(
         &mut self,
-        model: crate::notebook_model::Notebook,
+        model: sqlly_services::notebook::NotebookDoc,
         path: Option<String>,
+        cx: &mut Context<Self>,
+    ) -> usize {
+        let opening = if path.is_some() {
+            crate::notebook::view::NotebookOpening::File
+        } else {
+            crate::notebook::view::NotebookOpening::New
+        };
+        self.new_notebook_tab_with(model, path, opening, cx)
+    }
+
+    pub(super) fn new_notebook_tab_with(
+        &mut self,
+        model: sqlly_services::notebook::NotebookDoc,
+        path: Option<String>,
+        opening: crate::notebook::view::NotebookOpening,
         cx: &mut Context<Self>,
     ) -> usize {
         self.tab_counter += 1;
@@ -138,14 +153,15 @@ impl AppView {
                     .file_stem()
                     .map(|s| s.to_string_lossy().into_owned())
             })
+            .or_else(|| Some(model.title.clone()).filter(|t| !t.is_empty()))
             .unwrap_or_else(|| {
                 crate::tabs::auto_notebook_title(u32::try_from(self.tab_counter).unwrap_or(0))
             });
+        let titled = !model.title.is_empty();
         let mut tab = QueryTab::new(format!("tab-{}", self.tab_counter), name, editor, results);
         // Language-neutral number behind an unsaved `Notebook N` title, so a
         // language switch can re-title it.
-        tab.auto_number = path
-            .is_none()
+        tab.auto_number = (path.is_none() && !titled)
             .then(|| u32::try_from(self.tab_counter).ok())
             .flatten();
         tab.fim_autocomplete_enabled = self.fim_prefs.seed_new_tab_enabled();
@@ -154,11 +170,18 @@ impl AppView {
             false,
             None,
         );
-        tab.auto_named = path.is_none();
-        let notebook = cx.new(|cx| crate::notebook_view::NotebookView::new(model, cx));
-        if let Some(profile) = &self.active_profile {
-            notebook.update(cx, |nb, _cx| nb.set_database_type(profile.database_type));
-        }
+        tab.auto_named = path.is_none() && !titled;
+        let notebook = cx.new(|cx| crate::notebook_view::NotebookView::open(model, opening, cx));
+        let layout = self.notebook_layout.clone();
+        notebook.update(cx, |nb, cx| {
+            nb.set_layout(layout);
+            if let Some(profile) = &self.active_profile {
+                nb.set_database_type(profile.database_type);
+            }
+            if let Some(path) = &path {
+                nb.opened_from(path.clone(), cx);
+            }
+        });
         cx.subscribe(&notebook, Self::handle_notebook_event)
             .detach();
         tab.notebook = Some(notebook.clone());
@@ -169,7 +192,8 @@ impl AppView {
         self.retarget_same_buffer_view(cx);
         self.stamp_active_tab_connection();
         self.sync_toolbar_to_active_tab();
-        notebook.update(cx, |nb, cx| nb.ensure_cell_entities(cx));
+        self.sync_notebook_view(self.active_tab, cx);
+        notebook.update(cx, |nb, cx| nb.restore_cached_outputs(cx));
         cx.notify();
         self.active_tab
     }
@@ -267,6 +291,13 @@ impl AppView {
                     &path,
                 );
             }
+        }
+        // A closed unsaved notebook was discarded: its recovery copy goes too.
+        if let Some(tab) = self.tabs.get(index)
+            && tab.notebook_path.is_none()
+            && let Some(nb) = &tab.notebook
+        {
+            crate::notebook::autosave::remove_recovery(nb.read(cx).doc().id());
         }
         self.tabs.remove(index);
         // Closing a tab left of the active one shifts the active tab down a

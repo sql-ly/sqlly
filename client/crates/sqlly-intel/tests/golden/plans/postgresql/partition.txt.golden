@@ -1,0 +1,49 @@
+format: postgresql-text (Certain)
+statements: 1
+
+== statement 1
+dialect: "Postgres"
+estimated_rows: 10
+execution_time_ms: 1.317
+has_actuals: yes
+notes: ["Planning buffers: shared hit=113 read=1"]
+planning_time_ms: 0.533
+source_format: "postgresql-text"
+statement_type: "EXPLAIN ANALYZE"
+total_subtree_cost: 218.12
+operators: 2
+  #1 Aggregate [HashAggregate]
+      actual_rows: 10
+      actual_rows_total: 10
+      actual_self_time_ms: 0.591
+      actual_startup_ms: 1.281
+      actual_time_ms: 1.285
+      buffers: {logical_reads=54 physical_reads=54 shared_read=54}
+      estimated_cost: 218.12
+      estimated_row_width: 11
+      estimated_rows: 10
+      estimated_startup_cost: 218.02
+      group_keys: ["events.kind"]
+      hash_batches: 1
+      loops: 1
+      peak_memory_kb: 32
+      properties: [{name="Strategy" value="Hashed"}]
+    #2 Seq Scan [Seq Scan]
+        actual_rows: 8235
+        actual_rows_total: 8235
+        actual_self_time_ms: 0.694
+        actual_startup_ms: 0.105
+        actual_time_ms: 0.694
+        alias: "events"
+        buffers: {logical_reads=54 physical_reads=54 shared_read=54}
+        estimated_cost: 176.85
+        estimated_row_width: 3
+        estimated_rows: 8234
+        filter: "(happened_at >= '2025-03-01'::date)"
+        loops: 1
+        output_list: ["events_2025", "Filter: (happened_at >= '2025-03-01'::date)"]
+        parent_relationship: "Outer"
+        relation: "events_2025"
+        rows_read: 9828
+        rows_removed_by_filter: 1593
+        warnings: [{TableScan={table="events_2025"}}]

@@ -1,0 +1,38 @@
+format: duckdb-text (Certain)
+statements: 1
+
+== statement 1
+dialect: "DuckDb"
+estimated_rows: 4
+source_format: "duckdb-text"
+statement_type: "EXPLAIN"
+total_subtree_cost: 240008
+operators: 5
+  #1 PROJECTION [PROJECTION]
+      estimated_cost: 4
+      estimated_rows: 4
+      output_columns: ["__internal_decompress_string(#0)", "#1"]
+      output_list: ["__internal_decompress_string(#0)", "#1"]
+    #2 HASH_GROUP_BY [HASH_GROUP_BY]
+        estimated_cost: 4
+        estimated_rows: 4
+        group_keys: ["#0"]
+        properties: [{name="Aggregates" value="count_star()"}]
+      #3 PROJECTION [PROJECTION]
+          estimated_cost: 80000
+          estimated_rows: 80000
+          output_columns: ["status"]
+          output_list: ["status"]
+        #4 PROJECTION [PROJECTION]
+            estimated_cost: 80000
+            estimated_rows: 80000
+            output_columns: ["__internal_compress_string_uhugeint(#0)"]
+            output_list: ["__internal_compress_string_uhugeint(#0)"]
+          #5 SEQ_SCAN orders [SEQ_SCAN]
+              estimated_cost: 80000
+              estimated_rows: 80000
+              filter: "customer_id>=100 AND customer_id<=200 AND total>800"
+              output_columns: ["status"]
+              output_list: ["status"]
+              properties: [{name="Type" value="Sequential Scan"}]
+              relation: "orders"

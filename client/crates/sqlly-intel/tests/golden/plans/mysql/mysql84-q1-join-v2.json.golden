@@ -1,0 +1,69 @@
+format: mysql-json-v2 (Certain)
+statements: 1
+
+== statement 1
+dialect: "MySql"
+settings: [{name="query_type" value="select"}]
+source_format: "mysql-json-v2"
+statement_text: "/* select#1 */ select `c`.`country` AS `country`,count(0) AS `orders`,sum((`oi`.`quantity` * `oi`.`unit_price`)) AS `revenue` from `shop`.`order_items` `oi` joi..."
+statement_type: "EXPLAIN"
+operators: 9
+  #1 Sort: revenue DESC [Sort: revenue DESC]
+      properties: [{name="access_type" value="sort"}]
+      sort_keys: ["revenue DESC"]
+    #2 Table scan on <temporary> [Table scan on <temporary>]
+        output_list: ["<temporary>"]
+        properties: [{name="access_type" value="table"}]
+      #3 Aggregate using temporary table [Aggregate using temporary table]
+          properties: [{name="access_type" value="temp_table_aggregate"}]
+        #4 Nested loop inner join [Nested loop inner join]
+            estimated_cost: 8959.451997
+            estimated_rows: 10004.334217
+            join_type: "Inner"
+            properties: [{name="access_type" value="join"}, {name="join_algorithm" value="nested_loop"}]
+          #5 Nested loop inner join [Nested loop inner join]
+              estimated_cost: 5457.935021
+              estimated_rows: 4013.10006
+              join_type: "Inner"
+              properties: [{name="access_type" value="join"}, {name="join_algorithm" value="nested_loop"}]
+            #6 Filter: (o.`status` = 'paid') [Filter: (o.`status` = 'paid')]
+                estimated_cost: 4053.35
+                estimated_rows: 4013.10006
+                filter: "o.`status` = 'paid'"
+                output_list: ["Condition: (o.`status` = 'paid')"]
+                properties: [{name="access_type" value="filter"}]
+              #7 Table scan on o [Table scan on o]
+                  alias: "o"
+                  estimated_cost: 4053.35
+                  estimated_rows: 40131
+                  output_columns: ["id", "customer_id", "status"]
+                  output_list: ["orders"]
+                  properties: [{name="access_type" value="table"}]
+                  relation: "orders"
+                  relation_resolved: yes
+                  schema: "shop"
+                  warnings: [{TableScan={schema="shop" table="o"}}]
+            #8 Single-row index lookup on c using PRIMARY (id=o.customer_id) [Single-row index lookup on c using PRIMARY (id=o.customer_id)]
+                alias: "c"
+                estimated_cost: 0.250025
+                estimated_rows: 1
+                index_cond: "id=o.customer_id"
+                index_name: "PRIMARY"
+                output_columns: ["id", "country"]
+                output_list: ["customers", "Key: PRIMARY"]
+                properties: [{name="access_type" value="index"}, {name="covering" value="false"}, {name="index_access_type" value="index_lookup"}]
+                relation: "customers"
+                relation_resolved: yes
+                schema: "shop"
+          #9 Index lookup on oi using order_items_order_idx (order_id=o.id) [Index lookup on oi using order_items_order_idx (order_id=o.id)]
+              alias: "oi"
+              estimated_cost: 0.623292
+              estimated_rows: 2.492919
+              index_cond: "order_id=o.id"
+              index_name: "order_items_order_idx"
+              output_columns: ["id", "order_id", "quantity", "unit_price"]
+              output_list: ["order_items", "Key: order_items_order_idx"]
+              properties: [{name="access_type" value="index"}, {name="covering" value="false"}, {name="index_access_type" value="index_lookup"}]
+              relation: "order_items"
+              relation_resolved: yes
+              schema: "shop"

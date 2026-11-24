@@ -1,0 +1,616 @@
+[
+  {
+    "Plan": {
+      "Node Type": "Expression",
+      "Description": "Project names",
+      "Expression": {
+        "Inputs": [
+          {
+            "Name": "count()",
+            "Type": "UInt64"
+          },
+          {
+            "Name": "sum(__table2.total)",
+            "Type": "Decimal(38, 2)"
+          },
+          {
+            "Name": "__table1.country",
+            "Type": "LowCardinality(String)"
+          }
+        ],
+        "Actions": [
+          {
+            "Node Type": "INPUT",
+            "Result Type": "UInt64",
+            "Result Name": "count()",
+            "Arguments": [0],
+            "Removed Arguments": [0],
+            "Result": 0
+          },
+          {
+            "Node Type": "INPUT",
+            "Result Type": "Decimal(38, 2)",
+            "Result Name": "sum(__table2.total)",
+            "Arguments": [1],
+            "Removed Arguments": [],
+            "Result": 1
+          },
+          {
+            "Node Type": "INPUT",
+            "Result Type": "LowCardinality(String)",
+            "Result Name": "__table1.country",
+            "Arguments": [2],
+            "Removed Arguments": [],
+            "Result": 2
+          },
+          {
+            "Node Type": "ALIAS",
+            "Result Type": "Decimal(38, 2)",
+            "Result Name": "sum(total)",
+            "Arguments": [1],
+            "Removed Arguments": [1],
+            "Result": 3
+          },
+          {
+            "Node Type": "ALIAS",
+            "Result Type": "LowCardinality(String)",
+            "Result Name": "country",
+            "Arguments": [2],
+            "Removed Arguments": [2],
+            "Result": 1
+          }
+        ],
+        "Outputs": [
+          {
+            "Name": "country",
+            "Type": "LowCardinality(String)"
+          },
+          {
+            "Name": "count()",
+            "Type": "UInt64"
+          },
+          {
+            "Name": "sum(total)",
+            "Type": "Decimal(38, 2)"
+          }
+        ],
+        "Positions": [1, 0, 3]
+      },
+      "Plans": [
+        {
+          "Node Type": "Limit",
+          "Description": "preliminary LIMIT (without OFFSET)",
+          "Limit": 5,
+          "Offset": 0,
+          "With Ties": false,
+          "Reads All Data": false,
+          "Plans": [
+            {
+              "Node Type": "Sorting",
+              "Description": "Sorting for ORDER BY",
+              "Sort Description": [
+                {
+                  "Column": "sum(__table2.total)",
+                  "Ascending": false,
+                  "With Fill": false
+                }
+              ],
+              "Limit": 5,
+              "Plans": [
+                {
+                  "Node Type": "Expression",
+                  "Description": "(Before ORDER BY + Projection)",
+                  "Expression": {
+                    "Inputs": [
+                      {
+                        "Name": "count()",
+                        "Type": "UInt64"
+                      },
+                      {
+                        "Name": "sum(__table2.total)",
+                        "Type": "Decimal(38, 2)"
+                      },
+                      {
+                        "Name": "__table1.country",
+                        "Type": "LowCardinality(String)"
+                      }
+                    ],
+                    "Actions": [
+                      {
+                        "Node Type": "INPUT",
+                        "Result Type": "UInt64",
+                        "Result Name": "count()",
+                        "Arguments": [0],
+                        "Removed Arguments": [0],
+                        "Result": 0
+                      },
+                      {
+                        "Node Type": "INPUT",
+                        "Result Type": "Decimal(38, 2)",
+                        "Result Name": "sum(__table2.total)",
+                        "Arguments": [1],
+                        "Removed Arguments": [1],
+                        "Result": 1
+                      },
+                      {
+                        "Node Type": "INPUT",
+                        "Result Type": "LowCardinality(String)",
+                        "Result Name": "__table1.country",
+                        "Arguments": [2],
+                        "Removed Arguments": [2],
+                        "Result": 2
+                      }
+                    ],
+                    "Outputs": [
+                      {
+                        "Name": "sum(__table2.total)",
+                        "Type": "Decimal(38, 2)"
+                      },
+                      {
+                        "Name": "count()",
+                        "Type": "UInt64"
+                      },
+                      {
+                        "Name": "__table1.country",
+                        "Type": "LowCardinality(String)"
+                      }
+                    ],
+                    "Positions": [1, 0, 2]
+                  },
+                  "Plans": [
+                    {
+                      "Node Type": "Aggregating",
+                      "Keys": ["__table1.country"],
+                      "Aggregates": [
+                        {
+                          "Name": "count()",
+                          "Function": {
+                            "Name": "count",
+                            "Argument Types": [],
+                            "Result Type": "UInt64"
+                          },
+                          "Arguments": []
+                        },
+                        {
+                          "Name": "sum(__table2.total)",
+                          "Function": {
+                            "Name": "sum",
+                            "Argument Types": ["Decimal(12, 2)"],
+                            "Result Type": "Decimal(38, 2)"
+                          },
+                          "Arguments": ["__table2.total"]
+                        }
+                      ],
+                      "Skip merging": false,
+                      "Plans": [
+                        {
+                          "Node Type": "Expression",
+                          "Description": "(Before GROUP BY + )",
+                          "Expression": {
+                            "Inputs": [
+                              {
+                                "Name": "__table1.country",
+                                "Type": "LowCardinality(String)"
+                              },
+                              {
+                                "Name": "__table1.id",
+                                "Type": "UInt32"
+                              },
+                              {
+                                "Name": "__table2.total",
+                                "Type": "Decimal(12, 2)"
+                              },
+                              {
+                                "Name": "__table2.placed_at",
+                                "Type": "DateTime"
+                              },
+                              {
+                                "Name": "__table2.status",
+                                "Type": "LowCardinality(String)"
+                              }
+                            ],
+                            "Actions": [
+                              {
+                                "Node Type": "INPUT",
+                                "Result Type": "LowCardinality(String)",
+                                "Result Name": "__table1.country",
+                                "Arguments": [0],
+                                "Removed Arguments": [0],
+                                "Result": 0
+                              },
+                              {
+                                "Node Type": "INPUT",
+                                "Result Type": "UInt32",
+                                "Result Name": "__table1.id",
+                                "Arguments": [1],
+                                "Removed Arguments": [1],
+                                "Result": 1
+                              },
+                              {
+                                "Node Type": "INPUT",
+                                "Result Type": "Decimal(12, 2)",
+                                "Result Name": "__table2.total",
+                                "Arguments": [2],
+                                "Removed Arguments": [2],
+                                "Result": 2
+                              },
+                              {
+                                "Node Type": "INPUT",
+                                "Result Type": "DateTime",
+                                "Result Name": "__table2.placed_at",
+                                "Arguments": [3],
+                                "Removed Arguments": [3],
+                                "Result": 3
+                              },
+                              {
+                                "Node Type": "INPUT",
+                                "Result Type": "LowCardinality(String)",
+                                "Result Name": "__table2.status",
+                                "Arguments": [4],
+                                "Removed Arguments": [4],
+                                "Result": 4
+                              }
+                            ],
+                            "Outputs": [
+                              {
+                                "Name": "__table1.country",
+                                "Type": "LowCardinality(String)"
+                              },
+                              {
+                                "Name": "__table2.total",
+                                "Type": "Decimal(12, 2)"
+                              }
+                            ],
+                            "Positions": [0, 2]
+                          },
+                          "Plans": [
+                            {
+                              "Node Type": "Join",
+                              "Description": "JOIN FillRightFirst",
+                              "Type": "INNER",
+                              "Strictness": "ALL",
+                              "Algorithm": "HashJoin",
+                              "Clauses": "[(__table1.id) = (__table2.customer_id)]",
+                              "Plans": [
+                                {
+                                  "Node Type": "Expression",
+                                  "Description": "(JOIN actions + Change column names to column identifiers)",
+                                  "Expression": {
+                                    "Inputs": [
+                                      {
+                                        "Name": "country",
+                                        "Type": "LowCardinality(String)"
+                                      },
+                                      {
+                                        "Name": "id",
+                                        "Type": "UInt32"
+                                      }
+                                    ],
+                                    "Actions": [
+                                      {
+                                        "Node Type": "INPUT",
+                                        "Result Type": "LowCardinality(String)",
+                                        "Result Name": "country",
+                                        "Arguments": [0],
+                                        "Removed Arguments": [],
+                                        "Result": 0
+                                      },
+                                      {
+                                        "Node Type": "INPUT",
+                                        "Result Type": "UInt32",
+                                        "Result Name": "id",
+                                        "Arguments": [1],
+                                        "Removed Arguments": [],
+                                        "Result": 1
+                                      },
+                                      {
+                                        "Node Type": "ALIAS",
+                                        "Result Type": "LowCardinality(String)",
+                                        "Result Name": "__table1.country",
+                                        "Arguments": [0],
+                                        "Removed Arguments": [0],
+                                        "Result": 2
+                                      },
+                                      {
+                                        "Node Type": "ALIAS",
+                                        "Result Type": "UInt32",
+                                        "Result Name": "__table1.id",
+                                        "Arguments": [1],
+                                        "Removed Arguments": [1],
+                                        "Result": 0
+                                      }
+                                    ],
+                                    "Outputs": [
+                                      {
+                                        "Name": "__table1.country",
+                                        "Type": "LowCardinality(String)"
+                                      },
+                                      {
+                                        "Name": "__table1.id",
+                                        "Type": "UInt32"
+                                      }
+                                    ],
+                                    "Positions": [2, 0]
+                                  },
+                                  "Plans": [
+                                    {
+                                      "Node Type": "ReadFromMergeTree",
+                                      "Description": "default.customers",
+                                      "Read Type": "Default",
+                                      "Parts": 1,
+                                      "Granules": 6,
+                                      "Indexes": [
+                                        {
+                                          "Type": "PrimaryKey",
+                                          "Condition": "true",
+                                          "Initial Parts": 1,
+                                          "Selected Parts": 1,
+                                          "Initial Granules": 6,
+                                          "Selected Granules": 6
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "Node Type": "Expression",
+                                  "Expression": {
+                                    "Inputs": [
+                                      {
+                                        "Name": "total",
+                                        "Type": "Decimal(12, 2)"
+                                      },
+                                      {
+                                        "Name": "customer_id",
+                                        "Type": "UInt32"
+                                      },
+                                      {
+                                        "Name": "placed_at",
+                                        "Type": "DateTime"
+                                      },
+                                      {
+                                        "Name": "status",
+                                        "Type": "LowCardinality(String)"
+                                      }
+                                    ],
+                                    "Actions": [
+                                      {
+                                        "Node Type": "INPUT",
+                                        "Result Type": "Decimal(12, 2)",
+                                        "Result Name": "total",
+                                        "Arguments": [0],
+                                        "Removed Arguments": [],
+                                        "Result": 0
+                                      },
+                                      {
+                                        "Node Type": "INPUT",
+                                        "Result Type": "UInt32",
+                                        "Result Name": "customer_id",
+                                        "Arguments": [1],
+                                        "Removed Arguments": [],
+                                        "Result": 1
+                                      },
+                                      {
+                                        "Node Type": "INPUT",
+                                        "Result Type": "DateTime",
+                                        "Result Name": "placed_at",
+                                        "Arguments": [2],
+                                        "Removed Arguments": [],
+                                        "Result": 2
+                                      },
+                                      {
+                                        "Node Type": "INPUT",
+                                        "Result Type": "LowCardinality(String)",
+                                        "Result Name": "status",
+                                        "Arguments": [3],
+                                        "Removed Arguments": [],
+                                        "Result": 3
+                                      },
+                                      {
+                                        "Node Type": "ALIAS",
+                                        "Result Type": "Decimal(12, 2)",
+                                        "Result Name": "__table2.total",
+                                        "Arguments": [0],
+                                        "Removed Arguments": [0],
+                                        "Result": 4
+                                      },
+                                      {
+                                        "Node Type": "ALIAS",
+                                        "Result Type": "UInt32",
+                                        "Result Name": "__table2.customer_id",
+                                        "Arguments": [1],
+                                        "Removed Arguments": [1],
+                                        "Result": 0
+                                      },
+                                      {
+                                        "Node Type": "ALIAS",
+                                        "Result Type": "DateTime",
+                                        "Result Name": "__table2.placed_at",
+                                        "Arguments": [2],
+                                        "Removed Arguments": [2],
+                                        "Result": 1
+                                      },
+                                      {
+                                        "Node Type": "ALIAS",
+                                        "Result Type": "LowCardinality(String)",
+                                        "Result Name": "__table2.status",
+                                        "Arguments": [3],
+                                        "Removed Arguments": [3],
+                                        "Result": 2
+                                      }
+                                    ],
+                                    "Outputs": [
+                                      {
+                                        "Name": "__table2.total",
+                                        "Type": "Decimal(12, 2)"
+                                      },
+                                      {
+                                        "Name": "__table2.customer_id",
+                                        "Type": "UInt32"
+                                      },
+                                      {
+                                        "Name": "__table2.placed_at",
+                                        "Type": "DateTime"
+                                      },
+                                      {
+                                        "Name": "__table2.status",
+                                        "Type": "LowCardinality(String)"
+                                      }
+                                    ],
+                                    "Positions": [4, 0, 1, 2]
+                                  },
+                                  "Plans": [
+                                    {
+                                      "Node Type": "ReadFromMergeTree",
+                                      "Description": "default.orders",
+                                      "Read Type": "Default",
+                                      "Parts": 5,
+                                      "Granules": 194,
+                                      "Prewhere info": {
+                                        "Need filter": true,
+                                        "Prewhere filter": {
+                                          "Prewhere filter column": "and(greaterOrEquals(__table2.placed_at, '2023-06-01 00:00:00'_String), equals(__table2.status, 'paid'_String))",
+                                          "Prewhere filter remove filter column": true,
+                                          "Prewhere filter expression": {
+                                            "Inputs": [
+                                              {
+                                                "Name": "placed_at",
+                                                "Type": "DateTime"
+                                              },
+                                              {
+                                                "Name": "status",
+                                                "Type": "LowCardinality(String)"
+                                              }
+                                            ],
+                                            "Actions": [
+                                              {
+                                                "Node Type": "INPUT",
+                                                "Result Type": "DateTime",
+                                                "Result Name": "placed_at",
+                                                "Arguments": [0],
+                                                "Removed Arguments": [],
+                                                "Result": 0
+                                              },
+                                              {
+                                                "Node Type": "INPUT",
+                                                "Result Type": "LowCardinality(String)",
+                                                "Result Name": "status",
+                                                "Arguments": [1],
+                                                "Removed Arguments": [],
+                                                "Result": 1
+                                              },
+                                              {
+                                                "Node Type": "COLUMN",
+                                                "Result Type": "String",
+                                                "Result Name": "'paid'_String",
+                                                "Column": "Const(String)",
+                                                "Arguments": [],
+                                                "Removed Arguments": [],
+                                                "Result": 2
+                                              },
+                                              {
+                                                "Node Type": "COLUMN",
+                                                "Result Type": "String",
+                                                "Result Name": "'2023-06-01 00:00:00'_String",
+                                                "Column": "Const(String)",
+                                                "Arguments": [],
+                                                "Removed Arguments": [],
+                                                "Result": 3
+                                              },
+                                              {
+                                                "Node Type": "FUNCTION",
+                                                "Result Type": "LowCardinality(UInt8)",
+                                                "Result Name": "equals(__table2.status, 'paid'_String)",
+                                                "Function": "equals",
+                                                "Compiled": false,
+                                                "Arguments": [1, 2],
+                                                "Removed Arguments": [2],
+                                                "Result": 4
+                                              },
+                                              {
+                                                "Node Type": "FUNCTION",
+                                                "Result Type": "UInt8",
+                                                "Result Name": "greaterOrEquals(__table2.placed_at, '2023-06-01 00:00:00'_String)",
+                                                "Function": "greaterOrEquals",
+                                                "Compiled": false,
+                                                "Arguments": [0, 3],
+                                                "Removed Arguments": [3],
+                                                "Result": 2
+                                              },
+                                              {
+                                                "Node Type": "FUNCTION",
+                                                "Result Type": "UInt8",
+                                                "Result Name": "and(greaterOrEquals(__table2.placed_at, '2023-06-01 00:00:00'_String), equals(__table2.status, 'paid'_String))",
+                                                "Function": "and",
+                                                "Compiled": false,
+                                                "Arguments": [2, 4],
+                                                "Removed Arguments": [2, 4],
+                                                "Result": 3
+                                              }
+                                            ],
+                                            "Outputs": [
+                                              {
+                                                "Name": "placed_at",
+                                                "Type": "DateTime"
+                                              },
+                                              {
+                                                "Name": "status",
+                                                "Type": "LowCardinality(String)"
+                                              },
+                                              {
+                                                "Name": "and(greaterOrEquals(__table2.placed_at, '2023-06-01 00:00:00'_String), equals(__table2.status, 'paid'_String))",
+                                                "Type": "UInt8"
+                                              }
+                                            ],
+                                            "Positions": [0, 1, 3]
+                                          }
+                                        }
+                                      },
+                                      "Indexes": [
+                                        {
+                                          "Type": "MinMax",
+                                          "Keys": ["placed_at"],
+                                          "Condition": "(placed_at in [1685577600, +Inf))",
+                                          "Initial Parts": 10,
+                                          "Selected Parts": 5,
+                                          "Initial Granules": 389,
+                                          "Selected Granules": 194
+                                        },
+                                        {
+                                          "Type": "Partition",
+                                          "Keys": ["toYYYYMM(placed_at)"],
+                                          "Condition": "(toYYYYMM(placed_at) in [202306, +Inf))",
+                                          "Initial Parts": 5,
+                                          "Selected Parts": 5,
+                                          "Initial Granules": 194,
+                                          "Selected Granules": 194
+                                        },
+                                        {
+                                          "Type": "PrimaryKey",
+                                          "Keys": ["placed_at"],
+                                          "Condition": "(placed_at in [1685577600, +Inf))",
+                                          "Initial Parts": 5,
+                                          "Selected Parts": 5,
+                                          "Initial Granules": 194,
+                                          "Selected Granules": 194
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

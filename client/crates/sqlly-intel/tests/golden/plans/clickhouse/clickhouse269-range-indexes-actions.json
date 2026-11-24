@@ -1,0 +1,308 @@
+[
+  {
+    "Plan": {
+      "Node Type": "Expression",
+      "Node Id": "Expression_8",
+      "Description": "(Project names + Projection)",
+      "Expression": {
+        "Inputs": [
+          {
+            "Name": "count()",
+            "Type": "UInt64"
+          },
+          {
+            "Name": "__table1.status",
+            "Type": "LowCardinality(String)"
+          }
+        ],
+        "Actions": [
+          {
+            "Node Type": "INPUT",
+            "Result Type": "UInt64",
+            "Result Name": "count()",
+            "Arguments": [0],
+            "Removed Arguments": [0],
+            "Result": 0
+          },
+          {
+            "Node Type": "INPUT",
+            "Result Type": "LowCardinality(String)",
+            "Result Name": "__table1.status",
+            "Arguments": [1],
+            "Removed Arguments": [],
+            "Result": 1
+          },
+          {
+            "Node Type": "ALIAS",
+            "Result Type": "LowCardinality(String)",
+            "Result Name": "status",
+            "Arguments": [1],
+            "Removed Arguments": [1],
+            "Result": 2
+          }
+        ],
+        "Outputs": [
+          {
+            "Name": "status",
+            "Type": "LowCardinality(String)"
+          },
+          {
+            "Name": "count()",
+            "Type": "UInt64"
+          }
+        ],
+        "Positions": [2, 0]
+      },
+      "Plans": [
+        {
+          "Node Type": "Aggregating",
+          "Node Id": "Aggregating_4",
+          "Keys": ["__table1.status"],
+          "Aggregates": [
+            {
+              "Name": "count()",
+              "Function": {
+                "Name": "count",
+                "Argument Types": [],
+                "Result Type": "UInt64"
+              },
+              "Arguments": []
+            }
+          ],
+          "Skip merging": false,
+          "Plans": [
+            {
+              "Node Type": "Expression",
+              "Node Id": "Expression_3",
+              "Description": "Before GROUP BY",
+              "Expression": {
+                "Inputs": [
+                  {
+                    "Name": "__table1.status",
+                    "Type": "LowCardinality(String)"
+                  }
+                ],
+                "Actions": [
+                  {
+                    "Node Type": "INPUT",
+                    "Result Type": "LowCardinality(String)",
+                    "Result Name": "__table1.status",
+                    "Arguments": [0],
+                    "Removed Arguments": [0],
+                    "Result": 0
+                  }
+                ],
+                "Outputs": [
+                  {
+                    "Name": "__table1.status",
+                    "Type": "LowCardinality(String)"
+                  }
+                ],
+                "Positions": [0]
+              },
+              "Plans": [
+                {
+                  "Node Type": "Expression",
+                  "Node Id": "Expression_9",
+                  "Description": "(WHERE + Change column names to column identifiers)",
+                  "Expression": {
+                    "Inputs": [
+                      {
+                        "Name": "status",
+                        "Type": "LowCardinality(String)"
+                      }
+                    ],
+                    "Actions": [
+                      {
+                        "Node Type": "INPUT",
+                        "Result Type": "LowCardinality(String)",
+                        "Result Name": "status",
+                        "Arguments": [0],
+                        "Removed Arguments": [],
+                        "Result": 0
+                      },
+                      {
+                        "Node Type": "ALIAS",
+                        "Result Type": "LowCardinality(String)",
+                        "Result Name": "__table1.status",
+                        "Arguments": [0],
+                        "Removed Arguments": [0],
+                        "Result": 1
+                      }
+                    ],
+                    "Outputs": [
+                      {
+                        "Name": "__table1.status",
+                        "Type": "LowCardinality(String)"
+                      }
+                    ],
+                    "Positions": [1]
+                  },
+                  "Plans": [
+                    {
+                      "Node Type": "ReadFromMergeTree",
+                      "Node Id": "ReadFromMergeTree_0",
+                      "Description": "default.orders",
+                      "Read Type": "Default",
+                      "Parts": 10,
+                      "Granules": 10,
+                      "Prewhere info": {
+                        "Need filter": true,
+                        "Prewhere filter": {
+                          "Prewhere filter column": "and(greater(__table1.total, 800_UInt16), greaterOrEquals(__table1.customer_id, 100_UInt8), lessOrEquals(__table1.customer_id, 200_UInt8))",
+                          "Prewhere filter remove filter column": true,
+                          "Prewhere filter expression": {
+                            "Inputs": [
+                              {
+                                "Name": "customer_id",
+                                "Type": "UInt32"
+                              },
+                              {
+                                "Name": "total",
+                                "Type": "Decimal(12, 2)"
+                              }
+                            ],
+                            "Actions": [
+                              {
+                                "Node Type": "INPUT",
+                                "Result Type": "UInt32",
+                                "Result Name": "customer_id",
+                                "Arguments": [0],
+                                "Removed Arguments": [],
+                                "Result": 0
+                              },
+                              {
+                                "Node Type": "INPUT",
+                                "Result Type": "Decimal(12, 2)",
+                                "Result Name": "total",
+                                "Arguments": [1],
+                                "Removed Arguments": [],
+                                "Result": 1
+                              },
+                              {
+                                "Node Type": "COLUMN",
+                                "Result Type": "UInt8",
+                                "Result Name": "100_UInt8",
+                                "Column": "Const(UInt8)",
+                                "Arguments": [],
+                                "Removed Arguments": [],
+                                "Result": 2
+                              },
+                              {
+                                "Node Type": "COLUMN",
+                                "Result Type": "UInt8",
+                                "Result Name": "200_UInt8",
+                                "Column": "Const(UInt8)",
+                                "Arguments": [],
+                                "Removed Arguments": [],
+                                "Result": 3
+                              },
+                              {
+                                "Node Type": "COLUMN",
+                                "Result Type": "UInt16",
+                                "Result Name": "800_UInt16",
+                                "Column": "Const(UInt16)",
+                                "Arguments": [],
+                                "Removed Arguments": [],
+                                "Result": 4
+                              },
+                              {
+                                "Node Type": "FUNCTION",
+                                "Result Type": "UInt8",
+                                "Result Name": "greaterOrEquals(__table1.customer_id, 100_UInt8)",
+                                "Function": "greaterOrEquals",
+                                "Compiled": false,
+                                "Arguments": [0, 2],
+                                "Removed Arguments": [2],
+                                "Result": 5
+                              },
+                              {
+                                "Node Type": "FUNCTION",
+                                "Result Type": "UInt8",
+                                "Result Name": "lessOrEquals(__table1.customer_id, 200_UInt8)",
+                                "Function": "lessOrEquals",
+                                "Compiled": false,
+                                "Arguments": [0, 3],
+                                "Removed Arguments": [0, 3],
+                                "Result": 2
+                              },
+                              {
+                                "Node Type": "FUNCTION",
+                                "Result Type": "UInt8",
+                                "Result Name": "greater(__table1.total, 800_UInt16)",
+                                "Function": "greater",
+                                "Compiled": false,
+                                "Arguments": [1, 4],
+                                "Removed Arguments": [1, 4],
+                                "Result": 3
+                              },
+                              {
+                                "Node Type": "FUNCTION",
+                                "Result Type": "UInt8",
+                                "Result Name": "and(greater(__table1.total, 800_UInt16), greaterOrEquals(__table1.customer_id, 100_UInt8), lessOrEquals(__table1.customer_id, 200_UInt8))",
+                                "Function": "and",
+                                "Compiled": false,
+                                "Arguments": [3, 5, 2],
+                                "Removed Arguments": [3, 5, 2],
+                                "Result": 4
+                              }
+                            ],
+                            "Outputs": [
+                              {
+                                "Name": "and(greater(__table1.total, 800_UInt16), greaterOrEquals(__table1.customer_id, 100_UInt8), lessOrEquals(__table1.customer_id, 200_UInt8))",
+                                "Type": "UInt8"
+                              }
+                            ],
+                            "Positions": [4]
+                          }
+                        }
+                      },
+                      "Indexes": [
+                        {
+                          "Type": "Min-Max",
+                          "Condition": "true",
+                          "Initial Parts": 10,
+                          "Selected Parts": 10,
+                          "Initial Granules": 392,
+                          "Selected Granules": 392
+                        },
+                        {
+                          "Type": "Partition",
+                          "Condition": "true",
+                          "Initial Parts": 10,
+                          "Selected Parts": 10,
+                          "Initial Granules": 392,
+                          "Selected Granules": 392
+                        },
+                        {
+                          "Type": "PrimaryKey",
+                          "Keys": ["customer_id"],
+                          "Condition": "and((customer_id in (-Inf, 200]), (customer_id in [100, +Inf)))",
+                          "Search Algorithm": "binary search",
+                          "Initial Parts": 10,
+                          "Selected Parts": 10,
+                          "Initial Granules": 392,
+                          "Selected Granules": 10
+                        },
+                        {
+                          "Type": "Skip",
+                          "Name": "total_idx",
+                          "Description": "minmax GRANULARITY 4",
+                          "Condition": "(total in ('800', +Inf))",
+                          "Initial Parts": 10,
+                          "Selected Parts": 10,
+                          "Initial Granules": 10,
+                          "Selected Granules": 10
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

@@ -1,0 +1,37 @@
+format: mysql-table (Certain)
+statements: 1
+
+== statement 1
+dialect: "MySql"
+estimated_rows: 40131
+source_format: "mysql-table"
+statement_type: "EXPLAIN"
+operators: 4
+  #1 Query Block [Query Block]
+      properties: [{name="select_id" value="1"}, {name="select_type" value="SIMPLE"}]
+      subplan_name: "Select #1"
+    #2 Table: o [Access: ALL]
+        estimated_rows: 40131
+        estimated_rows_read: 40131
+        extra: ["Using where", "Using temporary", "Using filesort"]
+        filtered_percent: 10
+        output_list: ["o"]
+        properties: [{name="possible_keys" value="PRIMARY,orders_customer_idx"}]
+        relation: "o"
+        warnings: [{TableScan={table="o"}}]
+    #3 Table: c [Access: eq_ref]
+        estimated_rows: 1
+        estimated_rows_read: 1
+        filtered_percent: 100
+        index_name: "PRIMARY"
+        output_list: ["c", "Key: PRIMARY"]
+        properties: [{name="possible_keys" value="PRIMARY"}, {name="key_len" value="4"}, {name="ref" value="shop.o.customer_id"}]
+        relation: "c"
+    #4 Table: oi [Access: ref]
+        estimated_rows: 2
+        estimated_rows_read: 2
+        filtered_percent: 100
+        index_name: "order_items_order_idx"
+        output_list: ["oi", "Key: order_items_order_idx"]
+        properties: [{name="possible_keys" value="order_items_order_idx"}, {name="key_len" value="4"}, {name="ref" value="shop.o.id"}]
+        relation: "oi"

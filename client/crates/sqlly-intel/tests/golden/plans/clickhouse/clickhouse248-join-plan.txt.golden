@@ -1,0 +1,23 @@
+format: clickhouse-text (Certain)
+statements: 1
+
+== statement 1
+dialect: "ClickHouse"
+source_format: "clickhouse-text"
+statement_type: "EXPLAIN"
+operators: 11
+  #1 Expression Project names [Expression]
+    #2 Limit preliminary LIMIT (without OFFSET) [Limit]
+      #3 Sorting Sorting for ORDER BY [Sorting]
+        #4 Expression (Before ORDER BY + Projection) [Expression]
+          #5 Aggregating [Aggregating]
+            #6 Expression (Before GROUP BY + ) [Expression]
+              #7 Join JOIN FillRightFirst [Join]
+                #8 Expression (JOIN actions + Change column names to column identifiers) [Expression]
+                  #9 ReadFromMergeTree default.customers [ReadFromMergeTree]
+                      relation: "customers"
+                      schema: "default"
+                #10 Expression [Expression]
+                  #11 ReadFromMergeTree default.orders [ReadFromMergeTree]
+                      relation: "orders"
+                      schema: "default"

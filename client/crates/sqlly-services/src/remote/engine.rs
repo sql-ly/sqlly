@@ -668,6 +668,25 @@ pub(crate) fn engine_connection_json(profile: &ConnectionProfile) -> StudioResul
         AuthenticationType::AuthToken { secret_ref } => {
             ("auth-token", String::new(), secret_ref.resolve()?, None)
         }
+        // The engine never reaches the local keyring: a stored bearer token
+        // travels resolved, a device-code token as the runtime token.
+        AuthenticationType::PostgresOAuth {
+            username,
+            flow,
+            secret_ref,
+            ..
+        } => {
+            let token = match (flow, &profile.runtime_cloud_iam_token) {
+                (_, Some(token)) => Some(token.clone()),
+                (sqlly_core::PgOAuthFlow::BearerToken, None)
+                    if !secret_ref.is_empty_in_memory() =>
+                {
+                    Some(secret_ref.resolve()?)
+                }
+                _ => None,
+            };
+            ("pg-oauth", username.clone(), String::new(), token)
+        }
     };
 
     let value = serde_json::json!({

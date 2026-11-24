@@ -1,0 +1,50 @@
+format: mysql-json-v2 (Certain)
+statements: 1
+
+== statement 1
+dialect: "MySql"
+estimated_rows: 1
+settings: [{name="query_type" value="select"}]
+source_format: "mysql-json-v2"
+statement_text: "/* select#1 */ select count(0) AS `COUNT(*)` from `shop`.`customers` `c` join `shop`.`products` `p` where ((`c`.`name` = `p`.`name`) and (`p`.`price` > 100.00))"
+statement_type: "EXPLAIN"
+total_subtree_cost: 364861.382955
+operators: 5
+  #1 Aggregate: count(0) [Aggregate: count(0)]
+      estimated_cost: 364861.382955
+      estimated_rows: 1
+      properties: [{name="access_type" value="aggregate"}, {name="functions" value="count(0)"}]
+    #2 Inner hash join (c.`name` = p.`name`) [Inner hash join (c.`name` = p.`name`)]
+        estimated_cost: 331711.365011
+        estimated_rows: 331500.179438
+        join_predicate: "c.`name` = p.`name`"
+        join_type: "Inner"
+        properties: [{name="access_type" value="join"}, {name="join_algorithm" value="hash"}]
+      #3 Table scan on c [Table scan on c]
+          alias: "c"
+          estimated_cost: 0.088015
+          estimated_rows: 4973
+          output_columns: ["name"]
+          output_list: ["customers"]
+          properties: [{name="access_type" value="table"}]
+          relation: "customers"
+          relation_resolved: yes
+          schema: "shop"
+          warnings: [{TableScan={schema="shop" table="c"}}]
+      #4 Filter: (p.price > 100.00) [Filter: (p.price > 100.00)]
+          estimated_cost: 202.25
+          estimated_rows: 666.599989
+          filter: "p.price > 100.00"
+          output_list: ["Condition: (p.price > 100.00)"]
+          properties: [{name="access_type" value="filter"}, {name="heading" value="Hash"}]
+        #5 Table scan on p [Table scan on p]
+            alias: "p"
+            estimated_cost: 202.25
+            estimated_rows: 2000
+            output_columns: ["name", "price"]
+            output_list: ["products"]
+            properties: [{name="access_type" value="table"}]
+            relation: "products"
+            relation_resolved: yes
+            schema: "shop"
+            warnings: [{TableScan={schema="shop" table="p"}}]

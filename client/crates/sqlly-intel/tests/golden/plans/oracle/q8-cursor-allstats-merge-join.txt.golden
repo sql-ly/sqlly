@@ -1,0 +1,118 @@
+format: oracle-xplan (Certain)
+statements: 1
+
+== statement 1
+dialect: "Oracle"
+execution_time_ms: 60
+has_actuals: yes
+notes: ["child number 0"]
+query_hash: "fxz004vjg3cjw"
+query_plan_hash: "1432314422"
+source_format: "oracle-xplan"
+statement_text: "SELECT /*+ GATHER_PLAN_STATISTICS USE_MERGE(o oi) */ COUNT(*), MAX(oi.price) FROM orders o JOIN order_items oi ON oi.order_id = o.id WHERE o.id BETWEEN 1000 AND..."
+statement_type: "ACTUAL PLAN"
+total_subtree_cost: 1490
+operators: 7
+  #0 SELECT STATEMENT [SELECT STATEMENT]
+      actual_rebinds: 1
+      actual_rows: 1
+      actual_rows_total: 1
+      actual_time_ms: 60
+      buffers: {logical_reads=1214}
+      estimated_cost: 1490
+      loops: 1
+      output_list: ["actual: 1 rows, 1 starts, 60.000 ms"]
+      properties: [{name="Cost %CPU" value="100"}]
+    #1 SORT AGGREGATE [SORT]
+        actual_rebinds: 1
+        actual_rows: 1
+        actual_rows_total: 1
+        actual_time_ms: 60
+        buffers: {logical_reads=1214}
+        estimated_row_width: 15
+        estimated_rows: 1
+        loops: 1
+        output_columns: ["COUNT(*)", "MAX(\"OI\".\"PRICE\")"]
+        output_list: ["actual: 1 rows, 1 starts, 60.000 ms"]
+        properties: [{name="Bytes" value="15"}, {name="Query Block" value="SEL$58A6D7F6"}, {name="Projection" value="#keys=0"}]
+      #2 MERGE JOIN [MERGE JOIN]
+          actual_rebinds: 1
+          actual_rows: 178000
+          actual_rows_total: 178000
+          actual_self_time_ms: 30
+          actual_time_ms: 80
+          buffers: {logical_reads=1214}
+          estimated_cost: 1490
+          estimated_row_width: 15.025231
+          estimated_rows: 104000
+          join_type: "INNER"
+          loops: 1
+          output_columns: ["\"OI\".\"PRICE\""]
+          output_list: ["actual: 178000 rows, 1 starts, 80.000 ms"]
+          properties: [{name="Bytes" value="1562624"}, {name="Cost %CPU" value="1"}]
+        #3 TABLE ACCESS BY INDEX ROWID ORDER_ITEMS [TABLE ACCESS]
+            actual_rebinds: 1
+            actual_rows: 178000
+            actual_rows_total: 178000
+            actual_self_time_ms: 10
+            actual_time_ms: 20
+            alias: "OI"
+            buffers: {logical_reads=1046}
+            estimated_cost: 1048
+            estimated_row_width: 9.998382
+            estimated_rows: 178000
+            loops: 1
+            output_columns: ["\"OI\".\"ORDER_ID\"", "\"OI\".\"PRICE\""]
+            output_list: ["actual: 178000 rows, 1 starts, 20.000 ms"]
+            properties: [{name="Bytes" value="1779712"}, {name="Cost %CPU" value="1"}, {name="Query Block" value="SEL$58A6D7F6"}, {name="Object Alias" value="\"OI\"@\"SEL$1\""}]
+            relation: "ORDER_ITEMS"
+          #4 INDEX RANGE SCAN IX_ITEMS_ORDER [INDEX]
+              actual_rebinds: 1
+              actual_rows: 178000
+              actual_rows_total: 178000
+              actual_self_time_ms: 10
+              actual_time_ms: 10
+              alias: "OI"
+              buffers: {logical_reads=397}
+              estimated_cost: 399
+              estimated_rows: 178000
+              index_cond: "\"OI\".\"ORDER_ID\">=1000 AND \"OI\".\"ORDER_ID\"<=90000"
+              index_name: "IX_ITEMS_ORDER"
+              loops: 1
+              output_columns: ["\"OI\".ROWID", "\"OI\".\"ORDER_ID\""]
+              output_list: ["access: \"OI\".\"ORDER_ID\">=1000 AND \"OI\".\"ORDER_ID\"<=90000", "actual: 178000 rows, 1 starts, 10.000 ms"]
+              properties: [{name="Cost %CPU" value="1"}, {name="Query Block" value="SEL$58A6D7F6"}, {name="Object Alias" value="\"OI\"@\"SEL$1\""}]
+        #5 SORT JOIN [SORT]
+            actual_rebinds: 178000
+            actual_rows: 178000
+            actual_rows_total: 178000
+            actual_self_time_ms: 20
+            actual_time_ms: 30
+            buffers: {logical_reads=168}
+            estimated_cost: 441
+            estimated_row_width: 4.993326
+            estimated_rows: 89002
+            filter: "\"OI\".\"ORDER_ID\"=\"O\".\"ID\""
+            index_cond: "\"OI\".\"ORDER_ID\"=\"O\".\"ID\""
+            loops: 178000
+            output_columns: ["\"O\".\"ID\""]
+            output_list: ["access: \"OI\".\"ORDER_ID\"=\"O\".\"ID\"", "filter: \"OI\".\"ORDER_ID\"=\"O\".\"ID\"", "actual: 178000 rows, 178000 starts, 30.000 ms"]
+            peak_memory_kb: 1810
+            properties: [{name="Bytes" value="444416"}, {name="Cost %CPU" value="1"}, {name="E-Temp" value="2104K"}, {name="OMem" value="2037K"}, {name="1Mem" value="674K"}, {name="Used-Mem" value="1810K (0)"}, {name="Passes" value="0"}, {name="Projection" value="#keys=1"}]
+          #6 INDEX RANGE SCAN SYS_C008932 [INDEX]
+              actual_rebinds: 1
+              actual_rows: 89001
+              actual_rows_total: 89001
+              actual_self_time_ms: 10
+              actual_time_ms: 10
+              alias: "O"
+              buffers: {logical_reads=168}
+              estimated_cost: 168
+              estimated_row_width: 4.993326
+              estimated_rows: 89002
+              index_cond: "\"O\".\"ID\">=1000 AND \"O\".\"ID\"<=90000"
+              index_name: "SYS_C008932"
+              loops: 1
+              output_columns: ["\"O\".\"ID\""]
+              output_list: ["access: \"O\".\"ID\">=1000 AND \"O\".\"ID\"<=90000", "actual: 89001 rows, 1 starts, 10.000 ms"]
+              properties: [{name="Bytes" value="444416"}, {name="Cost %CPU" value="0"}, {name="Query Block" value="SEL$58A6D7F6"}, {name="Object Alias" value="\"O\"@\"SEL$1\""}]

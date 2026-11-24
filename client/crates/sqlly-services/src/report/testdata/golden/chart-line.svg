@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360" role="img" aria-labelledby="line-title line-desc" font-family="&apos;Noto Sans&apos;, -apple-system, &apos;Segoe UI&apos;, &apos;Helvetica Neue&apos;, Arial, sans-serif">
+<title id="line-title">line chart</title>
+<desc id="line-desc">line · month, revenue, region · 36</desc>
+<rect width="640" height="360" fill="#ffffff"/>
+<text x="12" y="26" font-size="14" fill="#0f2544" font-weight="600">line chart</text>
+<rect x="12" y="333.5" width="9" height="9" fill="#1a5fb4"/>
+<text x="26" y="342" font-size="10.5" fill="#3c5a85">West</text>
+<rect x="64.51" y="333.5" width="9" height="9" fill="#c9500a"/>
+<text x="78.51" y="342" font-size="10.5" fill="#3c5a85">East</text>
+<rect x="113.06" y="333.5" width="9" height="9" fill="#00876a"/>
+<text x="127.06" y="342" font-size="10.5" fill="#3c5a85">North</text>
+<line x1="67.78" y1="309.5" x2="624" y2="309.5" stroke="#e3edf9" stroke-width="1"/>
+<text x="61.78" y="313" font-size="10" fill="#3c5a85" text-anchor="end">$1,000</text>
+<line x1="67.78" y1="242.13" x2="624" y2="242.13" stroke="#e3edf9" stroke-width="1"/>
+<text x="61.78" y="245.63" font-size="10" fill="#3c5a85" text-anchor="end">$2,000</text>
+<line x1="67.78" y1="174.75" x2="624" y2="174.75" stroke="#e3edf9" stroke-width="1"/>
+<text x="61.78" y="178.25" font-size="10" fill="#3c5a85" text-anchor="end">$3,000</text>
+<line x1="67.78" y1="107.38" x2="624" y2="107.38" stroke="#e3edf9" stroke-width="1"/>
+<text x="61.78" y="110.88" font-size="10" fill="#3c5a85" text-anchor="end">$4,000</text>
+<line x1="67.78" y1="40" x2="624" y2="40" stroke="#e3edf9" stroke-width="1"/>
+<text x="61.78" y="43.5" font-size="10" fill="#3c5a85" text-anchor="end">$5,000</text>
+<line x1="67.78" y1="309.5" x2="67.78" y2="312.5" stroke="#c6d9ef" stroke-width="1"/>
+<text x="67.78" y="323.5" font-size="10" fill="#3c5a85" text-anchor="middle">2026-01</text>
+<line x1="166.03" y1="309.5" x2="166.03" y2="312.5" stroke="#c6d9ef" stroke-width="1"/>
+<text x="166.03" y="323.5" font-size="10" fill="#3c5a85" text-anchor="middle">2026-03</text>
+<line x1="267.62" y1="309.5" x2="267.62" y2="312.5" stroke="#c6d9ef" stroke-width="1"/>
+<text x="267.62" y="323.5" font-size="10" fill="#3c5a85" text-anchor="middle">2026-05</text>
+<line x1="369.2" y1="309.5" x2="369.2" y2="312.5" stroke="#c6d9ef" stroke-width="1"/>
+<text x="369.2" y="323.5" font-size="10" fill="#3c5a85" text-anchor="middle">2026-07</text>
+<line x1="472.46" y1="309.5" x2="472.46" y2="312.5" stroke="#c6d9ef" stroke-width="1"/>
+<text x="472.46" y="323.5" font-size="10" fill="#3c5a85" text-anchor="middle">2026-09</text>
+<line x1="574.04" y1="309.5" x2="574.04" y2="312.5" stroke="#c6d9ef" stroke-width="1"/>
+<text x="574.04" y="323.5" font-size="10" fill="#3c5a85" text-anchor="middle">2026-11</text>
+<path d="M67.78 303.74 L119.41 297.98 L166.03 292.22 L217.66 286.46 L267.62 280.7 L319.24 274.94 L369.2 269.18 L420.83 263.42 L472.46 197.02 L522.41 251.89 L574.04 246.13 L624 240.37" fill="none" stroke="#1a5fb4" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="67.78" cy="303.74" r="2.6" fill="#1a5fb4"/>
+<circle cx="119.41" cy="297.98" r="2.6" fill="#1a5fb4"/>
+<circle cx="166.03" cy="292.22" r="2.6" fill="#1a5fb4"/>
+<circle cx="217.66" cy="286.46" r="2.6" fill="#1a5fb4"/>
+<circle cx="267.62" cy="280.7" r="2.6" fill="#1a5fb4"/>
+<circle cx="319.24" cy="274.94" r="2.6" fill="#1a5fb4"/>
+<circle cx="369.2" cy="269.18" r="2.6" fill="#1a5fb4"/>
+<circle cx="420.83" cy="263.42" r="2.6" fill="#1a5fb4"/>
+<circle cx="472.46" cy="197.02" r="2.6" fill="#1a5fb4"/>
+<circle cx="522.41" cy="251.89" r="2.6" fill="#1a5fb4"/>
+<circle cx="574.04" cy="246.13" r="2.6" fill="#1a5fb4"/>
+<circle cx="624" cy="240.37" r="2.6" fill="#1a5fb4"/>
+<path d="M67.78 297.98 L119.41 286.46 L166.03 274.94 L217.66 263.42 L267.62 251.89 L319.24 240.37 L369.2 228.85 L420.83 217.33 L472.46 205.81 L522.41 194.29 L574.04 182.77 L624 171.25" fill="none" stroke="#c9500a" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="67.78" cy="297.98" r="2.6" fill="#c9500a"/>
+<circle cx="119.41" cy="286.46" r="2.6" fill="#c9500a"/>
+<circle cx="166.03" cy="274.94" r="2.6" fill="#c9500a"/>
+<circle cx="217.66" cy="263.42" r="2.6" fill="#c9500a"/>
+<circle cx="267.62" cy="251.89" r="2.6" fill="#c9500a"/>
+<circle cx="319.24" cy="240.37" r="2.6" fill="#c9500a"/>
+<circle cx="369.2" cy="228.85" r="2.6" fill="#c9500a"/>
+<circle cx="420.83" cy="217.33" r="2.6" fill="#c9500a"/>
+<circle cx="472.46" cy="205.81" r="2.6" fill="#c9500a"/>
+<circle cx="522.41" cy="194.29" r="2.6" fill="#c9500a"/>
+<circle cx="574.04" cy="182.77" r="2.6" fill="#c9500a"/>
+<circle cx="624" cy="171.25" r="2.6" fill="#c9500a"/>
+<path d="M67.78 292.22 L119.41 274.94 L166.03 257.65 L217.66 240.37 L267.62 223.09 L319.24 205.81 L369.2 188.53 L420.83 171.25 L472.46 153.96 L522.41 136.68 L574.04 119.4 L624 102.12" fill="none" stroke="#00876a" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="67.78" cy="292.22" r="2.6" fill="#00876a"/>
+<circle cx="119.41" cy="274.94" r="2.6" fill="#00876a"/>
+<circle cx="166.03" cy="257.65" r="2.6" fill="#00876a"/>
+<circle cx="217.66" cy="240.37" r="2.6" fill="#00876a"/>
+<circle cx="267.62" cy="223.09" r="2.6" fill="#00876a"/>
+<circle cx="319.24" cy="205.81" r="2.6" fill="#00876a"/>
+<circle cx="369.2" cy="188.53" r="2.6" fill="#00876a"/>
+<circle cx="420.83" cy="171.25" r="2.6" fill="#00876a"/>
+<circle cx="472.46" cy="153.96" r="2.6" fill="#00876a"/>
+<circle cx="522.41" cy="136.68" r="2.6" fill="#00876a"/>
+<circle cx="574.04" cy="119.4" r="2.6" fill="#00876a"/>
+<circle cx="624" cy="102.12" r="2.6" fill="#00876a"/>
+<line x1="472.46" y1="40" x2="472.46" y2="309.5" stroke="#3c5a85" stroke-width="1" stroke-dasharray="2 3"/>
+<text x="469.46" y="50" font-size="10" fill="#0f2544" text-anchor="end">Promo</text>
+<text x="22.5" y="174.75" font-size="10.5" fill="#3c5a85" text-anchor="middle" transform="rotate(-90 22.5 174.75)">Revenue</text>
+</svg>

@@ -1,0 +1,24 @@
+format: trino-text (Certain)
+statements: 1
+
+== statement 1
+estimated_rows: 5527
+notes: ["Trino version: 484"]
+source_format: "trino-text"
+statement_type: "EXPLAIN"
+operators: 2
+  #1 Output [Output]
+      estimated_rows: 5527
+      output_columns: ["orderkey:bigint", "custkey:bigint", "orderstatus:varchar(1)", "totalprice:double", "orderdate:date", "orderpriority:varchar(15)", "clerk:varchar(15)", "shippriority:integer", "comment:varchar(79)"]
+      properties: [{name="columnNames" value="[orderkey, custkey, orderstatus, totalprice, orderdate, orderpriority, clerk, shippriority, comment]"}, {name="Fragment" value="0 [tpch:orders:15000]"}, {name="Fragment Output layout" value="[orderkey, custkey, orderstatus, totalprice, orderdate, orderpriority, clerk, shippriority, comment]"}, {name="Fragment Output partitioning" value="SINGLE []"}, {name="Estimates" value="{rows: 5527 (581.02kB), cpu: 0, memory: 0B, network: 0B}"}]
+    #2 ScanFilter [ScanFilter]
+        database: "tpch"
+        estimated_cpu: 767810
+        estimated_rows: 5527
+        estimated_rows_read: 7304
+        filter: "double '100000.0' < totalprice"
+        output_columns: ["orderkey:bigint", "custkey:bigint", "orderstatus:varchar(1)", "totalprice:double", "orderdate:date", "orderpriority:varchar(15)", "clerk:varchar(15)", "shippriority:integer", "comment:varchar(79)"]
+        output_list: ["orders", "Filter: double '100000.0' < totalprice"]
+        properties: [{name="table" value="tpch:tiny:orders"}, {name="Estimates" value="{rows: 7304 (767.81kB), cpu: 767.81k, memory: 0B, network: 0B}/{rows: 5527 (581.02kB), cpu: 767.81k, memory: 0B, network: 0B}"}, {name="orderstatus" value="tpch:orderstatus :: [[F]]"}, {name="clerk" value="tpch:clerk"}, {name="shippriority" value="tpch:shippriority"}, {name="totalprice" value="tpch:totalprice"}, {name="orderdate" value="tpch:orderdate"}, {name="orderpriority" value="tpch:orderpriority"}, {name="comment" value="tpch:comment"}, {name="orderkey" value="tpch:orderkey"}, {name="custkey" value="tpch:custkey"}]
+        relation: "orders"
+        schema: "tiny"

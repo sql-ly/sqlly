@@ -313,6 +313,36 @@ pub(super) fn hover_card(info: &HoverInfo, width: usize) -> Vec<CardLine> {
             word_card("CONSTANT", doc, Theme::constant(), slot.as_deref(), width)
         }
         HoverInfo::DataType(doc) => word_card("TYPE", doc, Theme::type_name(), None, width),
+        HoverInfo::Relation {
+            kind_label,
+            name,
+            details,
+            columns,
+            more_columns,
+        } => {
+            let mut lines = vec![title(kind_label, name, Theme::kind_table(), None)];
+            for detail in details {
+                lines.push(CardLine::new().push(detail, dim(), false));
+            }
+            for col in columns {
+                lines.push(CardLine::new().push(&col.name, Theme::text(), false).push(
+                    format!("  {}", col.data_type),
+                    dim(),
+                    false,
+                ));
+            }
+            if *more_columns > 0 {
+                lines.push(CardLine::new().push(
+                    crate::localization::format(
+                        "editor.info_cards.more_columns",
+                        &[("count", &more_columns.to_string())],
+                    ),
+                    dim(),
+                    false,
+                ));
+            }
+            lines
+        }
         HoverInfo::Command(doc) => {
             // The safety badges ride on the title line so a destructive or
             // blocking command warns before Run does.

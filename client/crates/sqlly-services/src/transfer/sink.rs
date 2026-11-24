@@ -421,6 +421,116 @@ mod tests {
 
     /// A failing statement rolls the DuckDB sink's transaction back so the
     /// table is left untouched.
+    // https://github.com/dbeaver/dbeaver/issues/42769
+    #[tokio::test]
+    async fn append_into_a_wider_target_names_only_the_mapped_columns() {
+        let dir = tempfile::tempdir().unwrap();
+        let source = file_profile(DatabaseType::Sqlite, &dir.path().join("source.db"));
+        let sqlite = sqlly_engines::sqlite::open_client(&source).await.unwrap();
+        for statement in [
+            "CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT NOT NULL)",
+            "INSERT INTO items VALUES (1, 'apple'), (2, 'pear'), (3, 'plum')",
+        ] {
+            sqlly_engines::sqlite::execute_params_on_client(&sqlite, statement, &[])
+                .await
+                .unwrap();
+        }
+        drop(sqlite);
+
+        let column = |name: &str, source_type: &str, pk_ordinal: Option<i64>| TransferColumn {
+            name: name.into(),
+            source_type: source_type.into(),
+            nullable: pk_ordinal.is_none(),
+            is_identity: false,
+            pk_ordinal,
+        };
+        let plan_for = |target: DatabaseType, target_schema: &str| TransferPlan {
+            source: DatabaseType::Sqlite,
+            target,
+            target_schema: Some(target_schema.into()),
+            mode: TransferMode::Append,
+            casing: NameCasing::AsIs,
+            tables: vec![TransferTable {
+                schema: None,
+                name: "items".into(),
+                columns: vec![
+                    column("id", "INTEGER", Some(1)),
+                    column("name", "TEXT", None),
+                ],
+                depends_on: vec![],
+            }],
+        };
+        let services = crate::services::Services::new();
+
+        // PostgreSQL target: every write is a parameterized INSERT with the
+        // mapped column list, never a column-less COPY.
+        let mut pg = RecordingSink {
+            db: DatabaseType::Postgres,
+            ..Default::default()
+        };
+        let (progress, _events) = tokio::sync::mpsc::channel(64);
+        let outcome = run_transfer(
+            &services,
+            &source,
+            &mut pg,
+            &plan_for(DatabaseType::Postgres, "public"),
+            progress,
+            TransferCancel::default(),
+        )
+        .await;
+        assert_eq!(outcome.error, None, "{outcome:?}");
+        assert_eq!(outcome.tables, vec![("items".to_string(), 3)]);
+        assert!(!pg.statements.is_empty());
+        for (sql, _) in &pg.statements {
+            assert!(!sql.to_ascii_uppercase().contains("COPY"), "{sql}");
+            assert!(
+                sql.starts_with(r#"INSERT INTO "public"."items" ("id", "name") VALUES"#),
+                "{sql}"
+            );
+        }
+
+        // A real target whose table has columns the source does not map:
+        // a nullable one and two NOT NULL ones with defaults.
+        let target = file_profile(DatabaseType::DuckDb, &dir.path().join("target.duckdb"));
+        let mut sink = open_sink(&target).await.unwrap();
+        sink.execute(
+            "CREATE TABLE main.items (id INTEGER PRIMARY KEY, name TEXT NOT NULL, note TEXT, status TEXT NOT NULL DEFAULT 'new', imported_at TIMESTAMP NOT NULL DEFAULT current_timestamp)",
+            &[],
+        )
+        .await
+        .unwrap();
+        let (progress, _events) = tokio::sync::mpsc::channel(64);
+        let outcome = run_transfer(
+            &services,
+            &source,
+            &mut sink,
+            &plan_for(DatabaseType::DuckDb, "main"),
+            progress,
+            TransferCancel::default(),
+        )
+        .await;
+        assert_eq!(outcome.error, None, "{outcome:?}");
+        assert_eq!(outcome.tables, vec![("items".to_string(), 3)]);
+        drop(sink);
+
+        let duck = sqlly_engines::duckdb::open_client(&target).await.unwrap();
+        let sets = sqlly_engines::duckdb::query_rows_on_client(
+            &duck,
+            "SELECT id, name, note, status, imported_at IS NOT NULL FROM main.items ORDER BY id",
+            &[],
+        )
+        .await
+        .unwrap();
+        let rows = &sets[0].rows;
+        assert_eq!(rows.len(), 3, "the target must not stay empty");
+        assert_eq!(rows[1][1], CellValue::String("pear".into()));
+        for row in rows {
+            assert_eq!(row[2], CellValue::Null);
+            assert_eq!(row[3], CellValue::String("new".into()));
+            assert_eq!(row[4], CellValue::Bool(true));
+        }
+    }
+
     #[tokio::test]
     async fn duckdb_sink_rolls_back_a_failed_transaction() {
         let dir = tempfile::tempdir().unwrap();

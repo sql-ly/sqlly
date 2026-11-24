@@ -252,38 +252,36 @@ fn join_source_candidates(
             // Determine which side is already present and which is the new
             // table. new_* = table to JOIN in; existing_* = side in statement.
             // `pairs` is (new-table column, present-table column) per key column.
-            let (new_qualified, new_table, pairs, present_side): (_, _, Vec<(&str, &str)>, _) =
-                if let Some(p) = present
+            let (new_qualified, pairs, present_side): (_, Vec<(&str, &str)>, _) = if let Some(p) =
+                present
                     .iter()
                     .find(|p| p.schema == from_schema && p.name == from_name)
                     .filter(|_| !present_keys.contains(&to_key))
-                {
-                    // Outbound: statement has the child table, suggest the parent.
-                    (
-                        to_qualified.clone(),
-                        to_table.as_str(),
-                        key.iter()
-                            .map(|fk| (fk.target_column.as_str(), fk.column.as_str()))
-                            .collect(),
-                        p,
-                    )
-                } else if let Some(p) = present
-                    .iter()
-                    .find(|p| format!("{}.{}", p.schema, p.name) == to_key)
-                    .filter(|_| !present_keys.contains(&from_key))
-                {
-                    // Inbound: statement has the parent table, suggest the child.
-                    (
-                        from_qualified.clone(),
-                        obj.name.as_str(),
-                        key.iter()
-                            .map(|fk| (fk.column.as_str(), fk.target_column.as_str()))
-                            .collect(),
-                        p,
-                    )
-                } else {
-                    continue;
-                };
+            {
+                // Outbound: statement has the child table, suggest the parent.
+                (
+                    to_qualified.clone(),
+                    key.iter()
+                        .map(|fk| (fk.target_column.as_str(), fk.column.as_str()))
+                        .collect(),
+                    p,
+                )
+            } else if let Some(p) = present
+                .iter()
+                .find(|p| format!("{}.{}", p.schema, p.name) == to_key)
+                .filter(|_| !present_keys.contains(&from_key))
+            {
+                // Inbound: statement has the parent table, suggest the child.
+                (
+                    from_qualified.clone(),
+                    key.iter()
+                        .map(|fk| (fk.column.as_str(), fk.target_column.as_str()))
+                        .collect(),
+                    p,
+                )
+            } else {
+                continue;
+            };
 
             // Decide the score, and whether to lead with a synthesized join
             // keyword, based on the typed prefix. A join-type hint shows every
@@ -301,7 +299,7 @@ fn join_source_candidates(
                 },
             };
 
-            let alias = make_alias(new_table, &mut used_aliases);
+            let alias = make_alias(&new_qualified, &mut used_aliases);
             let conditions = pairs
                 .iter()
                 .map(|(new_column, existing_column)| {
@@ -384,25 +382,14 @@ fn resolve_fk_target(catalog: &CompletionCatalog, fk: &FkRelation) -> (String, S
     (String::new(), fk.target_table.clone())
 }
 
-/// Stable, collision-free short alias from a table name: the first letter,
-/// lowercased, with a numeric suffix on collision (`c`, `c2`, `c3`, …).
-/// Registers the chosen alias in `used` so later suggestions avoid it too.
-/// Port of the Swift `makeAlias(for:)`.
-fn make_alias(table: &str, used: &mut HashSet<String>) -> String {
-    let base = table
-        .chars()
-        .find(|ch| ch.is_alphabetic())
-        .map(|ch| ch.to_lowercase().to_string())
-        .unwrap_or_else(|| "t".to_string());
-    let mut alias = base.clone();
-    if used.contains(&alias) {
-        let mut n = 2;
-        while used.contains(&format!("{base}{n}")) {
-            n += 1;
-        }
-        alias = format!("{base}{n}");
-    }
-    used.insert(alias.clone());
+/// Collision-free short alias for the joined table in the user's join alias
+/// style (`c`, `c2`, … by default; `jl` for `JournalLine` under the capital
+/// letters rule, feedback ifb_6da8). Registers the chosen alias in `used` so
+/// later suggestions avoid it too.
+fn make_alias(qualified_table: &str, used: &mut HashSet<String>) -> String {
+    let taken: Vec<String> = used.iter().cloned().collect();
+    let alias = sqlly_intel::intellisense::join_alias_for(qualified_table, &taken);
+    used.insert(alias.to_lowercase());
     alias
 }
 
@@ -996,6 +983,32 @@ mod tests {
                 .starts_with("Sales.Coupons c2 ON c2."),
             "expected the colliding alias to get a numeric suffix, got: {}",
             coupon_join.insert_text
+        );
+    }
+
+    #[test]
+    fn join_alias_follows_the_capital_letters_rule() {
+        // ifb_6da8: under the "capital letters, lowercased" alias rule the
+        // joined OrderLines is `ol`, not the first-letter `o2` that collides
+        // with the present Orders alias.
+        let catalog = sales_catalog();
+        let ctx = join_source_ctx(
+            "SELECT * FROM Sales.Orders o JOIN ",
+            vec![table_ref("Sales", "Orders", Some("o"))],
+        );
+        let capitals = sqlly_intel::intellisense::AliasStyle::CapitalLetters {
+            include_schema: false,
+        };
+        let items = sqlly_intel::intellisense::with_join_alias_style(capitals, || {
+            join_candidates(&catalog, &ctx)
+        });
+        let lines_join = items
+            .iter()
+            .find(|i| i.insert_text.contains("Sales.OrderLines"))
+            .expect("expected the inbound OrderLines suggestion");
+        assert_eq!(
+            lines_join.insert_text,
+            "Sales.OrderLines ol ON ol.OrderId = o.OrderId"
         );
     }
 

@@ -51,18 +51,9 @@ pub fn export_copied_message(format_label: &str, rows: usize) -> String {
     )
 }
 
-/// Computes the 1-based Excel column label for a 1-based column index
-/// (1 → "A", 26 → "Z", 27 → "AA"). Pure, no I/O.
-pub fn excel_column_label(index: usize) -> String {
-    let mut remaining = std::cmp::max(1, index);
-    let mut label = String::new();
-    while remaining > 0 {
-        let digit = (remaining - 1) % 26;
-        label.insert(0, char::from_u32(65 + digit as u32).unwrap());
-        remaining = (remaining - 1) / 26;
-    }
-    label
-}
+/// The 1-based Excel column label (1 → "A", 27 → "AA"); shared with the
+/// report writers.
+pub use sqlly_services::report::xlsx::excel_column_label;
 
 /// Escapes XML special characters (`&` `<` `>` `"` `'`).
 pub fn xml_escape(text: &str) -> String {
@@ -845,35 +836,8 @@ pub fn sql_literal_for(db: DatabaseType, value: &CellValue) -> String {
 
 /// Deduplicates column names by appending `_2`, `_3`, etc. for duplicates,
 /// skipping any suffix another column is already named. Empty names become
-/// `"Column"`.
-pub fn unique_column_names(columns: &[ResultColumn]) -> Vec<String> {
-    let base_of = |c: &ResultColumn| {
-        if c.name.trim().is_empty() {
-            "Column".to_string()
-        } else {
-            c.name.clone()
-        }
-    };
-    let reserved: std::collections::HashSet<String> = columns.iter().map(base_of).collect();
-    let mut used: std::collections::HashSet<String> = std::collections::HashSet::new();
-    columns
-        .iter()
-        .map(|c| {
-            let base = base_of(c);
-            if used.insert(base.clone()) {
-                return base;
-            }
-            let mut n = 2;
-            loop {
-                let candidate = format!("{}_{}", base, n);
-                if !reserved.contains(&candidate) && used.insert(candidate.clone()) {
-                    return candidate;
-                }
-                n += 1;
-            }
-        })
-        .collect()
-}
+/// `"Column"`. Shared with the report writers.
+pub use sqlly_services::report::xlsx::unique_column_names;
 
 /// Returns the SQL type for a column, defaulting to `nvarchar(max)` for
 /// empty/unknown types (matching Swift's `sqlType`).

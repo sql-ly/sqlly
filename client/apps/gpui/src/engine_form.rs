@@ -3,7 +3,7 @@ use sqlly_core::{AuthenticationType, DatabaseType};
 /// Engines the desktop app can connect to with its bundled native drivers. The
 /// first eleven are first-party; the rest are wire-compatible labels grouped
 /// by family (see `DatabaseType::compatible_with`).
-pub const SELECTABLE_ENGINES: [DatabaseType; 30] = [
+pub const SELECTABLE_ENGINES: [DatabaseType; 31] = [
     DatabaseType::SqlServer,
     DatabaseType::AzureSqlDatabase,
     DatabaseType::Postgres,
@@ -23,6 +23,7 @@ pub const SELECTABLE_ENGINES: [DatabaseType; 30] = [
     DatabaseType::CloudSqlPostgres,
     DatabaseType::Neon,
     DatabaseType::Supabase,
+    DatabaseType::WarehousePg,
     DatabaseType::AmazonAurora,
     DatabaseType::AmazonRds,
     DatabaseType::AzureMySqlFlexible,
@@ -175,6 +176,25 @@ pub fn is_file_engine(engine: DatabaseType) -> bool {
     matches!(engine, DatabaseType::Sqlite | DatabaseType::DuckDb)
 }
 
+/// Engines whose SQL Login may leave the user name blank, because the server
+/// accepts a connection without one: file engines (no credentials at all),
+/// the Redis family (a blank user is the `default` user and no `AUTH` is sent
+/// without a password) and ClickHouse (a blank user signs in as `default`).
+/// The SQL Server, PostgreSQL, MySQL and Oracle protocols all need a user.
+pub fn user_name_optional(engine: DatabaseType) -> bool {
+    is_file_engine(engine) || engine.is_command_engine() || engine == DatabaseType::ClickHouse
+}
+
+/// Placeholder for the SQL Login user field: says the field may be left
+/// blank where [`user_name_optional`], else shows a typical login.
+pub fn sql_login_user_placeholder(engine: DatabaseType) -> String {
+    if user_name_optional(engine) {
+        crate::localization::text("connections.editor.optional_user_placeholder")
+    } else {
+        "sa".to_string()
+    }
+}
+
 /// The credentials-row note for a file engine.
 pub fn file_engine_credentials_note(engine: DatabaseType) -> String {
     if engine == DatabaseType::DuckDb {
@@ -305,6 +325,9 @@ pub fn authentication_supported(engine: DatabaseType, auth: &AuthenticationType)
             sqlly_lang::sqlmodel::ConnectionKind::PostgresWire
                 | sqlly_lang::sqlmodel::ConnectionKind::MySqlWire
         ),
+        // PostgreSQL 18's `oauth` method needs a validator module the server
+        // operator installs, so it is offered for self-managed PostgreSQL.
+        AuthenticationType::PostgresOAuth { .. } => engine == DatabaseType::Postgres,
     }
 }
 
@@ -540,6 +563,7 @@ mod tests {
         assert_eq!(default_port(DatabaseType::YugabyteDb), 5433);
         assert_eq!(default_port(DatabaseType::TiDb), 4000);
         assert_eq!(default_port(DatabaseType::Neon), 5432);
+        assert_eq!(default_port(DatabaseType::WarehousePg), 5432);
         assert_eq!(default_port(DatabaseType::PlanetScale), 3306);
         assert_eq!(
             port_after_engine_change("5432", DatabaseType::Postgres, DatabaseType::CockroachDb),
@@ -582,6 +606,21 @@ mod tests {
         );
         assert!(file_engine_credentials_note(DatabaseType::DuckDb).contains(":memory:"));
         assert!(file_engine_credentials_note(DatabaseType::Sqlite).starts_with("SQLite"));
+    }
+
+    #[test]
+    fn user_name_is_optional_only_where_the_server_accepts_none() {
+        assert!(user_name_optional(DatabaseType::Sqlite));
+        assert!(user_name_optional(DatabaseType::Redis));
+        assert!(user_name_optional(DatabaseType::Valkey));
+        assert!(user_name_optional(DatabaseType::AmazonMemoryDb));
+        assert!(user_name_optional(DatabaseType::ClickHouse));
+        assert!(!user_name_optional(DatabaseType::SqlServer));
+        assert!(!user_name_optional(DatabaseType::Postgres));
+        assert!(!user_name_optional(DatabaseType::MySql));
+        assert_eq!(sql_login_user_placeholder(DatabaseType::SqlServer), "sa");
+        assert_ne!(sql_login_user_placeholder(DatabaseType::Redis), "sa");
+        assert_ne!(sql_login_user_placeholder(DatabaseType::ClickHouse), "sa");
     }
 
     #[test]

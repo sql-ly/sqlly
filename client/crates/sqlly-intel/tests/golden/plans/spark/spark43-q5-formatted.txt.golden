@@ -1,0 +1,83 @@
+format: spark-text (Certain)
+statements: 1
+
+== statement 1
+source_format: "spark-text"
+statement_type: "EXPLAIN"
+operators: 20
+  #1 AdaptiveSparkPlan [AdaptiveSparkPlan]
+      output_columns: ["name#39", "t#225", "rn#223"]
+      properties: [{name="Operator id" value="15"}, {name="Arguments" value="isFinalPlan=false"}]
+    #2 Window [Window]
+        properties: [{name="Operator id" value="14"}, {name="Input" value="[name#39, t#225]"}, {name="Arguments" value="[row_number() windowspecdefinition(t#225 DESC NULLS LAST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS rn#223], [t#225 DESC NULLS LA..."}]
+      #3 Sort [Sort]
+          properties: [{name="Operator id" value="13"}, {name="Input" value="[name#39, t#225]"}, {name="Arguments" value="[t#225 DESC NULLS LAST], false, 0"}]
+          sort_keys: ["t#225 DESC NULLS LAST"]
+        #4 Exchange [Exchange]
+            properties: [{name="Operator id" value="12"}, {name="Input" value="[name#39, t#225]"}, {name="Arguments" value="SinglePartition, ENSURE_REQUIREMENTS, [plan_id=1208]"}]
+          #5 Project [Project]
+              output_columns: ["name#39", "t#225"]
+              properties: [{name="Operator id" value="11"}, {name="Input" value="[customer_id#6L, t#225, id#38L, name#39]"}]
+            #6 BroadcastHashJoin [BroadcastHashJoin]
+                join_predicate: "customer_id#6L = id#38L"
+                join_type: "Inner"
+                output_list: ["Condition: customer_id#6L = id#38L"]
+                properties: [{name="Arguments" value="Inner BuildRight"}, {name="Operator id" value="10"}, {name="Left keys" value="[customer_id#6L]"}, {name="Right keys" value="[id#38L]"}]
+              #7 Filter [Filter]
+                  filter: "isnotnull(t#225) AND (cast(t#225 as decimal(25,6)) > cast(Subquery subquery#224, [id=#1188] as decimal(25,6)))"
+                  output_list: ["Filter: isnotnull(t#225) AND (cast(t#225 as decimal(25,6)) > cast(Subquery subquery#224, [id=#1188] as decimal(25,6)))"]
+                  properties: [{name="Operator id" value="6"}, {name="Input" value="[customer_id#6L, t#225]"}]
+                #8 HashAggregate [HashAggregate]
+                    group_keys: ["customer_id#6L"]
+                    output_columns: ["customer_id#6L", "sum(total#7)#231 AS t#225"]
+                    properties: [{name="Operator id" value="5"}, {name="Input" value="[customer_id#6L, sum#240, isEmpty#241]"}, {name="Functions" value="[sum(total#7)]"}, {name="Aggregate Attributes" value="[sum(total#7)#231]"}]
+                  #9 Exchange [Exchange]
+                      properties: [{name="Operator id" value="4"}, {name="Input" value="[customer_id#6L, sum#240, isEmpty#241]"}, {name="Arguments" value="hashpartitioning(customer_id#6L, 200), ENSURE_REQUIREMENTS, [plan_id=1200]"}]
+                    #10 HashAggregate [HashAggregate]
+                        group_keys: ["customer_id#6L"]
+                        output_columns: ["customer_id#6L", "sum#240", "isEmpty#241"]
+                        properties: [{name="Operator id" value="3"}, {name="Input" value="[customer_id#6L, total#7]"}, {name="Functions" value="[partial_sum(total#7)]"}, {name="Aggregate Attributes" value="[sum#238, isEmpty#239]"}]
+                      #11 Filter [Filter]
+                          filter: "isnotnull(customer_id#6L)"
+                          output_list: ["Filter: isnotnull(customer_id#6L)"]
+                          properties: [{name="Operator id" value="2"}, {name="Input" value="[customer_id#6L, total#7]"}]
+                        #12 Scan parquet [Scan parquet]
+                            database: "spark_catalog"
+                            output_columns: ["customer_id#6L", "total#7"]
+                            output_list: ["orders"]
+                            properties: [{name="Operator id" value="1"}, {name="Batched" value="true"}, {name="Location" value="InMemoryFileIndex [file:/tmp/spark-warehouse/orders]"}, {name="PushedFilters" value="[IsNotNull(customer_id)]"}, {name="ReadSchema" value="struct<customer_id:bigint,total:decimal(11,2)>"}]
+                            relation: "orders"
+                            schema: "default"
+              #13 BroadcastExchange [BroadcastExchange]
+                  properties: [{name="Operator id" value="9"}, {name="Input" value="[id#38L, name#39]"}, {name="Arguments" value="HashedRelationBroadcastMode(List(input[0, bigint, false]),false), [plan_id=1204]"}]
+                #14 Filter [Filter]
+                    filter: "isnotnull(id#38L)"
+                    output_list: ["Filter: isnotnull(id#38L)"]
+                    properties: [{name="Operator id" value="8"}, {name="Input" value="[id#38L, name#39]"}]
+                  #15 Scan parquet [Scan parquet]
+                      database: "spark_catalog"
+                      output_columns: ["id#38L", "name#39"]
+                      output_list: ["customers"]
+                      properties: [{name="Operator id" value="7"}, {name="Batched" value="true"}, {name="Location" value="InMemoryFileIndex [file:/tmp/spark-warehouse/customers]"}, {name="PushedFilters" value="[IsNotNull(id)]"}, {name="ReadSchema" value="struct<id:bigint,name:string>"}]
+                      relation: "customers"
+                      schema: "default"
+                #16 AdaptiveSparkPlan [AdaptiveSparkPlan]
+                    output_columns: ["avg(total)#233"]
+                    properties: [{name="Operator id" value="20"}, {name="Hosting Expression" value="Subquery subquery#224, [id=#1188]"}, {name="Arguments" value="isFinalPlan=false"}]
+                    subplan_name: "subquery#224"
+                  #17 HashAggregate [HashAggregate]
+                      output_columns: ["cast((avg(UnscaledValue(total#236))#232 / 100.0) as decimal(15,6)) AS avg(total)#233"]
+                      properties: [{name="Operator id" value="19"}, {name="Input" value="[sum#244, count#245L]"}, {name="Functions" value="[avg(UnscaledValue(total#236))]"}, {name="Aggregate Attributes" value="[avg(UnscaledValue(total#236))#232]"}]
+                    #18 Exchange [Exchange]
+                        properties: [{name="Operator id" value="18"}, {name="Input" value="[sum#244, count#245L]"}, {name="Arguments" value="SinglePartition, ENSURE_REQUIREMENTS, [plan_id=1186]"}]
+                      #19 HashAggregate [HashAggregate]
+                          output_columns: ["sum#244", "count#245L"]
+                          properties: [{name="Operator id" value="17"}, {name="Input" value="[total#236]"}, {name="Functions" value="[partial_avg(UnscaledValue(total#236))]"}, {name="Aggregate Attributes" value="[sum#242, count#243L]"}]
+                        #20 Scan parquet [Scan parquet]
+                            database: "spark_catalog"
+                            output_columns: ["total#236"]
+                            output_list: ["orders"]
+                            properties: [{name="Operator id" value="16"}, {name="Batched" value="true"}, {name="Location" value="InMemoryFileIndex [file:/tmp/spark-warehouse/orders]"}, {name="ReadSchema" value="struct<total:decimal(11,2)>"}]
+                            relation: "orders"
+                            schema: "default"
+                            warnings: [{TableScan={schema="default" table="orders"}}]

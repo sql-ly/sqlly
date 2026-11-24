@@ -1,0 +1,38 @@
+format: mysql-table (Certain)
+statements: 1
+
+== statement 1
+dialect: "MySql"
+estimated_rows: 40131
+source_format: "mysql-table"
+statement_type: "EXPLAIN"
+operators: 5
+  #1 Query Block [Query Block]
+      properties: [{name="select_id" value="1"}, {name="select_type" value="PRIMARY"}]
+      subplan_name: "Select #1"
+    #2 Table: c [Access: ALL]
+        estimated_rows: 4973
+        estimated_rows_read: 4973
+        filtered_percent: 100
+        output_list: ["c"]
+        properties: [{name="possible_keys" value="PRIMARY"}]
+        relation: "c"
+        warnings: [{TableScan={table="c"}}]
+    #3 Table: <derived2> [Access: ref]
+        estimated_rows: 10
+        estimated_rows_read: 10
+        filtered_percent: 100
+        index_name: "<auto_key0>"
+        output_list: ["<derived2>", "Key: <auto_key0>"]
+        properties: [{name="possible_keys" value="<auto_key0>"}, {name="key_len" value="4"}, {name="ref" value="shop.c.id"}]
+      #4 Query Block [Query Block]
+          properties: [{name="select_id" value="2"}, {name="select_type" value="DERIVED"}]
+          subplan_name: "Select #2"
+        #5 Table: orders [Access: index]
+            estimated_rows: 40131
+            estimated_rows_read: 40131
+            filtered_percent: 100
+            index_name: "orders_customer_idx"
+            output_list: ["orders", "Key: orders_customer_idx"]
+            properties: [{name="possible_keys" value="orders_customer_idx"}, {name="key_len" value="4"}]
+            relation: "orders"

@@ -1,0 +1,70 @@
+
+PLAN_TABLE_OUTPUT
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+SQL_ID  bm8y9hp0cway1, child number 0
+-------------------------------------
+SELECT /*+ GATHER_PLAN_STATISTICS */ c.email, o.id, o.total FROM
+customers c JOIN orders o ON o.customer_id = c.id WHERE c.id BETWEEN
+100 AND 105 AND o.total > 50
+
+Plan hash value: 1938300530
+
+-----------------------------------------------------------------------------------------------------------------------------------------------
+|   Id  | Operation                               | Name               | Starts | E-Rows |E-Bytes| Cost (%CPU)| A-Rows |   A-Time   | Buffers |
+-----------------------------------------------------------------------------------------------------------------------------------------------
+|     0 | SELECT STATEMENT                        |                    |      1 |        |       |    18 (100)|     36 |00:00:00.01 |      62 |
+|- *  1 |  HASH JOIN                              |                    |      1 |      7 |   294 |    18   (0)|     36 |00:00:00.01 |      62 |
+|     2 |   NESTED LOOPS                          |                    |      1 |      7 |   294 |    18   (0)|     36 |00:00:00.01 |      62 |
+|     3 |    NESTED LOOPS                         |                    |      1 |      7 |   294 |    18   (0)|     36 |00:00:00.01 |      25 |
+|-    4 |     STATISTICS COLLECTOR                |                    |      1 |        |       |            |      6 |00:00:00.01 |       8 |
+|     5 |      TABLE ACCESS BY INDEX ROWID BATCHED| CUSTOMERS          |      1 |      7 |   189 |     3   (0)|      6 |00:00:00.01 |       8 |
+|  *  6 |       INDEX RANGE SCAN                  | SYS_C008926        |      1 |      7 |       |     2   (0)|      6 |00:00:00.01 |       5 |
+|  *  7 |     INDEX RANGE SCAN                    | IX_ORDERS_CUSTOMER |      6 |      1 |       |     2   (0)|     36 |00:00:00.01 |      17 |
+|  *  8 |    TABLE ACCESS BY INDEX ROWID          | ORDERS             |     36 |      1 |    15 |     3   (0)|     36 |00:00:00.01 |      37 |
+|- *  9 |   TABLE ACCESS BY INDEX ROWID BATCHED   | ORDERS             |      0 |      1 |    15 |     3   (0)|      0 |00:00:00.01 |       0 |
+|- * 10 |    INDEX RANGE SCAN                     | IX_ORDERS_CUSTOMER |      0 |      1 |       |     2   (0)|      0 |00:00:00.01 |       0 |
+-----------------------------------------------------------------------------------------------------------------------------------------------
+
+Query Block Name / Object Alias (identified by operation id):
+-------------------------------------------------------------
+
+   1 - SEL$58A6D7F6
+   5 - SEL$58A6D7F6 / "C"@"SEL$1"
+   6 - SEL$58A6D7F6 / "C"@"SEL$1"
+   7 - SEL$58A6D7F6 / "O"@"SEL$1"
+   8 - SEL$58A6D7F6 / "O"@"SEL$1"
+   9 - SEL$58A6D7F6 / "O"@"SEL$1"
+  10 - SEL$58A6D7F6 / "O"@"SEL$1"
+
+Predicate Information (identified by operation id):
+---------------------------------------------------
+
+   1 - access("O"."CUSTOMER_ID"="C"."ID")
+   6 - access("C"."ID">=100 AND "C"."ID"<=105)
+   7 - access("O"."CUSTOMER_ID"="C"."ID")
+       filter(("O"."CUSTOMER_ID"<=105 AND "O"."CUSTOMER_ID">=100))
+   8 - filter("O"."TOTAL">50)
+   9 - filter("O"."TOTAL">50)
+  10 - access("O"."CUSTOMER_ID">=100 AND "O"."CUSTOMER_ID"<=105)
+
+Column Projection Information (identified by operation id):
+-----------------------------------------------------------
+
+   1 - (#keys=1) "O"."TOTAL"[NUMBER,22], "C"."EMAIL"[VARCHAR2,200], "O"."ID"[NUMBER,22], "O"."ID"[NUMBER,22], "O"."TOTAL"[NUMBER,22]
+   2 - "C"."ID"[NUMBER,22], "C"."EMAIL"[VARCHAR2,200], "O"."ID"[NUMBER,22], "O"."TOTAL"[NUMBER,22]
+   3 - "C"."ID"[NUMBER,22], "C"."EMAIL"[VARCHAR2,200], "O".ROWID[ROWID,10]
+   4 - "C"."ID"[NUMBER,22], "C"."EMAIL"[VARCHAR2,200]
+   5 - "C"."ID"[NUMBER,22], "C"."EMAIL"[VARCHAR2,200]
+   6 - "C".ROWID[ROWID,10], "C"."ID"[NUMBER,22]
+   7 - "O".ROWID[ROWID,10]
+   8 - "O"."ID"[NUMBER,22], "O"."TOTAL"[NUMBER,22]
+   9 - "O"."ID"[NUMBER,22], "O"."CUSTOMER_ID"[NUMBER,22], "O"."TOTAL"[NUMBER,22]
+  10 - "O".ROWID[ROWID,10], "O"."CUSTOMER_ID"[NUMBER,22]
+
+Note
+-----
+   - this is an adaptive plan (rows marked '-' are inactive)
+
+
+64 rows selected.
+

@@ -2195,6 +2195,66 @@ mod tests {
         let _ = std::fs::remove_file(&tmp);
     }
 
+    // https://github.com/jakob/Postico/issues/900
+    #[cfg(unix)]
+    #[test]
+    fn saved_connections_survive_a_launch_that_cannot_read_them() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = std::env::temp_dir().join(format!("sqlly-test-unreadable-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("connections.json");
+        let saved = ConnectionStore::from_path(&path);
+        for name in ["prod", "staging"] {
+            saved.add(ConnectionStore::create_sql_login(
+                name,
+                "localhost",
+                5432,
+                None,
+                "app",
+                "pwd",
+                true,
+                false,
+            ));
+        }
+        let before = std::fs::read(&path).unwrap();
+
+        // An OS upgrade leaves the file in place but unreadable to the app.
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o000)).unwrap();
+        let after_upgrade = ConnectionStore::from_path(&path);
+        let blocked = after_upgrade.load_error().is_some();
+        // The user adds a server to the empty-looking list.
+        after_upgrade.add(ConnectionStore::create_sql_login(
+            "re-added",
+            "localhost",
+            5432,
+            None,
+            "app",
+            "pwd",
+            true,
+            false,
+        ));
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).unwrap();
+
+        assert!(
+            blocked,
+            "an unreadable store must be reported, not read as empty"
+        );
+        assert_eq!(
+            std::fs::read(&path).unwrap(),
+            before,
+            "the saved connections must not be replaced"
+        );
+        let names: Vec<String> = ConnectionStore::from_path(&path)
+            .list()
+            .into_iter()
+            .map(|p| p.name)
+            .collect();
+        assert_eq!(names, ["prod", "staging"]);
+        let entries = std::fs::read_dir(&dir).unwrap().count();
+        assert_eq!(entries, 1, "one store file, no second library beside it");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
     #[test]
     fn bracketed_profile_names_round_trip() {
         let tmp = std::env::temp_dir().join(format!("sqlly-test-bracket-{}", Uuid::new_v4()));

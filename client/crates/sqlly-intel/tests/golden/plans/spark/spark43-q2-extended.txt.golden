@@ -1,0 +1,53 @@
+format: spark-text (Certain)
+statements: 1
+
+== statement 1
+source_format: "spark-text"
+statement_type: "EXPLAIN"
+operators: 13
+  #1 AdaptiveSparkPlan [AdaptiveSparkPlan]
+      properties: [{name="Arguments" value="isFinalPlan=false"}]
+    #2 Sort [Sort]
+        properties: [{name="Arguments" value="[revenue#51 DESC NULLS LAST], true, 0"}]
+        sort_keys: ["revenue#51 DESC NULLS LAST"]
+      #3 Exchange [Exchange]
+          properties: [{name="Arguments" value="rangepartitioning(revenue#51 DESC NULLS LAST, 200), ENSURE_REQUIREMENTS, [plan_id=260]"}]
+        #4 HashAggregate [HashAggregate]
+            group_keys: ["region#40"]
+            output_columns: ["region#40", "n#50L", "revenue#51"]
+            properties: [{name="functions" value="[count(1), sum(total#7)]"}]
+          #5 Exchange [Exchange]
+              properties: [{name="Arguments" value="hashpartitioning(region#40, 200), ENSURE_REQUIREMENTS, [plan_id=257]"}]
+            #6 HashAggregate [HashAggregate]
+                group_keys: ["region#40"]
+                output_columns: ["region#40", "count#61L", "sum#62", "isEmpty#63"]
+                properties: [{name="functions" value="[partial_count(1), partial_sum(total#7)]"}]
+              #7 Project [Project]
+                  output_columns: ["region#40", "total#7"]
+                #8 BroadcastHashJoin [BroadcastHashJoin]
+                    join_predicate: "id#38L = customer_id#6L"
+                    join_type: "Inner"
+                    output_list: ["Condition: id#38L = customer_id#6L"]
+                    properties: [{name="Arguments" value="[id#38L], [customer_id#6L], Inner, BuildLeft, false, false"}]
+                  #9 BroadcastExchange [BroadcastExchange]
+                      properties: [{name="Arguments" value="HashedRelationBroadcastMode(List(input[0, bigint, false]),false), [plan_id=252]"}]
+                    #10 Filter [Filter]
+                        filter: "region#40 IN (east,west) AND isnotnull(id#38L)"
+                        output_list: ["Filter: region#40 IN (east,west) AND isnotnull(id#38L)"]
+                      #11 FileScan parquet [FileScan parquet]
+                          database: "spark_catalog"
+                          output_columns: ["id#38L", "region#40"]
+                          output_list: ["customers"]
+                          properties: [{name="Batched" value="true"}, {name="DataFilters" value="[region#40 IN (east,west), isnotnull(id#38L)]"}, {name="Format" value="Parquet"}, {name="Location" value="InMemoryFileIndex(1 paths)[file:/tmp/spark-warehouse/customers]"}, {name="PartitionFilters" value="[]"}, {name="PushedFilters" value="[In(region, [east,west]), IsNotNull(id)]"}, {name="ReadSchema" value="struct<id:bigint,region:string>"}]
+                          relation: "customers"
+                          schema: "default"
+                  #12 Filter [Filter]
+                      filter: "isnotnull(customer_id#6L)"
+                      output_list: ["Filter: isnotnull(customer_id#6L)"]
+                    #13 FileScan parquet [FileScan parquet]
+                        database: "spark_catalog"
+                        output_columns: ["customer_id#6L", "total#7"]
+                        output_list: ["orders"]
+                        properties: [{name="Batched" value="true"}, {name="DataFilters" value="[isnotnull(customer_id#6L)]"}, {name="Format" value="Parquet"}, {name="Location" value="InMemoryFileIndex(1 paths)[file:/tmp/spark-warehouse/orders]"}, {name="PartitionFilters" value="[]"}, {name="PushedFilters" value="[IsNotNull(customer_id)]"}, {name="ReadSchema" value="struct<customer_id:bigint,total:decimal(11,2)>"}]
+                        relation: "orders"
+                        schema: "default"

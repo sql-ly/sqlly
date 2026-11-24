@@ -15,10 +15,10 @@ use serde::Serialize;
 use serde_json::{Map, Value, json};
 use sqlly_lang::sqlformat::{
     BooleanOperatorPlacement, CaseExpressionStyle, ClauseBodyPlacement, CommaStyle, CommentStyle,
-    CteStyle, DdlStyle, DmlStyle, FunctionArgStyle, FunctionCase, IdentifierCase,
-    IdentifierQuoting, InListStyle, IndentStyle, JoinLayout, KeywordCase, MajorClausePlacement,
-    OnClausePlacement, OrderGroupLayout, Preset, SelectListStyle, SemicolonStyle,
-    SqlFormattingPreferences, SubqueryStyle, ValuesStyle,
+    CteStyle, DdlStyle, DmlStyle, FunctionArgStyle, FunctionCase, IdentifierQuoting, InListStyle,
+    IndentStyle, JoinLayout, KeywordCase, MajorClausePlacement, OnClausePlacement,
+    OrderGroupLayout, Preset, SelectListStyle, SemicolonStyle, SqlFormattingPreferences,
+    SubqueryStyle, ValuesStyle,
 };
 
 /// One control in the Advanced panel.
@@ -135,9 +135,10 @@ pub fn groups() -> Vec<Group> {
             label: "Keyword casing",
             fields: vec![
                 field("keywordCase", "Keywords", keyword_case()),
-                field(
+                hinted(
                     "functionCase",
-                    "Function names",
+                    "Built-in function names",
+                    "System functions such as COUNT, GETDATE or date_trunc. Your own functions, procedures, tables, columns and types keep the case you wrote.",
                     choice(FunctionCase::all(), FunctionCase::display_title),
                 ),
                 hinted(
@@ -147,7 +148,11 @@ pub fn groups() -> Vec<Group> {
                     Toggle,
                 ),
                 field("keywordGroupCasing.dataTypes", "Data types", keyword_case()),
-                field("keywordGroupCasing.functions", "Functions", keyword_case()),
+                field(
+                    "keywordGroupCasing.functions",
+                    "Built-in functions",
+                    keyword_case(),
+                ),
                 field(
                     "keywordGroupCasing.keywords",
                     "Other keywords",
@@ -177,19 +182,12 @@ pub fn groups() -> Vec<Group> {
         Group {
             id: "identifiers",
             label: "Identifiers",
-            fields: vec![
-                field(
-                    "identifierCase",
-                    "Identifier case",
-                    choice(IdentifierCase::all(), IdentifierCase::display_title),
-                ),
-                hinted(
-                    "identifierQuoting",
-                    "Quoting",
-                    "Quotes are only removed where the name still resolves to the same object under the dialect's case rules.",
-                    choice(IdentifierQuoting::all(), IdentifierQuoting::display_title),
-                ),
-            ],
+            fields: vec![hinted(
+                "identifierQuoting",
+                "Quoting",
+                "Quotes are only removed where the name still resolves to the same object under the dialect's case rules.",
+                choice(IdentifierQuoting::all(), IdentifierQuoting::display_title),
+            )],
         },
         Group {
             id: "clauses",

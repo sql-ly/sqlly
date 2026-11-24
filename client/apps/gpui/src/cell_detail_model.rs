@@ -214,6 +214,42 @@ pub fn edit_for_apply(original: &CellValue, draft: &str) -> Option<PanelEdit> {
     }
 }
 
+/// The editor's starting text for a cell of `data_type`: a valid JSON value
+/// in a JSON column opens pretty-printed unless edits are kept as typed.
+pub fn edit_seed_for(
+    value: &CellValue,
+    data_type: &str,
+    storage: crate::json_edit_format::JsonEditStorage,
+) -> Option<String> {
+    let seed = edit_seed_text(value)?;
+    if storage.edits_pretty()
+        && !matches!(value, CellValue::Null)
+        && crate::json_edit_format::is_json_type(data_type)
+    {
+        return Some(crate::json_edit_format::pretty_json(&seed).unwrap_or(seed));
+    }
+    Some(seed)
+}
+
+/// [`edit_for_apply`] for an editor seeded with `seed`: an untouched draft
+/// stages nothing, and a JSON column's draft is written in `storage`'s
+/// format first.
+pub fn edit_for_apply_as(
+    original: &CellValue,
+    seed: &str,
+    draft: &str,
+    data_type: &str,
+    storage: crate::json_edit_format::JsonEditStorage,
+) -> Option<PanelEdit> {
+    if !matches!(original, CellValue::Null) && draft == seed {
+        return None;
+    }
+    if crate::json_edit_format::is_json_type(data_type) {
+        return edit_for_apply(original, &storage.apply(draft));
+    }
+    edit_for_apply(original, draft)
+}
+
 /// A non-blocking warning for text applied to a JSON-typed column that does
 /// not parse as JSON. The edit is still staged; the server stays the
 /// authority.
@@ -340,6 +376,60 @@ mod tests {
         );
     }
 
+    // https://github.com/TablePlus/TablePlus/issues/3962
+    #[test]
+    fn row_details_for_a_row_with_huge_json_hold_only_previews() {
+        let limits = sqlly_services::CellLimits::default();
+        let json = format!(
+            "{{\"items\":[{}]}}",
+            (0..200_000)
+                .map(|i| format!("{{\"n\":{i}}}"))
+                .collect::<Vec<_>>()
+                .join(",")
+        );
+        let full_len = json.len();
+        assert!(full_len > 2 * 1024 * 1024);
+        let columns = vec![
+            col("id", "int4"),
+            col("payload", "jsonb"),
+            col("note", "text"),
+        ];
+        let mut rows = vec![vec![
+            CellValue::I64(1),
+            CellValue::String(json),
+            CellValue::String("ok".into()),
+        ]];
+        // The fetch pipeline cuts big cells before the grid ever holds them.
+        let cut = sqlly_services::truncate_rows(&mut rows, 0, &limits);
+        assert_eq!(cut.len(), 1);
+        assert_eq!((cut[0].row, cut[0].column), (0, 1));
+        assert_eq!(cut[0].total_len, full_len as u64);
+        // Selecting the row (any cell of it) builds the docked row form from
+        // that grid row: every field is a bounded preview.
+        for column in 0..columns.len() {
+            let focus = FocusedCell {
+                display_row: 0,
+                source_row: 0,
+                column,
+            };
+            let detail = build_detail(&columns, &rows[0], focus, 1).unwrap();
+            for field in &detail.fields {
+                assert!(
+                    field.value.len() <= limits.preview_bytes,
+                    "{} holds {} bytes",
+                    field.name,
+                    field.value.len()
+                );
+            }
+        }
+        // The full value is fetched in the background, since it is under the
+        // viewer cap and the row has a key.
+        assert_eq!(
+            crate::cell_hydration::hydration_blocker(&cut[0], &["id".to_string()], &limits),
+            None
+        );
+    }
+
     #[test]
     fn build_detail_marks_focused_field_and_labels_nulls() {
         let columns = vec![col("id", "int"), col("name", "text")];
@@ -453,5 +543,101 @@ mod tests {
         assert!(json_warning("jsonb", "{\"a\": 1}").is_none());
         assert!(json_warning("JSON", "{oops").is_some());
         assert!(json_warning("text", "{oops").is_none());
+    }
+
+    #[test]
+    fn json_cells_edit_pretty_and_save_in_the_chosen_format() {
+        use crate::json_edit_format::JsonEditStorage;
+        let stored = CellValue::String(r#"{"b":1,"a":[2]}"#.into());
+        let pretty = "{\n  \"b\": 1,\n  \"a\": [\n    2\n  ]\n}";
+
+        // Keep as typed: today's behavior, stored text in and out.
+        let seed = edit_seed_for(&stored, "jsonb", JsonEditStorage::KeepAsTyped).unwrap();
+        assert_eq!(seed, r#"{"b":1,"a":[2]}"#);
+        let draft = r#"{"b": 1, "a":[3]}"#;
+        assert_eq!(
+            edit_for_apply_as(&stored, &seed, draft, "jsonb", JsonEditStorage::KeepAsTyped),
+            Some(PanelEdit::Text(draft.into()))
+        );
+
+        // Minified: pretty in the editor, compact in the database.
+        let seed = edit_seed_for(&stored, "json", JsonEditStorage::Minified).unwrap();
+        assert_eq!(seed, pretty);
+        assert_eq!(
+            edit_for_apply_as(&stored, &seed, &seed, "json", JsonEditStorage::Minified),
+            None
+        );
+        let draft = seed.replace('2', "3");
+        assert_eq!(
+            edit_for_apply_as(&stored, &seed, &draft, "json", JsonEditStorage::Minified),
+            Some(PanelEdit::Text(r#"{"b":1,"a":[3]}"#.into()))
+        );
+        // Reformatting back to the stored text is no change at all.
+        let reindented = "{\"b\":1,\n\"a\":[2]}";
+        assert_eq!(
+            edit_for_apply_as(
+                &stored,
+                &seed,
+                reindented,
+                "json",
+                JsonEditStorage::Minified
+            ),
+            None
+        );
+
+        // Pretty-printed stores the indented form.
+        assert_eq!(
+            edit_for_apply_as(
+                &stored,
+                &seed,
+                r#"{"b":1,"a":[2]}  "#,
+                "json",
+                JsonEditStorage::PrettyPrinted
+            ),
+            Some(PanelEdit::Text(pretty.into()))
+        );
+
+        // Invalid JSON is saved exactly as typed.
+        assert_eq!(
+            edit_for_apply_as(&stored, &seed, "{ oops", "json", JsonEditStorage::Minified),
+            Some(PanelEdit::Text("{ oops".into()))
+        );
+
+        // Non-JSON columns and invalid stored JSON are left alone.
+        let text = CellValue::String(r#"{"b":1}"#.into());
+        assert_eq!(
+            edit_seed_for(&text, "text", JsonEditStorage::Minified).unwrap(),
+            r#"{"b":1}"#
+        );
+        assert_eq!(
+            edit_for_apply_as(
+                &text,
+                "x",
+                "{ \"b\": 2 }",
+                "text",
+                JsonEditStorage::Minified
+            ),
+            Some(PanelEdit::Text("{ \"b\": 2 }".into()))
+        );
+        let broken = CellValue::String("{ oops".into());
+        assert_eq!(
+            edit_seed_for(&broken, "json", JsonEditStorage::Minified).unwrap(),
+            "{ oops"
+        );
+        // NULL starts empty and still stages text.
+        assert_eq!(
+            edit_seed_for(&CellValue::Null, "json", JsonEditStorage::Minified).unwrap(),
+            ""
+        );
+        assert_eq!(
+            edit_for_apply_as(
+                &CellValue::Null,
+                "",
+                "[ 1 ]",
+                "json",
+                JsonEditStorage::Minified
+            ),
+            Some(PanelEdit::Text("[1]".into()))
+        );
     }
 }

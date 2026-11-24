@@ -1,0 +1,63 @@
+format: spark-text (Certain)
+statements: 1
+
+== statement 1
+source_format: "spark-text"
+statement_type: "EXPLAIN"
+operators: 15
+  #1 AdaptiveSparkPlan [AdaptiveSparkPlan]
+      output_columns: ["status#8", "sku#115", "max(price)#318"]
+      properties: [{name="Operator id" value="15"}, {name="Arguments" value="isFinalPlan=false"}]
+    #2 HashAggregate [HashAggregate]
+        group_keys: ["status#8", "sku#115"]
+        output_columns: ["status#8", "sku#115", "max(price#116)#317 AS max(price)#318"]
+        properties: [{name="Operator id" value="14"}, {name="Input" value="[status#8, sku#115, max#320]"}, {name="Functions" value="[max(price#116)]"}, {name="Aggregate Attributes" value="[max(price#116)#317]"}]
+      #3 Exchange [Exchange]
+          properties: [{name="Operator id" value="13"}, {name="Input" value="[status#8, sku#115, max#320]"}, {name="Arguments" value="hashpartitioning(status#8, sku#115, 200), ENSURE_REQUIREMENTS, [plan_id=1569]"}]
+        #4 HashAggregate [HashAggregate]
+            group_keys: ["status#8", "sku#115"]
+            output_columns: ["status#8", "sku#115", "max#320"]
+            properties: [{name="Operator id" value="12"}, {name="Input" value="[status#8, sku#115, price#116]"}, {name="Functions" value="[partial_max(price#116)]"}, {name="Aggregate Attributes" value="[max#319]"}]
+          #5 Project [Project]
+              output_columns: ["status#8", "sku#115", "price#116"]
+              properties: [{name="Operator id" value="11"}, {name="Input" value="[id#5L, status#8, order_id#114L, sku#115, price#116]"}]
+            #6 SortMergeJoin [SortMergeJoin]
+                join_predicate: "id#5L = order_id#114L"
+                join_type: "Inner"
+                output_list: ["Condition: id#5L = order_id#114L"]
+                properties: [{name="Arguments" value="Inner"}, {name="Operator id" value="10"}, {name="Left keys" value="[id#5L]"}, {name="Right keys" value="[order_id#114L]"}]
+              #7 Sort [Sort]
+                  properties: [{name="Operator id" value="4"}, {name="Input" value="[id#5L, status#8]"}, {name="Arguments" value="[id#5L ASC NULLS FIRST], false, 0"}]
+                  sort_keys: ["id#5L ASC NULLS FIRST"]
+                #8 Exchange [Exchange]
+                    properties: [{name="Operator id" value="3"}, {name="Input" value="[id#5L, status#8]"}, {name="Arguments" value="hashpartitioning(id#5L, 200), ENSURE_REQUIREMENTS, [plan_id=1561]"}]
+                  #9 Filter [Filter]
+                      filter: "isnotnull(id#5L)"
+                      output_list: ["Filter: isnotnull(id#5L)"]
+                      properties: [{name="Operator id" value="2"}, {name="Input" value="[id#5L, status#8]"}]
+                    #10 Scan parquet [Scan parquet]
+                        database: "spark_catalog"
+                        output_columns: ["id#5L", "status#8"]
+                        output_list: ["orders"]
+                        properties: [{name="Operator id" value="1"}, {name="Batched" value="true"}, {name="Location" value="InMemoryFileIndex [file:/tmp/spark-warehouse/orders]"}, {name="PushedFilters" value="[IsNotNull(id)]"}, {name="ReadSchema" value="struct<id:bigint,status:string>"}]
+                        relation: "orders"
+                        schema: "default"
+              #11 Sort [Sort]
+                  properties: [{name="Operator id" value="9"}, {name="Input" value="[order_id#114L, sku#115, price#116]"}, {name="Arguments" value="[order_id#114L ASC NULLS FIRST], false, 0"}]
+                  sort_keys: ["order_id#114L ASC NULLS FIRST"]
+                #12 Exchange [Exchange]
+                    properties: [{name="Operator id" value="8"}, {name="Input" value="[order_id#114L, sku#115, price#116]"}, {name="Arguments" value="hashpartitioning(order_id#114L, 200), ENSURE_REQUIREMENTS, [plan_id=1562]"}]
+                  #13 Project [Project]
+                      output_columns: ["order_id#114L", "sku#115", "price#116"]
+                      properties: [{name="Operator id" value="7"}, {name="Input" value="[order_id#114L, sku#115, price#116, qty#117L]"}]
+                    #14 Filter [Filter]
+                        filter: "isnotnull(order_id#114L)"
+                        output_list: ["Filter: isnotnull(order_id#114L)"]
+                        properties: [{name="Operator id" value="6"}, {name="Input" value="[order_id#114L, sku#115, price#116, qty#117L]"}]
+                      #15 Scan parquet [Scan parquet]
+                          database: "spark_catalog"
+                          output_columns: ["order_id#114L", "sku#115", "price#116", "qty#117L"]
+                          output_list: ["order_items"]
+                          properties: [{name="Operator id" value="5"}, {name="Batched" value="true"}, {name="Location" value="CatalogFileIndex [file:/tmp/spark-warehouse/order_items]"}, {name="PushedFilters" value="[IsNotNull(order_id)]"}, {name="ReadSchema" value="struct<order_id:bigint,sku:string,price:decimal(11,2)>"}]
+                          relation: "order_items"
+                          schema: "default"

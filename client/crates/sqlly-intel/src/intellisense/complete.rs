@@ -1366,4 +1366,28 @@ mod tests {
             started.elapsed()
         );
     }
+
+    /// DbGate #1500: a MySQL partition list between the table and its alias
+    /// (`FROM orders PARTITION (p0) a`) hid the alias, so `a.` offered nothing.
+    #[test]
+    fn alias_after_a_mysql_partition_list_resolves() {
+        for sql in [
+            "SELECT a. FROM sales.Orders PARTITION (p0) a",
+            "SELECT a. FROM sales.Orders PARTITION (p0, p1) AS a",
+            "SELECT a. FROM sales.Orders PARTITION (p0) a WHERE a.OrderId = 1",
+            "SELECT a. FROM appdb.sales.Orders partition (p0) a JOIN sales.Orders b ON 1 = 1",
+        ] {
+            let cursor = sql.find("a.").unwrap() + 2;
+            let items = complete(sql, cursor, &catalog());
+            assert!(
+                items.iter().any(|i| i.label == "a.OrderId"),
+                "{sql}: {:?}",
+                labels(&items)
+            );
+        }
+        // The plain alias form keeps working.
+        let sql = "SELECT a. FROM sales.Orders a";
+        let items = complete(sql, 9, &catalog());
+        assert!(items.iter().any(|i| i.label == "a.OrderId"));
+    }
 }

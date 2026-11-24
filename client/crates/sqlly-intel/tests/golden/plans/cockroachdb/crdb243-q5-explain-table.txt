@@ -1,0 +1,10 @@
+                                      info
+---------------------------------------------------------------------------------
+  distribution: local
+  vectorized: true
+
+  • scan
+    estimated row count: 1 (<0.01% of the table; stats collected 6 seconds ago)
+    table: orders@orders_pkey
+    spans: [/77 - /77]
+(7 rows)

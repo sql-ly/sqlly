@@ -1,0 +1,133 @@
+info
+planning time: 430µs
+execution time: 7ms
+distribution: local
+vectorized: true
+plan type: custom
+rows decoded from KV: 21,000 (1.1 MiB, 21,000 KVs, 2 gRPC calls)
+cumulative time spent in KV: 5ms
+maximum memory usage: 2.6 MiB
+network usage: 0 B (0 messages)
+sql cpu time: 3ms
+isolation level: serializable
+priority: normal
+quality of service: regular
+
+• root
+│ columns: (name, t, row_number)
+│
+├── • project
+│   │ columns: (name, t, row_number)
+│   │
+│   └── • window
+│       │ columns: (customer_id, t, id, name, row_number)
+│       │ sql nodes: n1
+│       │ actual row count: 500
+│       │ vectorized batch count: 1
+│       │ execution time: 83µs
+│       │ estimated max memory allocated: 90 KiB
+│       │ estimated max sql temp disk usage: 0 B
+│       │ sql cpu time: 83µs
+│       │ estimated row count: 333
+│       │ window 0: row_number() OVER (ORDER BY sum DESC RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)
+│       │
+│       └── • hash join (inner)
+│           │ columns: (customer_id, sum, id, name)
+│           │ sql nodes: n1
+│           │ actual row count: 500
+│           │ vectorized batch count: 1
+│           │ execution time: 40µs
+│           │ estimated max memory allocated: 100 KiB
+│           │ estimated max sql temp disk usage: 0 B
+│           │ sql cpu time: 40µs
+│           │ estimated row count: 333
+│           │ equality: (id) = (customer_id)
+│           │ left cols are key
+│           │ right cols are key
+│           │
+│           ├── • scan
+│           │     columns: (id, name)
+│           │     sql nodes: n1
+│           │     kv nodes: n1
+│           │     actual row count: 1,000
+│           │     vectorized batch count: 1
+│           │     KV time: 372µs
+│           │     KV contention time: 0µs
+│           │     KV rows decoded: 1,000
+│           │     KV pairs read: 1,000
+│           │     KV bytes read: 48 KiB
+│           │     KV gRPC calls: 1
+│           │     estimated max memory allocated: 100 KiB
+│           │     sql cpu time: 101µs
+│           │     MVCC step count (ext/int): 1,000/1,000
+│           │     MVCC seek count (ext/int): 1/1
+│           │     estimated row count: 1,000 (100% of the table; stats collected 9 seconds ago)
+│           │     table: customers@customers_pkey
+│           │     spans: FULL SCAN
+│           │
+│           └── • filter
+│               │ columns: (customer_id, sum)
+│               │ sql nodes: n1
+│               │ actual row count: 500
+│               │ vectorized batch count: 3
+│               │ execution time: 28µs
+│               │ sql cpu time: 28µs
+│               │ estimated row count: 333
+│               │ filter: sum > 5000
+│               │
+│               └── • scan buffer
+│                     columns: (customer_id, sum)
+│                     sql nodes: n1
+│                     actual row count: 1,000
+│                     vectorized batch count: 10
+│                     execution time: 78µs
+│                     sql cpu time: 78µs
+│                     estimated row count: 1,000
+│                     label: buffer 1 (big)
+│
+└── • subquery
+"    │ id: @S1"
+"    │ original sql: SELECT customer_id, sum(total) AS t FROM orders GROUP BY customer_id"
+"    │ exec mode: all rows"
+"    │"
+"    └── • buffer"
+"        │ columns: (customer_id, sum)"
+"        │ sql nodes: n1"
+"        │ actual row count: 1,000"
+"        │ vectorized batch count: 10"
+"        │ execution time: 157µs"
+"        │ sql cpu time: 156µs"
+"        │ label: buffer 1 (big)"
+"        │"
+"        └── • group (hash)"
+"            │ columns: (customer_id, sum)"
+"            │ sql nodes: n1"
+"            │ actual row count: 1,000"
+"            │ vectorized batch count: 1"
+"            │ execution time: 1ms"
+"            │ estimated max memory allocated: 1.6 MiB"
+"            │ estimated max sql temp disk usage: 0 B"
+"            │ sql cpu time: 1ms"
+"            │ estimated row count: 1,000"
+"            │ aggregate 0: sum(total)"
+"            │ group by: customer_id"
+"            │"
+"            └── • scan"
+"                  columns: (customer_id, total)"
+"                  sql nodes: n1"
+"                  kv nodes: n1"
+"                  actual row count: 20,000"
+"                  vectorized batch count: 20"
+"                  KV time: 5ms"
+"                  KV contention time: 0µs"
+"                  KV rows decoded: 20,000"
+"                  KV pairs read: 20,000"
+"                  KV bytes read: 1.1 MiB"
+"                  KV gRPC calls: 1"
+"                  estimated max memory allocated: 1.1 MiB"
+"                  sql cpu time: 2ms"
+"                  MVCC step count (ext/int): 20,000/20,000"
+"                  MVCC seek count (ext/int): 1/1"
+"                  estimated row count: 20,000 (100% of the table; stats collected 9 seconds ago)"
+"                  table: orders@orders_pkey"
+"                  spans: FULL SCAN"

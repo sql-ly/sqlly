@@ -38,12 +38,12 @@ use crate::preferences::{
     CaseExpressionStyle, CellDetailSide, ClauseBodyPlacement, CommaStyle, CommentStyle, CopyFormat,
     CteStyle, DateTimeZoneMode, DdlNavigationModifier, DdlNavigationPresentation,
     DdlPopupMonitorPreference, DdlStyle, DecimalSeparator, DmlStyle, EpochUnit, FunctionArgStyle,
-    FunctionCase, GridDensity, IdentifierCase, IdentifierQuoting, InListStyle, IndentStyle,
-    IntelliSenseSource, JoinLayout, KeywordCase, KeywordGroupCasing, MajorClausePlacement,
-    NegativeFormatStyle, NumberStyle, OnClausePlacement, OrderGroupLayout, PreferencesPane,
-    PreferencesStore, PreferencesTreeNode, PreferencesUiState, Preset, ResultKind,
-    ResultTextAlignment, SelectListStyle, SemicolonStyle, SqlDialect, SubqueryStyle,
-    ThousandsSeparator, ValuesStyle, build_preferences_tree,
+    FunctionCase, GridDensity, IdentifierQuoting, InListStyle, IndentStyle, IntelliSenseSource,
+    JoinLayout, KeywordCase, KeywordGroupCasing, MajorClausePlacement, NegativeFormatStyle,
+    NumberStyle, OnClausePlacement, OrderGroupLayout, PreferencesPane, PreferencesStore,
+    PreferencesTreeNode, PreferencesUiState, Preset, ResultKind, ResultTextAlignment,
+    SelectListStyle, SemicolonStyle, SqlDialect, SubqueryStyle, ThousandsSeparator, ValuesStyle,
+    build_preferences_tree,
 };
 use crate::result_export_code::CodeLanguage;
 use crate::results::ExportFormat;
@@ -167,7 +167,6 @@ macro_rules! impl_sql_option {
 
 impl_sql_option!(
     preferences::KeywordCase,
-    preferences::IdentifierCase,
     preferences::IdentifierQuoting,
     preferences::MajorClausePlacement,
     preferences::SelectListStyle,

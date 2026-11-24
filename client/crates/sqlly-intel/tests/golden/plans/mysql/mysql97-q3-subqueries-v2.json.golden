@@ -1,0 +1,90 @@
+format: mysql-json-v2 (Certain)
+statements: 1
+
+== statement 1
+dialect: "MySql"
+estimated_rows: 20
+settings: [{name="query_type" value="select"}, {name="json_schema_version" value="2.0"}]
+source_format: "mysql-json-v2"
+statement_text: "/* select#1 */ select `c`.`name` AS `name`,(/* select#2 */ select max(`o`.`total`) from `shop`.`orders` `o` where (`o`.`customer_id` = `c`.`id`)) AS `biggest` f..."
+statement_type: "EXPLAIN"
+total_subtree_cost: 6674121.110726
+operators: 11
+  #1 Limit: 20 row(s) [Limit: 20 row(s)]
+      estimated_cost: 6674121.110726
+      estimated_rows: 20
+      properties: [{name="access_type" value="limit"}, {name="limit" value="20"}, {name="limit_offset" value="0"}]
+    #2 Nested loop inner join [Nested loop inner join]
+        estimated_cost: 6674121.110726
+        estimated_rows: 66731178.107257
+        join_type: "Inner"
+        properties: [{name="access_type" value="join"}, {name="join_algorithm" value="nested_loop"}]
+      #3 Sort: c.`name` [Sort: c.`name`]
+          estimated_cost: 504.4
+          estimated_rows: 4989
+          properties: [{name="access_type" value="sort"}]
+          sort_keys: ["c.`name`"]
+        #4 Filter: (c.id is not null) [Filter: (c.id is not null)]
+            estimated_cost: 504.4
+            estimated_rows: 4989
+            filter: "c.id is not null"
+            output_list: ["Condition: (c.id is not null)"]
+            properties: [{name="access_type" value="filter"}, {name="filter_columns" value="c.id"}]
+          #5 Table scan on c [Table scan on c]
+              alias: "c"
+              estimated_cost: 504.4
+              estimated_rows: 4989
+              output_columns: ["id", "name"]
+              output_list: ["customers"]
+              properties: [{name="access_type" value="table"}]
+              relation: "customers"
+              relation_resolved: yes
+              schema: "shop"
+              warnings: [{TableScan={schema="shop" table="c"}}]
+      #6 Single-row index lookup on <subquery3> using <auto_distinct_key> (customer_id = c.id) [Single-row index lookup on <subquery3> using <auto_distinct_key> (customer_id = c.id)]
+          estimated_cost: 7135.337094
+          estimated_rows: 1
+          estimated_startup_cost: 7135.337094
+          index_cond: "customer_id = c.id"
+          index_name: "<auto_distinct_key>"
+          output_columns: ["customer_id"]
+          output_list: ["<subquery3>", "Key: <auto_distinct_key>"]
+          properties: [{name="access_type" value="index"}, {name="covering" value="false"}, {name="index_access_type" value="index_lookup"}, {name="key_columns" value="customer_id"}, {name="lookup_references" value="shop.c.id"}]
+        #7 Materialize with deduplication [Materialize with deduplication]
+            estimated_cost: 7135.299788
+            estimated_rows: 13375.662078
+            estimated_startup_cost: 7135.299788
+            properties: [{name="access_type" value="materialize"}, {name="deduplication" value="true"}]
+          #8 Filter: (orders.total > 900.00) [Filter: (orders.total > 900.00)]
+              estimated_cost: 4053.35
+              estimated_rows: 13375.662078
+              filter: "orders.total > 900.00"
+              output_list: ["Condition: (orders.total > 900.00)"]
+              properties: [{name="access_type" value="filter"}, {name="filter_columns" value="shop.orders.total"}]
+            #9 Table scan on orders [Table scan on orders]
+                estimated_cost: 4053.35
+                estimated_rows: 40131
+                output_columns: ["id", "customer_id", "total"]
+                output_list: ["orders"]
+                properties: [{name="access_type" value="table"}]
+                relation: "orders"
+                relation_resolved: yes
+                schema: "shop"
+                warnings: [{TableScan={schema="shop" table="orders"}}]
+    #10 Aggregate: max(o.total) [Aggregate: max(o.total)]
+        estimated_cost: 4.680994
+        estimated_rows: 1
+        properties: [{name="access_type" value="aggregate"}, {name="dependent" value="true"}, {name="functions" value="max(o.total)"}, {name="heading" value="Select #2 (subquery in projection; dependent)"}, {name="subquery" value="true"}, {name="subquery_location" value="projection"}]
+        subplan_name: "Select #2 (subquery in projection; dependent)"
+      #11 Index lookup on o using orders_customer_idx (customer_id = c.id) [Index lookup on o using orders_customer_idx (customer_id = c.id)]
+          alias: "o"
+          estimated_cost: 2.822719
+          estimated_rows: 8.064912
+          index_cond: "customer_id = c.id"
+          index_name: "orders_customer_idx"
+          output_columns: ["customer_id", "total"]
+          output_list: ["orders", "Key: orders_customer_idx"]
+          properties: [{name="access_type" value="index"}, {name="covering" value="false"}, {name="index_access_type" value="index_lookup"}, {name="key_columns" value="customer_id"}, {name="lookup_references" value="shop.c.id"}]
+          relation: "orders"
+          relation_resolved: yes
+          schema: "shop"

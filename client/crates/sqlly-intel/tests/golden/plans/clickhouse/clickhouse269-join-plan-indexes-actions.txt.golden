@@ -1,0 +1,43 @@
+format: clickhouse-text (Certain)
+statements: 1
+
+== statement 1
+dialect: "ClickHouse"
+estimated_rows: 36790
+source_format: "clickhouse-text"
+statement_type: "EXPLAIN"
+operators: 7
+  #1 Limit preliminary LIMIT [Limit]
+      output_columns: ["country", "count()", "sum(total)"]
+      properties: [{name="Limit" value="5"}, {name="Offset" value="0"}]
+    #2 Sorting Sorting for ORDER BY [Sorting]
+        properties: [{name="Limit" value="5"}]
+        sort_keys: ["sum(total) DESC"]
+      #3 Aggregating [Aggregating]
+          group_keys: ["country"]
+          properties: [{name="Aggregates" value="count(), sum(total)"}, {name="Skip merging" value="0"}]
+        #4 Join JOIN FillRightFirst [Join]
+            estimated_rows: 36790
+            extra: ["c[50000] ⋈ o[36512]"]
+            join_predicate: "id = customer_id"
+            join_type: "inner"
+            properties: [{name="Strictness" value="all"}, {name="Algorithm" value="SpillingHashJoin(HashJoin)"}, {name="Cost" value="estimated 36.79 thousand"}, {name="Selectivity" value="estimated (NDV) 2.015e-05"}, {name="Output rows" value="estimated 36.79 thousand"}, {name="Left" value="rows estimated 50.00 thousand"}, {name="Right" value="rows estimated 36.51 thousand"}, {name="Input (left)" value="id, country"}, {name="Input (right)" value="customer_id, total"}]
+          #5 ReadFromMergeTree default.customers [ReadFromMergeTree]
+              estimated_rows: 49152
+              output_columns: ["id", "country"]
+              output_list: ["PrimaryKey: true parts 1/1 granules 6/6"]
+              properties: [{name="Read type" value="Default"}, {name="Parts" value="1"}, {name="Granules" value="6"}, {name="Runtime filters" value="RF1(id, customer_id from default.orders)"}, {name="Ranges" value="1"}, {name="PrimaryKey index condition" value="true"}, {name="PrimaryKey index parts" value="1/1"}, {name="PrimaryKey index granules" value="6/6"}]
+              relation: "customers"
+              schema: "default"
+              warnings: [{TableScan={schema="default" table="customers"}}]
+          #6 BuildRuntimeFilter Build runtime join filter on customer_id [BuildRuntimeFilter]
+              properties: [{name="Filter id" value="RF1"}, {name="Source table" value="default.orders"}]
+            #7 ReadFromMergeTree default.orders [ReadFromMergeTree]
+                estimated_rows: 1466368
+                filter: "placed_at >= '2023-06-01 00:00:00' AND status = 'paid'"
+                index_cond: "(placed_at in [1685577600, +Inf))"
+                output_columns: ["total", "customer_id"]
+                output_list: ["Min-Max: (placed_at in [1685577600, +Inf)) parts 5/10 granules 179/392", "Partition: (toYYYYMM(placed_at) in [202306, +Inf)) parts 5/5 granules 179/179", "PrimaryKey: (placed_at in [1685577600, +Inf)) parts 5/5 granules 179/179"]
+                properties: [{name="Read type" value="Default"}, {name="Parts" value="5"}, {name="Granules" value="179"}, {name="Ranges" value="5"}, {name="Min-Max index keys" value="placed_at"}, {name="Min-Max index condition" value="(placed_at in [1685577600, +Inf))"}, {name="Min-Max index parts" value="5/10"}, {name="Min-Max index granules" value="179/392"}, {name="Partition index keys" value="toYYYYMM(placed_at)"}, {name="Partition index condition" value="(toYYYYMM(placed_at) in [202306, +Inf))"}, {name="Partition index parts" value="5/5"}, {name="Partition index granules" value="179/179"}, {name="PrimaryKey index keys" value="placed_at"}, {name="PrimaryKey index condition" value="(placed_at in [1685577600, +Inf))"}, {name="PrimaryKey index parts" value="5/5"}, {name="PrimaryKey index granules" value="179/179"}, {name="PrimaryKey index search" value="generic exclusion search"}]
+                relation: "orders"
+                schema: "default"

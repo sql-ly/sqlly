@@ -134,6 +134,9 @@ fn bearer_token(profile: &ConnectionProfile) -> StudioResult<Option<String>> {
                 "Cloud IAM sign-in is not available for libSQL connections".into(),
             ))
         }
+        AuthenticationType::PostgresOAuth { .. } => Err(StudioError::InvalidProfile(
+            "PostgreSQL OAuth sign-in applies to PostgreSQL, not libSQL / Turso".into(),
+        )),
     }
 }
 

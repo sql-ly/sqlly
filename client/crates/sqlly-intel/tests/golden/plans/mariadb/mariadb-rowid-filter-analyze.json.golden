@@ -1,0 +1,61 @@
+format: mariadb-json (Certain)
+statements: 1
+
+== statement 1
+dialect: "MariaDb"
+estimated_rows: 4989
+execution_time_ms: 3.419846
+has_actuals: yes
+planning_time_ms: 0.086234
+source_format: "mariadb-json"
+statement_type: "ANALYZE"
+total_subtree_cost: 18.548999
+operators: 3
+  #1 Query Block [Query Block]
+      actual_self_time_ms: 0.103147
+      actual_time_ms: 3.419846
+      estimated_cost: 18.548999
+      loops: 1
+      output_list: ["Actual time: 3.419846382 ms"]
+      properties: [{name="cost" value="18.54899888"}, {name="r_loops" value="1"}, {name="r_total_time_ms" value="3.419846382"}, {name="select_id" value="1"}]
+      subplan_name: "Select #1"
+    #2 Table: c [Access: ALL]
+        actual_rebinds: 1
+        actual_rows: 5000
+        actual_rows_total: 5000
+        actual_self_time_ms: 0.41163
+        actual_time_ms: 0.41163
+        buffers: {logical_reads=22}
+        estimated_cost: 0.842013
+        estimated_executions: 1
+        estimated_rows: 4989
+        estimated_rows_read: 4989
+        filter: "c.country in ('US','DE')"
+        filtered_percent: 100
+        loops: 1
+        output_list: ["c", "Condition: c.country in ('US','DE')", "Actual time: 0.232913818 ms", "Actual filtered: 25%"]
+        properties: [{name="cost" value="0.8420126"}, {name="loops" value="1"}, {name="r_engine_stats.pages_accessed" value="22"}, {name="r_filtered" value="25"}, {name="r_other_time_ms" value="0.178715843"}, {name="r_table_time_ms" value="0.232913818"}, {name="r_total_filtered" value="25"}]
+        relation: "c"
+        rows_read: 5000
+        rows_removed_by_filter: 3750
+        warnings: [{TableScan={table="c"}}]
+    #3 Table: o [Access: ref]
+        actual_rebinds: 1250
+        actual_rows: 1360
+        actual_rows_total: 1360
+        actual_self_time_ms: 2.90507
+        actual_time_ms: 2.90507
+        buffers: {logical_reads=5263}
+        estimated_cost: 17.706986
+        estimated_executions: 4989
+        estimated_rows: 8
+        estimated_rows_read: 8
+        extra: ["Using rowid filter"]
+        filter: "trigcond(o.placed_at > '2023-01-25')"
+        filtered_percent: 13.555605
+        index_name: "orders_customer_idx"
+        loops: 1250
+        output_list: ["o", "Key: orders_customer_idx", "Condition: trigcond(o.placed_at > '2023-01-25')", "Actual time: 2.836916128 ms", "Actual filtered: 100%"]
+        properties: [{name="cost" value="17.70698628"}, {name="key_length" value="4"}, {name="loops" value="4989"}, {name="possible_keys" value="orders_customer_idx, orders_placed_idx"}, {name="r_engine_stats.pages_accessed" value="5263"}, {name="r_filtered" value="100"}, {name="r_index_rows" value="8"}, {name="r_other_time_ms" value="0.068153641"}, {name="r_table_time_ms" value="2.836916128"}, {name="r_total_filtered" value="13.6"}, {name="ref" value="shop.c.id"}, {name="rowid_filter.r_buffer_size" value="2720"}, {name="rowid_filter.r_filling_time_ms" value="0.652333656"}, {name="rowid_filter.r_lookups" value="10000"}, {name="rowid_filter.r_rows" value="5440"}, {name="rowid_filter.r_selectivity_pct" value="13.6"}, {name="rowid_filter.range.key" value="orders_placed_idx"}, {name="rowid_filter.range.used_key_parts" value="placed_at"}, {name="rowid_filter.rows" value="5440"}, {name="rowid_filter.selectivity_pct" value="13.55560539"}, {name="used_key_parts" value="customer_id"}]
+        relation: "o"
+        rows_read: 1360

@@ -1,0 +1,37 @@
+(Expression)
+ExpressionTransform
+  (Limit)
+  Limit
+    (Sorting)
+    MergeSortingTransform
+      LimitsCheckingTransform
+        PartialSortingTransform
+          (Expression)
+          ExpressionTransform
+            (Aggregating)
+            AggregatingTransform
+              (Expression)
+              ExpressionTransform
+                (Join)
+                ColumnPermuteTransform
+                  FillingRightJoinSide
+                    Resize × 2 2 → 1
+                      DelayedPorts 2 → 2
+                        JoiningTransform 2 → 1
+                          DelayedJoinedBlocksWorkerTransform
+                            SimpleSquashingTransform
+                              DelayedJoinedBlocksTransform 0 → 1
+                                (Expression)
+                                ExpressionTransform
+                                  (Expression)
+                                  ExpressionTransform
+                                    (ReadFromMergeTree)
+                                    MergeTreeSelect(pool: ReadPoolInOrder, algorithm: InOrder) 0 → 1
+                                (Expression)
+                                ExpressionTransform × 4
+                                  (BuildRuntimeFilter)
+                                  BuildRuntimeFilterTransform × 4
+                                    (Expression)
+                                    ExpressionTransform × 4
+                                      (ReadFromMergeTree)
+                                      MergeTreeSelect(pool: ReadPool, algorithm: Thread) × 4 0 → 1

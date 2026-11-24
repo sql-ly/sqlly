@@ -1,0 +1,19 @@
+format: clickhouse-text (Certain)
+statements: 1
+
+== statement 1
+dialect: "ClickHouse"
+source_format: "clickhouse-text"
+statement_type: "EXPLAIN"
+operators: 11
+  #1 Expression [Expression]
+    #2 Limit [Limit]
+      #3 Sorting [Sorting]
+        #4 Expression [Expression]
+          #5 Aggregating [Aggregating]
+            #6 Expression [Expression]
+              #7 Join [Join]
+                #8 Expression [Expression]
+                  #9 ReadFromMergeTree [ReadFromMergeTree]
+                #10 Expression [Expression]
+                  #11 ReadFromMergeTree [ReadFromMergeTree]

@@ -1,0 +1,48 @@
+
+CO     ORDERS    REVENUE
+-- ---------- ----------
+FR       6000    8129940
+
+1 row selected.
+
+
+Execution Plan
+----------------------------------------------------------
+Plan hash value: 2958302572
+
+----------------------------------------------------------------------------------
+| Id  | Operation            | Name      | Rows  | Bytes | Cost (%CPU)| Time     |
+----------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT     |           |     5 |   135 |  1684   (1)| 00:00:01 |
+|   1 |  SORT ORDER BY       |           |     5 |   135 |  1684   (1)| 00:00:01 |
+|   2 |   HASH GROUP BY      |           |     5 |   135 |  1684   (1)| 00:00:01 |
+|*  3 |    HASH JOIN         |           | 15010 |   395K|  1681   (1)| 00:00:01 |
+|*  4 |     TABLE ACCESS FULL| ORDERS    | 15010 |   278K|  1593   (1)| 00:00:01 |
+|   5 |     TABLE ACCESS FULL| CUSTOMERS | 50000 |   390K|    88   (0)| 00:00:01 |
+----------------------------------------------------------------------------------
+
+Predicate Information (identified by operation id):
+---------------------------------------------------
+
+   3 - access("C"."ID"="O"."CUSTOMER_ID")
+   4 - filter("O"."TOTAL">1200 AND "O"."STATUS"='refunded')
+
+Note
+-----
+   - this is an adaptive plan
+
+
+Statistics
+----------------------------------------------------------
+          5  recursive calls
+          0  db block gets
+       6079  consistent gets
+          0  physical reads
+        220  redo size
+        783  bytes sent via SQL*Net to client
+        108  bytes received via SQL*Net from client
+          2  SQL*Net roundtrips to/from client
+          1  sorts (memory)
+          0  sorts (disk)
+          1  rows processed
+

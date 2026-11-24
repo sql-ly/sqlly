@@ -1,0 +1,195 @@
+format: trino-text (Certain)
+statements: 1
+
+== statement 1
+execution_time_ms: 289.31
+has_actuals: yes
+notes: ["Trino version: 484", "Queued: 144.54us, Analysis: 4.16ms, Planning: 29.42ms, Execution: 289.31ms, Finishing: 0.00ns"]
+planning_time_ms: 29.42
+source_format: "trino-text"
+statement_type: "EXPLAIN ANALYZE"
+operators: 18
+  #1 RemoteMerge [RemoteMerge]
+      actual_rows: 25
+      actual_rows_total: 25
+      actual_time_ms: 267
+      output_columns: ["name_5:varchar(25)", "count:bigint", "sum:double"]
+      properties: [{name="sourceFragmentIds" value="[2]"}, {name="Fragment" value="1 [SINGLE]"}, {name="Fragment CPU" value="497.71us, Scheduled: 553.50us, Blocked 119.93ms (Input: 119.93ms, Output: 0.00ns), Input: 25 rows (752B); per task: avg.: 25.00 std.dev.: 0.00, Output: 25 rows ..."}, {name="Fragment Peak Memory" value="968B, Tasks count: 1; per task: max: 968B"}, {name="Fragment Output layout" value="[name_5, count, sum]"}, {name="Fragment Output partitioning" value="SINGLE []"}, {name="CPU" value="0.00ns (0.00%)"}, {name="Scheduled" value="0.00ns (0.00%)"}, {name="Blocked" value="120.00ms (3.11%)"}, {name="Output" value="25 rows (752B)"}, {name="Input avg." value="25.00 rows"}, {name="Input std.dev." value="0.00%"}]
+    #2 LocalMerge [LocalMerge]
+        actual_cpu_ms: 1
+        actual_rows: 25
+        actual_rows_total: 25
+        actual_self_time_ms: 1
+        actual_time_ms: 267
+        estimated_rows: 25
+        output_columns: ["name_5:varchar(25)", "count:bigint", "sum:double"]
+        properties: [{name="Fragment" value="2 [ROUND_ROBIN]"}, {name="Fragment CPU" value="3.62ms, Scheduled: 4.00ms, Blocked 989.65ms (Input: 873.13ms, Output: 0.00ns), Input: 25 rows (752B); per task: avg.: 25.00 std.dev.: 0.00, Output: 25 rows (752..."}, {name="Fragment Peak Memory" value="968B, Tasks count: 1; per task: max: 968B"}, {name="Fragment Output layout" value="[name_5, count, sum]"}, {name="Fragment Output partitioning" value="SINGLE []"}, {name="Estimates" value="{rows: 25 (752B), cpu: 0, memory: 0B, network: 0B}"}, {name="CPU" value="1.00ms (0.60%)"}, {name="Scheduled" value="1.00ms (0.37%)"}, {name="Blocked" value="116.00ms (3.01%)"}, {name="Output" value="25 rows (752B)"}, {name="Input avg." value="3.13 rows"}, {name="Input std.dev." value="160.35%"}]
+        sort_keys: ["sum DESC NULLS LAST"]
+      #3 PartialSort [PartialSort]
+          actual_cpu_ms: 1
+          actual_rows: 25
+          actual_rows_total: 25
+          actual_self_time_ms: 2
+          actual_time_ms: 266
+          estimated_rows: 25
+          output_columns: ["name_5:varchar(25)", "count:bigint", "sum:double"]
+          properties: [{name="Estimates" value="{rows: 25 (752B), cpu: ?, memory: ?, network: ?}"}, {name="CPU" value="1.00ms (0.60%)"}, {name="Scheduled" value="2.00ms (0.75%)"}, {name="Blocked" value="0.00ns (0.00%)"}, {name="Output" value="25 rows (752B)"}, {name="Input avg." value="3.13 rows"}, {name="Input std.dev." value="160.35%"}]
+          sort_keys: ["sum DESC NULLS LAST"]
+        #4 RemoteSource [RemoteSource]
+            actual_cpu_ms: 1
+            actual_rows: 25
+            actual_rows_total: 25
+            actual_self_time_ms: 1
+            actual_time_ms: 264
+            output_columns: ["name_5:varchar(25)", "count:bigint", "sum:double"]
+            properties: [{name="sourceFragmentIds" value="[3]"}, {name="CPU" value="1.00ms (0.60%)"}, {name="Scheduled" value="1.00ms (0.37%)"}, {name="Blocked" value="873.00ms (22.64%)"}, {name="Output" value="25 rows (752B)"}, {name="Input avg." value="3.13 rows"}, {name="Input std.dev." value="160.35%"}]
+          #5 Aggregate [Aggregate]
+              actual_cpu_ms: 4
+              actual_rows: 25
+              actual_rows_total: 25
+              actual_self_time_ms: 5
+              actual_time_ms: 263
+              estimated_cpu: 132190
+              estimated_rows: 25
+              group_keys: ["name_5"]
+              output_columns: ["name_5:varchar(25)", "count:bigint", "sum:double"]
+              properties: [{name="type" value="FINAL"}, {name="Fragment" value="3 [HASH]"}, {name="Fragment CPU" value="5.91ms, Scheduled: 7.22ms, Blocked 1.42s (Input: 624.50ms, Output: 0.00ns), Input: 100 rows (2.94kB); per task: avg.: 100.00 std.dev.: 0.00, Output: 25 rows (75..."}, {name="Fragment Peak Memory" value="2.43kB, Tasks count: 1; per task: max: 2.43kB"}, {name="Fragment Output layout" value="[name_5, count, sum]"}, {name="Fragment Output partitioning" value="ROUND_ROBIN []"}, {name="Estimates" value="{rows: 25 (752B), cpu: 132.19k, memory: 752B, network: 0B}"}, {name="CPU" value="4.00ms (2.41%)"}, {name="Scheduled" value="5.00ms (1.87%)"}, {name="Blocked" value="0.00ns (0.00%)"}, {name="Output" value="25 rows (752B)"}, {name="Input avg." value="12.50 rows"}, {name="Input std.dev." value="40.60%"}, {name="count" value="count(count_7)"}, {name="sum" value="sum(sum_8)"}]
+            #6 LocalExchange [LocalExchange]
+                actual_rows: 100
+                actual_rows_total: 100
+                actual_time_ms: 258
+                estimated_cpu: 132190
+                estimated_rows: 4500
+                output_columns: ["name_5:varchar(25)", "count_7:bigint", "sum_8:double"]
+                properties: [{name="partitioning" value="HASH"}, {name="arguments" value="[name_5::varchar(25)]"}, {name="Estimates" value="{rows: 4500 (132.19kB), cpu: 132.19k, memory: 0B, network: 0B}"}, {name="CPU" value="0.00ns (0.00%)"}, {name="Scheduled" value="0.00ns (0.00%)"}, {name="Blocked" value="714.00ms (18.52%)"}, {name="Output" value="100 rows (2.94kB)"}, {name="Input avg." value="12.50 rows"}, {name="Input std.dev." value="200.00%"}]
+              #7 RemoteSource [RemoteSource]
+                  actual_rows: 100
+                  actual_rows_total: 100
+                  actual_time_ms: 258
+                  output_columns: ["name_5:varchar(25)", "count_7:bigint", "sum_8:double"]
+                  properties: [{name="sourceFragmentIds" value="[4]"}, {name="CPU" value="0.00ns (0.00%)"}, {name="Scheduled" value="0.00ns (0.00%)"}, {name="Blocked" value="625.00ms (16.21%)"}, {name="Output" value="100 rows (2.94kB)"}, {name="Input avg." value="12.50 rows"}, {name="Input std.dev." value="200.00%"}]
+                #8 Aggregate [Aggregate]
+                    actual_cpu_ms: 20
+                    actual_rows: 100
+                    actual_rows_total: 100
+                    actual_self_time_ms: 39
+                    actual_time_ms: 258
+                    estimated_rows: 4500
+                    group_keys: ["name_5"]
+                    output_columns: ["name_5:varchar(25)", "count_7:bigint", "sum_8:double"]
+                    properties: [{name="type" value="INTERMEDIATE"}, {name="Fragment" value="4 [tpch:orders:15000]"}, {name="Fragment CPU" value="139.37ms, Scheduled: 206.34ms, Blocked 1.08s (Input: 444.34ms, Output: 0.00ns), Input: 15337 rows (270.66kB); per task: avg.: 15337.00 std.dev.: 0.00, Output: 1..."}, {name="Fragment Peak Memory" value="2.24MB, Tasks count: 1; per task: max: 2.24MB"}, {name="Fragment Output layout" value="[name_5, count_7, sum_8]"}, {name="Fragment Output partitioning" value="HASH [name_5]"}, {name="Estimates" value="{rows: 4500 (132.19kB), cpu: ?, memory: ?, network: ?}"}, {name="CPU" value="20.00ms (12.05%)"}, {name="Scheduled" value="39.00ms (14.61%)"}, {name="Blocked" value="0.00ns (0.00%)"}, {name="Output" value="100 rows (2.94kB)"}, {name="Input avg." value="234.75 rows"}, {name="Input std.dev." value="0.76%"}, {name="count_7" value="count(count_7)"}, {name="sum_8" value="sum(sum_8)"}]
+                  #9 InnerJoin [InnerJoin]
+                      actual_cpu_ms: 16
+                      actual_rows: 939
+                      actual_rows_total: 939
+                      actual_self_time_ms: 19
+                      actual_time_ms: 219
+                      estimated_cpu: 533870
+                      estimated_rows: 4500
+                      join_predicate: "custkey_1 = custkey"
+                      join_type: "Inner"
+                      output_columns: ["count_7:bigint", "sum_8:double", "name_5:varchar(25)"]
+                      output_list: ["Condition: custkey_1 = custkey"]
+                      properties: [{name="distribution" value="REPLICATED"}, {name="Estimates" value="{rows: 4500 (132.19kB), cpu: 533.87k, memory: 6.18kB, network: 0B}"}, {name="CPU" value="16.00ms (9.64%)"}, {name="Scheduled" value="19.00ms (7.12%)"}, {name="Blocked" value="200.00ms (5.19%)"}, {name="Output" value="939 rows (35.07kB)"}, {name="Left (probe) Input avg." value="956.25 rows"}, {name="Input std.dev." value="0.68%"}, {name="Right (build) Input avg." value="42.13 rows"}, {name="Input std.dev." value="14.12%"}, {name="Distribution" value="REPLICATED"}, {name="dynamicFilterAssignments" value="{custkey -> #df_588}"}]
+                    #10 Aggregate [Aggregate]
+                        actual_cpu_ms: 60
+                        actual_rows: 3825
+                        actual_rows_total: 3825
+                        actual_self_time_ms: 83
+                        actual_time_ms: 144
+                        estimated_rows: 15000
+                        group_keys: ["custkey_1"]
+                        output_columns: ["custkey_1:bigint", "count_7:bigint", "sum_8:double"]
+                        properties: [{name="type" value="PARTIAL"}, {name="Estimates" value="{rows: 15000 (395.51kB), cpu: ?, memory: ?, network: ?}"}, {name="CPU" value="60.00ms (36.14%)"}, {name="Scheduled" value="83.00ms (31.09%)"}, {name="Blocked" value="0.00ns (0.00%)"}, {name="Output" value="3825 rows (100.85kB)"}, {name="Input avg." value="3750.00 rows"}, {name="Input std.dev." value="0.00%"}, {name="count_7" value="count(*)"}, {name="sum_8" value="sum(totalprice)"}]
+                      #11 ScanFilter [ScanFilter]
+                          actual_cpu_ms: 38
+                          actual_rows: 15000
+                          actual_rows_total: 15000
+                          actual_self_time_ms: 61
+                          actual_time_ms: 61
+                          database: "tpch"
+                          estimated_cpu: 263670
+                          estimated_rows: 15000
+                          estimated_rows_read: 15000
+                          output_columns: ["custkey_1:bigint", "totalprice:double"]
+                          output_list: ["orders"]
+                          properties: [{name="table" value="tpch:tiny:orders"}, {name="dynamicFilters" value="{custkey_1 = #df_588}"}, {name="Estimates" value="{rows: 15000 (263.67kB), cpu: 263.67k, memory: 0B, network: 0B}/{rows: 15000 (263.67kB), cpu: 263.67k, memory: 0B, network: 0B}"}, {name="CPU" value="38.00ms (22.89%)"}, {name="Scheduled" value="61.00ms (22.85%)"}, {name="Blocked" value="0.00ns (0.00%)"}, {name="Output" value="15000 rows (263.67kB)"}, {name="Input avg." value="3750.00 rows"}, {name="Input std.dev." value="0.00%"}, {name="totalprice" value="tpch:totalprice"}, {name="custkey_1" value="tpch:custkey"}, {name="tpch:orderstatus" value=":: [[F], [O], [P]]"}, {name="Input" value="15000 rows (263.67kB)"}, {name="Filtered" value="0.00%"}, {name="Splits" value="4"}, {name="Splits generation wait time" value="0.00ms"}, {name="Dynamic filters" value="- df_588, [ SortedRangeSet[type=bigint, ranges=337, {[1], ..., [1486]}] ], collection time=121.28ms"}]
+                          relation: "orders"
+                          rows_read: 15000
+                          schema: "tiny"
+                    #12 LocalExchange [LocalExchange]
+                        actual_cpu_ms: 1
+                        actual_rows: 337
+                        actual_rows_total: 337
+                        actual_self_time_ms: 2
+                        actual_time_ms: 56
+                        estimated_cpu: 6180
+                        estimated_rows: 300
+                        output_columns: ["custkey:bigint", "name_5:varchar(25)"]
+                        properties: [{name="partitioning" value="HASH"}, {name="arguments" value="[custkey::bigint]"}, {name="Estimates" value="{rows: 300 (6.18kB), cpu: 6.18k, memory: 0B, network: 0B}"}, {name="CPU" value="1.00ms (0.60%)"}, {name="Scheduled" value="2.00ms (0.75%)"}, {name="Blocked" value="421.00ms (10.92%)"}, {name="Output" value="337 rows (6.99kB)"}, {name="Input avg." value="42.13 rows"}, {name="Input std.dev." value="144.85%"}]
+                      #13 RemoteSource [RemoteSource]
+                          actual_rows: 337
+                          actual_rows_total: 337
+                          actual_time_ms: 54
+                          output_columns: ["custkey:bigint", "name_5:varchar(25)"]
+                          properties: [{name="sourceFragmentIds" value="[5]"}, {name="CPU" value="0.00ns (0.00%)"}, {name="Scheduled" value="0.00ns (0.00%)"}, {name="Blocked" value="444.00ms (11.51%)"}, {name="Output" value="337 rows (6.99kB)"}, {name="Input avg." value="42.13 rows"}, {name="Input std.dev." value="144.85%"}]
+                        #14 InnerJoin [InnerJoin]
+                            actual_cpu_ms: 10
+                            actual_rows: 337
+                            actual_rows_total: 337
+                            actual_self_time_ms: 19
+                            actual_time_ms: 54
+                            estimated_cpu: 11960
+                            estimated_rows: 300
+                            join_predicate: "nationkey = nationkey_4"
+                            join_type: "Inner"
+                            output_columns: ["custkey:bigint", "name_5:varchar(25)"]
+                            output_list: ["Condition: nationkey = nationkey_4"]
+                            properties: [{name="distribution" value="REPLICATED"}, {name="Fragment" value="5 [SOURCE]"}, {name="Fragment CPU" value="23.72ms, Scheduled: 48.79ms, Blocked 355.24ms (Input: 177.19ms, Output: 0.00ns), Input: 1525 rows (47.36kB); per task: avg.: 1525.00 std.dev.: 0.00, Output: 337..."}, {name="Fragment Peak Memory" value="128kB, Tasks count: 1; per task: max: 128kB"}, {name="Fragment Output layout" value="[custkey, name_5]"}, {name="Fragment Output partitioning" value="BROADCAST []"}, {name="Estimates" value="{rows: 300 (6.18kB), cpu: 11.96k, memory: 527B, network: 0B}"}, {name="CPU" value="10.00ms (6.02%)"}, {name="Scheduled" value="19.00ms (7.12%)"}, {name="Blocked" value="145.00ms (3.76%)"}, {name="Output" value="337 rows (6.99kB)"}, {name="Left (probe) Input avg." value="84.25 rows"}, {name="Input std.dev." value="12.63%"}, {name="Right (build) Input avg." value="25.00 rows"}, {name="Input std.dev." value="0.00%"}, {name="Distribution" value="REPLICATED"}, {name="dynamicFilterAssignments" value="{nationkey_4 -> #df_590}"}]
+                          #15 ScanFilterProject [ScanFilterProject]
+                              actual_cpu_ms: 11
+                              actual_rows: 337
+                              actual_rows_total: 337
+                              actual_self_time_ms: 26
+                              actual_time_ms: 26
+                              database: "tpch"
+                              estimated_cpu: 5270
+                              estimated_rows: 300
+                              estimated_rows_read: 1500
+                              filter: "mktsegment = varchar(10) 'BUILDING'"
+                              output_columns: ["custkey:bigint", "nationkey:bigint"]
+                              output_list: ["customer", "Filter: mktsegment = varchar(10) 'BUILDING'"]
+                              properties: [{name="table" value="tpch:tiny:customer"}, {name="dynamicFilters" value="{nationkey = #df_590}"}, {name="Estimates" value="{rows: 1500 (26.37kB), cpu: 33.74k, memory: 0B, network: 0B}/{rows: 300 (5.27kB), cpu: 33.74k, memory: 0B, network: 0B}/{rows: 300 (5.27kB), cpu: 5.27k, memory:..."}, {name="CPU" value="11.00ms (6.63%)"}, {name="Scheduled" value="26.00ms (9.74%)"}, {name="Blocked" value="0.00ns (0.00%)"}, {name="Output" value="337 rows (5.92kB)"}, {name="Input avg." value="375.00 rows"}, {name="Input std.dev." value="0.00%"}, {name="mktsegment" value="tpch:mktsegment"}, {name="nationkey" value="tpch:nationkey"}, {name="custkey" value="tpch:custkey"}, {name="Input" value="1500 rows (46.84kB)"}, {name="Filtered" value="77.53%"}, {name="Splits" value="4"}, {name="Splits generation wait time" value="0.01ms"}, {name="Dynamic filters" value="- df_590, [ SortedRangeSet[type=bigint, ranges=25, {[0], ..., [24]}] ], collection time=95.88ms"}]
+                              relation: "customer"
+                              rows_read: 1500
+                              rows_removed_by_filter: 1163
+                              schema: "tiny"
+                          #16 LocalExchange [LocalExchange]
+                              actual_rows: 25
+                              actual_rows_total: 25
+                              actual_time_ms: 9
+                              estimated_rows: 25
+                              output_columns: ["nationkey_4:bigint", "name_5:varchar(25)"]
+                              properties: [{name="partitioning" value="SINGLE"}, {name="Estimates" value="{rows: 25 (527B), cpu: 0, memory: 0B, network: 0B}"}, {name="CPU" value="0.00ns (0.00%)"}, {name="Scheduled" value="0.00ns (0.00%)"}, {name="Blocked" value="21.00ms (0.54%)"}, {name="Output" value="25 rows (527B)"}, {name="Input avg." value="3.13 rows"}, {name="Input std.dev." value="264.58%"}]
+                            #17 RemoteSource [RemoteSource]
+                                actual_rows: 25
+                                actual_rows_total: 25
+                                actual_time_ms: 9
+                                output_columns: ["nationkey_4:bigint", "name_5:varchar(25)"]
+                                properties: [{name="sourceFragmentIds" value="[6]"}, {name="CPU" value="0.00ns (0.00%)"}, {name="Scheduled" value="0.00ns (0.00%)"}, {name="Blocked" value="177.00ms (4.59%)"}, {name="Output" value="25 rows (527B)"}, {name="Input avg." value="3.13 rows"}, {name="Input std.dev." value="264.58%"}]
+                              #18 TableScan [TableScan]
+                                  actual_cpu_ms: 3
+                                  actual_rows: 25
+                                  actual_rows_total: 25
+                                  actual_self_time_ms: 9
+                                  actual_time_ms: 9
+                                  database: "tpch"
+                                  estimated_cpu: 527
+                                  estimated_rows: 25
+                                  output_columns: ["nationkey_4:bigint", "name_5:varchar(25)"]
+                                  output_list: ["nation"]
+                                  properties: [{name="table" value="tpch:tiny:nation"}, {name="Fragment" value="6 [SOURCE]"}, {name="Fragment CPU" value="3.28ms, Scheduled: 9.25ms, Blocked 0.00ns (Input: 0.00ns, Output: 0.00ns), Input: 25 rows (527B); per task: avg.: 25.00 std.dev.: 0.00, Output: 25 rows (527B)"}, {name="Fragment Peak Memory" value="696B, Tasks count: 1; per task: max: 696B"}, {name="Fragment Output layout" value="[nationkey_4, name_5]"}, {name="Fragment Output partitioning" value="BROADCAST []"}, {name="Estimates" value="{rows: 25 (527B), cpu: 527, memory: 0B, network: 0B}"}, {name="CPU" value="3.00ms (1.81%)"}, {name="Scheduled" value="9.00ms (3.37%)"}, {name="Blocked" value="0.00ns (0.00%)"}, {name="Output" value="25 rows (527B)"}, {name="Input avg." value="6.25 rows"}, {name="Input std.dev." value="173.21%"}, {name="nationkey_4" value="tpch:nationkey"}, {name="name_5" value="tpch:name"}, {name="Input" value="25 rows (527B)"}, {name="Splits" value="4"}, {name="Splits generation wait time" value="0.01ms"}]
+                                  relation: "nation"
+                                  rows_read: 25
+                                  schema: "tiny"
+                                  warnings: [{TableScan={schema="tiny" table="nation"}}]

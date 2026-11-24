@@ -1,0 +1,13 @@
+== Physical Plan ==
+AdaptiveSparkPlan isFinalPlan=false
++- TakeOrderedAndProject(limit=10, orderBy=[total#7 DESC NULLS LAST], output=[id#5L,total#7,sku#115,qty#117L])
+   +- Project [id#5L, total#7, sku#115, qty#117L]
+      +- BroadcastHashJoin [id#5L], [order_id#114L], Inner, BuildRight, false, false
+         :- Project [id#5L, total#7]
+         :  +- Filter ((isnotnull(customer_id#6L) AND (customer_id#6L = 42)) AND isnotnull(id#5L))
+         :     +- FileScan parquet spark_catalog.default.orders[id#5L,customer_id#6L,total#7] Batched: true, DataFilters: [isnotnull(customer_id#6L), (customer_id#6L = 42), isnotnull(id#5L)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/tmp/spark-warehouse/orders], PartitionFilters: [], PushedFilters: [IsNotNull(customer_id), EqualTo(customer_id,42), IsNotNull(id)], ReadSchema: struct<id:bigint,customer_id:bigint,total:decimal(11,2)>
+         +- BroadcastExchange HashedRelationBroadcastMode(List(input[0, bigint, false]),false), [plan_id=506]
+            +- Filter isnotnull(order_id#114L)
+               +- FileScan parquet spark_catalog.default.order_items[order_id#114L,sku#115,qty#117L] Batched: true, DataFilters: [isnotnull(order_id#114L)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/tmp/spark-warehouse/order_items/qty=3], PartitionFilters: [isnotnull(qty#117L), (qty#117L = 3)], PushedFilters: [IsNotNull(order_id)], ReadSchema: struct<order_id:bigint,sku:string>
+
+

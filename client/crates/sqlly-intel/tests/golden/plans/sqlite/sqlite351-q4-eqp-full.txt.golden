@@ -1,0 +1,39 @@
+format: sqlite-eqp (Certain)
+statements: 1
+
+== statement 1
+dialect: "Sqlite"
+source_format: "sqlite-eqp"
+statement_type: "EXPLAIN QUERY PLAN"
+operators: 12
+  #1 COMPOUND QUERY [COMPOUND]
+    #2 LEFT-MOST SUBQUERY [LEFT-MOST]
+      #3 MULTI-INDEX OR [MULTI-INDEX]
+        #4 INDEX 1 [INDEX]
+          #5 SEARCH o USING INDEX orders_customer_idx (customer_id=?) [SEARCH]
+              index_cond: "customer_id=?"
+              index_name: "orders_customer_idx"
+              output_list: ["o", "Index Cond: customer_id=?", "Index: orders_customer_idx"]
+              properties: [{name="Access" value="INDEX"}]
+              relation: "o"
+        #6 INDEX 2 [INDEX]
+          #7 SEARCH o USING INTEGER PRIMARY KEY (rowid=?) [SEARCH]
+              extra: ["INTEGER PRIMARY KEY"]
+              index_cond: "rowid=?"
+              output_list: ["o", "Index Cond: rowid=?"]
+              properties: [{name="Access" value="INTEGER PRIMARY KEY"}]
+              relation: "o"
+    #8 UNION USING TEMP B-TREE [UNION]
+      #9 SEARCH orders USING INDEX orders_customer_idx (customer_id=?) [SEARCH]
+          index_cond: "customer_id=?"
+          index_name: "orders_customer_idx"
+          output_list: ["orders", "Index Cond: customer_id=?", "Index: orders_customer_idx"]
+          properties: [{name="Access" value="INDEX"}]
+          relation: "orders"
+      #10 LIST SUBQUERY 2 [LIST]
+          subplan_name: "LIST SUBQUERY 2"
+        #11 SCAN customers [SCAN]
+            output_list: ["customers"]
+            relation: "customers"
+            warnings: [{TableScan={table="customers"}}]
+        #12 CREATE BLOOM FILTER [CREATE]

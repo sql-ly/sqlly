@@ -1,0 +1,15 @@
+Output: status, count()
+
+Aggregating
+│  Header: __table1.status LowCardinality(String)
+│          count() UInt64
+│  Keys: status
+│  Aggregates: count()
+│  Skip merging: 0
+└──ReadFromMergeTree (default.orders)
+      Header: status LowCardinality(String)
+      Read type: Default
+      Parts: 10 | Granules: 10
+      Output: status
+      Prewhere filter
+      Prewhere filter column:  customer_id <= 200 AND customer_id >= 100 AND total > 800

@@ -10,7 +10,7 @@
 use super::batch_lead::{tsql_batch_lead_violation, tsql_batch_must_lead};
 use super::classify::classify;
 use super::read_only::{read_only_violation, read_only_wrap_for};
-use super::statements::{Destination, is_pure_use_batch, unit_views};
+use super::statements::{Destination, is_pure_use_batch, tsql_showplan_toggle, unit_views};
 use crate::query::tokenizer::TokenKind;
 use sqlly_core::{ConnectionKind, ConnectionProfile, DatabaseType, StudioError, StudioResult};
 use sqlly_lang::seclex::{self, LexTarget, View};
@@ -445,6 +445,13 @@ pub fn apply_connection_policy(profile: &ConnectionProfile, sql: &str) -> Studio
         ));
     }
 
+    // `SET SHOWPLAN_XML ON` changes how the session compiles, never data,
+    // and the server refuses it anywhere but alone in its batch (Msg 1067),
+    // so neither wrap may surround it.
+    if tsql_showplan_toggle(sql).is_some() {
+        return Ok(sql.to_string());
+    }
+
     if profile.enforce_read_only {
         let mut tds = profile.clone();
         tds.database_type = db;
@@ -463,6 +470,23 @@ pub fn apply_connection_policy(profile: &ConnectionProfile, sql: &str) -> Studio
     } else {
         Ok(sql.to_string())
     }
+}
+
+/// The `SHOWPLAN` toggle `sql` is, for the TDS driver: `Some(true)` for
+/// `SET SHOWPLAN_XML ON` (or `_ALL` / `_TEXT`), `Some(false)` for OFF.
+pub fn showplan_toggle(sql: &str) -> Option<bool> {
+    tsql_showplan_toggle(sql)
+}
+
+/// [`apply_connection_policy`] for a batch sent while `SHOWPLAN` is on: the
+/// server only compiles it, so every refusal still applies but the batch
+/// goes unwrapped. A rollback or read-only wrap would only add its own
+/// statements to the returned plan.
+pub fn apply_connection_policy_compile_only(
+    profile: &ConnectionProfile,
+    sql: &str,
+) -> StudioResult<String> {
+    apply_connection_policy(profile, sql).map(|_| sql.to_string())
 }
 
 #[cfg(test)]
@@ -818,5 +842,54 @@ mod tests {
         // An ordinary comment before the SELECT still wraps normally.
         let sql = apply_connection_policy_for(&p, "/* note */ SELECT 1").unwrap();
         assert!(sql.starts_with("ROLLBACK;\nSTART TRANSACTION;"), "{sql}");
+    }
+
+    fn read_only_tds() -> ConnectionProfile {
+        let mut p = profile();
+        p.block_all_but_select = true;
+        p.enforce_read_only = true;
+        p
+    }
+
+    #[test]
+    fn showplan_toggles_are_never_wrapped() {
+        let p = read_only_tds();
+        for sql in [
+            "SET SHOWPLAN_XML ON;",
+            "set showplan_xml off",
+            "SET SHOWPLAN_ALL ON",
+            "  SET SHOWPLAN_TEXT OFF; ",
+        ] {
+            assert_eq!(apply_connection_policy(&p, sql).unwrap(), sql);
+        }
+        assert_eq!(showplan_toggle("SET SHOWPLAN_XML ON;"), Some(true));
+        assert_eq!(showplan_toggle("SET SHOWPLAN_XML OFF"), Some(false));
+    }
+
+    #[test]
+    fn showplan_with_anything_else_is_not_a_toggle() {
+        for sql in [
+            "SET SHOWPLAN_XML ON; SELECT 1",
+            "SET SHOWPLAN_XML ON\nSELECT 1",
+            "SET STATISTICS XML ON",
+            "SET SHOWPLAN_XML MAYBE",
+            "SELECT 'SET SHOWPLAN_XML ON'",
+            "-- SET SHOWPLAN_XML ON",
+        ] {
+            assert_eq!(showplan_toggle(sql), None, "{sql}");
+        }
+        let wrapped = apply_connection_policy(&read_only_tds(), "SET SHOWPLAN_XML ON; SELECT 1")
+            .unwrap_or_default();
+        assert!(!wrapped.starts_with("SET SHOWPLAN_XML ON;"), "{wrapped}");
+    }
+
+    #[test]
+    fn compile_only_batches_keep_every_refusal_but_no_wrap() {
+        let p = read_only_tds();
+        assert_eq!(
+            apply_connection_policy_compile_only(&p, "SELECT * FROM t").unwrap(),
+            "SELECT * FROM t"
+        );
+        assert!(apply_connection_policy_compile_only(&p, "DELETE FROM t").is_err());
     }
 }

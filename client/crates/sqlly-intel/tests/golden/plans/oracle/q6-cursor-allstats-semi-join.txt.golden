@@ -1,0 +1,64 @@
+format: oracle-xplan (Certain)
+statements: 1
+
+== statement 1
+dialect: "Oracle"
+execution_time_ms: 20
+has_actuals: yes
+notes: ["child number 0"]
+query_hash: "1u3u87d0zn2qf"
+query_plan_hash: "389127010"
+source_format: "oracle-xplan"
+statement_text: "SELECT /*+ GATHER_PLAN_STATISTICS */ c.id, c.email FROM customers c WHERE EXISTS (SELECT 1 FROM orders o WHERE o.customer_id = c.id AND o.total > 1499) AND c.co..."
+statement_type: "ACTUAL PLAN"
+operators: 5
+  #0 SELECT STATEMENT [SELECT STATEMENT]
+      actual_rebinds: 1
+      actual_time_ms: 20
+      buffers: {logical_reads=6077}
+      loops: 1
+      output_list: ["actual: 0 rows, 1 starts, 20.000 ms"]
+    #1 COUNT STOPKEY [COUNT]
+        actual_rebinds: 1
+        actual_time_ms: 20
+        buffers: {logical_reads=6077}
+        filter: "ROWNUM<=20"
+        loops: 1
+        output_list: ["filter: ROWNUM<=20", "actual: 0 rows, 1 starts, 20.000 ms"]
+      #2 HASH JOIN RIGHT SEMI [HASH JOIN]
+          actual_rebinds: 1
+          actual_time_ms: 20
+          buffers: {logical_reads=6077}
+          estimated_rows: 20
+          join_predicate: "\"O\".\"CUSTOMER_ID\"=\"C\".\"ID\""
+          join_type: "RIGHT SEMI"
+          loops: 1
+          output_list: ["access: \"O\".\"CUSTOMER_ID\"=\"C\".\"ID\"", "actual: 0 rows, 1 starts, 20.000 ms"]
+          peak_memory_kb: 1678
+          properties: [{name="OMem" value="2402K"}, {name="1Mem" value="2402K"}, {name="Used-Mem" value="1678K (0)"}, {name="Passes" value="0"}]
+        #3 TABLE ACCESS FULL ORDERS [TABLE ACCESS]
+            actual_rebinds: 1
+            actual_rows: 200
+            actual_rows_total: 200
+            actual_self_time_ms: 20
+            actual_time_ms: 20
+            buffers: {logical_reads=5773}
+            estimated_rows: 200
+            filter: "\"O\".\"TOTAL\">1499"
+            loops: 1
+            output_list: ["filter: \"O\".\"TOTAL\">1499", "actual: 200 rows, 1 starts, 20.000 ms"]
+            relation: "ORDERS"
+            warnings: [{TableScan={table="ORDERS"}}]
+        #4 TABLE ACCESS FULL CUSTOMERS [TABLE ACCESS]
+            actual_rebinds: 1
+            actual_rows: 10000
+            actual_rows_total: 10000
+            actual_self_time_ms: 10
+            actual_time_ms: 10
+            buffers: {logical_reads=304}
+            estimated_rows: 10000
+            filter: "\"C\".\"COUNTRY\"='JP'"
+            loops: 1
+            output_list: ["filter: \"C\".\"COUNTRY\"='JP'", "actual: 10000 rows, 1 starts, 10.000 ms"]
+            relation: "CUSTOMERS"
+            warnings: [{TableScan={table="CUSTOMERS"}}]

@@ -298,6 +298,58 @@ mod tests {
         );
     }
 
+    // https://github.com/dbeaver/dbeaver/issues/42811
+    #[test]
+    fn missing_saved_secrets_fail_at_once_instead_of_waiting_for_a_prompt() {
+        keyring::mock::install();
+        let unsaved = || SecretRef {
+            provider: SecretProvider::MacOsKeychain,
+            key: Uuid::new_v4().to_string(),
+        };
+        let hop = |auth| SshHop {
+            host: "bastion".into(),
+            port: 22,
+            username: "deploy".into(),
+            auth,
+        };
+        let sql_password = profile_with_secret(unsaved());
+        let mut ssh_password = profile_with_secret(SecretRef {
+            provider: SecretProvider::InMemory,
+            key: "db-pass".into(),
+        });
+        ssh_password.ssh_tunnel = Some(SshTunnelConfig {
+            target: hop(SshAuth::Password {
+                secret_ref: unsaved(),
+            }),
+            jump: None,
+            keepalive: Default::default(),
+        });
+        let mut key_passphrase = ssh_password.clone();
+        key_passphrase.ssh_tunnel = Some(SshTunnelConfig {
+            target: hop(SshAuth::KeyFile {
+                path: "~/.ssh/id_ed25519".into(),
+                passphrase: Some(unsaved()),
+            }),
+            jump: None,
+            keepalive: Default::default(),
+        });
+        for (label, profile) in [
+            ("sql password", sql_password),
+            ("ssh password", ssh_password),
+            ("key passphrase", key_passphrase),
+        ] {
+            let (tx, rx) = std::sync::mpsc::channel();
+            std::thread::spawn(move || {
+                let _ = tx.send(hydrate_profile(profile).map(|_| ()));
+            });
+            let outcome = rx
+                .recv_timeout(std::time::Duration::from_secs(5))
+                .unwrap_or_else(|_| panic!("{label}: hydration is still waiting on something"));
+            let error = outcome.expect_err(label);
+            assert!(!error.is_empty(), "{label}: the status bar needs a reason");
+        }
+    }
+
     #[test]
     fn hydrate_leaves_other_auth_kinds_untouched() {
         keyring::mock::install();

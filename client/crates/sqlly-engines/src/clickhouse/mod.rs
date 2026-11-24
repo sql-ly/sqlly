@@ -200,6 +200,9 @@ fn credentials(profile: &ConnectionProfile) -> StudioResult<(String, String)> {
         AuthenticationType::AuthToken { .. } => Err(StudioError::InvalidProfile(
             "Auth-token sign-in applies to libSQL / Turso, not ClickHouse".into(),
         )),
+        AuthenticationType::PostgresOAuth { .. } => Err(StudioError::InvalidProfile(
+            "PostgreSQL OAuth sign-in applies to PostgreSQL, not ClickHouse".into(),
+        )),
     }
 }
 

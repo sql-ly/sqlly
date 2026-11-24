@@ -1,0 +1,11 @@
+Expression
+  Limit
+    Sorting
+      Expression
+        Aggregating
+          Expression
+            Join
+              Expression
+                ReadFromMergeTree
+              Expression
+                ReadFromMergeTree

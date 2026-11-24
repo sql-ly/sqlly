@@ -57,6 +57,14 @@ impl ConnectionManagement {
             AuthenticationType::AwsRdsIam { .. } => AuthMode::AwsRdsIam,
             AuthenticationType::GcpCloudSqlIam { .. } => AuthMode::GcpCloudSqlIam,
             AuthenticationType::AuthToken { .. } => AuthMode::AuthToken,
+            AuthenticationType::PostgresOAuth {
+                flow: sqlly_core::PgOAuthFlow::DeviceCode,
+                ..
+            } => AuthMode::PgOAuth,
+            AuthenticationType::PostgresOAuth {
+                flow: sqlly_core::PgOAuthFlow::BearerToken,
+                ..
+            } => AuthMode::PgOAuthToken,
         };
         if self.auth_mode == AuthMode::EntraBrowser && self.entra_account.is_none() {
             self.reload_entra_accounts();
@@ -152,6 +160,36 @@ impl ConnectionManagement {
                 self.password
                     .update(cx, |f, cx| f.set_value(shown, window, cx));
             }
+            // PostgreSQL OAuth keeps its client secret / bearer token like a
+            // libSQL token.
+            AuthenticationType::PostgresOAuth {
+                username,
+                issuer,
+                client_id,
+                scope,
+                secret_ref,
+                ..
+            } => {
+                self.username = username.clone();
+                self.pg_oauth_issuer = issuer.clone();
+                self.pg_oauth_client_id = client_id.clone();
+                self.pg_oauth_scope = scope.clone();
+                self.connection_sql_account =
+                    if secret_ref.provider == SecretProvider::MacOsKeychain {
+                        Uuid::parse_str(&secret_ref.key).ok()
+                    } else {
+                        None
+                    };
+                let shown = if secret_ref.provider == SecretProvider::InMemory {
+                    secret_ref.key.clone()
+                } else if self.connection_sql_account.is_some() {
+                    crate::connection_editor::password_mask()
+                } else {
+                    String::new()
+                };
+                self.password
+                    .update(cx, |f, cx| f.set_value(shown, window, cx));
+            }
             _ => {
                 self.username.clear();
                 self.password
@@ -178,6 +216,16 @@ impl ConnectionManagement {
         let aws_region = self.aws_region.clone();
         self.aws_region_input
             .update(cx, |s, cx| s.set_value(aws_region, window, cx));
+        for (input, value) in [
+            (&self.pg_oauth_issuer_input, self.pg_oauth_issuer.clone()),
+            (
+                &self.pg_oauth_client_id_input,
+                self.pg_oauth_client_id.clone(),
+            ),
+            (&self.pg_oauth_scope_input, self.pg_oauth_scope.clone()),
+        ] {
+            input.update(cx, |s, cx| s.set_value(value, window, cx));
+        }
         #[cfg(not(target_arch = "wasm32"))]
         {
             self.aws_profile_select_stale = true;
@@ -240,6 +288,9 @@ impl ConnectionManagement {
         self.username.clear();
         self.aws_region.clear();
         self.aws_profile.clear();
+        self.pg_oauth_issuer.clear();
+        self.pg_oauth_client_id.clear();
+        self.pg_oauth_scope.clear();
         #[cfg(not(target_arch = "wasm32"))]
         {
             self.gcp_adc_status.clear();
@@ -272,6 +323,13 @@ impl ConnectionManagement {
             .update(cx, |s, cx| s.set_value("", window, cx));
         self.aws_region_input
             .update(cx, |s, cx| s.set_value("", window, cx));
+        for input in [
+            &self.pg_oauth_issuer_input,
+            &self.pg_oauth_client_id_input,
+            &self.pg_oauth_scope_input,
+        ] {
+            input.update(cx, |s, cx| s.set_value("", window, cx));
+        }
         self.timeout_input
             .update(cx, |s, cx| s.set_value("30", window, cx));
         self.statement_timeout_input
@@ -304,12 +362,40 @@ impl ConnectionManagement {
         cx.notify();
     }
 
+    /// The PostgreSQL OAuth sign-in the form describes.
+    fn pg_oauth_authentication(
+        &self,
+        username: String,
+        secret_ref: SecretRef,
+    ) -> AuthenticationType {
+        AuthenticationType::PostgresOAuth {
+            username,
+            issuer: self.pg_oauth_issuer.trim().to_string(),
+            client_id: self.pg_oauth_client_id.trim().to_string(),
+            scope: self.pg_oauth_scope.trim().to_string(),
+            flow: if self.auth_mode == AuthMode::PgOAuthToken {
+                sqlly_core::PgOAuthFlow::BearerToken
+            } else {
+                sqlly_core::PgOAuthFlow::DeviceCode
+            },
+            secret_ref,
+        }
+    }
+
     pub(super) fn set_auth_mode(
         &mut self,
         mode: AuthMode,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        // The password field means a client secret or a bearer token in the
+        // OAuth modes; never carry a secret across into a different meaning.
+        let oauth = |m: AuthMode| matches!(m, AuthMode::PgOAuth | AuthMode::PgOAuthToken);
+        if mode != self.auth_mode && (oauth(mode) || oauth(self.auth_mode)) {
+            self.connection_sql_account = None;
+            self.password
+                .update(cx, |f, cx| f.set_value("", window, cx));
+        }
         self.auth_mode = mode;
         self.mark_dirty();
         self.apply_iam_auth_mode_side_effects(mode, window, cx);
@@ -395,6 +481,13 @@ impl ConnectionManagement {
                     key: password.trim().to_string(),
                 },
             },
+            AuthMode::PgOAuth | AuthMode::PgOAuthToken => self.pg_oauth_authentication(
+                username,
+                SecretRef {
+                    provider: SecretProvider::InMemory,
+                    key: password.trim().to_string(),
+                },
+            ),
         };
 
         let mode = if self.editing_id.is_some() {
@@ -571,6 +664,22 @@ impl ConnectionManagement {
                     },
                 };
                 profile.authentication = AuthenticationType::AuthToken { secret_ref };
+            }
+            AuthMode::PgOAuth | AuthMode::PgOAuthToken => {
+                let typed = self.password.read(cx).value().trim().to_string();
+                let secret_ref = match self.connection_sql_account {
+                    Some(id) if typed == crate::connection_editor::password_mask() => SecretRef {
+                        provider: SecretProvider::MacOsKeychain,
+                        key: id.to_string(),
+                    },
+                    _ => SecretRef {
+                        provider: SecretProvider::InMemory,
+                        key: typed,
+                    },
+                };
+                profile.authentication =
+                    self.pg_oauth_authentication(self.username.trim().to_string(), secret_ref);
+                profile.encrypt = true;
             }
         }
 

@@ -25,9 +25,7 @@ impl AppView {
         // DDL viewer tabs are session-only: their content is a point-in-time
         // fetch, so they are excluded from persistence. The selected index is
         // re-based onto the surviving query tabs.
-        let persistable = |t: &crate::tabs::QueryTab| {
-            t.ddl_view.is_none() && (!t.is_notebook() || t.notebook_path.is_some())
-        };
+        let persistable = |t: &crate::tabs::QueryTab| t.ddl_view.is_none();
         let selected_tab = self
             .tabs
             .iter()
@@ -76,6 +74,13 @@ impl AppView {
                         #[cfg(target_arch = "wasm32")]
                         result_cache_key: None,
                         notebook_path: t.notebook_path.clone(),
+                        // Unsaved notebooks come back from their recovery
+                        // copy; saved ones are offered the unsaved changes
+                        // they had at quit.
+                        notebook_id: t
+                            .notebook
+                            .as_ref()
+                            .map(|nb| nb.read(cx).doc().id().to_string()),
                         query_params: t.query_params.persisted(cx),
                     }
                 })
@@ -119,6 +124,7 @@ impl AppView {
                 cell_detail_visible: self.cell_detail_visible,
                 cell_detail_width: self.cell_detail_width,
                 cell_detail_height: self.cell_detail_height,
+                notebook_layout: Some(self.notebook_layout.clone()),
                 editor_split: self.split.as_ref().and_then(|split| {
                     let axis = match split.axis {
                         crate::editor_groups::SplitAxis::Vertical => {
@@ -138,19 +144,14 @@ impl AppView {
                         });
                     };
                     let tab = self.tabs.get(split_other)?;
-                    if tab.ddl_view.is_some()
-                        || (tab.notebook.is_some() && tab.notebook_path.is_none())
-                    {
+                    if tab.ddl_view.is_some() {
                         return None;
                     }
                     let other_tab = self
                         .tabs
                         .iter()
                         .take(split_other)
-                        .filter(|t| {
-                            t.ddl_view.is_none()
-                                && (t.notebook.is_none() || t.notebook_path.is_some())
-                        })
+                        .filter(|t| t.ddl_view.is_none())
                         .count();
                     Some(crate::workspace_session::EditorSplit {
                         axis,
@@ -257,6 +258,12 @@ impl AppView {
         self.cell_detail_visible = session.layout.cell_detail_visible;
         self.cell_detail_width = session.layout.cell_detail_width;
         self.cell_detail_height = session.layout.cell_detail_height;
+        self.notebook_layout = session
+            .layout
+            .notebook_layout
+            .clone()
+            .unwrap_or_default()
+            .sanitized();
         self.ai_visible = session.layout.ai_assistant_visible;
         self.ai_width = session.layout.ai_assistant_width;
         self.ai_panel_width = clamp_ai_width(session.layout.ai_assistant_width);
@@ -282,8 +289,12 @@ impl AppView {
         } else {
             for tab_state in &restore_tabs {
                 if let Some(path) = tab_state.notebook_path.as_ref() {
-                    if std::path::Path::new(path).exists() {
+                    if self.notebook_tab_for_path(path).is_some() {
+                        continue;
+                    }
+                    if crate::notebook::files::exists(path) {
                         self.open_notebook_from_path(path, cx);
+                        self.offer_notebook_recovery(tab_state, cx);
                         if let Some(tab) = self.tabs.last_mut() {
                             tab.name = tab_state.title.clone();
                             tab.pinned = tab_state.pinned;
@@ -305,8 +316,12 @@ impl AppView {
                             }
                         }
                     } else {
-                        tracing::debug!(path, "notebook file missing; skipping restore");
+                        self.restore_missing_notebook_file(path, tab_state, cx);
                     }
+                    continue;
+                }
+                if let Some(id) = tab_state.notebook_id.as_deref() {
+                    self.restore_recovered_notebook(id, tab_state, cx);
                     continue;
                 }
                 let initial_text = match tab_state.file_path.as_deref() {

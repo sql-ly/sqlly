@@ -1,0 +1,77 @@
+# 1 column
+# row 1
+## 19
+distribution: local
+# row 2
+## 16
+vectorized: true
+# row 3
+## 0
+
+# row 4
+## 8
+• sort
+# row 5
+## 26
+│ estimated row count: 2
+# row 6
+## 15
+│ order: -sum
+# row 7
+## 3
+│
+# row 8
+## 26
+└── • group (hash)
+# row 9
+## 30
+    │ estimated row count: 2
+# row 10
+## 24
+    │ group by: region
+# row 11
+## 7
+    │
+# row 12
+## 27
+    └── • hash join
+# row 13
+## 39
+        │ estimated row count: 10,000
+# row 14
+## 42
+        │ equality: (customer_id) = (id)
+# row 15
+## 30
+        │ right cols are key
+# row 16
+## 11
+        │
+# row 17
+## 26
+        ├── • scan
+# row 18
+## 94
+        │     estimated row count: 20,000 (100% of the table; stats collected 2 seconds ago)
+# row 19
+## 41
+        │     table: orders@orders_pkey
+# row 20
+## 32
+        │     spans: FULL SCAN
+# row 21
+## 11
+        │
+# row 22
+## 26
+        └── • scan
+# row 23
+## 88
+              estimated row count: 500 (50% of the table; stats collected 2 seconds ago)
+# row 24
+## 51
+              table: customers@customers_region_idx
+# row 25
+## 60
+              spans: [/'east' - /'east'] [/'west' - /'west']
+# 25 rows

@@ -1,0 +1,33 @@
+format: mariadb-table (Certain)
+statements: 1
+
+== statement 1
+dialect: "MariaDb"
+estimated_rows: 4989
+has_actuals: yes
+source_format: "mariadb-table"
+statement_type: "ANALYZE"
+operators: 3
+  #1 Query Block [Query Block]
+      properties: [{name="select_id" value="1"}, {name="select_type" value="SIMPLE"}]
+      subplan_name: "Select #1"
+    #2 Table: c [Access: ALL]
+        actual_rows: 5000
+        estimated_rows: 4989
+        estimated_rows_read: 4989
+        extra: ["Using where"]
+        filtered_percent: 100
+        output_list: ["c"]
+        properties: [{name="r_filtered" value="25.00"}]
+        relation: "c"
+        warnings: [{TableScan={table="c"}}]
+    #3 Table: o [Access: ref]
+        actual_rows: 1.09
+        estimated_rows: 8
+        estimated_rows_read: 8
+        extra: ["Using where", "Using rowid filter"]
+        filtered_percent: 13.56
+        index_name: "orders_customer_idx"
+        output_list: ["o", "Key: orders_customer_idx"]
+        properties: [{name="type" value="ref|filter"}, {name="possible_keys" value="orders_customer_idx,orders_placed_idx"}, {name="rowid_filter_key" value="orders_placed_idx"}, {name="key_len" value="4|5"}, {name="ref" value="shop.c.id"}, {name="rows" value="8 (14%)"}, {name="r_rows" value="1.09 (13%)"}, {name="r_filtered" value="100.00"}]
+        relation: "o"

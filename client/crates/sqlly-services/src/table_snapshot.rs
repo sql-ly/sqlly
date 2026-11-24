@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 use crate::alter::script::comments::string_literal;
 use crate::alter::{
     CheckConstraintDef, ColumnDef, ColumnExtras, DependentView, ForeignKeyDef, GeneratedColumn,
-    IndexDef, TableSnapshot, TableStorage,
+    IndexDef, PartitionDef, PartitionOf, TableSnapshot, TableStorage,
 };
 use sqlly_core::{CellValue, ConnectionProfile, DisplayMessage, StudioResult};
 
@@ -525,7 +525,8 @@ fn tds_storage_from_row(row: Vec<CellValue>, schema: &str, table: &str) -> Table
     storage
 }
 
-/// Read the SQL Server storage options (empty elsewhere).
+/// Read the SQL Server storage options and PostgreSQL partitioning (empty
+/// elsewhere).
 async fn load_table_storage(
     queries: &dyn QueryExecutor,
     profile: &ConnectionProfile,
@@ -534,6 +535,17 @@ async fn load_table_storage(
     schema: &str,
     table: &str,
 ) -> StudioResult<TableStorage> {
+    // CockroachDB speaks the wire protocol but has no declarative
+    // partitioning catalog.
+    if dialect == MetadataDialect::Postgres
+        && profile.database_type != sqlly_core::DatabaseType::CockroachDb
+    {
+        let mut storage = load_pg_partitioning(queries, profile, database, schema, table).await;
+        if profile.database_type == sqlly_core::DatabaseType::WarehousePg {
+            load_distribution(queries, profile, database, schema, table, &mut storage).await;
+        }
+        return Ok(storage);
+    }
     if dialect != MetadataDialect::SqlServer {
         return Ok(TableStorage::default());
     }
@@ -759,10 +771,21 @@ fn pg_columns_sql(schema: &str, table: &str) -> String {
 
 /// MySQL/MariaDB columns with the full `column_type` (enum/set values,
 /// unsigned, fractional-second precision) and the raw default + `extra`
-/// needed to spell the default as SQL.
-fn mysql_columns_sql(db: sqlly_core::DatabaseType, schema: &str, table: &str) -> String {
+/// needed to spell the default as SQL. `generation_expression` only exists
+/// from MySQL 5.7.6 / MariaDB 10.2; without it that column reads as `NULL`.
+fn mysql_columns_sql(
+    db: sqlly_core::DatabaseType,
+    schema: &str,
+    table: &str,
+    with_generation_expression: bool,
+) -> String {
+    let generation = if with_generation_expression {
+        "c.generation_expression"
+    } else {
+        "NULL AS generated_expr"
+    };
     format!(
-        "SELECT c.column_name, c.column_type, c.data_type, IF(c.is_nullable = 'YES', 1, 0) AS is_nullable, c.extra, c.column_default, c.generation_expression FROM information_schema.columns c WHERE c.table_schema = {} AND c.table_name = {} ORDER BY c.ordinal_position",
+        "SELECT c.column_name, c.column_type, c.data_type, IF(c.is_nullable = 'YES', 1, 0) AS is_nullable, c.extra, c.column_default, {generation} FROM information_schema.columns c WHERE c.table_schema = {} AND c.table_name = {} ORDER BY c.ordinal_position",
         string_literal(db, schema),
         string_literal(db, table)
     )
@@ -1012,8 +1035,23 @@ async fn load_columns(
             }
         }
         MetadataDialect::MySql => {
-            let sql = mysql_columns_sql(db, schema, table);
-            let rows = collect_rows(queries, profile_with_db(profile, database), &sql).await?;
+            let sql = mysql_columns_sql(db, schema, table, true);
+            let rows = match collect_rows(queries, profile_with_db(profile, database), &sql).await {
+                Ok(rows) => rows,
+                // MySQL before 5.7.6 / MariaDB before 10.2: no generated
+                // columns in information_schema, so read the rest without it.
+                Err(err)
+                    if err
+                        .to_string()
+                        .to_ascii_lowercase()
+                        .contains("generation_expression") =>
+                {
+                    tracing::debug!(%err, schema, table, "no information_schema.columns.generation_expression; reading columns without it");
+                    let sql = mysql_columns_sql(db, schema, table, false);
+                    collect_rows(queries, profile_with_db(profile, database), &sql).await?
+                }
+                Err(err) => return Err(err),
+            };
             let mut extras = BTreeMap::new();
             let columns = rows
                 .into_iter()
@@ -1836,6 +1874,211 @@ fn is_oracle_not_null_check(text: &str) -> bool {
     }
 }
 
+/// PostgreSQL declarative partitioning of one table: its partition key, the
+/// parent it is attached to, and every partition below it. A failed read
+/// leaves the table unpartitioned in the script, with a warning saying so.
+async fn load_pg_partitioning(
+    queries: &dyn QueryExecutor,
+    profile: &ConnectionProfile,
+    database: &str,
+    schema: &str,
+    table: &str,
+) -> TableStorage {
+    match read_pg_partitioning(queries, profile, database, schema, table).await {
+        Ok(storage) => storage,
+        Err(err) => TableStorage {
+            unscripted: vec![
+                snapshot_message(
+                    "services.table_snapshot.storage.pg_partitioning_unreadable",
+                    format!(
+                        "its partitioning could not be read ({err}); if it is partitioned, the script creates an ordinary table"
+                    ),
+                )
+                .with_arg("detail", err.to_string()),
+            ],
+            ..TableStorage::default()
+        },
+    }
+}
+
+async fn read_pg_partitioning(
+    queries: &dyn QueryExecutor,
+    profile: &ConnectionProfile,
+    database: &str,
+    schema: &str,
+    table: &str,
+) -> StudioResult<TableStorage> {
+    let regclass = pg_regclass_literal(schema, table);
+    let mut storage = TableStorage::default();
+    let own = collect_rows(
+        queries,
+        profile_with_db(profile, database),
+        &format!(
+            "SELECT CASE WHEN c.relkind = 'p' THEN pg_catalog.pg_get_partkeydef(c.oid) END, \
+             c.relispartition::int, pg_catalog.pg_get_expr(c.relpartbound, c.oid) \
+             FROM pg_catalog.pg_class c WHERE c.oid = {regclass}::regclass"
+        ),
+    )
+    .await?;
+    let Some(row) = own.into_iter().next() else {
+        return Ok(storage);
+    };
+    let mut cells = row.into_iter();
+    storage.partition_key = cell_to_string(cells.next()).filter(|k| !k.trim().is_empty());
+    let is_partition = cell_to_bool(cells.next()).unwrap_or(false);
+    let bound = cell_to_string(cells.next());
+
+    if is_partition && let Some(bound) = bound {
+        let ancestors = collect_rows(
+            queries,
+            profile_with_db(profile, database),
+            &format!(
+                "WITH RECURSIVE up(relid, depth) AS (\
+                 SELECT i.inhparent, 1 FROM pg_catalog.pg_inherits i WHERE i.inhrelid = {regclass}::regclass \
+                 UNION ALL SELECT i.inhparent, up.depth + 1 FROM pg_catalog.pg_inherits i JOIN up ON i.inhrelid = up.relid) \
+                 SELECT n.nspname, c.relname FROM up \
+                 JOIN pg_catalog.pg_class c ON c.oid = up.relid \
+                 JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace ORDER BY up.depth"
+            ),
+        )
+        .await?
+        .into_iter()
+        .filter_map(|row| {
+            let mut cells = row.into_iter();
+            Some((cell_to_string(cells.next())?, cell_to_string(cells.next())?))
+        })
+        .collect::<Vec<_>>();
+        if let Some((parent_schema, parent)) = ancestors.first().cloned() {
+            storage.partition_of = Some(PartitionOf {
+                parent_schema: Some(parent_schema),
+                parent,
+                bound,
+                ancestors: ancestors
+                    .iter()
+                    .map(|(s, t)| crate::dump_render::table_key(s, t))
+                    .collect(),
+            });
+        }
+    }
+
+    if storage.partition_key.is_some() {
+        let rows = collect_rows(
+            queries,
+            profile_with_db(profile, database),
+            &format!(
+                "WITH RECURSIVE tree(relid, parent, depth) AS (\
+                 SELECT i.inhrelid, i.inhparent, 1 FROM pg_catalog.pg_inherits i WHERE i.inhparent = {regclass}::regclass \
+                 UNION ALL SELECT i.inhrelid, i.inhparent, tree.depth + 1 FROM pg_catalog.pg_inherits i JOIN tree ON i.inhparent = tree.relid) \
+                 SELECT cn.nspname, c.relname, pn.nspname, p.relname, \
+                 pg_catalog.pg_get_expr(c.relpartbound, c.oid), \
+                 CASE WHEN c.relkind = 'p' THEN pg_catalog.pg_get_partkeydef(c.oid) END, c.relkind::text \
+                 FROM tree JOIN pg_catalog.pg_class c ON c.oid = tree.relid \
+                 JOIN pg_catalog.pg_namespace cn ON cn.oid = c.relnamespace \
+                 JOIN pg_catalog.pg_class p ON p.oid = tree.parent \
+                 JOIN pg_catalog.pg_namespace pn ON pn.oid = p.relnamespace \
+                 WHERE c.relispartition ORDER BY tree.depth, cn.nspname, c.relname"
+            ),
+        )
+        .await?;
+        storage.partitions = pg_partitions_from_rows(rows, &mut storage.unscripted);
+    }
+    Ok(storage)
+}
+
+/// WarehousePG's `DISTRIBUTED BY` / `RANDOMLY` / `REPLICATED` clause for one
+/// table. A failed read leaves it out with a warning, so the copy would use
+/// the server's default distribution.
+async fn load_distribution(
+    queries: &dyn QueryExecutor,
+    profile: &ConnectionProfile,
+    database: &str,
+    schema: &str,
+    table: &str,
+    storage: &mut TableStorage,
+) {
+    let regclass = pg_regclass_literal(schema, table);
+    match collect_rows(
+        queries,
+        profile_with_db(profile, database),
+        &format!("SELECT pg_catalog.pg_get_table_distributedby({regclass}::regclass)"),
+    )
+    .await
+    {
+        Ok(rows) => {
+            storage.distributed_by = rows
+                .into_iter()
+                .next()
+                .and_then(|row| cell_to_string(row.into_iter().next()))
+                .map(|clause| clause.trim().to_string())
+                .filter(|clause| clause.to_ascii_uppercase().starts_with("DISTRIBUTED"));
+        }
+        Err(err) => storage.unscripted.push(
+            snapshot_message(
+                "services.table_snapshot.storage.distribution_unreadable",
+                format!(
+                    "its distribution could not be read ({err}); the script leaves out DISTRIBUTED BY, so the copy uses the server's default distribution"
+                ),
+            )
+            .with_arg("detail", err.to_string()),
+        ),
+    }
+}
+
+/// The partition-tree rows of [`read_pg_partitioning`]. A foreign-table
+/// partition cannot be recreated by `CREATE TABLE … PARTITION OF`, so it
+/// (and anything below it) is left out with a warning.
+fn pg_partitions_from_rows(
+    rows: Vec<Vec<CellValue>>,
+    unscripted: &mut Vec<DisplayMessage>,
+) -> Vec<PartitionDef> {
+    let mut partitions: Vec<PartitionDef> = Vec::new();
+    let mut left_out: Vec<(String, String)> = Vec::new();
+    for row in rows {
+        let mut cells = row.into_iter();
+        let (Some(schema), Some(table), Some(parent_schema), Some(parent), Some(bound)) = (
+            cell_to_string(cells.next()),
+            cell_to_string(cells.next()),
+            cell_to_string(cells.next()),
+            cell_to_string(cells.next()),
+            cell_to_string(cells.next()),
+        ) else {
+            continue;
+        };
+        let partition_key = cell_to_string(cells.next()).filter(|k| !k.trim().is_empty());
+        let relkind = cell_to_string(cells.next()).unwrap_or_default();
+        if left_out
+            .iter()
+            .any(|(s, t)| *s == parent_schema && *t == parent)
+        {
+            left_out.push((schema, table));
+            continue;
+        }
+        if relkind == "f" {
+            unscripted.push(
+                snapshot_message(
+                    "services.table_snapshot.storage.pg_foreign_partition",
+                    format!(
+                        "partition {schema}.{table} is a foreign table, which the script does not recreate"
+                    ),
+                )
+                .with_arg("schema_name", schema.clone())
+                .with_arg("table_name", table.clone()),
+            );
+            left_out.push((schema, table));
+            continue;
+        }
+        partitions.push(PartitionDef {
+            schema: Some(schema),
+            table,
+            parent_schema: Some(parent_schema),
+            parent,
+            bound,
+            partition_key,
+        });
+    }
+    partitions
+}
+
 /// `' "schema"."table" '` as a string literal usable as `::regclass` input.
 fn pg_regclass_literal(schema: &str, table: &str) -> String {
     let inner = format!(
@@ -1926,6 +2169,279 @@ mod tests {
 
     fn s(text: &str) -> CellValue {
         CellValue::String(text.to_string())
+    }
+
+    #[tokio::test]
+    async fn warehousepg_snapshot_reads_the_distribution_clause() {
+        let snapshot = |db| {
+            let queries = FakeQueries {
+                routes: vec![(
+                    "pg_get_table_distributedby".into(),
+                    vec![vec![s("DISTRIBUTED BY (id)")]],
+                )],
+                executed: Mutex::new(Vec::new()),
+            };
+            async move {
+                let snap = load_table_snapshot(
+                    &queries,
+                    &profile_for(db),
+                    "app",
+                    Some("public"),
+                    "orders",
+                )
+                .await
+                .unwrap();
+                let asked = queries
+                    .executed
+                    .lock()
+                    .unwrap()
+                    .iter()
+                    .any(|sql| sql.contains("pg_get_table_distributedby"));
+                (snap, asked)
+            }
+        };
+        let (snap, asked) = snapshot(sqlly_core::DatabaseType::WarehousePg).await;
+        assert!(asked);
+        assert_eq!(
+            snap.storage.distributed_by.as_deref(),
+            Some("DISTRIBUTED BY (id)")
+        );
+        // Plain PostgreSQL has no such function and is never asked.
+        let (snap, asked) = snapshot(sqlly_core::DatabaseType::Postgres).await;
+        assert!(!asked);
+        assert_eq!(snap.storage.distributed_by, None);
+    }
+
+    /// Regression (CloudBeaver #4913): the snapshot of a partitioned table
+    /// that is itself a partition carries its key, its parent chain and the
+    /// partitions below it, so the DDL can rebuild the whole tree.
+    #[tokio::test]
+    async fn postgres_snapshot_reads_partition_key_parent_chain_and_partitions() {
+        let queries = FakeQueries {
+            routes: vec![
+                (
+                    "c.relispartition::int".into(),
+                    vec![vec![
+                        s("LIST (region)"),
+                        CellValue::I64(1),
+                        s("FOR VALUES FROM (2026) TO (2027)"),
+                    ]],
+                ),
+                (
+                    "WITH RECURSIVE up(".into(),
+                    vec![
+                        vec![s("public"), s("measurements")],
+                        vec![s("archive"), s("all_measurements")],
+                    ],
+                ),
+                (
+                    "WITH RECURSIVE tree(".into(),
+                    vec![vec![
+                        s("public"),
+                        s("m_2026_eu"),
+                        s("public"),
+                        s("m_2026"),
+                        s("FOR VALUES IN ('eu')"),
+                        CellValue::Null,
+                        s("r"),
+                    ]],
+                ),
+            ],
+            executed: Mutex::new(Vec::new()),
+        };
+        let snap = load_table_snapshot(
+            &queries,
+            &profile_for(sqlly_core::DatabaseType::Postgres),
+            "app",
+            Some("public"),
+            "m_2026",
+        )
+        .await
+        .unwrap();
+        let storage = &snap.storage;
+        assert_eq!(storage.partition_key.as_deref(), Some("LIST (region)"));
+        let of = storage.partition_of.as_ref().expect("partition_of");
+        assert_eq!(of.parent_schema.as_deref(), Some("public"));
+        assert_eq!(of.parent, "measurements");
+        assert_eq!(of.bound, "FOR VALUES FROM (2026) TO (2027)");
+        assert_eq!(of.ancestors.len(), 2);
+        assert_eq!(storage.partitions.len(), 1);
+        assert_eq!(storage.partitions[0].table, "m_2026_eu");
+        assert_eq!(storage.partitions[0].bound, "FOR VALUES IN ('eu')");
+        assert!(storage.unscripted.is_empty(), "{:?}", storage.unscripted);
+    }
+
+    /// An ordinary table never runs the ancestor or partition-tree queries.
+    #[tokio::test]
+    async fn postgres_unpartitioned_table_skips_the_partition_tree_reads() {
+        let queries = FakeQueries {
+            routes: vec![(
+                "c.relispartition::int".into(),
+                vec![vec![CellValue::Null, CellValue::I64(0), CellValue::Null]],
+            )],
+            executed: Mutex::new(Vec::new()),
+        };
+        let snap = load_table_snapshot(
+            &queries,
+            &profile_for(sqlly_core::DatabaseType::Postgres),
+            "app",
+            Some("public"),
+            "people",
+        )
+        .await
+        .unwrap();
+        assert_eq!(snap.storage.partition_key, None);
+        assert!(snap.storage.partition_of.is_none());
+        assert!(snap.storage.partitions.is_empty());
+        let executed = queries.executed.lock().unwrap();
+        assert!(
+            !executed.iter().any(|sql| sql.contains("WITH RECURSIVE")),
+            "{executed:?}"
+        );
+    }
+
+    /// CockroachDB has no declarative partitioning catalog; asking for it
+    /// would fail every DDL view.
+    #[tokio::test]
+    async fn cockroachdb_snapshot_never_reads_postgres_partitioning() {
+        let queries = FakeQueries {
+            routes: vec![],
+            executed: Mutex::new(Vec::new()),
+        };
+        load_table_snapshot(
+            &queries,
+            &profile_for(sqlly_core::DatabaseType::CockroachDb),
+            "app",
+            Some("public"),
+            "people",
+        )
+        .await
+        .unwrap();
+        let executed = queries.executed.lock().unwrap();
+        assert!(
+            !executed.iter().any(|sql| sql.contains("pg_get_partkeydef")
+                || sql.contains("pg_get_table_distributedby")),
+            "{executed:?}"
+        );
+    }
+
+    /// A failed partitioning or distribution read leaves the snapshot usable,
+    /// with a warning naming what the script leaves out.
+    #[tokio::test]
+    async fn partitioning_and_distribution_read_failures_become_warnings() {
+        struct FailOn(&'static str);
+        #[async_trait]
+        impl QueryExecutor for FailOn {
+            async fn execute(
+                &self,
+                _profile: &ConnectionProfile,
+                sql: &str,
+                _row_buffer: usize,
+            ) -> sqlly_core::StudioResult<crate::query::QueryHandle> {
+                let (tx, rx) = mpsc::channel(16);
+                if sql.contains(self.0) {
+                    tx.send(QueryEvent::Error {
+                        message: "permission denied".into(),
+                    })
+                    .await
+                    .ok();
+                } else {
+                    tx.send(QueryEvent::Rows {
+                        index: 0,
+                        rows: vec![],
+                    })
+                    .await
+                    .ok();
+                    tx.send(QueryEvent::Completed { elapsed_ms: 1 }).await.ok();
+                }
+                Ok(crate::query::QueryHandle {
+                    task_id: "t".into(),
+                    events: rx,
+                })
+            }
+
+            async fn cancel(&self, _task_id: &str) -> sqlly_core::StudioResult<()> {
+                Ok(())
+            }
+        }
+
+        for (db, needle, warning) in [
+            (
+                sqlly_core::DatabaseType::Postgres,
+                "pg_get_partkeydef",
+                "partitioning could not be read",
+            ),
+            (
+                sqlly_core::DatabaseType::WarehousePg,
+                "pg_get_table_distributedby",
+                "distribution could not be read",
+            ),
+        ] {
+            let snap = load_table_snapshot(
+                &FailOn(needle),
+                &profile_for(db),
+                "app",
+                Some("public"),
+                "orders",
+            )
+            .await
+            .unwrap();
+            let warnings: Vec<String> = snap
+                .storage
+                .unscripted
+                .iter()
+                .map(|w| w.to_string())
+                .collect();
+            assert!(
+                warnings
+                    .iter()
+                    .any(|w| w.contains(warning) && w.contains("permission denied")),
+                "{db:?}: {warnings:?}"
+            );
+            assert_eq!(snap.storage.partition_key, None);
+            assert_eq!(snap.storage.distributed_by, None);
+        }
+    }
+
+    #[test]
+    fn foreign_table_partitions_and_their_subtrees_are_left_out_with_a_warning() {
+        let row = |table: &str, parent: &str, bound: &str, key: Option<&str>, kind: &str| {
+            vec![
+                s("public"),
+                s(table),
+                s("public"),
+                s(parent),
+                s(bound),
+                key.map(s).unwrap_or(CellValue::Null),
+                s(kind),
+            ]
+        };
+        let mut unscripted = Vec::new();
+        let parts = pg_partitions_from_rows(
+            vec![
+                row("m_2025", "m", "FOR VALUES IN (2025)", None, "r"),
+                row("m_remote", "m", "FOR VALUES IN (2024)", None, "f"),
+                row(
+                    "m_2026",
+                    "m",
+                    "FOR VALUES IN (2026)",
+                    Some("LIST (region)"),
+                    "p",
+                ),
+                row("m_2026_eu", "m_2026", "FOR VALUES IN ('eu')", None, "r"),
+            ],
+            &mut unscripted,
+        );
+        let names: Vec<_> = parts.iter().map(|p| p.table.as_str()).collect();
+        assert_eq!(names, ["m_2025", "m_2026", "m_2026_eu"]);
+        assert_eq!(parts[1].partition_key.as_deref(), Some("LIST (region)"));
+        assert_eq!(parts[2].parent, "m_2026");
+        assert_eq!(unscripted.len(), 1);
+        assert!(
+            unscripted[0].to_string().contains("public.m_remote"),
+            "{}",
+            unscripted[0]
+        );
     }
 
     #[tokio::test]
@@ -2624,6 +3140,97 @@ mod tests {
             })
         );
         assert!(snap.stored_table_ddl.is_some());
+    }
+
+    /// A server that rejects any query naming `missing` the way MySQL
+    /// before 5.7.6 / MariaDB before 10.2 reject `generation_expression`.
+    struct OldServerQueries {
+        inner: FakeQueries,
+        missing: &'static str,
+    }
+
+    #[async_trait]
+    impl QueryExecutor for OldServerQueries {
+        async fn execute(
+            &self,
+            profile: &ConnectionProfile,
+            sql: &str,
+            row_buffer: usize,
+        ) -> sqlly_core::StudioResult<crate::query::QueryHandle> {
+            if sql.to_ascii_lowercase().contains(self.missing) {
+                self.inner.executed.lock().unwrap().push(sql.to_string());
+                let (tx, rx) = mpsc::channel(4);
+                tx.send(QueryEvent::Error {
+                    message: format!("Unknown column 'c.{}' in 'field list'", self.missing),
+                })
+                .await
+                .ok();
+                return Ok(crate::query::QueryHandle {
+                    task_id: "t".into(),
+                    events: rx,
+                });
+            }
+            self.inner.execute(profile, sql, row_buffer).await
+        }
+
+        async fn cancel(&self, task_id: &str) -> sqlly_core::StudioResult<()> {
+            self.inner.cancel(task_id).await
+        }
+    }
+
+    /// Sequel Ace #2395 class of failure: the table designer's column read
+    /// must not break on a server without `GENERATION_EXPRESSION`.
+    #[tokio::test]
+    async fn mysql_snapshot_loads_columns_on_servers_without_generation_expression() {
+        let queries = OldServerQueries {
+            inner: FakeQueries {
+                routes: vec![
+                    (
+                        "c.column_type".into(),
+                        vec![
+                            vec![
+                                s("id"),
+                                s("int(10) unsigned"),
+                                s("int"),
+                                i(0),
+                                s("auto_increment"),
+                                CellValue::Null,
+                                CellValue::Null,
+                            ],
+                            vec![
+                                s("state"),
+                                s("enum('new','done')"),
+                                s("enum"),
+                                i(0),
+                                s(""),
+                                s("new"),
+                                CellValue::Null,
+                            ],
+                        ],
+                    ),
+                    (
+                        "SHOW CREATE TABLE".into(),
+                        vec![vec![s("t"), s("CREATE TABLE `t` (\n)")]],
+                    ),
+                ],
+                executed: Mutex::new(Vec::new()),
+            },
+            missing: "generation_expression",
+        };
+        let snap = load_table_snapshot(
+            &queries,
+            &profile_for(sqlly_core::DatabaseType::MySql),
+            "shop",
+            Some("shop"),
+            "t",
+        )
+        .await
+        .unwrap();
+        let names: Vec<&str> = snap.columns.iter().map(|c| c.name.as_str()).collect();
+        assert_eq!(names, ["id", "state"]);
+        assert!(snap.columns[0].identity);
+        assert_eq!(snap.columns[1].default.as_deref(), Some("'new'"));
+        assert!(snap.column_extras.values().all(|e| e.generated.is_none()));
     }
 
     #[test]

@@ -1,0 +1,14 @@
+{"format":"sqlly.notebook","format_version":2,"notebook_id":"nb_demo","title":"Refund review (EU)",
+ "connection_refs":[{"id":"primary","label":"Sales EU","database":"sales"}],
+ "parameters":[
+   {"id":"region","name":"region","type":"string","default":"US"},
+   {"id":"day","name":"day","type":"date","default":{"preset":"yesterday"}}],
+ "cells":[
+   {"id":"c_intro","kind":"markdown","source":"# Refunds\r\nWeekly review.\r\n"},
+   {"id":"c_check","kind":"assertion","spec":{"input":"c_orders","kind":"row_count","min":10}},
+   {"id":"c_orders","name":"all_orders","kind":"sql","connection_ref":"primary",
+    "execution_policy":{"read_only":true,"timeout_seconds":30},
+    "source":"SELECT id, total, refund_total\nFROM orders\nWHERE region = :region"},
+   {"id":"c_kpi","name":"refund_rate","kind":"kpi",
+    "spec":{"input":"c_orders","value":{"kind":"aggregate","column":"refund_total","aggregate":"sum"}}}
+ ]}

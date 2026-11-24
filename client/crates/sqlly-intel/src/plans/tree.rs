@@ -1,7 +1,13 @@
-//! Engine-agnostic operator tree and top-down diagram layout.
+//! Engine-agnostic operator tree and the basic top-down diagram layout.
+//!
+//! These work straight from an [`ExecutionPlan`]. The richer views built on
+//! the plan analysis live in [`crate::plans::diagram`] (the full diagram
+//! model) and [`crate::plans::projections`] (operator table, flame chart,
+//! breakdowns).
 
 use std::collections::{HashMap, HashSet};
 
+use crate::plans::diagram::{TidyInput, tidy_breadth};
 use crate::plans::model::{ExecutionPlan, PlanNode};
 
 /// One row of the indented operator tree, in pre-order (parent before its
@@ -54,27 +60,93 @@ pub const DIAGRAM_H_GAP: f32 = 24.0;
 pub const DIAGRAM_V_GAP: f32 = 40.0;
 pub const DIAGRAM_MARGIN: f32 = 24.0;
 
+/// The plan as a forest of indices into `plan.nodes`: roots are nodes that
+/// are never a `to_node` (every node when the plan has no edges), children
+/// follow edge order. Each node appears once even if a malformed plan lists
+/// it under two parents or in a cycle.
+struct Forest {
+    roots: Vec<usize>,
+    /// Pre-order: parents before children, siblings in edge order.
+    order: Vec<usize>,
+    children: Vec<Vec<usize>>,
+    depth: Vec<usize>,
+}
+
+fn forest(plan: &ExecutionPlan) -> Forest {
+    let count = plan.nodes.len();
+    let position: HashMap<i32, usize> = plan
+        .nodes
+        .iter()
+        .enumerate()
+        .map(|(index, node)| (node.id, index))
+        .collect();
+    let mut listed: Vec<Vec<usize>> = vec![Vec::new(); count];
+    let mut is_child = vec![false; count];
+    for edge in &plan.edges {
+        if let (Some(&from), Some(&to)) =
+            (position.get(&edge.from_node), position.get(&edge.to_node))
+        {
+            listed[from].push(to);
+            is_child[to] = true;
+        }
+    }
+    let mut roots = Vec::new();
+    let mut order = Vec::with_capacity(count);
+    let mut children: Vec<Vec<usize>> = vec![Vec::new(); count];
+    let mut depth = vec![0usize; count];
+    let mut seen = vec![false; count];
+    let mut stack: Vec<usize> = Vec::new();
+    for start in (0..count).filter(|index| !is_child[*index]) {
+        if seen[start] {
+            continue;
+        }
+        seen[start] = true;
+        roots.push(start);
+        stack.push(start);
+        while let Some(node) = stack.pop() {
+            order.push(node);
+            let kids: Vec<usize> = listed[node]
+                .iter()
+                .copied()
+                .filter(|child| !std::mem::replace(&mut seen[*child], true))
+                .collect();
+            for &child in kids.iter().rev() {
+                depth[child] = depth[node] + 1;
+                stack.push(child);
+            }
+            children[node] = kids;
+        }
+    }
+    Forest {
+        roots,
+        order,
+        children,
+        depth,
+    }
+}
+
 /// Pre-order rows for `plan`. Roots are nodes that are never a `to_node`;
 /// when the plan has no edges every node is a root. Cycles cannot occur in a
-/// parsed plan, but a visited set guards against a malformed one.
+/// parsed plan, and a malformed one is cut where it would repeat a node.
 pub fn plan_tree_rows(plan: &ExecutionPlan) -> Vec<PlanTreeRow> {
-    let children = children_map(plan);
-    let node_by_id: HashMap<i32, &PlanNode> =
-        plan.nodes.iter().map(|node| (node.id, node)).collect();
-    let mut rows = Vec::new();
-    let mut visited = HashSet::new();
-    for root in roots(plan) {
-        walk_tree(
-            root,
-            0,
-            &children,
-            &node_by_id,
-            plan,
-            &mut visited,
-            &mut rows,
-        );
-    }
-    rows
+    let forest = forest(plan);
+    forest
+        .order
+        .iter()
+        .map(|&index| {
+            let node = &plan.nodes[index];
+            PlanTreeRow {
+                node_id: node.id,
+                depth: forest.depth[index],
+                has_children: !forest.children[index].is_empty(),
+                title: display_op(node),
+                cost_percent: cost_percent(plan, node),
+                estimated_rows: node.estimated_rows,
+                actual_rows: node.actual_rows,
+                warning_count: node.warnings.len(),
+            }
+        })
+        .collect()
 }
 
 /// Rows with the subtrees of `collapsed` node ids removed (the collapsed
@@ -97,34 +169,66 @@ pub fn visible_tree_rows(rows: &[PlanTreeRow], collapsed: &HashSet<i32>) -> Vec<
     visible
 }
 
+/// The basic top-down diagram: fixed-size boxes, root at the top, parents
+/// centred over their inputs. Subtrees are packed by outline (see
+/// [`crate::plans::diagram`]), so wide and deep plans stay compact, and the
+/// layout is linear in the number of nodes.
+///
+/// [`crate::plans::diagram::plan_diagram`] is the full model, with both
+/// orientations, sized boxes, connectors scaled by rows, collapsing and
+/// frames.
 pub fn plan_diagram_layout(plan: &ExecutionPlan) -> PlanDiagramLayout {
-    let children = children_map(plan);
-    let node_by_id: HashMap<i32, &PlanNode> =
-        plan.nodes.iter().map(|node| (node.id, node)).collect();
-    let mut nodes = Vec::new();
-    let mut visited = HashSet::new();
-    let mut x = DIAGRAM_MARGIN;
-    {
-        let mut ctx = DiagramLayout {
-            children: &children,
-            node_by_id: &node_by_id,
-            plan,
-            visited: &mut visited,
-            nodes: &mut nodes,
-        };
-        for root in roots(plan) {
-            let width = layout_subtree(root, 0, x, &mut ctx);
-            x += width + DIAGRAM_H_GAP;
-        }
-    }
-    let placed: HashSet<i32> = nodes.iter().map(|node| node.node_id).collect();
-    let edges = plan
-        .edges
+    let forest = forest(plan);
+    let count = plan.nodes.len();
+    let sizes = vec![DIAGRAM_NODE_W; count];
+    let block = vec![None; count];
+    let breadth = tidy_breadth(&TidyInput {
+        roots: &forest.roots,
+        order: &forest.order,
+        children: &forest.children,
+        sizes: &sizes,
+        block: &block,
+        gap: DIAGRAM_H_GAP,
+        centered: true,
+    });
+    let left = forest
+        .order
         .iter()
-        .filter(|edge| placed.contains(&edge.from_node) && placed.contains(&edge.to_node))
-        .map(|edge| PlanDiagramEdge {
-            from_node: edge.from_node,
-            to_node: edge.to_node,
+        .map(|index| breadth[*index])
+        .fold(f32::INFINITY, f32::min);
+    let shift = if left.is_finite() {
+        DIAGRAM_MARGIN - left
+    } else {
+        0.0
+    };
+    let nodes: Vec<PlanDiagramNode> = forest
+        .order
+        .iter()
+        .map(|&index| {
+            let node = &plan.nodes[index];
+            PlanDiagramNode {
+                node_id: node.id,
+                title: display_op(node),
+                cost_percent: cost_percent(plan, node),
+                estimated_rows: node.estimated_rows,
+                actual_rows: node.actual_rows,
+                warning_count: node.warnings.len(),
+                x: breadth[index] + shift,
+                y: DIAGRAM_MARGIN + forest.depth[index] as f32 * (DIAGRAM_NODE_H + DIAGRAM_V_GAP),
+            }
+        })
+        .collect();
+    let edges = forest
+        .order
+        .iter()
+        .flat_map(|&index| {
+            let from_node = plan.nodes[index].id;
+            forest.children[index]
+                .iter()
+                .map(move |&child| PlanDiagramEdge {
+                    from_node,
+                    to_node: plan.nodes[child].id,
+                })
         })
         .collect();
     let width = nodes
@@ -143,98 +247,6 @@ pub fn plan_diagram_layout(plan: &ExecutionPlan) -> PlanDiagramLayout {
         width,
         height,
     }
-}
-
-fn children_map(plan: &ExecutionPlan) -> HashMap<i32, Vec<i32>> {
-    let mut children: HashMap<i32, Vec<i32>> = HashMap::new();
-    for edge in &plan.edges {
-        children
-            .entry(edge.from_node)
-            .or_default()
-            .push(edge.to_node);
-    }
-    children
-}
-
-fn roots(plan: &ExecutionPlan) -> Vec<i32> {
-    let children_ids: HashSet<i32> = plan.edges.iter().map(|edge| edge.to_node).collect();
-    plan.nodes
-        .iter()
-        .map(|node| node.id)
-        .filter(|id| !children_ids.contains(id))
-        .collect()
-}
-
-fn walk_tree(
-    id: i32,
-    depth: usize,
-    children: &HashMap<i32, Vec<i32>>,
-    node_by_id: &HashMap<i32, &PlanNode>,
-    plan: &ExecutionPlan,
-    visited: &mut HashSet<i32>,
-    rows: &mut Vec<PlanTreeRow>,
-) {
-    if !visited.insert(id) {
-        return;
-    }
-    let Some(node) = node_by_id.get(&id) else {
-        return;
-    };
-    let kids = children.get(&id).map(Vec::as_slice).unwrap_or(&[]);
-    rows.push(PlanTreeRow {
-        node_id: id,
-        depth,
-        has_children: !kids.is_empty(),
-        title: display_op(node),
-        cost_percent: cost_percent(plan, node),
-        estimated_rows: node.estimated_rows,
-        actual_rows: node.actual_rows,
-        warning_count: node.warnings.len(),
-    });
-    for child in kids {
-        walk_tree(*child, depth + 1, children, node_by_id, plan, visited, rows);
-    }
-}
-
-struct DiagramLayout<'a> {
-    children: &'a HashMap<i32, Vec<i32>>,
-    node_by_id: &'a HashMap<i32, &'a PlanNode>,
-    plan: &'a ExecutionPlan,
-    visited: &'a mut HashSet<i32>,
-    nodes: &'a mut Vec<PlanDiagramNode>,
-}
-
-fn layout_subtree(id: i32, depth: usize, x_left: f32, ctx: &mut DiagramLayout<'_>) -> f32 {
-    if !ctx.visited.insert(id) {
-        return DIAGRAM_NODE_W;
-    }
-    let Some(node) = ctx.node_by_id.get(&id).copied() else {
-        return DIAGRAM_NODE_W;
-    };
-    let y = DIAGRAM_MARGIN + depth as f32 * (DIAGRAM_NODE_H + DIAGRAM_V_GAP);
-    let kids = ctx.children.get(&id).cloned().unwrap_or_default();
-    let span = if kids.is_empty() {
-        DIAGRAM_NODE_W
-    } else {
-        let mut cursor = x_left;
-        for child in kids {
-            let width = layout_subtree(child, depth + 1, cursor, ctx);
-            cursor += width + DIAGRAM_H_GAP;
-        }
-        (cursor - x_left - DIAGRAM_H_GAP).max(DIAGRAM_NODE_W)
-    };
-    let x = x_left + (span - DIAGRAM_NODE_W).max(0.0) / 2.0;
-    ctx.nodes.push(PlanDiagramNode {
-        node_id: id,
-        title: display_op(node),
-        cost_percent: cost_percent(ctx.plan, node),
-        estimated_rows: node.estimated_rows,
-        actual_rows: node.actual_rows,
-        warning_count: node.warnings.len(),
-        x,
-        y,
-    });
-    span
 }
 
 fn display_op(node: &PlanNode) -> String {
@@ -275,6 +287,7 @@ mod tests {
             row_count: None,
             output_list: Vec::new(),
             warnings: Vec::new(),
+            ..Default::default()
         }
     }
 
@@ -294,6 +307,7 @@ mod tests {
             total_subtree_cost,
             estimated_rows: 1.0,
             warnings: Vec::new(),
+            ..Default::default()
         }
     }
 

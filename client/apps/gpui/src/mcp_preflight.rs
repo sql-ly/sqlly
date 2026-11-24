@@ -273,7 +273,7 @@ async fn run_bounded_query(
     let work = async {
         let mut handle = services
             .queries
-            .execute(profile, sql, 64)
+            .execute_full_values(profile, None, sql, 64)
             .await
             .map_err(|error| crate::localization::message(error.message()))?;
         let mut columns = Vec::new();

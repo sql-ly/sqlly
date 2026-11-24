@@ -1,0 +1,132 @@
+== Physical Plan ==
+AdaptiveSparkPlan (15)
++- Window (14)
+   +- Sort (13)
+      +- Exchange (12)
+         +- Project (11)
+            +- BroadcastHashJoin Inner BuildRight (10)
+               :- Filter (6)
+               :  +- HashAggregate (5)
+               :     +- Exchange (4)
+               :        +- HashAggregate (3)
+               :           +- Filter (2)
+               :              +- Scan parquet spark_catalog.default.orders (1)
+               +- BroadcastExchange (9)
+                  +- Filter (8)
+                     +- Scan parquet spark_catalog.default.customers (7)
+
+
+(1) Scan parquet spark_catalog.default.orders
+Output [2]: [customer_id#6L, total#7]
+Batched: true
+Location: InMemoryFileIndex [file:/tmp/spark-warehouse/orders]
+PushedFilters: [IsNotNull(customer_id)]
+ReadSchema: struct<customer_id:bigint,total:decimal(11,2)>
+
+(2) Filter
+Input [2]: [customer_id#6L, total#7]
+Condition : isnotnull(customer_id#6L)
+
+(3) HashAggregate
+Input [2]: [customer_id#6L, total#7]
+Keys [1]: [customer_id#6L]
+Functions [1]: [partial_sum(total#7)]
+Aggregate Attributes [2]: [sum#238, isEmpty#239]
+Results [3]: [customer_id#6L, sum#240, isEmpty#241]
+
+(4) Exchange
+Input [3]: [customer_id#6L, sum#240, isEmpty#241]
+Arguments: hashpartitioning(customer_id#6L, 200), ENSURE_REQUIREMENTS, [plan_id=1200]
+
+(5) HashAggregate
+Input [3]: [customer_id#6L, sum#240, isEmpty#241]
+Keys [1]: [customer_id#6L]
+Functions [1]: [sum(total#7)]
+Aggregate Attributes [1]: [sum(total#7)#231]
+Results [2]: [customer_id#6L, sum(total#7)#231 AS t#225]
+
+(6) Filter
+Input [2]: [customer_id#6L, t#225]
+Condition : (isnotnull(t#225) AND (cast(t#225 as decimal(25,6)) > cast(Subquery subquery#224, [id=#1188] as decimal(25,6))))
+
+(7) Scan parquet spark_catalog.default.customers
+Output [2]: [id#38L, name#39]
+Batched: true
+Location: InMemoryFileIndex [file:/tmp/spark-warehouse/customers]
+PushedFilters: [IsNotNull(id)]
+ReadSchema: struct<id:bigint,name:string>
+
+(8) Filter
+Input [2]: [id#38L, name#39]
+Condition : isnotnull(id#38L)
+
+(9) BroadcastExchange
+Input [2]: [id#38L, name#39]
+Arguments: HashedRelationBroadcastMode(List(input[0, bigint, false]),false), [plan_id=1204]
+
+(10) BroadcastHashJoin
+Left keys [1]: [customer_id#6L]
+Right keys [1]: [id#38L]
+Join type: Inner
+Join condition: None
+
+(11) Project
+Output [2]: [name#39, t#225]
+Input [4]: [customer_id#6L, t#225, id#38L, name#39]
+
+(12) Exchange
+Input [2]: [name#39, t#225]
+Arguments: SinglePartition, ENSURE_REQUIREMENTS, [plan_id=1208]
+
+(13) Sort
+Input [2]: [name#39, t#225]
+Arguments: [t#225 DESC NULLS LAST], false, 0
+
+(14) Window
+Input [2]: [name#39, t#225]
+Arguments: [row_number() windowspecdefinition(t#225 DESC NULLS LAST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS rn#223], [t#225 DESC NULLS LAST]
+
+(15) AdaptiveSparkPlan
+Output [3]: [name#39, t#225, rn#223]
+Arguments: isFinalPlan=false
+
+===== Subqueries =====
+
+Subquery:1 Hosting operator id = 6 Hosting Expression = Subquery subquery#224, [id=#1188]
+AdaptiveSparkPlan (20)
++- HashAggregate (19)
+   +- Exchange (18)
+      +- HashAggregate (17)
+         +- Scan parquet spark_catalog.default.orders (16)
+
+
+(16) Scan parquet spark_catalog.default.orders
+Output [1]: [total#236]
+Batched: true
+Location: InMemoryFileIndex [file:/tmp/spark-warehouse/orders]
+ReadSchema: struct<total:decimal(11,2)>
+
+(17) HashAggregate
+Input [1]: [total#236]
+Keys: []
+Functions [1]: [partial_avg(UnscaledValue(total#236))]
+Aggregate Attributes [2]: [sum#242, count#243L]
+Results [2]: [sum#244, count#245L]
+
+(18) Exchange
+Input [2]: [sum#244, count#245L]
+Arguments: SinglePartition, ENSURE_REQUIREMENTS, [plan_id=1186]
+
+(19) HashAggregate
+Input [2]: [sum#244, count#245L]
+Keys: []
+Functions [1]: [avg(UnscaledValue(total#236))]
+Aggregate Attributes [1]: [avg(UnscaledValue(total#236))#232]
+Results [1]: [cast((avg(UnscaledValue(total#236))#232 / 100.0) as decimal(15,6)) AS avg(total)#233]
+
+(20) AdaptiveSparkPlan
+Output [1]: [avg(total)#233]
+Arguments: isFinalPlan=false
+
+
+

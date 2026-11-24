@@ -33,6 +33,7 @@ pub mod admin_tools;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod agent_tools;
 pub mod alter;
+pub mod analytics;
 pub mod catalog;
 pub mod cloud_auth;
 pub mod connection;
@@ -47,6 +48,7 @@ pub mod dump_render;
 pub mod fakedb;
 pub mod identifier_quoting;
 pub mod intellisense;
+pub mod local_analytics;
 pub mod maintenance;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod mcp;
@@ -54,6 +56,9 @@ pub mod metadata;
 pub mod mysql_definer;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod native_dump;
+pub mod notebook;
+pub mod notebook_agent;
+pub mod notebook_security;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod open_requests;
 pub mod pg_privileges;
@@ -64,6 +69,7 @@ pub mod query;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod redis_live;
 pub mod remote;
+pub mod report;
 pub mod row_editing;
 #[cfg(not(target_arch = "wasm32"))]
 mod row_editing_duckdb;
@@ -314,7 +320,7 @@ pub use script_set::{
 };
 pub use server_info::{IdentifierCase, ServerInfo, collect_server_info};
 pub use services::Services;
-pub use sqlly_ai::agent::jobs::{JobDefinition, JobStepDefinition};
+pub use sqlly_ai::agent::jobs::{JobDefinition, JobStepDefinition, StepFlow};
 pub use sqlly_ai::agent::operator::{AlertDefinition, AlertInfo, OperatorDefinition};
 pub use sqlly_ai::agent::schedule::ScheduleDefinition;
 pub use sqlly_ai::agent::schedule::{describe_schedule, next_run_after};

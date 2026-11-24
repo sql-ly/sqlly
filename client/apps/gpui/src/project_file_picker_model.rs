@@ -1873,6 +1873,110 @@ mod tests {
         );
     }
 
+    // https://github.com/HeidiSQL/HeidiSQL/issues/2638
+    #[test]
+    fn open_project_file_lists_a_large_folder_sorted_whatever_the_disk_order() {
+        // The reporter's folder: many files and sub-folders, mixed case, that
+        // the file system hands back in no particular order. Create them in a
+        // scrambled order so the listing cannot inherit creation order.
+        let dir = tempfile::tempdir().expect("tempdir");
+        let root = dir.path();
+        for name in ["zeta", "Archive", "beta", "migrations", "Docs"] {
+            fs::create_dir_all(root.join(name)).unwrap();
+        }
+        for name in [
+            "z_last.sql",
+            "Report.sql",
+            "alpha.sql",
+            "notes.txt",
+            "Backup.bak",
+            "m_middle.sql",
+            "README.md",
+            "b_second.sql",
+        ] {
+            fs::write(root.join(name), "SELECT 1").unwrap();
+        }
+        fs::write(root.join("migrations/002_b.sql"), "SELECT 1").unwrap();
+        fs::write(root.join("migrations/001_a.sql"), "SELECT 1").unwrap();
+        let cache = MetadataCache::default();
+
+        let snapshot = folder_snapshot(root, root, ScanOptions::default(), &[], &cache);
+        let names: Vec<&str> = snapshot.rows.iter().map(|r| r.name.as_str()).collect();
+        assert_eq!(
+            names,
+            vec![
+                "Archive",
+                "beta",
+                "Docs",
+                "migrations",
+                "zeta",
+                "alpha.sql",
+                "b_second.sql",
+                "Backup.bak",
+                "m_middle.sql",
+                "notes.txt",
+                "README.md",
+                "Report.sql",
+                "z_last.sql",
+            ],
+            "folders first, then files, each A to Z ignoring case"
+        );
+
+        // What the dialog shows with an empty filter: folders, SQL files,
+        // then the other files, each group still A to Z.
+        let shown = filter_rows(&snapshot.rows, "", PickerMode::Folder);
+        let names: Vec<&str> = shown.rows.iter().map(|r| r.name.as_str()).collect();
+        assert_eq!(
+            names,
+            vec![
+                "Archive",
+                "beta",
+                "Docs",
+                "migrations",
+                "zeta",
+                "alpha.sql",
+                "b_second.sql",
+                "m_middle.sql",
+                "Report.sql",
+                "z_last.sql",
+                "Backup.bak",
+                "notes.txt",
+                "README.md",
+            ]
+        );
+
+        // Inside a sub-folder: `..` first, then the files in order.
+        let sub = folder_snapshot(
+            root,
+            &root.join("migrations"),
+            ScanOptions::default(),
+            &[],
+            &cache,
+        );
+        let names: Vec<&str> = sub.rows.iter().map(|r| r.name.as_str()).collect();
+        assert_eq!(names, vec!["..", "001_a.sql", "002_b.sql"]);
+
+        // Project mode lists every SQL file by path, A to Z ignoring case.
+        let project = project_snapshot(root, ScanOptions::default(), &[], &cache, &|| false);
+        let paths: Vec<&str> = project
+            .rows
+            .iter()
+            .map(|r| r.relative_path.as_str())
+            .collect();
+        assert_eq!(
+            paths,
+            vec![
+                "alpha.sql",
+                "b_second.sql",
+                "m_middle.sql",
+                "migrations/001_a.sql",
+                "migrations/002_b.sql",
+                "Report.sql",
+                "z_last.sql",
+            ]
+        );
+    }
+
     #[test]
     fn folder_snapshot_adds_parent_row_below_root() {
         let dir = make_tree();

@@ -670,13 +670,17 @@ impl StructureEditorDialog {
     }
 
     fn draft(&self) -> TableDraft {
-        draft_from_rows(
+        let mut draft = draft_from_rows(
             &self.snapshot,
             &self.column_rows,
             &self.indexes,
             &self.foreign_keys,
             &self.table_description,
-        )
+        );
+        // A plain value typed as a text/ENUM/SET default is a string literal,
+        // so typing `a` where the catalog says `'a'` is no change at all.
+        sqlly_services::alter::normalize_draft_defaults(self.profile.database_type, &mut draft);
+        draft
     }
 
     fn change_set(&self) -> ChangeSet {
@@ -2063,6 +2067,83 @@ mod tests {
             descriptions_unavailable(sqlly_core::DatabaseType::Sqlite, &snap)
                 .unwrap()
                 .contains("no server-side comments")
+        );
+    }
+
+    // https://github.com/beekeeper-studio/beekeeper-studio/issues/5061
+    #[gpui::test]
+    fn designer_change_is_scripted_to_an_editor_tab_not_run_in_place(
+        cx: &mut gpui::TestAppContext,
+    ) {
+        use crate::tool_dialog::ToolDialogEvent;
+        use sqlly_core::{SecretProvider, SecretRef};
+        cx.update(|cx| {
+            if cx.try_global::<gpui_component::Theme>().is_none() {
+                gpui_component::init(cx);
+            }
+        });
+        let secret = SecretRef {
+            provider: SecretProvider::InMemory,
+            key: "k".to_string(),
+        };
+        let profile = ConnectionProfile::sql_login("dev", "127.0.0.1", "sa", secret);
+        let mut editor = None;
+        let (_host, cx) = cx.add_window_view(|window, cx| {
+            let dialog =
+                cx.new(|cx| StructureEditorDialog::new(sample_snapshot(), profile, window, cx));
+            editor = Some(dialog.clone());
+            crate::tool_dialog::OverlayStack {
+                overlay: dialog.into(),
+            }
+        });
+        let editor = editor.expect("editor");
+        cx.run_until_parked();
+
+        let events = std::rc::Rc::new(std::cell::RefCell::new(Vec::<String>::new()));
+        let sink = events.clone();
+        cx.update(|_, cx| {
+            cx.subscribe(&editor, move |_, event: &ToolDialogEvent, _| {
+                let entry = match event {
+                    ToolDialogEvent::ScriptToEditorForProfile { sql, .. } => {
+                        format!("script:{sql}")
+                    }
+                    ToolDialogEvent::ScriptToEditor { sql } => format!("script:{sql}"),
+                    ToolDialogEvent::ScriptToEditorAndRun { .. }
+                    | ToolDialogEvent::ScriptToEditorForProfileAndRun { .. } => "run".to_string(),
+                    ToolDialogEvent::Close => "close".to_string(),
+                    ToolDialogEvent::Status { message, .. } => format!("status:{message}"),
+                    _ => "other".to_string(),
+                };
+                sink.borrow_mut().push(entry);
+            })
+            .detach();
+        });
+
+        // The kind of change a server can reject (a NOT NULL column with no
+        // default on a table that may hold rows), made in a long form.
+        cx.update(|_, cx| {
+            editor.update(cx, |e, cx| {
+                e.push_column_row();
+                let row = e.column_rows.last_mut().expect("new row");
+                row.name = "created_at".into();
+                row.data_type = "datetime2".into();
+                row.nullable = false;
+                e.script_to_editor(cx);
+            });
+        });
+        cx.run_until_parked();
+
+        let events = events.borrow();
+        assert_eq!(events.len(), 2, "{events:?}");
+        let script = events[0]
+            .strip_prefix("script:")
+            .unwrap_or_else(|| panic!("the change must open as a script, got {events:?}"));
+        assert!(script.contains("ALTER TABLE"), "{script}");
+        assert!(script.contains("created_at"), "{script}");
+        assert_eq!(events[1], "close");
+        assert!(
+            !events.iter().any(|e| e == "run"),
+            "the designer must never execute its own change"
         );
     }
 }

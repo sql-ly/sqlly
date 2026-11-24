@@ -1,0 +1,58 @@
+format: oracle-xplan (Certain)
+statements: 1
+
+== statement 1
+dialect: "Oracle"
+estimated_rows: 7
+notes: ["this is an adaptive plan"]
+query_plan_hash: "1938300530"
+source_format: "oracle-xplan"
+statement_type: "EXPLAIN PLAN"
+total_subtree_cost: 18
+operators: 7
+  #0 SELECT STATEMENT [SELECT STATEMENT]
+      estimated_cost: 18
+      estimated_row_width: 42
+      estimated_rows: 7
+      properties: [{name="Bytes" value="294"}, {name="Cost %CPU" value="0"}, {name="Time" value="00:00:01"}]
+    #1 NESTED LOOPS [NESTED LOOPS]
+        estimated_cost: 18
+        estimated_row_width: 42
+        estimated_rows: 7
+        join_type: "INNER"
+        properties: [{name="Bytes" value="294"}, {name="Cost %CPU" value="0"}, {name="Time" value="00:00:01"}]
+      #2 NESTED LOOPS [NESTED LOOPS]
+          estimated_cost: 18
+          estimated_row_width: 42
+          estimated_rows: 7
+          join_type: "INNER"
+          properties: [{name="Bytes" value="294"}, {name="Cost %CPU" value="0"}, {name="Time" value="00:00:01"}]
+        #3 TABLE ACCESS BY INDEX ROWID BATCHED CUSTOMERS [TABLE ACCESS]
+            estimated_cost: 3
+            estimated_row_width: 27
+            estimated_rows: 7
+            properties: [{name="Bytes" value="189"}, {name="Cost %CPU" value="0"}, {name="Time" value="00:00:01"}]
+            relation: "CUSTOMERS"
+          #4 INDEX RANGE SCAN SYS_C008926 [INDEX]
+              estimated_cost: 2
+              estimated_rows: 7
+              index_cond: "\"C\".\"ID\">=100 AND \"C\".\"ID\"<=105"
+              index_name: "SYS_C008926"
+              output_list: ["access: \"C\".\"ID\">=100 AND \"C\".\"ID\"<=105"]
+              properties: [{name="Cost %CPU" value="0"}, {name="Time" value="00:00:01"}]
+        #5 INDEX RANGE SCAN IX_ORDERS_CUSTOMER [INDEX]
+            estimated_cost: 2
+            estimated_rows: 1
+            filter: "\"O\".\"CUSTOMER_ID\"<=105 AND \"O\".\"CUSTOMER_ID\">=100"
+            index_cond: "\"O\".\"CUSTOMER_ID\"=\"C\".\"ID\""
+            index_name: "IX_ORDERS_CUSTOMER"
+            output_list: ["access: \"O\".\"CUSTOMER_ID\"=\"C\".\"ID\"", "filter: \"O\".\"CUSTOMER_ID\"<=105 AND \"O\".\"CUSTOMER_ID\">=100"]
+            properties: [{name="Cost %CPU" value="0"}, {name="Time" value="00:00:01"}]
+      #6 TABLE ACCESS BY INDEX ROWID ORDERS [TABLE ACCESS]
+          estimated_cost: 3
+          estimated_row_width: 15
+          estimated_rows: 1
+          filter: "\"O\".\"TOTAL\">50"
+          output_list: ["filter: \"O\".\"TOTAL\">50"]
+          properties: [{name="Bytes" value="15"}, {name="Cost %CPU" value="0"}, {name="Time" value="00:00:01"}]
+          relation: "ORDERS"

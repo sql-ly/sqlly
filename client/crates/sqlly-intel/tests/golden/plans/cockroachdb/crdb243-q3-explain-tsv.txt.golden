@@ -1,0 +1,33 @@
+format: cockroachdb-text (Certain)
+statements: 1
+
+== statement 1
+notes: ["distribution: local", "vectorized: true", "index recommendation 1: type: index replacement; SQL commands: CREATE INDEX ON shop.public.orders (customer_id) STORING (total) /* After successfully creating t..."]
+source_format: "cockroachdb-text"
+statement_type: "EXPLAIN"
+operators: 5
+  #1 limit [limit]
+      properties: [{name="count" value="10"}]
+    #2 lookup join [lookup join]
+        estimated_rows: 59
+        index_name: "order_items_pkey"
+        join_predicate: "(id) = (order_id)"
+        join_type: "Inner"
+        output_list: ["order_items", "Index: order_items_pkey", "Condition: (id) = (order_id)"]
+        relation: "order_items"
+      #3 sort [sort]
+          estimated_rows: 20
+          sort_keys: ["-total"]
+        #4 index join [index join]
+            estimated_rows: 20
+            index_name: "orders_pkey"
+            output_list: ["orders", "Index: orders_pkey"]
+            relation: "orders"
+            warnings: [{KeyLookup={index="orders_pkey" table="orders"}}]
+          #5 scan [scan]
+              estimated_rows: 20
+              index_cond: "[/42 - /42]"
+              index_name: "orders_customer_idx"
+              output_list: ["orders", "Index: orders_customer_idx", "Index Cond: [/42 - /42]"]
+              properties: [{name="estimated row count" value="20 (0.10% of the table; stats collected 3 seconds ago)"}]
+              relation: "orders"

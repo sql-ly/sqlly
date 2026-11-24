@@ -1,0 +1,159 @@
+{
+  "query": "/* select#1 */ select `c`.`name` AS `name`,(/* select#2 */ select max(`o`.`total`) from `shop`.`orders` `o` where (`o`.`customer_id` = `c`.`id`)) AS `biggest` from `shop`.`customers` `c` semi join (`shop`.`orders`) where ((`<subquery3>`.`customer_id` = `c`.`id`) and (`shop`.`orders`.`total` > 900.00)) order by `c`.`name` limit 20",
+  "query_plan": {
+    "limit": 20,
+    "inputs": [
+      {
+        "inputs": [
+          {
+            "inputs": [
+              {
+                "inputs": [
+                  {
+                    "alias": "c",
+                    "operation": "Table scan on c",
+                    "table_name": "customers",
+                    "access_type": "table",
+                    "schema_name": "shop",
+                    "used_columns": [
+                      "id",
+                      "name"
+                    ],
+                    "estimated_rows": 4989.0,
+                    "estimated_total_cost": 504.40000000000003
+                  }
+                ],
+                "condition": "(c.id is not null)",
+                "operation": "Filter: (c.id is not null)",
+                "access_type": "filter",
+                "estimated_rows": 4989.0,
+                "filter_columns": [
+                  "c.id"
+                ],
+                "estimated_total_cost": 504.40000000000003
+              }
+            ],
+            "operation": "Sort: c.`name`",
+            "access_type": "sort",
+            "sort_fields": [
+              "c.`name`"
+            ],
+            "estimated_rows": 4989.0,
+            "estimated_total_cost": 504.40000000000003
+          },
+          {
+            "inputs": [
+              {
+                "inputs": [
+                  {
+                    "inputs": [
+                      {
+                        "operation": "Table scan on orders",
+                        "table_name": "orders",
+                        "access_type": "table",
+                        "schema_name": "shop",
+                        "used_columns": [
+                          "id",
+                          "customer_id",
+                          "total"
+                        ],
+                        "estimated_rows": 40131.0,
+                        "estimated_total_cost": 4053.35
+                      }
+                    ],
+                    "condition": "(orders.total > 900.00)",
+                    "operation": "Filter: (orders.total > 900.00)",
+                    "access_type": "filter",
+                    "estimated_rows": 13375.662078022957,
+                    "filter_columns": [
+                      "shop.orders.total"
+                    ],
+                    "estimated_total_cost": 4053.35
+                  }
+                ],
+                "operation": "Materialize with deduplication",
+                "access_type": "materialize",
+                "deduplication": true,
+                "estimated_rows": 13375.662078022957,
+                "estimated_total_cost": 7135.2997875628935,
+                "estimated_first_row_cost": 7135.2997875628935
+              }
+            ],
+            "covering": false,
+            "operation": "Single-row index lookup on <subquery3> using <auto_distinct_key> (customer_id = c.id)",
+            "index_name": "<auto_distinct_key>",
+            "table_name": "<subquery3>",
+            "access_type": "index",
+            "key_columns": [
+              "customer_id"
+            ],
+            "used_columns": [
+              "customer_id"
+            ],
+            "estimated_rows": 1.0,
+            "lookup_condition": "customer_id = c.id",
+            "index_access_type": "index_lookup",
+            "lookup_references": [
+              "shop.c.id"
+            ],
+            "estimated_total_cost": 7135.337094127391,
+            "estimated_first_row_cost": 7135.337094127391
+          }
+        ],
+        "join_type": "inner join",
+        "operation": "Nested loop inner join",
+        "access_type": "join",
+        "estimated_rows": 66731178.10725653,
+        "join_algorithm": "nested_loop",
+        "estimated_total_cost": 6674121.110725653
+      }
+    ],
+    "operation": "Limit: 20 row(s)",
+    "access_type": "limit",
+    "limit_offset": 0,
+    "estimated_rows": 20.0,
+    "estimated_total_cost": 6674121.110725653,
+    "inputs_from_select_list": [
+      {
+        "inputs": [
+          {
+            "alias": "o",
+            "covering": false,
+            "operation": "Index lookup on o using orders_customer_idx (customer_id = c.id)",
+            "index_name": "orders_customer_idx",
+            "table_name": "orders",
+            "access_type": "index",
+            "key_columns": [
+              "customer_id"
+            ],
+            "schema_name": "shop",
+            "used_columns": [
+              "customer_id",
+              "total"
+            ],
+            "estimated_rows": 8.064911842346191,
+            "lookup_condition": "customer_id = c.id",
+            "index_access_type": "index_lookup",
+            "lookup_references": [
+              "shop.c.id"
+            ],
+            "estimated_total_cost": 2.822719144821167
+          }
+        ],
+        "heading": "Select #2 (subquery in projection; dependent)",
+        "subquery": true,
+        "dependent": true,
+        "functions": [
+          "max(o.total)"
+        ],
+        "operation": "Aggregate: max(o.total)",
+        "access_type": "aggregate",
+        "estimated_rows": 1.0,
+        "subquery_location": "projection",
+        "estimated_total_cost": 4.6809937628732845
+      }
+    ]
+  },
+  "query_type": "select",
+  "json_schema_version": "2.0"
+}

@@ -742,6 +742,16 @@ impl PreferencesWindow {
                 children.push(self.hint(&note));
             }
 
+            children.push(self.labeled_row(
+                &crate::localization::text("settings.ai.labeled_row.price_input"),
+                self.prefs_input("ai_profile_price_input"),
+            ));
+            children.push(self.labeled_row(
+                &crate::localization::text("settings.ai.labeled_row.price_output"),
+                self.prefs_input("ai_profile_price_output"),
+            ));
+            children.push(self.hint(&crate::localization::text("settings.ai.hint.price")));
+
             children.push(
                 self.quiet_button(
                     "ai_profile_remove",
@@ -1159,6 +1169,24 @@ impl PreferencesWindow {
             &profile
                 .thinking_budget
                 .map(|budget| budget.to_string())
+                .unwrap_or_default(),
+            window,
+            cx,
+        );
+        self.set_input_value(
+            "ai_profile_price_input",
+            &profile
+                .price_per_1k_input_usd
+                .map(|price| price.to_string())
+                .unwrap_or_default(),
+            window,
+            cx,
+        );
+        self.set_input_value(
+            "ai_profile_price_output",
+            &profile
+                .price_per_1k_output_usd
+                .map(|price| price.to_string())
                 .unwrap_or_default(),
             window,
             cx,

@@ -1,0 +1,1 @@
+error: This looks like SQLite bytecode from plain EXPLAIN, but that is the virtual machine program, not the query plan. Run EXPLAIN QUERY PLAN in front of the query in the sqlite3 shell and paste what it prints. Plain EXPLAIN prints bytecode, which is not a plan.

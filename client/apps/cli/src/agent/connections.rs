@@ -202,6 +202,7 @@ fn auth_provider_label(auth: &AuthenticationType) -> &'static str {
         AuthenticationType::AwsRdsIam { .. } => "aws-rds-iam",
         AuthenticationType::GcpCloudSqlIam { .. } => "gcp-cloud-sql-iam",
         AuthenticationType::AuthToken { .. } => "auth-token",
+        AuthenticationType::PostgresOAuth { .. } => "pg-oauth",
     }
 }
 

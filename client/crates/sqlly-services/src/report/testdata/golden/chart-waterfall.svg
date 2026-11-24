@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360" role="img" aria-labelledby="waterfall-title waterfall-desc" font-family="&apos;Noto Sans&apos;, -apple-system, &apos;Segoe UI&apos;, &apos;Helvetica Neue&apos;, Arial, sans-serif">
+<title id="waterfall-title">waterfall chart</title>
+<desc id="waterfall-desc">waterfall · step, delta · 5</desc>
+<rect width="640" height="360" fill="#ffffff"/>
+<text x="12" y="26" font-size="14" fill="#0f2544" font-weight="600">waterfall chart</text>
+<line x1="40.31" y1="332" x2="628" y2="332" stroke="#c6d9ef" stroke-width="1"/>
+<text x="34.31" y="335.5" font-size="10" fill="#3c5a85" text-anchor="end">0</text>
+<line x1="40.31" y1="259" x2="628" y2="259" stroke="#e3edf9" stroke-width="1"/>
+<text x="34.31" y="262.5" font-size="10" fill="#3c5a85" text-anchor="end">500</text>
+<line x1="40.31" y1="186" x2="628" y2="186" stroke="#e3edf9" stroke-width="1"/>
+<text x="34.31" y="189.5" font-size="10" fill="#3c5a85" text-anchor="end">1K</text>
+<line x1="40.31" y1="113" x2="628" y2="113" stroke="#e3edf9" stroke-width="1"/>
+<text x="34.31" y="116.5" font-size="10" fill="#3c5a85" text-anchor="end">1.5K</text>
+<line x1="40.31" y1="40" x2="628" y2="40" stroke="#e3edf9" stroke-width="1"/>
+<text x="34.31" y="43.5" font-size="10" fill="#3c5a85" text-anchor="end">2K</text>
+<text x="89.28" y="346" font-size="10" fill="#3c5a85" text-anchor="middle">Start</text>
+<text x="187.23" y="346" font-size="10" fill="#3c5a85" text-anchor="middle">New</text>
+<text x="285.18" y="346" font-size="10" fill="#3c5a85" text-anchor="middle">Churn</text>
+<text x="383.13" y="346" font-size="10" fill="#3c5a85" text-anchor="middle">Upsell</text>
+<text x="481.08" y="346" font-size="10" fill="#3c5a85" text-anchor="middle">Refunds</text>
+<text x="579.03" y="346" font-size="10" fill="#3c5a85" text-anchor="middle">Total</text>
+<rect x="52.55" y="156.8" width="73.46" height="175.2" fill="#2c6a2f"/>
+<line x1="126.01" y1="156.8" x2="150.5" y2="156.8" stroke="#3c5a85" stroke-width="1" stroke-dasharray="2 2"/>
+<text x="89.28" y="153.8" font-size="10" fill="#0f2544" text-anchor="middle">1.2K</text>
+<rect x="150.5" y="107.09" width="73.46" height="49.71" fill="#2c6a2f"/>
+<line x1="223.96" y1="107.09" x2="248.45" y2="107.09" stroke="#3c5a85" stroke-width="1" stroke-dasharray="2 2"/>
+<text x="187.23" y="104.09" font-size="10" fill="#0f2544" text-anchor="middle">341</text>
+<rect x="248.45" y="107.09" width="73.46" height="30.66" fill="#ac1515"/>
+<line x1="321.91" y1="137.75" x2="346.4" y2="137.75" stroke="#3c5a85" stroke-width="1" stroke-dasharray="2 2"/>
+<text x="285.18" y="104.09" font-size="10" fill="#0f2544" text-anchor="middle">-210</text>
+<rect x="346.4" y="120.23" width="73.46" height="17.52" fill="#2c6a2f"/>
+<line x1="419.86" y1="120.23" x2="444.35" y2="120.23" stroke="#3c5a85" stroke-width="1" stroke-dasharray="2 2"/>
+<text x="383.13" y="117.23" font-size="10" fill="#0f2544" text-anchor="middle">120</text>
+<rect x="444.35" y="120.23" width="73.46" height="6.61" fill="#ac1515"/>
+<line x1="517.81" y1="126.83" x2="542.3" y2="126.83" stroke="#3c5a85" stroke-width="1" stroke-dasharray="2 2"/>
+<text x="481.08" y="117.23" font-size="10" fill="#0f2544" text-anchor="middle">-45.3</text>
+<rect x="542.3" y="126.83" width="73.46" height="205.17" fill="#1a5fb4"/>
+<text x="579.03" y="123.83" font-size="10" fill="#0f2544" text-anchor="middle">1.4K</text>
+</svg>

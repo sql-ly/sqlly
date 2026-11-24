@@ -1,0 +1,87 @@
+format: mysql-tree (Certain)
+statements: 1
+
+== statement 1
+dialect: "MySql"
+estimated_rows: 13873
+execution_time_ms: 9.56
+has_actuals: yes
+source_format: "mysql-tree"
+statement_type: "EXPLAIN ANALYZE"
+total_subtree_cost: 6119
+operators: 6
+  #1 Table scan on <union temporary> [Table scan on <union temporary>]
+      actual_rebinds: 1
+      actual_rows: 691
+      actual_rows_total: 691
+      actual_self_time_ms: 0.04
+      actual_startup_ms: 9.52
+      actual_time_ms: 9.56
+      estimated_cost: 6119
+      estimated_rows: 13873
+      estimated_startup_cost: 5943
+      loops: 1
+      output_list: ["Actual time: 9.56 ms", "<union"]
+      properties: [{name="detail" value="temporary>"}]
+    #2 Union materialize with deduplication [Union materialize with deduplication]
+        actual_rebinds: 1
+        actual_rows: 691
+        actual_rows_total: 691
+        actual_self_time_ms: 0.124
+        actual_startup_ms: 9.52
+        actual_time_ms: 9.52
+        estimated_cost: 5943
+        estimated_rows: 13873
+        estimated_startup_cost: 5943
+        loops: 1
+        output_list: ["Actual time: 9.52 ms"]
+      #3 Filter: (customers.country = 'US') [Filter: (customers.country = 'US')]
+          actual_rebinds: 1
+          actual_rows: 625
+          actual_rows_total: 625
+          actual_self_time_ms: 0.204
+          actual_startup_ms: 0.0537
+          actual_time_ms: 0.596
+          estimated_cost: 503
+          estimated_rows: 497
+          filter: "customers.country = 'US'"
+          loops: 1
+          output_list: ["Actual time: 0.596 ms"]
+        #4 Table scan on customers [Table scan on customers]
+            actual_rebinds: 1
+            actual_rows: 5000
+            actual_rows_total: 5000
+            actual_self_time_ms: 0.392
+            actual_startup_ms: 0.0499
+            actual_time_ms: 0.392
+            estimated_cost: 503
+            estimated_rows: 4973
+            loops: 1
+            output_list: ["Actual time: 0.392 ms", "customers"]
+            relation: "customers"
+            warnings: [{TableScan={table="customers"}}]
+      #5 Filter: (orders.total < 12.00) [Filter: (orders.total < 12.00)]
+          actual_rebinds: 1
+          actual_rows: 89
+          actual_rows_total: 89
+          actual_self_time_ms: 1.84
+          actual_startup_ms: 0.0646
+          actual_time_ms: 8.8
+          estimated_cost: 4053
+          estimated_rows: 13376
+          filter: "orders.total < 12.00"
+          loops: 1
+          output_list: ["Actual time: 8.8 ms"]
+        #6 Table scan on orders [Table scan on orders]
+            actual_rebinds: 1
+            actual_rows: 40000
+            actual_rows_total: 40000
+            actual_self_time_ms: 6.96
+            actual_startup_ms: 0.0628
+            actual_time_ms: 6.96
+            estimated_cost: 4053
+            estimated_rows: 40131
+            loops: 1
+            output_list: ["Actual time: 6.96 ms", "orders"]
+            relation: "orders"
+            warnings: [{TableScan={table="orders"}}]

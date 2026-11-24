@@ -1,0 +1,29 @@
+== Optimized Logical Plan ==
+Sort [revenue#221 DESC NULLS LAST], true, Statistics(sizeInBytes=98.0 B, rowCount=2)
++- Aggregate [region#33], [region#33, count(1) AS n#220L, sum(total#15) AS revenue#221], Statistics(sizeInBytes=98.0 B, rowCount=2)
+   +- Project [region#33, total#15], Statistics(sizeInBytes=314.1 KiB, rowCount=9.75E+3)
+      +- Join Inner, (customer_id#14L = id#31L), Statistics(sizeInBytes=466.4 KiB, rowCount=9.75E+3)
+         :- Project [id#31L, region#33], Statistics(sizeInBytes=16.1 KiB, rowCount=500)
+         :  +- Filter (region#33 IN (east,west) AND isnotnull(id#31L)), Statistics(sizeInBytes=27.8 KiB, rowCount=500)
+         :     +- Relation spark_catalog.default.customers[id#31L,name#32,region#33] parquet, Statistics(sizeInBytes=55.7 KiB, rowCount=1.00E+3)
+         +- Project [customer_id#14L, total#15], Statistics(sizeInBytes=468.8 KiB, rowCount=2.00E+4)
+            +- Filter isnotnull(customer_id#14L), Statistics(sizeInBytes=957.0 KiB, rowCount=2.00E+4)
+               +- Relation spark_catalog.default.orders[id#13L,customer_id#14L,total#15,status#16] parquet, Statistics(sizeInBytes=957.0 KiB, rowCount=2.00E+4)
+
+== Physical Plan ==
+*(4) Sort [revenue#221 DESC NULLS LAST], true, 0
++- Exchange rangepartitioning(revenue#221 DESC NULLS LAST, 200), ENSURE_REQUIREMENTS, [plan_id=1489]
+   +- *(3) HashAggregate(keys=[region#33], functions=[count(1), sum(total#15)], output=[region#33, n#220L, revenue#221])
+      +- Exchange hashpartitioning(region#33, 200), ENSURE_REQUIREMENTS, [plan_id=1485]
+         +- *(2) HashAggregate(keys=[region#33], functions=[partial_count(1), partial_sum(total#15)], output=[region#33, count#231L, sum#232, isEmpty#233])
+            +- *(2) Project [region#33, total#15]
+               +- *(2) BroadcastHashJoin [id#31L], [customer_id#14L], Inner, BuildLeft, false, false
+                  :- BroadcastExchange HashedRelationBroadcastMode(List(input[0, bigint, false]),false), [plan_id=1476]
+                  :  +- *(1) Filter (region#33 IN (east,west) AND isnotnull(id#31L))
+                  :     +- *(1) ColumnarToRow
+                  :        +- FileScan parquet spark_catalog.default.customers[id#31L,region#33] Batched: true, DataFilters: [region#33 IN (east,west), isnotnull(id#31L)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/tmp/spark-warehouse/customers], PartitionFilters: [], PushedFilters: [In(region, [east,west]), IsNotNull(id)], ReadSchema: struct<id:bigint,region:string>
+                  +- *(2) Filter isnotnull(customer_id#14L)
+                     +- *(2) ColumnarToRow
+                        +- FileScan parquet spark_catalog.default.orders[customer_id#14L,total#15] Batched: true, DataFilters: [isnotnull(customer_id#14L)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/tmp/spark-warehouse/orders], PartitionFilters: [], PushedFilters: [IsNotNull(customer_id)], ReadSchema: struct<customer_id:bigint,total:decimal(11,2)>
+
+

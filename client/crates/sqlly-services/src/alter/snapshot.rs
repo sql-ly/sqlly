@@ -90,6 +90,46 @@ pub struct TableStorage {
     /// recreate (system versioning, partitioning, memory optimisation, …),
     /// each a sentence for the script's warnings.
     pub unscripted: Vec<sqlly_core::DisplayMessage>,
+    /// PostgreSQL partitioned table: the `PARTITION BY` clause body
+    /// (`RANGE (created_at)`) exactly as `pg_get_partkeydef` prints it.
+    pub partition_key: Option<String>,
+    /// PostgreSQL partition: the table it is attached to, restated after the
+    /// CREATE as `ALTER TABLE parent ATTACH PARTITION`.
+    pub partition_of: Option<PartitionOf>,
+    /// PostgreSQL partitioned table: every partition below it, each one's
+    /// parent listed before it, created with `CREATE TABLE … PARTITION OF`.
+    pub partitions: Vec<PartitionDef>,
+    /// WarehousePG (Greenplum) distribution clause, as
+    /// `pg_get_table_distributedby` prints it: `DISTRIBUTED BY (id)`,
+    /// `DISTRIBUTED RANDOMLY` or `DISTRIBUTED REPLICATED`.
+    pub distributed_by: Option<String>,
+}
+
+/// Where a PostgreSQL partition hangs; see [`TableStorage::partition_of`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PartitionOf {
+    pub parent_schema: Option<String>,
+    pub parent: String,
+    /// `FOR VALUES …` or `DEFAULT`, as `pg_get_expr(relpartbound)` prints it.
+    pub bound: String,
+    /// Keys (`schema.table`) of every partitioned table above this one,
+    /// nearest first. A script that also creates one of them creates this
+    /// partition with it instead of on its own.
+    pub ancestors: Vec<String>,
+}
+
+/// One partition below a PostgreSQL partitioned table; see
+/// [`TableStorage::partitions`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PartitionDef {
+    pub schema: Option<String>,
+    pub table: String,
+    pub parent_schema: Option<String>,
+    pub parent: String,
+    /// `FOR VALUES …` or `DEFAULT`, as `pg_get_expr(relpartbound)` prints it.
+    pub bound: String,
+    /// Set when the partition is itself partitioned.
+    pub partition_key: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

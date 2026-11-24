@@ -1,0 +1,86 @@
+format: mysql-json-v2 (Certain)
+statements: 1
+
+== statement 1
+dialect: "MySql"
+estimated_rows: 110.076705
+execution_time_ms: 0.739171
+has_actuals: yes
+settings: [{name="query_type" value="select"}]
+source_format: "mysql-json-v2"
+statement_text: "/* select#1 */ select `c`.`name` AS `name`,`o`.`id` AS `id`,`o`.`total` AS `total` from `shop`.`customers` `c` join `shop`.`orders` `o` where ((`o`.`customer_id..."
+statement_type: "EXPLAIN ANALYZE"
+total_subtree_cost: 124.062587
+operators: 5
+  #1 Nested loop inner join [Nested loop inner join]
+      actual_rows: 149
+      actual_rows_total: 149
+      actual_self_time_ms: 0.016341
+      actual_startup_ms: 0.052751
+      actual_time_ms: 0.739171
+      estimated_cost: 124.062587
+      estimated_rows: 110.076705
+      join_type: "Inner"
+      loops: 1
+      output_list: ["Actual time: 0.7391709999999999 ms"]
+      properties: [{name="access_type" value="join"}, {name="join_algorithm" value="nested_loop"}]
+    #2 Filter: (c.id between 100 and 140) [Filter: (c.id between 100 and 140)]
+        actual_rows: 41
+        actual_rows_total: 41
+        actual_self_time_ms: 0.005581
+        actual_startup_ms: 0.017584
+        actual_time_ms: 0.032789
+        estimated_cost: 8.470486
+        estimated_rows: 41
+        filter: "c.id between 100 and 140"
+        loops: 1
+        output_list: ["Actual time: 0.032789 ms", "Condition: (c.id between 100 and 140)"]
+        properties: [{name="access_type" value="filter"}]
+      #3 Index range scan on c using PRIMARY over (100 <= id <= 140) [Index range scan on c using PRIMARY over (100 <= id <= 140)]
+          actual_rows: 41
+          actual_rows_total: 41
+          actual_self_time_ms: 0.027208
+          actual_startup_ms: 0.015834
+          actual_time_ms: 0.027208
+          alias: "c"
+          estimated_cost: 8.470486
+          estimated_rows: 41
+          index_cond: "(100 <= id <= 140)"
+          index_name: "PRIMARY"
+          loops: 1
+          output_columns: ["id", "name"]
+          output_list: ["Actual time: 0.027208 ms", "customers", "Key: PRIMARY"]
+          properties: [{name="access_type" value="index"}, {name="covering" value="false"}, {name="index_access_type" value="index_range_scan"}]
+          relation: "customers"
+          relation_resolved: yes
+          schema: "shop"
+    #4 Filter: (o.total > 500.00) [Filter: (o.total > 500.00)]
+        actual_rows: 3.634146
+        actual_rows_total: 149
+        actual_self_time_ms: 0.067416
+        actual_startup_ms: 0.015501
+        actual_time_ms: 0.690041
+        estimated_cost: 2.020348
+        estimated_rows: 2.684798
+        filter: "o.total > 500.00"
+        loops: 41
+        output_list: ["Actual time: 0.01683026829268293 ms", "Condition: (o.total > 500.00)"]
+        properties: [{name="access_type" value="filter"}]
+      #5 Index lookup on o using orders_customer_idx (customer_id=c.id) [Index lookup on o using orders_customer_idx (customer_id=c.id)]
+          actual_rows: 8
+          actual_rows_total: 328
+          actual_self_time_ms: 0.622625
+          actual_startup_ms: 0.014368
+          actual_time_ms: 0.622625
+          alias: "o"
+          estimated_cost: 2.020348
+          estimated_rows: 8.055199
+          index_cond: "customer_id=c.id"
+          index_name: "orders_customer_idx"
+          loops: 41
+          output_columns: ["id", "customer_id", "total"]
+          output_list: ["Actual time: 0.015185975609756095 ms", "orders", "Key: orders_customer_idx"]
+          properties: [{name="access_type" value="index"}, {name="covering" value="false"}, {name="index_access_type" value="index_lookup"}]
+          relation: "orders"
+          relation_resolved: yes
+          schema: "shop"

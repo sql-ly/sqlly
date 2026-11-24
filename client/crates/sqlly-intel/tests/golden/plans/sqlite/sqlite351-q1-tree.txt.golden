@@ -1,0 +1,28 @@
+format: sqlite-eqp (Certain)
+statements: 1
+
+== statement 1
+dialect: "Sqlite"
+source_format: "sqlite-eqp"
+statement_type: "EXPLAIN QUERY PLAN"
+operators: 5
+  #1 SCAN o [SCAN]
+      output_list: ["o"]
+      relation: "o"
+      warnings: [{TableScan={table="o"}}]
+  #2 SEARCH c USING INTEGER PRIMARY KEY (rowid=?) [SEARCH]
+      extra: ["INTEGER PRIMARY KEY"]
+      index_cond: "rowid=?"
+      output_list: ["c", "Index Cond: rowid=?"]
+      properties: [{name="Access" value="INTEGER PRIMARY KEY"}]
+      relation: "c"
+  #3 SEARCH oi USING INDEX order_items_order_idx (order_id=?) [SEARCH]
+      index_cond: "order_id=?"
+      index_name: "order_items_order_idx"
+      output_list: ["oi", "Index Cond: order_id=?", "Index: order_items_order_idx"]
+      properties: [{name="Access" value="INDEX"}]
+      relation: "oi"
+  #4 USE TEMP B-TREE FOR GROUP BY [USE]
+      properties: [{name="Temp B-tree for" value="GROUP BY"}]
+  #5 USE TEMP B-TREE FOR ORDER BY [USE]
+      properties: [{name="Temp B-tree for" value="ORDER BY"}]

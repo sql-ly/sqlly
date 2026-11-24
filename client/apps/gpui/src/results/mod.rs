@@ -805,6 +805,13 @@ pub(crate) struct FilterBuilderState {
     /// Text the expression field is (re)created with — set when a saved
     /// filter that carries an expression is applied.
     expression_seed: Option<String>,
+    /// Recent filters dropdown beside the expression field, materialized at
+    /// render time from [`crate::recent_filters`]; `None` while there are
+    /// none.
+    recent_select: Option<Entity<SelectState<Vec<String>>>>,
+    /// The dropdown must be (re)read from the store: set at open and after
+    /// each applied expression, so it is rebuilt in the new order.
+    recents_stale: bool,
 }
 
 /// One memoized footer-stats result (see `ResultsView::selection_stats_cache`).
@@ -1537,7 +1544,7 @@ pub enum ResultsViewEvent {
     },
     /// The plan pane's Re-capture button was pressed. The app owns the
     /// connection profile and services, so it re-runs the capture and feeds
-    /// the result back through `set_execution_plan` / `fail_execution_plan`.
+    /// the result back through `set_execution_plan_with_schema` / `fail_execution_plan`.
     ExecutionPlanCaptureRequested(PlanKind),
     /// Open a saved plan file into the plan pane.
     ExecutionPlanOpenRequested,
@@ -1545,6 +1552,12 @@ pub enum ResultsViewEvent {
     ExecutionPlanPasteRequested,
     /// Open generated finding SQL in a new editor tab without running it.
     ExecutionPlanOpenSqlInNewTab(String),
+    /// The plan pane finished analysing a plan (or its analysis failed).
+    /// A large plan is analysed in the background, so the status bar's
+    /// finding count is only known now.
+    ExecutionPlanAnalysed {
+        failed: bool,
+    },
     /// Result layout (stacked vs tabbed) was toggled from results chrome.
     LayoutModeChanged(LayoutMode),
     /// An output-panel tab that needs host-owned content (History / DDL) or
@@ -3789,6 +3802,11 @@ impl ResultsView {
             ExecutionPlanViewEvent::OpenSqlInNewTab(sql) => {
                 cx.emit(ResultsViewEvent::ExecutionPlanOpenSqlInNewTab(sql.clone()));
             }
+            ExecutionPlanViewEvent::AnalysisFinished { failed } => {
+                // The Plan tab caption shows the finding count.
+                cx.notify();
+                cx.emit(ResultsViewEvent::ExecutionPlanAnalysed { failed: *failed });
+            }
         })
         .detach();
         self.execution_plan_view = Some(view.clone());
@@ -3807,21 +3825,56 @@ impl ResultsView {
         cx.notify();
     }
 
-    /// Install plans with the editor SQL that produced them so the plan pane
+    /// Install plans with the editor SQL that produced them, so the plan pane
     /// can reject comparisons across different query-history contexts without
-    /// re-executing either statement.
-    pub fn set_execution_plan_for_context(
+    /// re-executing either statement. `schema` holds definitions of the
+    /// tables the plan touches, taken from the connection's cached catalog.
+    pub fn set_execution_plan_with_schema(
         &mut self,
         kind: PlanKind,
         query_context: String,
+        plans: Vec<sqlly_services::plans::ExecutionPlan>,
+        schema: Option<sqlly_services::plans::SchemaContext>,
+        cx: &mut Context<Self>,
+    ) {
+        let view = self.execution_plan_view(cx);
+        view.update(cx, |view, cx| {
+            view.set_plans_with_schema(kind, query_context, plans, schema, cx)
+        });
+        self.show_execution_plan = true;
+        cx.notify();
+    }
+
+    /// Install plans read from a pasted or opened document. `source` names
+    /// the clipboard or the file.
+    pub fn set_imported_execution_plan(
+        &mut self,
+        kind: PlanKind,
+        source: String,
         plans: Vec<sqlly_services::plans::ExecutionPlan>,
         cx: &mut Context<Self>,
     ) {
         let view = self.execution_plan_view(cx);
         view.update(cx, |view, cx| {
-            view.set_plans_for_context(kind, query_context, plans, cx)
+            view.set_imported_plans(kind, source, plans, cx)
         });
         self.show_execution_plan = true;
+        cx.notify();
+    }
+
+    /// Show why a pasted or opened document could not be read as a plan.
+    pub fn fail_execution_plan_import(
+        &mut self,
+        error: sqlly_services::plans::PlanImportError,
+        cx: &mut Context<Self>,
+    ) {
+        let view = self.execution_plan_view(cx);
+        view.update(cx, |view, cx| view.set_import_failed(error, cx));
+        self.clear_output_tab_flags();
+        self.show_execution_plan = true;
+        self.show_messages = false;
+        self.show_diff = false;
+        self.show_result_profile = false;
         cx.notify();
     }
 
@@ -3853,6 +3906,14 @@ impl ResultsView {
         self.execution_plan_view
             .as_ref()
             .map(|view| view.read(cx).finding_count())
+    }
+
+    /// True while a large plan is analysed in the background: its finding
+    /// count is not known until `ExecutionPlanAnalysed`.
+    pub fn is_analysing_execution_plan(&self, cx: &App) -> bool {
+        self.execution_plan_view
+            .as_ref()
+            .is_some_and(|view| view.read(cx).is_analysing())
     }
 
     /// True while a plan capture is in flight — used to ignore repeat
@@ -6612,6 +6673,17 @@ impl ResultsView {
         }
     }
 
+    /// The active result's grid, built if it is not yet. A notebook cell
+    /// shown embedded draws it without the results chrome around it.
+    pub(crate) fn embedded_grid(
+        &mut self,
+        cx: &mut Context<Self>,
+    ) -> Option<Entity<SqllyDataTable>> {
+        self.active_result_set()?;
+        self.ensure_grid_for_active_tab(cx);
+        self.grid_entity_for_slot(self.active_tab)
+    }
+
     /// The grid shown for `slot`: the transposed snapshot when that view is
     /// active, otherwise the source result grid.
     pub(crate) fn grid_entity_for_slot(&self, slot: usize) -> Option<Entity<SqllyDataTable>> {
@@ -6862,6 +6934,8 @@ impl ResultsView {
             expression_input: None,
             expression_error: None,
             expression_seed: None,
+            recent_select: None,
+            recents_stale: true,
             non_iso_date_columns,
         });
         cx.notify();
@@ -7489,6 +7563,24 @@ impl ResultsView {
         cx.notify();
     }
 
+    /// Put a Recent filters entry into the expression field and apply it.
+    fn filter_builder_apply_recent(
+        &mut self,
+        expression: String,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(input) = self
+            .filter_builder
+            .as_ref()
+            .and_then(|builder| builder.expression_input.clone())
+        else {
+            return;
+        };
+        input.update(cx, |state, cx| state.set_value(expression, window, cx));
+        self.filter_builder_apply_expression(cx);
+    }
+
     /// Parse the typed filter expression and replace the builder's model.
     /// Invalid input shows a red hint and leaves the model untouched.
     fn filter_builder_apply_expression(&mut self, cx: &mut Context<Self>) {
@@ -7512,10 +7604,17 @@ impl ResultsView {
         let today = self.filter_today(slot);
         match crate::filter_lang::parse_filter_expression(&text, &columns, today) {
             Ok(model) => {
+                let policy = crate::recent_filters::RecentFilterPolicy::from_prefs(
+                    &self.formatting_or_load(),
+                );
                 if let Some(builder) = self.filter_builder.as_mut() {
                     builder.model = model;
                     builder.reset_tree_widgets();
                     builder.expression_error = None;
+                    if let Some(scope) = &builder.scope {
+                        crate::recent_filters::remember_filter(&scope.key, &text, policy);
+                        builder.recents_stale = true;
+                    }
                 }
                 self.apply_filter_builder(cx);
             }
@@ -8336,6 +8435,19 @@ impl ResultsView {
             .as_ref()
             .is_some_and(|b| b.saved_select.is_none() && b.scope.is_some())
             .then(|| self.load_saved_filters());
+        // Recent filters for the dropdown, only while it has to be (re)built.
+        let recents = self
+            .filter_builder
+            .as_ref()
+            .filter(|b| b.recents_stale)
+            .and_then(|b| b.scope.as_ref())
+            .map(|scope| {
+                let policy = crate::recent_filters::RecentFilterPolicy::from_prefs(
+                    &self.formatting_or_load(),
+                );
+                crate::recent_filters::recent_filters(&scope.key, policy)
+            })
+            .unwrap_or_default();
         {
             let builder = self.filter_builder.as_mut()?;
             let leaf_count = builder.model.leaf_count();
@@ -8485,6 +8597,25 @@ impl ResultsView {
                 )
                 .detach();
                 builder.expression_input = Some(input);
+            }
+            if builder.recents_stale {
+                builder.recents_stale = false;
+                builder.recent_select = None;
+            }
+            if builder.recent_select.is_none() && !recents.is_empty() {
+                let select = cx.new(|cx| SelectState::new(recents, None, window, cx));
+                cx.subscribe_in(
+                    &select,
+                    window,
+                    |this, _, event: &SelectEvent<Vec<String>>, window, cx| {
+                        let SelectEvent::Confirm(value) = event;
+                        if let Some(expression) = value.clone() {
+                            this.filter_builder_apply_recent(expression, window, cx);
+                        }
+                    },
+                )
+                .detach();
+                builder.recent_select = Some(select);
             }
             if builder.saved_name_input.is_none() {
                 let input = cx.new(|cx| {
@@ -8668,6 +8799,7 @@ impl ResultsView {
         let root_select = builder.root_conjunction_select.clone();
         let expression_input = builder.expression_input.clone();
         let expression_error = builder.expression_error.clone();
+        let recent_select = builder.recent_select.clone();
         let saved_select = builder.saved_select.clone();
         let saved_name_input = builder.saved_name_input.clone();
         let has_scope = builder.scope.is_some();
@@ -8691,6 +8823,15 @@ impl ResultsView {
                     .items_center()
                     .gap(px(s(6.0)))
                     .child(div().flex_1().child(Input::new(&input)))
+                    .children(recent_select.map(|select| {
+                        div().w(px(s(180.0))).child(
+                            Select::new(&select)
+                                .placeholder(crate::localization::text(
+                                    "results.filters.recent_filters_placeholder",
+                                ))
+                                .menu_width(px(s(420.0))),
+                        )
+                    }))
                     .child(
                         Button::new("filter-expr-apply")
                             .label(crate::localization::text(

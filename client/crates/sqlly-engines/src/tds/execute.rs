@@ -149,6 +149,43 @@ pub async fn execute_on_client_keep_transaction(
     execute_on_client_with(client, profile, sql, events, rows_tx, keep_open_transaction).await
 }
 
+/// The text one `GO` batch is sent as under `profile`'s connection policy.
+/// `showplan` is whether an earlier batch of the same run switched
+/// `SHOWPLAN` on: the server then only compiles the batch, so it keeps every
+/// refusal but goes unwrapped.
+pub fn policied_batch(
+    profile: &ConnectionProfile,
+    batch: &str,
+    showplan: bool,
+) -> StudioResult<String> {
+    use sqlly_intel::query::safety::{
+        apply_connection_policy, apply_connection_policy_compile_only, showplan_toggle,
+    };
+    if showplan && showplan_toggle(batch).is_none() {
+        apply_connection_policy_compile_only(profile, batch)
+    } else {
+        apply_connection_policy(profile, batch)
+    }
+}
+
+/// The batches a run of `sql` sends when every one succeeds, as
+/// [`execute_on_client`] words them.
+pub fn planned_batches(profile: &ConnectionProfile, sql: &str) -> Vec<StudioResult<String>> {
+    let mut showplan = false;
+    split_batches(sql, Dialect::SqlServer)
+        .iter()
+        .map(|batch| {
+            let sent = policied_batch(profile, batch.text, showplan);
+            if let Some(on) = sqlly_intel::query::safety::showplan_toggle(batch.text)
+                && sent.is_ok()
+            {
+                showplan = on;
+            }
+            sent
+        })
+        .collect()
+}
+
 async fn execute_on_client_with(
     client: &mut TdsClient,
     profile: &ConnectionProfile,
@@ -184,25 +221,28 @@ async fn execute_on_client_with(
     // keep running after it; it becomes the query's terminal error so the UI
     // reports failure while the specifics stay in the Messages stream.
     let mut first_error: Option<String> = None;
+    // Set once a `SET SHOWPLAN_… ON` batch went through cleanly: the server
+    // then only compiles, so later batches need no wrap.
+    let mut showplan = false;
 
     'batches: for batch in &batches {
         // Apply the connection policy per batch so a rolled-back-transaction
         // wrap never straddles a `GO`. A client-side refusal (SELECT-only) is
         // reported inline and the run continues to the next batch.
-        let policied =
-            match sqlly_intel::query::safety::apply_connection_policy(profile, batch.text) {
-                Ok(sql) => sql,
-                Err(err) => {
-                    let text = err.to_string();
-                    ensure_query_started(events, &session_id, &mut query_started)?;
-                    events.publish(EventPayload::Message {
-                        session_id: session_id.clone(),
-                        text: text.clone(),
-                    })?;
-                    first_error.get_or_insert(text);
-                    continue 'batches;
-                }
-            };
+        let toggle = sqlly_intel::query::safety::showplan_toggle(batch.text);
+        let policied = match policied_batch(profile, batch.text, showplan) {
+            Ok(sql) => sql,
+            Err(err) => {
+                let text = err.to_string();
+                ensure_query_started(events, &session_id, &mut query_started)?;
+                events.publish(EventPayload::Message {
+                    session_id: session_id.clone(),
+                    text: text.clone(),
+                })?;
+                first_error.get_or_insert(text);
+                continue 'batches;
+            }
+        };
 
         let line_shift =
             crate::tds::error::batch_line_shift(sql, batch.span.start, batch.text, &policied);
@@ -218,6 +258,11 @@ async fn execute_on_client_with(
         )
         .await?;
         result_set_index = progress.next_rsi;
+        if let Some(on) = toggle
+            && progress.first_error.is_none()
+        {
+            showplan = on;
+        }
         if let Some(err) = progress.first_error {
             first_error.get_or_insert(err);
         }
@@ -774,6 +819,51 @@ pub async fn execute_params_on_client(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn read_only_profile() -> ConnectionProfile {
+        let mut p = ConnectionProfile::sql_login(
+            "ro",
+            "localhost",
+            "sa",
+            sqlly_core::SecretRef {
+                provider: sqlly_core::SecretProvider::InMemory,
+                key: "password".to_string(),
+            },
+        );
+        p.block_all_but_select = true;
+        p.enforce_read_only = true;
+        p
+    }
+
+    #[test]
+    fn a_read_only_estimated_plan_keeps_showplan_alone_in_its_batch() {
+        let sql = "SET SHOWPLAN_XML ON;\nGO\nSELECT * FROM dbo.Orders\nGO\nSET SHOWPLAN_XML OFF;";
+        let sent: Vec<String> = planned_batches(&read_only_profile(), sql)
+            .into_iter()
+            .map(|b| b.unwrap().replace("\r\n", "\n"))
+            .collect();
+        assert_eq!(
+            sent,
+            [
+                "SET SHOWPLAN_XML ON;",
+                "SELECT * FROM dbo.Orders",
+                "SET SHOWPLAN_XML OFF;"
+            ]
+        );
+    }
+
+    #[test]
+    fn batches_without_showplan_on_stay_wrapped() {
+        let p = read_only_profile();
+        let sent = policied_batch(&p, "SELECT 1", false).unwrap();
+        assert!(sent.contains("BEGIN TRANSACTION"), "{sent}");
+        let sent = planned_batches(
+            &p,
+            "SET STATISTICS XML ON;\nSELECT 1\n;\nSET STATISTICS XML OFF;",
+        );
+        assert!(sent[0].as_ref().unwrap().contains("BEGIN TRANSACTION"));
+        assert!(policied_batch(&p, "DELETE FROM t", true).is_err());
+    }
 
     #[test]
     fn size_flush_triggers_only_at_or_above_target() {

@@ -1,0 +1,74 @@
+{
+  "query": "/* select#1 */ select `c`.`name` AS `name`,`o`.`total` AS `total` from `shop`.`customers` `c` join `shop`.`orders` `o` where ((`o`.`customer_id` = `c`.`id`) and (`c`.`email` = 'nobody@example.com'))",
+  "query_plan": {
+    "inputs": [
+      {
+        "alias": "c",
+        "covering": false,
+        "operation": "Index lookup on c using customers_email_idx (email = 'nobody@example.com')",
+        "index_name": "customers_email_idx",
+        "table_name": "customers",
+        "access_type": "index",
+        "actual_rows": 0.0,
+        "key_columns": [
+          "email"
+        ],
+        "schema_name": "shop",
+        "actual_loops": 1,
+        "used_columns": [
+          "id",
+          "name",
+          "email"
+        ],
+        "estimated_rows": 1.0,
+        "lookup_condition": "email = 'nobody@example.com'",
+        "index_access_type": "index_lookup",
+        "lookup_references": [
+          "const"
+        ],
+        "actual_last_row_ms": 0.011583000000000001,
+        "actual_first_row_ms": 0.011583000000000001,
+        "estimated_total_cost": 0.35
+      },
+      {
+        "alias": "o",
+        "covering": false,
+        "operation": "Index lookup on o using orders_customer_idx (customer_id = c.id)",
+        "index_name": "orders_customer_idx",
+        "table_name": "orders",
+        "access_type": "index",
+        "actual_rows": null,
+        "key_columns": [
+          "customer_id"
+        ],
+        "schema_name": "shop",
+        "actual_loops": null,
+        "used_columns": [
+          "customer_id",
+          "total"
+        ],
+        "estimated_rows": 8.064911842346191,
+        "lookup_condition": "customer_id = c.id",
+        "index_access_type": "index_lookup",
+        "lookup_references": [
+          "shop.c.id"
+        ],
+        "actual_last_row_ms": null,
+        "actual_first_row_ms": null,
+        "estimated_total_cost": 2.822719144821167
+      }
+    ],
+    "join_type": "inner join",
+    "operation": "Nested loop inner join",
+    "access_type": "join",
+    "actual_rows": 0.0,
+    "actual_loops": 1,
+    "estimated_rows": 8.064911842346191,
+    "join_algorithm": "nested_loop",
+    "actual_last_row_ms": 0.012542,
+    "actual_first_row_ms": 0.012542,
+    "estimated_total_cost": 3.1727191448211673
+  },
+  "query_type": "select",
+  "json_schema_version": "2.0"
+}

@@ -124,6 +124,32 @@ pub(super) const TYPE_WORDS: &[&str] = &[
     "bytea",
 ];
 
+/// SQL grammar written like a call (`ON CONFLICT (`, `OPTION (`,
+/// `ROLLUP(`, `GROUPING SETS (`, `ROW(`, `IDENTITY(1, 1)`, Redshift
+/// `SORTKEY(`, Snowflake `FLATTEN(`): system
+/// syntax rather than a user's function, so it takes the function casing.
+pub(super) const GRAMMAR_CALL_WORDS: &[&str] = &[
+    "conflict",
+    "option",
+    "tablesample",
+    "pivot",
+    "unpivot",
+    "match_recognize",
+    "partition",
+    "rollup",
+    "cube",
+    "sets",
+    "row",
+    "array",
+    "struct",
+    "map",
+    "flatten",
+    "identity",
+    "autoincrement",
+    "sortkey",
+    "distkey",
+];
+
 pub(super) fn word_in(list: &[&str], w: &str) -> bool {
     list.iter().any(|x| w.eq_ignore_ascii_case(x))
 }
@@ -155,26 +181,6 @@ pub(super) fn title_case(text: &str) -> String {
         if first {
             out.extend(c.to_uppercase());
             first = false;
-        } else {
-            out.extend(c.to_lowercase());
-        }
-    }
-    out
-}
-
-/// PascalCase each `_`-separated segment, keeping the underscores: unquoted
-/// identifiers are case-insensitive in every supported dialect, so changing
-/// case is safe but removing underscores would change the identifier.
-pub(super) fn pascal_case_identifier(text: &str) -> String {
-    let mut out = String::with_capacity(text.len());
-    let mut start_of_segment = true;
-    for c in text.chars() {
-        if c == '_' {
-            out.push(c);
-            start_of_segment = true;
-        } else if start_of_segment {
-            out.extend(c.to_uppercase());
-            start_of_segment = false;
         } else {
             out.extend(c.to_lowercase());
         }

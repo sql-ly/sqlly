@@ -1,0 +1,74 @@
+format: mysql-tree (Certain)
+statements: 1
+
+== statement 1
+dialect: "MySql"
+estimated_rows: 1
+execution_time_ms: 1.39
+has_actuals: yes
+source_format: "mysql-tree"
+statement_type: "EXPLAIN ANALYZE"
+total_subtree_cost: 364861
+operators: 6
+  #1 Aggregate: count(0) [Aggregate: count(0)]
+      actual_rebinds: 1
+      actual_rows: 1
+      actual_rows_total: 1
+      actual_self_time_ms: 0.02
+      actual_startup_ms: 1.39
+      actual_time_ms: 1.39
+      estimated_cost: 364861
+      estimated_rows: 1
+      loops: 1
+      output_list: ["Actual time: 1.39 ms"]
+      properties: [{name="functions" value="count(0)"}]
+    #2 Inner hash join (c.`name` = p.`name`) [Inner hash join (c.`name` = p.`name`)]
+        actual_rebinds: 1
+        actual_self_time_ms: 0.928
+        actual_startup_ms: 1.37
+        actual_time_ms: 1.37
+        estimated_cost: 331711
+        estimated_rows: 331500
+        join_predicate: "c.`name` = p.`name`"
+        join_type: "Inner"
+        loops: 1
+        output_list: ["Actual time: 1.37 ms"]
+      #3 Table scan on c [Table scan on c]
+          actual_rebinds: 1
+          actual_rows: 5000
+          actual_rows_total: 5000
+          actual_self_time_ms: 0.442
+          actual_startup_ms: 0.0746
+          actual_time_ms: 0.442
+          estimated_cost: 0.088
+          estimated_rows: 4973
+          loops: 1
+          output_list: ["Actual time: 0.442 ms", "c"]
+          relation: "c"
+          warnings: [{TableScan={table="c"}}]
+      #4 Hash [Hash]
+        #5 Filter: (p.price > 100.00) [Filter: (p.price > 100.00)]
+            actual_rebinds: 1
+            actual_rows: 1600
+            actual_rows_total: 1600
+            actual_self_time_ms: 0.125
+            actual_startup_ms: 0.106
+            actual_time_ms: 0.364
+            estimated_cost: 202
+            estimated_rows: 667
+            filter: "p.price > 100.00"
+            loops: 1
+            output_list: ["Actual time: 0.364 ms"]
+          #6 Table scan on p [Table scan on p]
+              actual_rebinds: 1
+              actual_rows: 2000
+              actual_rows_total: 2000
+              actual_self_time_ms: 0.239
+              actual_startup_ms: 0.0745
+              actual_time_ms: 0.239
+              estimated_cost: 202
+              estimated_rows: 2000
+              loops: 1
+              output_list: ["Actual time: 0.239 ms", "p"]
+              relation: "p"
+              warnings: [{TableScan={table="p"}}]

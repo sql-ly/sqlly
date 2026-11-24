@@ -1,0 +1,43 @@
+format: oracle-xplan (Certain)
+statements: 1
+
+== statement 1
+dialect: "Oracle"
+estimated_rows: 4
+query_plan_hash: "2436019392"
+source_format: "oracle-xplan"
+statement_type: "EXPLAIN PLAN"
+total_subtree_cost: 671
+operators: 4
+  #0 SELECT STATEMENT [SELECT STATEMENT]
+      estimated_cost: 671
+      estimated_row_width: 19
+      estimated_rows: 4
+      properties: [{name="Bytes" value="76"}, {name="Cost %CPU" value="1"}, {name="Time" value="00:00:01"}]
+    #1 HASH GROUP BY [HASH]
+        estimated_cost: 671
+        estimated_row_width: 19
+        estimated_rows: 4
+        output_columns: ["\"REGION\"", "SUM(\"AMOUNT\")"]
+        properties: [{name="Bytes" value="76"}, {name="Cost %CPU" value="1"}, {name="Time" value="00:00:01"}, {name="Query Block" value="SEL$1"}, {name="Projection" value="#keys=1; rowset=256"}]
+      #2 PARTITION RANGE ITERATOR [PARTITION RANGE]
+          estimated_cost: 670
+          estimated_row_width: 18.982726
+          estimated_rows: 45097
+          output_columns: ["\"REGION\"", "\"AMOUNT\""]
+          partitions: ["3", "4"]
+          partitions_scanned: 2
+          properties: [{name="Bytes" value="856064"}, {name="Cost %CPU" value="1"}, {name="Time" value="00:00:01"}, {name="Pstart" value="3"}, {name="Pstop" value="4"}, {name="Projection" value="rowset=256"}]
+        #3 TABLE ACCESS FULL SALES [TABLE ACCESS]
+            alias: "SALES"
+            estimated_cost: 670
+            estimated_row_width: 18.982726
+            estimated_rows: 45097
+            filter: "\"SOLD_AT\">=TO_DATE(' 2023-03-01 00:00:00', 'syyyy-mm-dd hh24:mi:ss') AND \"SOLD_AT\"<TO_DATE(' 2024-02-01 00:00:00', 'syyyy-mm-dd hh24:mi:ss')"
+            output_columns: ["\"REGION\"", "\"AMOUNT\""]
+            output_list: ["filter: \"SOLD_AT\">=TO_DATE(' 2023-03-01 00:00:00', 'syyyy-mm-dd hh24:mi:ss') AND \"SOLD_AT\"<TO_DATE(' 2024-02-01 00:00:00', 'syyyy-mm-dd hh24:mi:ss')"]
+            partitions: ["3", "4"]
+            partitions_scanned: 2
+            properties: [{name="Bytes" value="856064"}, {name="Cost %CPU" value="1"}, {name="Time" value="00:00:01"}, {name="Pstart" value="3"}, {name="Pstop" value="4"}, {name="Query Block" value="SEL$1"}, {name="Object Alias" value="\"SALES\"@\"SEL$1\""}, {name="Projection" value="rowset=256"}]
+            relation: "SALES"
+            warnings: [{TableScan={table="SALES"}}]

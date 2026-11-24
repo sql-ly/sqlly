@@ -468,6 +468,21 @@ impl<'c, 'a> StatementParser<'c, 'a> {
         if self.source_ref_is_mysql_dual(reference) {
             return SourceKind::Nothing;
         }
+        // MySQL partition selection (`FROM t PARTITION (p0) a`) still names
+        // the table; consume it so the alias after the list is captured.
+        if self
+            .cur
+            .peek()
+            .is_some_and(|t| t.is_word() && t.text.eq_ignore_ascii_case("partition"))
+            && self
+                .cur
+                .peek_n(1)
+                .is_some_and(|t| t.kind == TokenKind::LParen)
+        {
+            self.cur.advance();
+            self.skip_balanced_parens();
+            return SourceKind::Table;
+        }
         if !self
             .cur
             .peek()

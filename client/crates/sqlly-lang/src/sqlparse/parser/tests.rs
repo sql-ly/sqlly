@@ -700,6 +700,25 @@ fn select_from_with_alias() {
     }
 }
 
+/// DbGate #1500: the alias after a MySQL partition list belongs to the table.
+#[test]
+fn select_from_partition_list_keeps_the_alias() {
+    for sql in [
+        "SELECT a.id FROM orders PARTITION (p0) a WHERE a.id = 1",
+        "SELECT a.id FROM orders PARTITION (p0, p1) AS a",
+    ] {
+        let tree = parse(sql, Dialect::MySql);
+        match &tree.statements[0] {
+            StatementNode::Select(q) => {
+                assert_eq!(q.tables.len(), 1, "{sql}: {q:?}");
+                assert_eq!(q.tables[0].reference.display(), "orders", "{sql}");
+                assert_eq!(q.tables[0].alias.as_deref(), Some("a"), "{sql}");
+            }
+            other => panic!("{other:?}"),
+        }
+    }
+}
+
 #[test]
 fn insert_columns_and_arity() {
     let sql = "INSERT INTO dbo.T (A, B, C) VALUES (1, 'x', 3), (4, 'y')";

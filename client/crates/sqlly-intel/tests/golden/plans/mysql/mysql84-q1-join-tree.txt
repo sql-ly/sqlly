@@ -1,0 +1,10 @@
+-> Sort: revenue DESC
+    -> Table scan on <temporary>
+        -> Aggregate using temporary table
+            -> Nested loop inner join  (cost=8959 rows=10004)
+                -> Nested loop inner join  (cost=5458 rows=4013)
+                    -> Filter: (o.`status` = 'paid')  (cost=4053 rows=4013)
+                        -> Table scan on o  (cost=4053 rows=40131)
+                    -> Single-row index lookup on c using PRIMARY (id=o.customer_id)  (cost=0.25 rows=1)
+                -> Index lookup on oi using order_items_order_idx (order_id=o.id)  (cost=0.623 rows=2.49)
+

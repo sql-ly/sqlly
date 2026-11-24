@@ -1,0 +1,37 @@
+Output: country, count(), sum(total)
+
+Limit (preliminary LIMIT)
+│  Limit 5
+│  Offset 0
+└──Sorting (Sorting for ORDER BY)
+   │  Sort description: sum(total) DESC
+   │  Limit 5
+   └──Aggregating
+      │  Keys: country
+      │  Aggregates: count(), sum(total)
+      │  Skip merging: 0
+      └──Join (JOIN FillRightFirst)
+         │  c[50000] ⋈ o[36512]
+         │  Type: inner | Strictness: all | Algorithm: SpillingHashJoin(HashJoin)
+         │  Cost: estimated 36.79 thousand
+         │  Selectivity: estimated (NDV) 2.015e-05
+         │  Output rows: estimated 36.79 thousand
+         │  Left: rows estimated 50.00 thousand
+         │  Right: rows estimated 36.51 thousand
+         │  Join conditions: id = customer_id
+         │  Input (left): id, country
+         │  Input (right): customer_id, total
+         ├──ReadFromMergeTree (default.customers)
+         │     Read type: Default
+         │     Parts: 1 | Granules: 6
+         │     Output: id, country
+         │     Runtime filters: RF1(id, customer_id from default.orders)
+         └──BuildRuntimeFilter (Build runtime join filter on customer_id)
+            │  Filter id: RF1
+            │  Source table: default.orders
+            └──ReadFromMergeTree (default.orders)
+                  Read type: Default
+                  Parts: 5 | Granules: 179
+                  Output: total, customer_id
+                  Prewhere filter
+                  Prewhere filter column:  placed_at >= \'2023-06-01 00:00:00\' AND status = \'paid\'

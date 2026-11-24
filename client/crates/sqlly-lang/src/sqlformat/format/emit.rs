@@ -4,8 +4,8 @@
 use super::Options;
 use super::casing::{
     CAT_CLAUSES, CAT_DDL, CAT_DML, CAT_JOINS, CAT_SET_OPS, CAT_TRANSACTION, CAT_WORD_OPERATORS,
-    TYPE_WORDS, apply_keyword_case, pascal_case_identifier, plain_identifier_ok, quote_plain,
-    reserved_needs_quotes, safe_to_unquote, word_in,
+    TYPE_WORDS, apply_keyword_case, plain_identifier_ok, quote_plain, reserved_needs_quotes,
+    safe_to_unquote, word_in,
 };
 use super::segment::{
     BatchSeparator, Clause, ClauseKind, Statement, control_comment_state, find_alias_pos,
@@ -15,12 +15,12 @@ use super::tree::{Item, Node, ParenKind, build_tree, word_text};
 use super::writer::{AlignTag, LastTok, Writer, push_multiline, reindent_block_comment};
 use crate::sqlformat::prefs::{
     BooleanOperatorPlacement, CaseExpressionStyle, ClauseBodyPlacement, CommaStyle, CommentStyle,
-    CteStyle, DdlStyle, DmlStyle, FunctionArgStyle, FunctionCase, IdentifierCase,
-    IdentifierQuoting, InListStyle, JoinLayout, KeywordCase, MajorClausePlacement,
-    OnClausePlacement, OrderGroupLayout, SelectListStyle, SemicolonStyle, SubqueryStyle,
-    ValuesStyle,
+    CteStyle, DdlStyle, DmlStyle, FunctionArgStyle, FunctionCase, IdentifierQuoting, InListStyle,
+    JoinLayout, KeywordCase, MajorClausePlacement, OnClausePlacement, OrderGroupLayout,
+    SelectListStyle, SemicolonStyle, SubqueryStyle, ValuesStyle,
 };
 use crate::sqllex::{CommentShape, IdentQuote, TokenKind};
+use crate::sqlmodel::is_reserved_in_dialect;
 
 /// Where a word sits, for casing decisions.
 #[derive(Clone, Copy, PartialEq)]
@@ -1513,9 +1513,20 @@ impl<'a, 'o, 'p> Formatter<'a, 'o, 'p> {
             self.emit_node(&def[idx], ctx);
             idx += 1;
         }
-        // Column name.
+        // Column name: the user's, even when spelled like a type or a
+        // non-reserved keyword (`Text nvarchar(10)`, `Date date`).
         if idx < def.len() {
-            self.emit_node(&def[idx], ctx);
+            match &def[idx] {
+                Node::Tok(item)
+                    if matches!(
+                        item.tok.kind,
+                        TokenKind::Ident(IdentQuote::None) | TokenKind::Keyword
+                    ) && !is_reserved_in_dialect(self.o.dialect, item.tok.text) =>
+                {
+                    self.emit_word_as(item, WordRole::Identifier);
+                }
+                node => self.emit_node(node, ctx),
+            }
             idx += 1;
         }
         // Type word (+ optional `(n)` / `(p, s)`).
@@ -1773,7 +1784,17 @@ impl<'a, 'o, 'p> Formatter<'a, 'o, 'p> {
     }
 
     fn infer_role(&self, item: &Item<'a>) -> WordRole {
+        if item.is_cast_type {
+            return WordRole::DataType;
+        }
         if item.is_function_name {
+            // `nvarchar(50)`, `decimal(10, 2)`: a sized type, not a call.
+            if !self.after_dot
+                && !self.o.is_system_function(item.tok.text)
+                && self.o.is_system_type(item.tok.text)
+            {
+                return WordRole::DataType;
+            }
             return WordRole::Function;
         }
         if item.is_context_keyword {
@@ -1782,7 +1803,7 @@ impl<'a, 'o, 'p> Formatter<'a, 'o, 'p> {
         match item.tok.kind {
             // `o.type`, `t.key`: a keyword spelled behind a qualifier is a
             // column (or table) name.
-            TokenKind::Keyword if self.after_dot => WordRole::Identifier,
+            TokenKind::Keyword if self.after_dot || item.is_keyword_name => WordRole::Identifier,
             TokenKind::Keyword => {
                 if word_in(TYPE_WORDS, item.tok.text) {
                     WordRole::DataType
@@ -1804,6 +1825,15 @@ impl<'a, 'o, 'p> Formatter<'a, 'o, 'p> {
         let t = &item.tok;
         let g = &self.o.p.keyword_group_casing;
         match role {
+            // A user-defined function (`dbo.fnTotals(`, `calc_tax(`) is the
+            // user's name: only system functions are re-cased.
+            WordRole::Function
+                if self.after_dot
+                    || (matches!(t.kind, TokenKind::Ident(_))
+                        && !self.o.is_system_function(t.text)) =>
+            {
+                t.text.to_string()
+            }
             WordRole::Function => {
                 let case = if g.enabled {
                     g.functions
@@ -1820,6 +1850,13 @@ impl<'a, 'o, 'p> Formatter<'a, 'o, 'p> {
                     }
                     _ => t.text.to_string(),
                 }
+            }
+            // A user-defined type (`OrderIdList`, `dbo.Money2`) keeps its
+            // spelling; keywords in the slot (`Total AS (…)`) still case.
+            WordRole::DataType
+                if matches!(t.kind, TokenKind::Ident(_)) && !self.o.is_system_type(t.text) =>
+            {
+                t.text.to_string()
             }
             WordRole::DataType => {
                 let case = if g.enabled {
@@ -1918,13 +1955,10 @@ impl<'a, 'o, 'p> Formatter<'a, 'o, 'p> {
         }
     }
 
+    /// User-defined names (tables, columns, aliases, functions, procedures,
+    /// types) are never re-cased: the spelling is the user's.
     fn cased_plain_identifier(&self, text: &str) -> String {
-        match self.o.p.identifier_case {
-            IdentifierCase::Preserve => text.to_string(),
-            IdentifierCase::Lowercase => text.to_ascii_lowercase(),
-            IdentifierCase::Uppercase => text.to_ascii_uppercase(),
-            IdentifierCase::PascalCase => pascal_case_identifier(text),
-        }
+        text.to_string()
     }
 
     fn measure_nodes(&mut self, nodes: &[Node<'a>]) -> usize {

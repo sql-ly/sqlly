@@ -1,0 +1,93 @@
+== Physical Plan ==
+AdaptiveSparkPlan (15)
++- HashAggregate (14)
+   +- Exchange (13)
+      +- HashAggregate (12)
+         +- Project (11)
+            +- SortMergeJoin Inner (10)
+               :- Sort (4)
+               :  +- Exchange (3)
+               :     +- Filter (2)
+               :        +- Scan parquet spark_catalog.default.orders (1)
+               +- Sort (9)
+                  +- Exchange (8)
+                     +- Project (7)
+                        +- Filter (6)
+                           +- Scan parquet spark_catalog.default.order_items (5)
+
+
+(1) Scan parquet spark_catalog.default.orders
+Output [2]: [id#5L, status#8]
+Batched: true
+Location: InMemoryFileIndex [file:/tmp/spark-warehouse/orders]
+PushedFilters: [IsNotNull(id)]
+ReadSchema: struct<id:bigint,status:string>
+
+(2) Filter
+Input [2]: [id#5L, status#8]
+Condition : isnotnull(id#5L)
+
+(3) Exchange
+Input [2]: [id#5L, status#8]
+Arguments: hashpartitioning(id#5L, 200), ENSURE_REQUIREMENTS, [plan_id=1561]
+
+(4) Sort
+Input [2]: [id#5L, status#8]
+Arguments: [id#5L ASC NULLS FIRST], false, 0
+
+(5) Scan parquet spark_catalog.default.order_items
+Output [4]: [order_id#114L, sku#115, price#116, qty#117L]
+Batched: true
+Location: CatalogFileIndex [file:/tmp/spark-warehouse/order_items]
+PushedFilters: [IsNotNull(order_id)]
+ReadSchema: struct<order_id:bigint,sku:string,price:decimal(11,2)>
+
+(6) Filter
+Input [4]: [order_id#114L, sku#115, price#116, qty#117L]
+Condition : isnotnull(order_id#114L)
+
+(7) Project
+Output [3]: [order_id#114L, sku#115, price#116]
+Input [4]: [order_id#114L, sku#115, price#116, qty#117L]
+
+(8) Exchange
+Input [3]: [order_id#114L, sku#115, price#116]
+Arguments: hashpartitioning(order_id#114L, 200), ENSURE_REQUIREMENTS, [plan_id=1562]
+
+(9) Sort
+Input [3]: [order_id#114L, sku#115, price#116]
+Arguments: [order_id#114L ASC NULLS FIRST], false, 0
+
+(10) SortMergeJoin
+Left keys [1]: [id#5L]
+Right keys [1]: [order_id#114L]
+Join type: Inner
+Join condition: None
+
+(11) Project
+Output [3]: [status#8, sku#115, price#116]
+Input [5]: [id#5L, status#8, order_id#114L, sku#115, price#116]
+
+(12) HashAggregate
+Input [3]: [status#8, sku#115, price#116]
+Keys [2]: [status#8, sku#115]
+Functions [1]: [partial_max(price#116)]
+Aggregate Attributes [1]: [max#319]
+Results [3]: [status#8, sku#115, max#320]
+
+(13) Exchange
+Input [3]: [status#8, sku#115, max#320]
+Arguments: hashpartitioning(status#8, sku#115, 200), ENSURE_REQUIREMENTS, [plan_id=1569]
+
+(14) HashAggregate
+Input [3]: [status#8, sku#115, max#320]
+Keys [2]: [status#8, sku#115]
+Functions [1]: [max(price#116)]
+Aggregate Attributes [1]: [max(price#116)#317]
+Results [3]: [status#8, sku#115, max(price#116)#317 AS max(price)#318]
+
+(15) AdaptiveSparkPlan
+Output [3]: [status#8, sku#115, max(price)#318]
+Arguments: isFinalPlan=false
+
+

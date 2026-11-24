@@ -1,0 +1,8 @@
+JP|12500|9449625.0
+CA|12500|9449625.0
+QUERY PLAN
+|--SCAN o                                                       (loops=1 rows=40000 rpl=40000.0 est=9216.0)
+|--SEARCH c USING INTEGER PRIMARY KEY (rowid=?)                 (loops=10000 rows=10000 rpl=1.0 est=1.0)
+|--SEARCH oi USING INDEX order_items_order_idx (order_id=?)     (loops=10000 rows=25000 rpl=2.5 est=3.0)
+|--USE TEMP B-TREE FOR GROUP BY                                 (loops=1 rows=25000)
+`--USE TEMP B-TREE FOR ORDER BY                                 (loops=1 rows=2)

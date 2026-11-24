@@ -1,0 +1,36 @@
+format: sqlite-eqp (Certain)
+statements: 1
+
+== statement 1
+dialect: "Sqlite"
+has_actuals: yes
+source_format: "sqlite-eqp"
+statement_type: "EXPLAIN QUERY PLAN"
+operators: 5
+  #1 CO-ROUTINE x [CO-ROUTINE]
+      subplan_name: "x"
+    #2 SCAN order_items USING INDEX order_items_order_idx [SCAN]
+        actual_rows: 100000
+        actual_rows_total: 100000
+        index_name: "order_items_order_idx"
+        loops: 1
+        output_list: ["order_items", "Index: order_items_order_idx"]
+        properties: [{name="Access" value="INDEX"}]
+        relation: "order_items"
+  #3 SCAN x [SCAN]
+      actual_rows: 40000
+      actual_rows_total: 40000
+      loops: 1
+      output_list: ["x"]
+      relation: "x"
+  #4 SEARCH o USING INTEGER PRIMARY KEY (rowid=?) [SEARCH]
+      actual_rows: 40000
+      actual_rows_total: 40000
+      extra: ["INTEGER PRIMARY KEY"]
+      index_cond: "rowid=?"
+      loops: 40000
+      output_list: ["o", "Index Cond: rowid=?"]
+      properties: [{name="Access" value="INTEGER PRIMARY KEY"}]
+      relation: "o"
+  #5 USE TEMP B-TREE FOR DISTINCT [USE]
+      properties: [{name="Temp B-tree for" value="DISTINCT"}]

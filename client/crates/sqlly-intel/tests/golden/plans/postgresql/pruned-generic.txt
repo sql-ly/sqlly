@@ -1,0 +1,17 @@
+                                                             QUERY PLAN                                                              
+-------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=409.00..409.01 rows=1 width=8) (actual time=1.028..1.031 rows=1.00 loops=1)
+   Buffers: shared hit=54
+   ->  Append  (cost=0.00..392.33 rows=6667 width=0) (actual time=0.006..0.776 rows=8235.00 loops=1)
+         Buffers: shared hit=54
+         Subplans Removed: 1
+         ->  Seq Scan on events_2025 events_1  (cost=0.00..176.85 rows=3276 width=0) (actual time=0.005..0.444 rows=8235.00 loops=1)
+               Filter: (happened_at >= $1)
+               Rows Removed by Filter: 1593
+               Buffers: shared hit=54
+ Planning:
+   Buffers: shared hit=103
+ Planning Time: 0.227 ms
+ Execution Time: 1.050 ms
+(13 rows)
+

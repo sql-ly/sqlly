@@ -206,6 +206,68 @@ async fn live_db_connect_mariadb_stored_generated_comment_refuses_rebuild() {
     );
 }
 
+// https://github.com/Sequel-Ace/Sequel-Ace/issues/2479
+#[tokio::test]
+async fn live_db_connect_mariadb_accounts_fallback_lists_every_account() {
+    use sqlly_services::admin_tools::{AdminToolsService, DefaultAdminToolsService};
+    let Some(profile) = env_profile("MARIADB", DatabaseType::MariaDb, 3306) else {
+        eprintln!("skipping: MARIADB_* env vars not set");
+        return;
+    };
+    let client = sqlly_engines::mysql::open_client(&profile)
+        .await
+        .expect("connect to MariaDB");
+    let accounts = [
+        ("sqlly_guard_app", "%"),
+        ("sqlly_guard_report", "localhost"),
+    ];
+    for (user, host) in accounts {
+        execute_params_on_client(
+            &client,
+            &format!("CREATE OR REPLACE USER '{user}'@'{host}' IDENTIFIED BY 'guard-pw'"),
+            &[],
+        )
+        .await
+        .expect("create account fixture");
+    }
+
+    // The query the accounts view falls back to on MariaDB.
+    let sql = DefaultAdminToolsService
+        .security_query_for(DatabaseType::MariaDb, "users-compat")
+        .unwrap();
+    let listed = query_rows_on_client(&client, &sql, &[]).await;
+    for (user, host) in accounts {
+        let _ = execute_params_on_client(
+            &client,
+            &format!("DROP USER IF EXISTS '{user}'@'{host}'"),
+            &[],
+        )
+        .await;
+    }
+    let rows = listed.expect("the accounts query must run on this MariaDB")[0]
+        .rows
+        .clone();
+    let cell = |value: &CellValue| match value {
+        CellValue::String(text) => text.clone(),
+        CellValue::Bytes(bytes) => String::from_utf8_lossy(bytes).into_owned(),
+        other => panic!("unexpected cell {other:?}"),
+    };
+    let listed: Vec<(String, String)> = rows
+        .iter()
+        .map(|row| (cell(&row[0]), cell(&row[1])))
+        .collect();
+    for (user, host) in accounts {
+        assert!(
+            listed.contains(&(user.to_string(), host.to_string())),
+            "{user}@{host} missing from {listed:?}"
+        );
+    }
+    assert!(
+        listed.len() > accounts.len(),
+        "every account, not one: {listed:?}"
+    );
+}
+
 #[tokio::test]
 async fn live_db_connect_oracle() {
     // A real logon through the Oracle driver (needs the Instant Client on

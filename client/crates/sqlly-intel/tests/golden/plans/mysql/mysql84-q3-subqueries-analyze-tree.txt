@@ -1,0 +1,13 @@
+-> Limit: 20 row(s)  (cost=6.65e+6 rows=20) (actual time=11.4..11.5 rows=20 loops=1)
+    -> Nested loop inner join  (cost=6.65e+6 rows=66.5e+6) (actual time=11.4..11.5 rows=20 loops=1)
+        -> Sort: c.`name`  (cost=503 rows=4973) (actual time=4.25..4.26 rows=295 loops=1)
+            -> Filter: (c.id is not null)  (cost=503 rows=4973) (actual time=0.0364..2.47 rows=5000 loops=1)
+                -> Table scan on c  (cost=503 rows=4973) (actual time=0.0358..0.886 rows=5000 loops=1)
+        -> Single-row index lookup on <subquery3> using <auto_distinct_key> (customer_id=c.id)  (cost=5391..5391 rows=1) (actual time=0.0243..0.0243 rows=0.0678 loops=295)
+            -> Materialize with deduplication  (cost=5391..5391 rows=13376) (actual time=7.12..7.12 rows=396 loops=1)
+                -> Filter: (orders.total > 900.00)  (cost=4053 rows=13376) (actual time=0.692..6.94 rows=396 loops=1)
+                    -> Table scan on orders  (cost=4053 rows=40131) (actual time=0.506..4.25 rows=40000 loops=1)
+-> Select #2 (subquery in projection; dependent)
+    -> Aggregate: max(o.total)  (cost=3.62 rows=1) (actual time=0.00928..0.0093 rows=1 loops=20)
+        -> Index lookup on o using orders_customer_idx (customer_id=c.id)  (cost=2.82 rows=8.06) (actual time=0.00828..0.00863 rows=8 loops=20)
+

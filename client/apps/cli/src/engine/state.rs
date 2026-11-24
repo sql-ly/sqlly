@@ -87,6 +87,13 @@ impl EngineConnection {
                     .unwrap_or(sqlly_core::DatabaseType::Postgres),
                 &self.username,
             ),
+            // PostgreSQL 18 OAuth: the bearer token arrives as `access_token`.
+            "pg-oauth" => ConnectionProfile::postgres_oauth(
+                &self.server,
+                &self.server,
+                self.port,
+                &self.username,
+            ),
             // libSQL / Turso: the token travels in the password slot.
             "auth-token" => ConnectionProfile::auth_token(
                 &self.server,
@@ -109,7 +116,7 @@ impl EngineConnection {
         };
         profile.port = self.port;
         profile.database = self.database;
-        if profile.authentication.is_cloud_iam() {
+        if profile.authentication.is_cloud_iam() || profile.authentication.is_pg_oauth() {
             profile.runtime_cloud_iam_token = self.access_token;
         } else {
             profile.runtime_entra_access_token = self.access_token;

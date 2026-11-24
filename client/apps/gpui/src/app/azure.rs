@@ -193,6 +193,11 @@ impl AppView {
             }
         };
         #[cfg(not(target_arch = "wasm32"))]
+        if profile.authentication.is_pg_oauth_device_flow() {
+            self.with_pg_oauth_token(profile, cx, then);
+            return;
+        }
+        #[cfg(not(target_arch = "wasm32"))]
         if profile.authentication.is_cloud_iam() {
             let cache_key = crate::cloud_iam_token::CloudIamTokenProvider::cache_key(&profile);
             if let Some(token) = self

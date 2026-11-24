@@ -1,0 +1,55 @@
+{
+  "query_block": {
+    "select_id": 1,
+    "cost": 155.8313818,
+    "filesort": {
+      "sort_key": "sum(oi.quantity * oi.unit_price) desc",
+      "temporary_table": {
+        "nested_loop": [
+          {
+            "table": {
+              "table_name": "o",
+              "access_type": "ALL",
+              "possible_keys": ["PRIMARY", "orders_customer_idx"],
+              "loops": 1,
+              "rows": 40131,
+              "cost": 6.6889758,
+              "filtered": 100,
+              "attached_condition": "o.`status` = 'paid'"
+            }
+          },
+          {
+            "table": {
+              "table_name": "c",
+              "access_type": "eq_ref",
+              "possible_keys": ["PRIMARY"],
+              "key": "PRIMARY",
+              "key_length": "4",
+              "used_key_parts": ["id"],
+              "ref": ["shop.o.customer_id"],
+              "loops": 40131,
+              "rows": 1,
+              "cost": 35.91279404,
+              "filtered": 100
+            }
+          },
+          {
+            "table": {
+              "table_name": "oi",
+              "access_type": "ref",
+              "possible_keys": ["order_items_order_idx"],
+              "key": "order_items_order_idx",
+              "key_length": "4",
+              "used_key_parts": ["order_id"],
+              "ref": ["shop.o.id"],
+              "loops": 40131,
+              "rows": 2,
+              "cost": 113.229612,
+              "filtered": 100
+            }
+          }
+        ]
+      }
+    }
+  }
+}

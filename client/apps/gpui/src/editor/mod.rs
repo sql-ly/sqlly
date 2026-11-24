@@ -79,6 +79,7 @@ actions!(
         ToggleLineComment,
         AddLineComment,
         RemoveLineComment,
+        ToggleBlockComment,
         MoveWordLeft,
         MoveWordRight,
         SelectWordLeft,
@@ -166,6 +167,8 @@ mod identity_lint;
 mod info_cards;
 mod input;
 mod insert_hints;
+mod markdown;
+mod markdown_syntax;
 #[cfg(test)]
 pub(crate) mod perf_fixture;
 #[cfg(test)]
@@ -181,6 +184,10 @@ mod types;
 mod vim;
 
 pub use element::EditorElement;
+pub use markdown::EditorLanguage;
+pub(crate) use markdown_syntax::{
+    fence_marker as markdown_fence_marker, fence_states as markdown_fence_states,
+};
 // Previously reachable as `crate::editor::{EditorPrepaintState, PaintLine}`;
 // only `EditorElement`'s own machinery uses them today.
 #[allow(unused_imports)]
@@ -317,6 +324,13 @@ pub struct SqlEditor {
     line_number_width: Pixels,
     services: Option<Services>,
     completion_catalog: std::sync::Arc<CompletionCatalog>,
+    /// A notebook cell's view of the other cells (`{{name}}` completion and
+    /// hover, the Markdown slash menu); `None` outside notebooks.
+    notebook_refs: Option<std::sync::Arc<crate::notebook::editing::intel::ReferenceContext>>,
+    /// The catalog the host set, before notebook references were merged in.
+    base_catalog: std::sync::Arc<CompletionCatalog>,
+    /// SQL, or Markdown for a notebook Markdown cell (see `markdown.rs`).
+    language: EditorLanguage,
     /// [`Self::semantic_names`] cache: the catalog it was built from (held so
     /// its address cannot be reused) and the names.
     #[allow(clippy::type_complexity)]
@@ -536,6 +550,11 @@ pub struct ResultSource {
 
 pub enum SqlEditorEvent {
     Change,
+    /// A notebook completion (a `{{…}}` reference or a slash-menu item) was
+    /// accepted; `label` names it.
+    NotebookCompletionAccepted {
+        label: String,
+    },
     Execute,
     /// Gutter play glyph clicked; `offset` is the statement's first non-blank
     /// byte. The app layer moves the caret there and runs with the
@@ -663,6 +682,9 @@ impl SqlEditor {
             line_number_width: Self::gutter_width(editor_prefs.show_line_numbers),
             services: None,
             completion_catalog: std::sync::Arc::new(CompletionCatalog::default()),
+            notebook_refs: None,
+            base_catalog: std::sync::Arc::new(CompletionCatalog::default()),
+            language: EditorLanguage::Sql,
             semantic_names: std::cell::RefCell::new(None),
             schema_snapshot: std::sync::Arc::new(sqlly_lang::sqlmodel::ModelSnapshot::default()),
             completion_procedures: std::sync::Arc::new(Vec::new()),
@@ -825,6 +847,7 @@ impl SqlEditor {
                 view.shape_cache = src.shape_cache.clone();
                 view.undo_stack = src.undo_stack.clone();
                 view.redo_stack = src.redo_stack.clone();
+                view.language = src.language;
                 view.diagnostics = src.diagnostics.clone();
                 view.diag_by_line = src.diag_by_line.clone();
                 view.diag_spans = src.diag_spans.clone();
@@ -1626,6 +1649,8 @@ impl SqlEditor {
         catalog: std::sync::Arc<CompletionCatalog>,
         cx: &mut Context<Self>,
     ) {
+        self.base_catalog = catalog.clone();
+        let catalog = self.with_notebook_references(catalog);
         self.completion_catalog = catalog.clone();
         self.schedule_insert_hints(cx);
         self.forward_to_shared_view(cx, move |view, cx| {
@@ -1634,6 +1659,118 @@ impl SqlEditor {
             cx.notify();
         });
         cx.notify();
+    }
+
+    /// Give a notebook cell's editor the other cells it can reference
+    /// (`None` drops them).
+    pub fn set_notebook_references(
+        &mut self,
+        refs: Option<std::sync::Arc<crate::notebook::editing::intel::ReferenceContext>>,
+        cx: &mut Context<Self>,
+    ) {
+        if self.notebook_refs == refs {
+            return;
+        }
+        self.notebook_refs = refs;
+        self.completion_catalog = self.with_notebook_references(self.base_catalog.clone());
+        if self.is_markdown() {
+            self.schedule_insert_hints(cx);
+        }
+        cx.notify();
+    }
+
+    pub fn notebook_references(
+        &self,
+    ) -> Option<std::sync::Arc<crate::notebook::editing::intel::ReferenceContext>> {
+        self.notebook_refs.clone()
+    }
+
+    fn with_notebook_references(
+        &self,
+        catalog: std::sync::Arc<CompletionCatalog>,
+    ) -> std::sync::Arc<CompletionCatalog> {
+        match &self.notebook_refs {
+            // Markdown never reads the SQL catalog, so no merged copy.
+            Some(refs) if !refs.cells.is_empty() && !self.is_markdown() => std::sync::Arc::new(
+                crate::notebook::editing::intel::merged_catalog(&catalog, refs),
+            ),
+            _ => catalog,
+        }
+    }
+
+    /// `{{…}}` and slash-menu completions for the caret in a notebook cell.
+    fn notebook_completions(&self) -> Option<crate::directive_completion::DirectiveCompletions> {
+        if self.is_markdown() {
+            return self.markdown_completions(false);
+        }
+        let refs = self.notebook_refs.as_ref()?;
+        crate::notebook::editing::intel::completions(refs, &self.content, self.cursor)
+    }
+
+    #[cfg(test)]
+    pub(crate) fn request_completions_for_test(&mut self, cx: &mut Context<Self>) {
+        self.trigger_completions_with(true, cx);
+    }
+
+    #[cfg(test)]
+    pub(crate) fn completion_labels_for_test(&self) -> Vec<String> {
+        self.completions.iter().map(|i| i.label.clone()).collect()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn completion_items_for_test(&self) -> Vec<CompletionItem> {
+        self.completions.as_ref().clone()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn move_completion_down_for_test(&mut self, cx: &mut Context<Self>) {
+        self.move_completion_down(cx);
+    }
+
+    #[cfg(test)]
+    pub(crate) fn accept_completion_for_test(&mut self, cx: &mut Context<Self>) {
+        self.accept_completion(cx);
+    }
+
+    /// Whether the hover card shows: a hover card (the pointer resting on a
+    /// word) wins over signature help (the caret inside a call), as the
+    /// more deliberate ask, and gives way to every other popup.
+    pub(super) fn hover_card_wanted(&self) -> bool {
+        self.hover_info.is_some()
+            && self.fold_preview.is_none()
+            && !self.completion_visible
+            && self.hovered_diagnostic.is_none()
+            && self.hovered_sqlly_directive.is_none()
+    }
+
+    /// Rest the pointer on the notebook reference at `offset`.
+    #[cfg(test)]
+    pub(crate) fn show_notebook_hover_for_test(&mut self, offset: usize) {
+        if self.is_markdown() {
+            self.hover_info = self.markdown_hover(offset);
+            return;
+        }
+        let refs = self.notebook_refs.clone();
+        self.hover_info = refs
+            .and_then(|refs| crate::notebook::editing::intel::hover(&refs, &self.content, offset));
+    }
+
+    /// Lines the painted hover card shows, and the lines its content has.
+    #[cfg(test)]
+    pub(crate) fn hover_card_lines_for_test(&self) -> Option<(usize, usize)> {
+        let bounds = self.hover_card_bounds.get()?;
+        let (info, _) = self.hover_info.as_ref()?;
+        let shown = ((bounds.size.height - px(8.0)) / self.line_height).round() as usize;
+        Some((shown, info_cards::hover_card(info, 200).len()))
+    }
+
+    #[cfg(test)]
+    pub(crate) fn notebook_hover_for_test(&self, offset: usize) -> Option<HoverInfo> {
+        if self.is_markdown() {
+            return self.markdown_hover(offset).map(|(h, _)| h);
+        }
+        let refs = self.notebook_refs.as_ref()?;
+        crate::notebook::editing::intel::hover(refs, &self.content, offset).map(|(h, _)| h)
     }
 
     pub fn set_schema_snapshot(
@@ -1797,26 +1934,39 @@ impl SqlEditor {
         let Some(offset) = self.byte_offset_for_position(position) else {
             return;
         };
+        let next = self.hover_at(offset);
+        if next != self.hover_info {
+            self.hover_info = next;
+            cx.notify();
+        }
+    }
+
+    /// The hover card for the text at `offset`, for this editor's language.
+    fn hover_at(&self, offset: usize) -> Option<(HoverInfo, (usize, usize))> {
         if self.database_type.is_command_engine() {
             // Redis tabs hold commands: the card is the command's docs and
             // safety badges, not a schema object.
-            let next = sqlly_intel::redis_complete::hover_at(
+            return sqlly_intel::redis_complete::hover_at(
                 &self.content,
                 offset,
                 &self.redis_completion.vocabulary,
             );
-            if next != self.hover_info {
-                self.hover_info = next;
-                cx.notify();
-            }
-            return;
+        }
+        if self.is_markdown() {
+            // Markdown cards are about notebook values only, never SQL.
+            return self.markdown_hover(offset);
+        }
+        if let Some(refs) = &self.notebook_refs
+            && let Some(card) = crate::notebook::editing::intel::hover(refs, &self.content, offset)
+        {
+            return Some(card);
         }
         let database = self
             .completion_catalog
             .databases
             .first()
             .map(|s| s.as_str());
-        let next = sqlly_intel::intellisense::hover_at(
+        sqlly_intel::intellisense::hover_at(
             &self.content,
             offset,
             &self.completion_catalog,
@@ -1831,15 +1981,16 @@ impl SqlEditor {
                 &self.content,
                 offset,
             )
-        });
-        if next != self.hover_info {
-            self.hover_info = next;
-            cx.notify();
-        }
+        })
+    }
+
+    #[cfg(test)]
+    pub(crate) fn hover_at_for_test(&self, offset: usize) -> Option<HoverInfo> {
+        self.hover_at(offset).map(|(h, _)| h)
     }
 
     fn refresh_signature_help(&mut self, cx: &mut Context<Self>) {
-        if !self.editor_prefs.show_signature_help {
+        if !self.editor_prefs.show_signature_help || self.is_markdown() {
             if self.signature_help.is_some() {
                 self.signature_help = None;
                 cx.notify();
@@ -1982,8 +2133,23 @@ impl SqlEditor {
             self.trigger_redis_completions(trigger, manual, cx);
             return;
         }
+        if self.is_markdown() {
+            // Markdown help only; the SQL engine never sees a Markdown cell.
+            let items = self.markdown_completions(manual).unwrap_or(
+                crate::directive_completion::DirectiveCompletions {
+                    items: Vec::new(),
+                    replace_start: self.cursor,
+                },
+            );
+            self.show_directive_completions(items, cx);
+            return;
+        }
         if let Some(directive) = self.directive_completions() {
             self.show_directive_completions(directive, cx);
+            return;
+        }
+        if let Some(references) = self.notebook_completions() {
+            self.show_directive_completions(references, cx);
             return;
         }
         if let Some(services) = &self.services {
@@ -1992,7 +2158,10 @@ impl SqlEditor {
             // background executor so typing pauses never stall the UI thread.
             // All inputs are Arc/SharedString clones (no buffer copies).
             let intellisense = services.intellisense.clone();
-            let sql = self.content.clone();
+            let sql = match &self.notebook_refs {
+                Some(_) => SharedString::from(crate::notebook::editing::intel::mask(&self.content)),
+                None => self.content.clone(),
+            };
             let cursor = self.cursor;
             let catalog = self.completion_catalog.clone();
             let procedures = self.completion_procedures.clone();
@@ -2036,7 +2205,11 @@ impl SqlEditor {
                         if editor.completion_generation != generation || editor.cursor != cursor {
                             return;
                         }
-                        editor.completions = std::rc::Rc::new(response.items);
+                        let mut items = response.items;
+                        if let Some(refs) = &editor.notebook_refs {
+                            crate::notebook::editing::intel::unmask_items(refs, &mut items);
+                        }
+                        editor.completions = std::rc::Rc::new(items);
                         editor.completion_index = 0;
                         editor.completion_scroll_offset = 0;
                         editor.completion_replace_start = response.replace_start;
@@ -2165,7 +2338,9 @@ impl SqlEditor {
             let multi_cursor = !self.extra_cursors.is_empty();
             // A directive item is written exactly as offered: the SQL
             // casing, quoting and layout rules do not apply inside a comment.
-            let directive = self.directive_completions().is_some();
+            // Everything a Markdown cell offers is written as offered.
+            let notebook_item = self.is_markdown() || self.notebook_completions().is_some();
+            let directive = self.directive_completions().is_some() || notebook_item;
             let insert_text = if directive {
                 item.insert_text.clone()
             } else {
@@ -2187,7 +2362,7 @@ impl SqlEditor {
                         .max(self.completion_replace_start),
                 );
             let primary_replace_end = item.replace_span.map(|(_, e)| e).unwrap_or(self.cursor);
-            if !directive
+            if (!directive || self.is_markdown())
                 && item.kind == CompletionKind::Snippet
                 && crate::snippets::has_tab_stops(&insert_text)
             {
@@ -2196,6 +2371,11 @@ impl SqlEditor {
                 self.close_completions(cx);
                 self.expand_snippet(range, &insert_text, cx);
                 self.accepted_completion_at = Some((self.content_revision, self.cursor));
+                if notebook_item {
+                    cx.emit(SqlEditorEvent::NotebookCompletionAccepted {
+                        label: item.label.clone(),
+                    });
+                }
                 return;
             }
             let insert_text = if multi_cursor || directive {
@@ -2248,10 +2428,17 @@ impl SqlEditor {
                     .is_some_and(|c| !c.is_alphanumeric());
                 if open_ended
                     && !multi_cursor
-                    && let Some(next) = self.directive_completions()
+                    && let Some(next) = self
+                        .directive_completions()
+                        .or_else(|| self.notebook_completions())
                     && !next.items.is_empty()
                 {
                     self.show_directive_completions(next, cx);
+                }
+                if notebook_item {
+                    cx.emit(SqlEditorEvent::NotebookCompletionAccepted {
+                        label: item.label.clone(),
+                    });
                 }
             } else if !multi_cursor {
                 self.suggest_table_alias_after_completion(
@@ -2273,7 +2460,7 @@ impl SqlEditor {
         replace_end: usize,
         insert: String,
     ) -> String {
-        if self.database_type.is_command_engine() {
+        if self.database_type.is_command_engine() || self.is_markdown() {
             return insert;
         }
         let statement_start = self
@@ -2362,7 +2549,8 @@ impl SqlEditor {
     /// segment was committed; `false` means the caller should fall through to
     /// its normal behavior (insert the literal `.` / move the caret).
     fn try_advance_completion_to_dot(&mut self, cx: &mut Context<Self>) -> bool {
-        if !self.completion_visible
+        if self.is_markdown()
+            || !self.completion_visible
             || self.completions.is_empty()
             || self.active_value_lookup.is_some()
             || !self.extra_cursors.is_empty()
@@ -2588,7 +2776,8 @@ impl SqlEditor {
         // the preedit text is not committed input yet. With multiple cursors,
         // the popup is computed from the primary and acceptance fans the same
         // completion out using each caret's local replacement range.
-        if self.services.is_some() && self.marked_range.is_none() {
+        if (self.services.is_some() || self.notebook_refs.is_some()) && self.marked_range.is_none()
+        {
             self.schedule_automatic_completion(cx);
         } else {
             cx.notify();
@@ -2645,6 +2834,11 @@ impl SqlEditor {
             let work = weak_self
                 .update(&mut cx, |editor, cx| {
                     if editor.insert_hints_generation != generation {
+                        return None;
+                    }
+                    if editor.is_markdown() {
+                        // No SQL hints or lints; only the reference check.
+                        editor.refresh_markdown_diagnostics(cx);
                         return None;
                     }
                     if !insert_hints::may_contain_insert(&editor.content) {
@@ -3921,7 +4115,11 @@ impl SqlEditor {
         {
             return states.clone();
         }
-        let states = std::rc::Rc::new(crate::sql_syntax::comment_states(dialect, &self.content));
+        let states = std::rc::Rc::new(if self.is_markdown() {
+            self.markdown_line_states()
+        } else {
+            crate::sql_syntax::comment_states(dialect, &self.content)
+        });
         *cache = Some((self.content_revision, dialect, states.clone()));
         states
     }
@@ -3953,7 +4151,13 @@ impl SqlEditor {
     fn with_folds<R>(&self, f: impl FnOnce(&mut crate::folding::EditorFolds) -> R) -> R {
         let mut cache = self.folds.borrow_mut();
         if cache.0 != Some(self.content_revision) {
-            cache.1.reconcile(&self.content);
+            // SQL fold regions (BEGIN/END, parentheses, comments) mean
+            // nothing in Markdown.
+            cache.1.reconcile(if self.is_markdown() {
+                ""
+            } else {
+                &self.content
+            });
             cache.0 = Some(self.content_revision);
         }
         f(&mut cache.1)
@@ -3962,7 +4166,10 @@ impl SqlEditor {
     fn with_statement_spans<R>(&self, f: impl FnOnce(&[statements::StatementSpan]) -> R) -> R {
         let mut cache = self.statement_cache.borrow_mut();
         if cache.0 != Some(self.content_revision) {
-            cache.1 = if self.database_type.is_command_engine() {
+            cache.1 = if self.is_markdown() {
+                // Markdown has no statements to run.
+                Vec::new()
+            } else if self.database_type.is_command_engine() {
                 // One command per line.
                 crate::mutation_review::command_line_spans(&self.content)
                     .into_iter()
@@ -4717,6 +4924,33 @@ impl SqlEditor {
         self.after_text_change(cx);
     }
 
+    /// Wrap the selection (or the caret's line) in `/* */`, or unwrap it when
+    /// it already is one block comment. One undo step.
+    fn toggle_block_comment(&mut self, cx: &mut Context<Self>) {
+        self.clear_extra_cursors();
+        let selection = self.selection().unwrap_or(self.cursor..self.cursor);
+        let Some(edit) = crate::block_comment::toggle_block_comment(&self.content, selection)
+        else {
+            return;
+        };
+        self.push_delta(edit.replace.clone(), edit.text.len());
+        let mut new_content =
+            String::with_capacity(self.content.len() - edit.replace.len() + edit.text.len());
+        new_content.push_str(&self.content[..edit.replace.start]);
+        new_content.push_str(&edit.text);
+        new_content.push_str(&self.content[edit.replace.end..]);
+        self.content = new_content.into();
+        self.invalidate_text_derived_caches();
+        if edit.selection.is_empty() {
+            self.selection_anchor = None;
+        } else {
+            self.selection_anchor = Some(edit.selection.start);
+        }
+        self.cursor = edit.selection.end;
+        self.scroll_cursor_into_view();
+        self.after_text_change(cx);
+    }
+
     /// Byte offset of `(line, col)` in `lines`, clamping the column to the
     /// line's length and the line to the document.
     fn offset_at_line_col(lines: &[String], line: usize, col: usize) -> usize {
@@ -4910,6 +5144,9 @@ impl SqlEditor {
             .take_while(|c| *c == ' ' || *c == '\t')
             .collect();
 
+        if self.is_markdown() {
+            return format!("\n{indent}");
+        }
         let after_indent = &before_cursor[indent.len()..];
         let extra = if ends_with_indent_keyword(after_indent) {
             self.editor_prefs.indent_unit()
@@ -5219,6 +5456,9 @@ impl SqlEditor {
             self.feed_vim(VimKey::Backspace, None, cx);
             return;
         }
+        if self.is_markdown() && self.markdown_backspace(cx) {
+            return;
+        }
         self.delete_backward(cx);
     }
     fn handle_delete(&mut self, _: &Delete, _: &mut Window, cx: &mut Context<Self>) {
@@ -5398,7 +5638,7 @@ impl SqlEditor {
     /// more complete statements — formatting an expression fragment out of
     /// context would mangle the line it lands on.
     fn maybe_format_pasted(&self, text: String) -> String {
-        if !looks_like_statement(&text) {
+        if self.is_markdown() || !looks_like_statement(&text) {
             return text;
         }
         let prefs = crate::preferences::load_sql_formatting_preferences();
@@ -5453,6 +5693,10 @@ impl SqlEditor {
             // over the fresh line; the next automatic pass re-evaluates.
             self.close_completions(cx);
         }
+        if self.is_markdown() {
+            self.markdown_enter(cx);
+            return;
+        }
         if !self.format_as_you_go(cx) {
             self.insert_newline(cx);
         }
@@ -5479,7 +5723,10 @@ impl SqlEditor {
             .take_while(|c| *c == ' ' || *c == '\t')
             .collect();
         let after_indent = before_cursor[indent.len()..].trim_end();
-        if in_select_column_context(&self.content, range.start) && !after_indent.ends_with(',') {
+        if !self.is_markdown()
+            && in_select_column_context(&self.content, range.start)
+            && !after_indent.ends_with(',')
+        {
             // If cursor is at end of line (next char is \n or end of content),
             // just insert the comma — the existing newline serves as the break.
             let at_line_end = range.start >= self.content.len()
@@ -5529,6 +5776,13 @@ impl SqlEditor {
         if self.next_snippet_stop(cx) {
             return;
         }
+        if self.is_markdown() {
+            // A list item nests as a whole; SQL snippet prefixes don't apply.
+            if !self.markdown_indent_item(false, cx) {
+                self.insert_tab(cx);
+            }
+            return;
+        }
         if !self.try_expand_snippet_prefix(cx) {
             self.insert_tab(cx);
         }
@@ -5537,7 +5791,10 @@ impl SqlEditor {
         if self.vim.as_ref().is_some_and(|v| v.intercepts_text()) {
             return;
         }
-        if !self.previous_snippet_stop(cx) {
+        if self.previous_snippet_stop(cx) {
+            return;
+        }
+        if !(self.is_markdown() && self.markdown_indent_item(true, cx)) {
             self.unindent(cx);
         }
     }
@@ -5550,6 +5807,33 @@ impl SqlEditor {
 
     fn handle_dismiss(&mut self, _: &Dismiss, _: &mut Window, cx: &mut Context<Self>) {
         self.dismiss_transient_ui(cx);
+    }
+
+    /// Esc inside a notebook cell: dismiss transient UI the way Esc always
+    /// does and return `true`, or return `false` when there is nothing to
+    /// dismiss so the notebook can switch to command mode.
+    pub(crate) fn dismiss_for_command_mode(&mut self, cx: &mut Context<Self>) -> bool {
+        let transient = self.date_helper.is_some()
+            || self.hover_info.is_some()
+            || self.signature_help.is_some()
+            || self
+                .vim
+                .as_ref()
+                .is_some_and(|v| v.mode != VimMode::Normal || v.has_pending())
+            || self.snippet_session.is_some()
+            || self.goto_line_bar.as_ref().is_some_and(|bar| bar.visible)
+            || self.formatter_picker.is_some()
+            || self.format_dialog.is_some()
+            || self.convert_dialog.is_some()
+            || self.context_menu.is_some()
+            || self.completion_visible
+            || self.fim_visible
+            || !self.extra_cursors.is_empty()
+            || self.find_bar.as_ref().is_some_and(|bar| bar.visible);
+        if transient {
+            self.dismiss_transient_ui(cx);
+        }
+        transient
     }
 
     /// Esc ladder: one press dismisses the most transient thing on screen —
@@ -6336,7 +6620,8 @@ impl SqlEditor {
         use StandardContextItem::{Command, Separator, Submenu};
         let has_selection = self.has_selection();
         let has_text = !self.content.is_empty();
-        let sql_engine = !self.database_type.is_command_engine();
+        let sql_engine = !self.database_type.is_command_engine() && !self.is_markdown();
+        let runnable = !self.is_markdown();
         let cmd = |label: &'static str, enabled: bool, run: ContextCommand| Command {
             label,
             enabled,
@@ -6368,7 +6653,7 @@ impl SqlEditor {
                     sql: e.content.clone(),
                 });
             }),
-            cmd("Run Statement", true, |e, _w, cx| {
+            cmd("Run Statement", runnable, |e, _w, cx| {
                 cx.emit(SqlEditorEvent::RunStatementAt { offset: e.cursor });
             }),
             act(
@@ -6403,7 +6688,7 @@ impl SqlEditor {
                     }),
                     act(
                         "Toggle Line Comment",
-                        true,
+                        runnable,
                         Box::new(ToggleLineComment),
                         |e, w, cx| e.handle_toggle_line_comment(&ToggleLineComment, w, cx),
                     ),
@@ -6466,7 +6751,7 @@ impl SqlEditor {
         _: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        if self.services.is_some() {
+        if self.services.is_some() || self.is_markdown() {
             self.trigger_completions_manual(cx);
         }
     }
@@ -6597,7 +6882,7 @@ impl SqlEditor {
     /// Minify the selection — the statement under the caret when nothing is
     /// selected, the whole buffer otherwise — as one undoable edit.
     pub fn minify_sql_buffer(&mut self, cx: &mut Context<Self>) {
-        if self.database_type.is_command_engine() {
+        if self.database_type.is_command_engine() || self.is_markdown() {
             return;
         }
         let range = self
@@ -6635,6 +6920,7 @@ impl SqlEditor {
     /// re-flow.
     fn format_as_you_go(&mut self, cx: &mut Context<Self>) -> bool {
         if self.database_type.is_command_engine()
+            || self.is_markdown()
             || self.has_selection()
             || !self.extra_cursors.is_empty()
             || self.marked_range.is_some()
@@ -6723,8 +7009,8 @@ impl SqlEditor {
         prefs: &crate::preferences::SqlFormattingPreferences,
         cx: &mut Context<Self>,
     ) {
-        // The SQL formatter would mangle Redis command lines.
-        if self.database_type.is_command_engine() {
+        // The SQL formatter would mangle Redis command lines and Markdown.
+        if self.database_type.is_command_engine() || self.is_markdown() {
             return;
         }
         self.clear_extra_cursors();
@@ -7179,6 +7465,14 @@ impl SqlEditor {
     ) {
         self.edit_line_comments(CommentMode::Remove, cx);
     }
+    fn handle_toggle_block_comment(
+        &mut self,
+        _: &ToggleBlockComment,
+        _: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.toggle_block_comment(cx);
+    }
     fn handle_move_line_up(&mut self, _: &MoveLineUp, _: &mut Window, cx: &mut Context<Self>) {
         self.move_lines(true, cx);
     }
@@ -7471,7 +7765,8 @@ impl SqlEditor {
     /// caret placement: the feature is enabled, it's a plain single click,
     /// and exactly the configured modifier is held.
     fn is_ddl_navigation_click(&self, click_count: usize, modifiers: &gpui::Modifiers) -> bool {
-        self.ddl_nav_prefs.enabled
+        !self.is_markdown()
+            && self.ddl_nav_prefs.enabled
             && click_count == 1
             && self.ddl_nav_prefs.activation_modifier.matches_flags(
                 modifiers.platform,
@@ -7488,7 +7783,8 @@ impl SqlEditor {
     /// is held, and is skipped entirely while the pointer stays inside the
     /// currently highlighted span.
     fn update_link_hover(&mut self, modifiers: &gpui::Modifiers, cx: &mut Context<Self>) {
-        let modifier_held = self.ddl_nav_prefs.enabled
+        let modifier_held = !self.is_markdown()
+            && self.ddl_nav_prefs.enabled
             && self.ddl_nav_prefs.activation_modifier.matches_flags(
                 modifiers.platform,
                 modifiers.control,
@@ -8015,6 +8311,7 @@ impl SqlEditor {
             // stays reachable.
             let over_directive = self
                 .byte_offset_for_position(event.position)
+                .filter(|_| !self.is_markdown())
                 .and_then(|off| {
                     crate::sqlly_directive::directive_keyword_span_at(&self.content, off)
                 });

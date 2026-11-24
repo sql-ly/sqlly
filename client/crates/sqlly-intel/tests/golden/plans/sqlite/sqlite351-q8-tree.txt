@@ -1,0 +1,6 @@
+QUERY PLAN
+|--MATERIALIZE m
+|  `--SCAN orders USING INDEX orders_customer_idx
+|--SCAN a
+|--BLOOM FILTER ON b (t=?)
+`--SEARCH b USING AUTOMATIC COVERING INDEX (t=?)

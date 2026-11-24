@@ -1,0 +1,21 @@
+--- a/report.sqllynb
++++ b/report.sqllynb
+notebook title: "Refund review" -> "Refund review (EU)"
+parameter region default: "EU" -> "US"
+parameter added: day
+connection primary database: (none) -> "sales"
+connection primary label: "Sales" -> "Sales EU"
+cell c_tmp "scratch" (sql) removed from 3
+@@ -1 +0,0 @@
+-SELECT 1
+cell c_check "c_check" (assertion) spec.min: 1 -> 10
+cell c_orders "all_orders" (sql) moved 2 -> 3
+cell c_orders "all_orders" (sql) execution_policy.timeout_seconds: (none) -> 30
+cell c_orders "all_orders" (sql) renamed: "orders" -> "all_orders"
+cell c_orders "all_orders" (sql) source:
+@@ -1,3 +1,3 @@
+-SELECT id, total
++SELECT id, total, refund_total
+ FROM orders
+ WHERE region = :region
+cell c_kpi "refund_rate" (kpi) added at 4

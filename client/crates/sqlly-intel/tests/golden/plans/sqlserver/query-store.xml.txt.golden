@@ -1,0 +1,177 @@
+format: sqlserver-xml (Certain)
+statements: 1
+
+== statement 1
+cardinality_estimator_version: 160
+dialect: "SqlServer"
+estimated_rows: 5
+memory_grant: {granted_kb=0 max_used_kb=0 serial_desired_kb=6176 serial_required_kb=2560}
+notes: ["Compile CPU: 173 ms", "Compile memory: 520 kB", "Cached plan size: 88 kB"]
+optimization_level: "FULL"
+planning_time_ms: 233
+query_hash: "0x3AA3B0152934FC13"
+query_plan_hash: "0x5002BCDD97D95C83"
+settings: [{name="QUOTED_IDENTIFIER" value="false"}, {name="ARITHABORT" value="false"}, {name="CONCAT_NULL_YIELDS_NULL" value="true"}, {name="ANSI_NULLS" value="true"}, {name="ANSI_PADDING" value="true"}, {name="ANSI_WARNINGS" value="true"}, {name="NUMERIC_ROUNDABORT" value="false"}]
+source_format: "sqlserver-xml"
+statement_text: "SELECT c.country, COUNT(*) AS orders, SUM(o.total) AS revenue FROM dbo.orders o JOIN dbo.customers c ON c.customer_id = o.customer_id WHERE o.status = 'refunded..."
+statement_type: "SELECT"
+statistics_used: [{last_update="2026-11-23T23:04:12.66" modification_count=0 sampling_percent=100 schema="dbo" statistics="_WA_Sys_00000003_35BCFE0A" table="customers"}, {last_update="2026-11-23T23:03:31.64" modification_count=0 sampling_percent=100 schema="dbo" statistics="IX_orders_customer" table="orders"}, {last_update="2026-11-23T23:04:12.48" modification_count=0 sampling_percent=24.1267 schema="dbo" statistics="_WA_Sys_00000005_37A5467C" table="orders"}, {last_update="2026-11-23T23:04:12.63" modification_count=0 sampling_percent=100 schema="dbo" statistics="PK__customer__CD65CB850EC2D984" table="customers"}, {last_update="2026-11-23T23:03:32.10" modification_count=0 sampling_percent=100 schema="dbo" statistics="IX_customers_email" table="customers"}, {last_update="2026-11-23T23:04:12.52" modification_count=0 sampling_percent=23.6987 schema="dbo" statistics="_WA_Sys_00000004_37A5467C" table="orders"}, {last_update="2026-11-23T23:03:31.77" modification_count=0 sampling_percent=100 schema="dbo" statistics="IX_orders_date" table="orders"}]
+total_subtree_cost: 4.87187
+warnings: [{TableScan={schema="dbo" table="orders"}}, {MissingIndex={database="[Shop]" equality_columns=["status"] impact=81.8055 included_columns=["customer_id"] inequality_columns=["total"] schema="[dbo]" table="[orders]"}}, {TableScan={schema="dbo" table="customers"}}]
+operators: 12
+  #0 Sort [Sort]
+      estimated_cost: 4.87187
+      estimated_cpu: 0.000118
+      estimated_executions: 1
+      estimated_io: 0.011261
+      estimated_row_width: 30
+      estimated_rows: 5
+      execution_mode: "Row"
+      output_columns: ["c.country", "Expr1002", "Expr1003"]
+      output_list: ["c.country", "Expr1002", "Expr1003"]
+      properties: [{name="Distinct" value="0"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}, {name="Memory Fraction Input" value="0.5"}, {name="Memory Fraction Output" value="1"}]
+      sort_keys: ["Expr1003 DESC"]
+    #2 Compute Scalar [Compute Scalar]
+        estimated_cost: 4.86049
+        estimated_cpu: 0.000001
+        estimated_executions: 1
+        estimated_row_width: 30
+        estimated_rows: 5
+        execution_mode: "Row"
+        output_columns: ["c.country", "Expr1002", "Expr1003"]
+        output_list: ["c.country", "Expr1002", "Expr1003"]
+        properties: [{name="Defined Values" value="Expr1002 = CONVERT_IMPLICIT(int,[globalagg1005],0)"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}]
+      #3 Stream Aggregate [Aggregate]
+          estimated_cost: 4.86049
+          estimated_cpu: 0.000012
+          estimated_executions: 1
+          estimated_row_width: 34
+          estimated_rows: 5
+          execution_mode: "Row"
+          group_keys: ["c.country"]
+          output_columns: ["c.country", "Expr1003", "globalagg1005"]
+          output_list: ["c.country", "Expr1003", "globalagg1005"]
+          properties: [{name="Defined Values" value="globalagg1005 = SUM([partialagg1004]); Expr1003 = SUM([partialagg1006])"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}]
+        #4 Sort [Sort]
+            estimated_cost: 4.86048
+            estimated_cpu: 0.000191
+            estimated_executions: 1
+            estimated_io: 0.011261
+            estimated_row_width: 34
+            estimated_rows: 15
+            execution_mode: "Row"
+            output_columns: ["c.country", "partialagg1004", "partialagg1006"]
+            output_list: ["c.country", "partialagg1004", "partialagg1006"]
+            properties: [{name="Distinct" value="0"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}, {name="Memory Fraction Input" value="0.00884956"}, {name="Memory Fraction Output" value="0.5"}]
+            sort_keys: ["c.country"]
+          #5 Parallelism [Gather Streams]
+              estimated_cost: 4.84903
+              estimated_cpu: 0.028522
+              estimated_executions: 1
+              estimated_row_width: 34
+              estimated_rows: 15
+              execution_mode: "Row"
+              output_columns: ["c.country", "partialagg1004", "partialagg1006"]
+              output_list: ["c.country", "partialagg1004", "partialagg1006"]
+              parallel: yes
+              properties: [{name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}]
+            #6 Hash Match [Partial Aggregate]
+                estimated_cost: 4.82051
+                estimated_cpu: 0.049515
+                estimated_executions: 1
+                estimated_row_width: 34
+                estimated_rows: 15
+                execution_mode: "Row"
+                group_keys: ["c.country"]
+                output_columns: ["c.country", "partialagg1004", "partialagg1006"]
+                output_list: ["c.country", "partialagg1004", "partialagg1006"]
+                parallel: yes
+                properties: [{name="Build Residual" value="[Shop].[dbo].[customers].[country] as [c].[country] = [Shop].[dbo].[customers].[country] as [c].[country]"}, {name="Defined Values" value="partialagg1004 = COUNT(*); partialagg1006 = SUM([Shop].[dbo].[orders].[total] as [o].[total])"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}, {name="Memory Fraction Input" value="0"}, {name="Memory Fraction Output" value="0"}]
+              #7 Hash Match [Inner Join]
+                  estimated_cost: 4.77099
+                  estimated_cpu: 0.165845
+                  estimated_executions: 1
+                  estimated_row_width: 18
+                  estimated_rows: 13634.6
+                  execution_mode: "Row"
+                  join_predicate: "o.customer_id = c.customer_id"
+                  join_type: "Inner"
+                  output_columns: ["o.total", "c.country"]
+                  output_list: ["o.total", "c.country"]
+                  parallel: yes
+                  properties: [{name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}, {name="Memory Fraction Input" value="1"}, {name="Memory Fraction Output" value="0.99115"}]
+                #8 Bitmap [Bitmap Create]
+                    estimated_cost: 4.28559
+                    estimated_cpu: 0.044408
+                    estimated_executions: 1
+                    estimated_row_width: 20
+                    estimated_rows: 13634.6
+                    execution_mode: "Row"
+                    output_columns: ["o.customer_id", "o.total"]
+                    output_list: ["o.customer_id", "o.total"]
+                    parallel: yes
+                    properties: [{name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}]
+                  #9 Parallelism [Repartition Streams]
+                      estimated_cost: 4.28559
+                      estimated_cpu: 0.044408
+                      estimated_executions: 1
+                      estimated_row_width: 20
+                      estimated_rows: 13634.6
+                      execution_mode: "Row"
+                      output_columns: ["o.customer_id", "o.total"]
+                      output_list: ["o.customer_id", "o.total"]
+                      parallel: yes
+                      properties: [{name="Partition Columns" value="o.customer_id"}, {name="PartitioningType" value="Hash"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}]
+                    #10 Clustered Index Scan [Clustered Index Scan]
+                        alias: "o"
+                        database: "Shop"
+                        estimated_cost: 4.15318
+                        estimated_cpu: 0.110052
+                        estimated_executions: 1
+                        estimated_io: 4.04312
+                        estimated_row_width: 31
+                        estimated_rows: 13634.6
+                        estimated_rows_read: 300000
+                        execution_mode: "Row"
+                        filter: "[Shop].[dbo].[orders].[total] as [o].[total]>(1200.00) AND [Shop].[dbo].[orders].[status] as [o].[status]='refunded'"
+                        index_name: "PK__orders__46596229A6DBB338"
+                        output_columns: ["o.customer_id", "o.total"]
+                        output_list: ["o.customer_id", "o.total"]
+                        parallel: yes
+                        properties: [{name="Ordered" value="0"}, {name="ForcedIndex" value="0"}, {name="ForceScan" value="0"}, {name="NoExpandHint" value="0"}, {name="Storage" value="RowStore"}, {name="TableCardinality" value="300000"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}, {name="IndexKind" value="Clustered"}, {name="Storage" value="RowStore"}]
+                        relation: "orders"
+                        schema: "dbo"
+                        table_cardinality: 300000
+                        warnings: [{TableScan={schema="dbo" table="orders"}}, {MissingIndex={database="[Shop]" equality_columns=["status"] impact=81.8055 included_columns=["customer_id"] inequality_columns=["total"] schema="[dbo]" table="[orders]"}}]
+                #11 Parallelism [Repartition Streams]
+                    estimated_cost: 0.319557
+                    estimated_cpu: 0.078788
+                    estimated_executions: 1
+                    estimated_row_width: 13
+                    estimated_rows: 50000
+                    execution_mode: "Row"
+                    output_columns: ["c.customer_id", "c.country"]
+                    output_list: ["c.customer_id", "c.country"]
+                    parallel: yes
+                    properties: [{name="Partition Columns" value="c.customer_id"}, {name="PartitioningType" value="Hash"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}]
+                  #12 Clustered Index Scan [Clustered Index Scan]
+                      alias: "c"
+                      database: "Shop"
+                      estimated_cost: 0.24077
+                      estimated_cpu: 0.018386
+                      estimated_executions: 1
+                      estimated_io: 0.222384
+                      estimated_row_width: 13
+                      estimated_rows: 50000
+                      estimated_rows_read: 50000
+                      execution_mode: "Row"
+                      filter: "PROBE([Bitmap1007],[Shop].[dbo].[customers].[customer_id] as [c].[customer_id],N'[IN ROW]')"
+                      index_name: "PK__customer__CD65CB850EC2D984"
+                      output_columns: ["c.customer_id", "c.country"]
+                      output_list: ["c.customer_id", "c.country"]
+                      parallel: yes
+                      properties: [{name="Ordered" value="0"}, {name="ForcedIndex" value="0"}, {name="ForceScan" value="0"}, {name="NoExpandHint" value="0"}, {name="Storage" value="RowStore"}, {name="TableCardinality" value="50000"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}, {name="IndexKind" value="Clustered"}, {name="Storage" value="RowStore"}]
+                      relation: "customers"
+                      schema: "dbo"
+                      table_cardinality: 50000
+                      warnings: [{TableScan={schema="dbo" table="customers"}}]

@@ -1,0 +1,61 @@
+format: spark-text (Certain)
+statements: 1
+
+== statement 1
+source_format: "spark-text"
+statement_type: "EXPLAIN"
+operators: 14
+  #1 Union [Union]
+      properties: [{name="Operator id" value="14"}, {name="Codegen stage" value="2"}]
+    #2 Project [Project]
+        output_columns: ["name#32"]
+        properties: [{name="Operator id" value="9"}, {name="Codegen stage" value="2"}, {name="Input" value="[id#31L, name#32]"}]
+      #3 BroadcastHashJoin [BroadcastHashJoin]
+          join_predicate: "id#31L = customer_id#14L"
+          join_type: "Semi"
+          output_list: ["Condition: id#31L = customer_id#14L"]
+          properties: [{name="Arguments" value="LeftSemi BuildRight"}, {name="Operator id" value="8"}, {name="Codegen stage" value="2"}, {name="Left keys" value="[id#31L]"}, {name="Right keys" value="[customer_id#14L]"}]
+        #4 ColumnarToRow [ColumnarToRow]
+            properties: [{name="Operator id" value="2"}, {name="Codegen stage" value="2"}, {name="Input" value="[id#31L, name#32]"}]
+          #5 Scan parquet [Scan parquet]
+              database: "spark_catalog"
+              output_columns: ["id#31L", "name#32"]
+              output_list: ["customers"]
+              properties: [{name="Operator id" value="1"}, {name="Batched" value="true"}, {name="Location" value="InMemoryFileIndex [file:/tmp/spark-warehouse/customers]"}, {name="ReadSchema" value="struct<id:bigint,name:string>"}]
+              relation: "customers"
+              schema: "default"
+              warnings: [{TableScan={schema="default" table="customers"}}]
+        #6 BroadcastExchange [BroadcastExchange]
+            properties: [{name="Operator id" value="7"}, {name="Input" value="[customer_id#14L]"}, {name="Arguments" value="HashedRelationBroadcastMode(List(input[0, bigint, true]),false), [plan_id=616]"}]
+          #7 Project [Project]
+              output_columns: ["customer_id#14L"]
+              properties: [{name="Operator id" value="6"}, {name="Codegen stage" value="1"}, {name="Input" value="[customer_id#14L, total#15]"}]
+            #8 Filter [Filter]
+                filter: "isnotnull(total#15) AND (total#15 > 499.00)"
+                output_list: ["Filter: isnotnull(total#15) AND (total#15 > 499.00)"]
+                properties: [{name="Operator id" value="5"}, {name="Codegen stage" value="1"}, {name="Input" value="[customer_id#14L, total#15]"}]
+              #9 ColumnarToRow [ColumnarToRow]
+                  properties: [{name="Operator id" value="4"}, {name="Codegen stage" value="1"}, {name="Input" value="[customer_id#14L, total#15]"}]
+                #10 Scan parquet [Scan parquet]
+                    database: "spark_catalog"
+                    output_columns: ["customer_id#14L", "total#15"]
+                    output_list: ["orders"]
+                    properties: [{name="Operator id" value="3"}, {name="Batched" value="true"}, {name="Location" value="InMemoryFileIndex [file:/tmp/spark-warehouse/orders]"}, {name="PushedFilters" value="[IsNotNull(total), GreaterThan(total,499.00)]"}, {name="ReadSchema" value="struct<customer_id:bigint,total:decimal(11,2)>"}]
+                    relation: "orders"
+                    schema: "default"
+    #11 Project [Project]
+        output_columns: ["sku#75"]
+        properties: [{name="Operator id" value="13"}, {name="Input" value="[sku#75, price#76, qty#77L]"}]
+      #12 Filter [Filter]
+          filter: "isnotnull(price#76) AND (price#76 < 1.00)"
+          output_list: ["Filter: isnotnull(price#76) AND (price#76 < 1.00)"]
+          properties: [{name="Operator id" value="12"}, {name="Input" value="[sku#75, price#76, qty#77L]"}]
+        #13 ColumnarToRow [ColumnarToRow]
+            properties: [{name="Operator id" value="11"}, {name="Input" value="[sku#75, price#76, qty#77L]"}]
+          #14 Scan parquet [Scan parquet]
+              database: "spark_catalog"
+              output_columns: ["sku#75", "price#76", "qty#77L"]
+              output_list: ["order_items"]
+              properties: [{name="Operator id" value="10"}, {name="Batched" value="true"}, {name="Location" value="CatalogFileIndex [file:/tmp/spark-warehouse/order_items]"}, {name="PushedFilters" value="[IsNotNull(price), LessThan(price,1.00)]"}, {name="ReadSchema" value="struct<sku:string,price:decimal(11,2)>"}]
+              relation: "order_items"
+              schema: "default"

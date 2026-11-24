@@ -1,0 +1,7 @@
+== Physical Plan ==
+Execute InsertIntoHadoopFsRelationCommand file:/tmp/spark-warehouse/customers, false, Parquet, [path=file:/tmp/spark-warehouse/customers], Append, `spark_catalog`.`default`.`customers`, org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe, org.apache.spark.sql.execution.datasources.InMemoryFileIndex(file:/tmp/spark-warehouse/customers), [id, name, region]
++- WriteFiles
+   +- *(1) Project [id#281L, x AS name#285, east AS region#286]
+      +- *(1) Range (0, 5, step=1, splits=7)
+
+

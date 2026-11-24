@@ -2111,6 +2111,30 @@ mod tests {
         assert_eq!(end, 6);
     }
 
+    // https://github.com/TablePlus/TablePlus/issues/3962
+    #[test]
+    fn multi_megabyte_json_opens_as_a_capped_windowed_tree() {
+        // A few MB of JSON: an array of 40,000 small objects.
+        let mut json = String::from("[");
+        for i in 0..40_000 {
+            if i > 0 {
+                json.push(',');
+            }
+            json.push_str(&format!(
+                r#"{{"id":{i},"name":"item-{i}","tags":["a","b"],"ok":true}}"#
+            ));
+        }
+        json.push(']');
+        assert!(json.len() > 2 * 1024 * 1024);
+        let root = build_tree(&json, StructuredDataKind::Json).unwrap();
+        let (rows, truncated) = collect_visible_rows(&root, &HashSet::new(), "");
+        assert_eq!(rows.len(), MAX_TREE_ROWS, "the flatten is capped");
+        assert!(truncated > 0, "the rest is reported, not built");
+        // Only the viewport's slice of the capped rows is painted.
+        let (start, end) = tree_window_bounds(600.0, 0.0, 20.0, rows.len());
+        assert!(end - start < 50, "painted {start}..{end}");
+    }
+
     #[test]
     fn flatten_cache_hits_on_same_collapsed_and_search() {
         let json = json_object_with_keys(20);

@@ -1,0 +1,427 @@
+format: sqlserver-xml (Certain)
+statements: 5
+
+== statement 1
+cardinality_estimator_version: 160
+cpu_time_ms: 3
+dialect: "SqlServer"
+early_abort_reason: "GoodEnoughPlanFound"
+estimated_rows: 2000
+execution_time_ms: 3
+has_actuals: yes
+memory_grant: {granted_kb=0 max_used_kb=0 serial_desired_kb=0 serial_required_kb=0}
+non_parallel_reason: "TableVariableTransactionsDoNotSupportParallelNestedTransaction"
+notes: ["Plan retrieved from the plan cache", "Compile CPU: 0 ms", "Compile memory: 152 kB", "Cached plan size: 16 kB"]
+optimization_level: "FULL"
+query_hash: "0xCECA3A581A1FAB0E"
+query_plan_hash: "0x27C94501B88766AC"
+settings: [{name="QUOTED_IDENTIFIER" value="false"}, {name="ARITHABORT" value="false"}, {name="CONCAT_NULL_YIELDS_NULL" value="true"}, {name="ANSI_NULLS" value="true"}, {name="ANSI_PADDING" value="true"}, {name="ANSI_WARNINGS" value="true"}, {name="NUMERIC_ROUNDABORT" value="false"}]
+source_format: "sqlserver-xml"
+statement_text: "INSERT @t SELECT TOP (2000) order_id, customer_id FROM dbo.orders"
+statement_type: "INSERT"
+total_subtree_cost: 0.062589
+warnings: ["RowGoal"]
+operators: 3
+  #0 Clustered Index Insert [Insert]
+      actual_cpu_ms: 3
+      actual_rows: 2000
+      actual_rows_total: 2000
+      actual_self_time_ms: 3
+      actual_time_ms: 3
+      buffers: {logical_reads=974 physical_reads=0 read_aheads=0}
+      estimated_cost: 0.062589
+      estimated_cpu: 0.002
+      estimated_executions: 1
+      estimated_io: 0.027987
+      estimated_row_width: 9
+      estimated_rows: 2000
+      execution_mode: "Row"
+      index_name: "PK__#AA7DFC6__3213E83FE8F5C9E7"
+      loops: 1
+      properties: [{name="Set Predicate" value="[id] = [Shop].[dbo].[orders].[order_id],[v] = [Shop].[dbo].[orders].[customer_id]"}, {name="DMLRequestSort" value="1"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}, {name="Storage" value="RowStore"}, {name="TableVariable" value="true"}]
+      relation: "@t"
+      row_count: 2000
+    #1 Top [Top]
+        actual_rows: 2000
+        actual_rows_total: 2000
+        estimated_cost: 0.032602
+        estimated_cpu: 0.0002
+        estimated_executions: 1
+        estimated_row_width: 15
+        estimated_rows: 2000
+        execution_mode: "Row"
+        loops: 1
+        output_columns: ["orders.order_id", "orders.customer_id"]
+        output_list: ["orders.order_id", "orders.customer_id"]
+        properties: [{name="Top Expression" value="(2000)"}, {name="RowCount" value="0"}, {name="IsPercent" value="0"}, {name="WithTies" value="0"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}]
+        row_count: 2000
+      #2 Clustered Index Scan [Clustered Index Scan]
+          actual_rows: 2000
+          actual_rows_total: 2000
+          buffers: {logical_reads=47 physical_reads=0 read_aheads=0}
+          database: "Shop"
+          estimated_cost: 0.032402
+          estimated_cpu: 0.330157
+          estimated_executions: 1
+          estimated_io: 4.04312
+          estimated_row_width: 15
+          estimated_rows: 2000
+          estimated_rows_read: 300000
+          execution_mode: "Row"
+          index_name: "PK__orders__46596229A6DBB338"
+          loops: 1
+          output_columns: ["orders.order_id", "orders.customer_id"]
+          output_list: ["orders.order_id", "orders.customer_id"]
+          properties: [{name="Ordered" value="1"}, {name="ScanDirection" value="FORWARD"}, {name="ForcedIndex" value="0"}, {name="ForceSeek" value="0"}, {name="ForceScan" value="0"}, {name="NoExpandHint" value="0"}, {name="Storage" value="RowStore"}, {name="TableCardinality" value="300000"}, {name="EstimateRowsWithoutRowGoal" value="300000"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}, {name="IndexKind" value="Clustered"}, {name="Storage" value="RowStore"}, {name="Actual Scans" value="1"}]
+          relation: "orders"
+          row_count: 2000
+          rows_read: 2000
+          schema: "dbo"
+          table_cardinality: 300000
+          warnings: ["RowGoal"]
+
+== statement 2
+cardinality_estimator_version: 160
+cpu_time_ms: 40
+degree_of_parallelism: 1
+dialect: "SqlServer"
+estimated_rows: 1
+execution_time_ms: 40
+has_actuals: yes
+memory_grant: {desired_kb=1928 grant_wait_seconds=0 granted_kb=1928 max_query_memory_kb=353280 max_used_kb=704 requested_kb=1928 required_kb=1024 serial_desired_kb=1928 serial_required_kb=1024}
+notes: ["Plan retrieved from the plan cache", "Compile CPU: 1 ms", "Compile memory: 224 kB", "Cached plan size: 40 kB", "Memory grant feedback adjusted: No: First Execution"]
+optimization_level: "FULL"
+planning_time_ms: 1
+query_hash: "0x0C0A12D4FC16BB3B"
+query_plan_hash: "0x6B90E25258D476DB"
+settings: [{name="QUOTED_IDENTIFIER" value="false"}, {name="ARITHABORT" value="false"}, {name="CONCAT_NULL_YIELDS_NULL" value="true"}, {name="ANSI_NULLS" value="true"}, {name="ANSI_PADDING" value="true"}, {name="ANSI_WARNINGS" value="true"}, {name="NUMERIC_ROUNDABORT" value="false"}]
+source_format: "sqlserver-xml"
+statement_text: "SELECT COUNT(*) FROM @t t JOIN dbo.orders o ON o.order_id = t.id"
+statement_type: "SELECT"
+statistics_used: [{last_update="2026-11-23T23:04:29.59" modification_count=0 sampling_percent=24.672 schema="dbo" statistics="PK__orders__46596229A6DBB338" table="orders"}]
+total_subtree_cost: 2.14162
+operators: 5
+  #0 Compute Scalar [Compute Scalar]
+      estimated_cost: 2.14162
+      estimated_executions: 1
+      estimated_row_width: 11
+      estimated_rows: 1
+      execution_mode: "Row"
+      output_columns: ["Expr1002"]
+      output_list: ["Expr1002"]
+      properties: [{name="Defined Values" value="Expr1002 = CONVERT_IMPLICIT(int,[Expr1005],0)"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}]
+    #1 Stream Aggregate [Aggregate]
+        actual_cpu_ms: 40
+        actual_rows: 1
+        actual_rows_total: 1
+        actual_time_ms: 40
+        estimated_cost: 2.14162
+        estimated_cpu: 0.001201
+        estimated_executions: 1
+        estimated_row_width: 11
+        estimated_rows: 1
+        execution_mode: "Row"
+        loops: 1
+        output_columns: ["Expr1005"]
+        output_list: ["Expr1005"]
+        properties: [{name="Defined Values" value="Expr1005 = Count(*)"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}]
+        row_count: 1
+      #2 Hash Match [Inner Join]
+          actual_cpu_ms: 40
+          actual_rows: 2000
+          actual_rows_total: 2000
+          actual_self_time_ms: 16
+          actual_time_ms: 40
+          buffers: {logical_reads=0 physical_reads=0 read_aheads=0}
+          estimated_cost: 2.14042
+          estimated_cpu: 1.41128
+          estimated_executions: 1
+          estimated_row_width: 9
+          estimated_rows: 2000
+          execution_mode: "Row"
+          join_predicate: "t.id = o.order_id"
+          join_type: "Inner"
+          loops: 1
+          peak_memory_kb: 704
+          properties: [{name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}, {name="Memory Fraction Input" value="1"}, {name="Memory Fraction Output" value="1"}, {name="Input Memory Grant kB" value="1928"}, {name="Output Memory Grant kB" value="1928"}]
+          row_count: 2000
+        #3 Clustered Index Scan [Clustered Index Scan]
+            actual_rows: 2000
+            actual_rows_total: 2000
+            alias: "t"
+            buffers: {logical_reads=7 physical_reads=0 read_aheads=0}
+            estimated_cost: 0.008445
+            estimated_cpu: 0.002357
+            estimated_executions: 1
+            estimated_io: 0.006088
+            estimated_row_width: 11
+            estimated_rows: 2000
+            estimated_rows_read: 2000
+            execution_mode: "Row"
+            index_name: "PK__#AA7DFC6__3213E83FE8F5C9E7"
+            loops: 1
+            output_columns: ["t.id"]
+            output_list: ["t.id"]
+            properties: [{name="Ordered" value="0"}, {name="ForcedIndex" value="0"}, {name="ForceScan" value="0"}, {name="NoExpandHint" value="0"}, {name="Storage" value="RowStore"}, {name="TableCardinality" value="2000"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}, {name="Storage" value="RowStore"}, {name="TableVariable" value="true"}, {name="Actual Scans" value="1"}]
+            relation: "@t"
+            row_count: 2000
+            rows_read: 2000
+            table_cardinality: 2000
+        #4 Index Scan [Index Scan]
+            actual_cpu_ms: 24
+            actual_rows: 300000
+            actual_rows_total: 300000
+            actual_self_time_ms: 24
+            actual_time_ms: 24
+            alias: "o"
+            buffers: {logical_reads=528 physical_reads=0 read_aheads=0}
+            database: "Shop"
+            estimated_cost: 0.720689
+            estimated_cpu: 0.330157
+            estimated_executions: 1
+            estimated_io: 0.390532
+            estimated_row_width: 11
+            estimated_rows: 300000
+            estimated_rows_read: 300000
+            execution_mode: "Row"
+            index_name: "IX_orders_customer"
+            loops: 1
+            output_columns: ["o.order_id"]
+            output_list: ["o.order_id"]
+            properties: [{name="Ordered" value="0"}, {name="ForcedIndex" value="0"}, {name="ForceSeek" value="0"}, {name="ForceScan" value="0"}, {name="NoExpandHint" value="0"}, {name="Storage" value="RowStore"}, {name="TableCardinality" value="300000"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}, {name="IndexKind" value="NonClustered"}, {name="Storage" value="RowStore"}, {name="Actual Scans" value="1"}]
+            relation: "orders"
+            row_count: 300000
+            rows_read: 300000
+            schema: "dbo"
+            table_cardinality: 300000
+
+== statement 3
+cardinality_estimator_version: 160
+cpu_time_ms: 2
+dialect: "SqlServer"
+estimated_rows: 5
+execution_time_ms: 2
+has_actuals: yes
+memory_grant: {granted_kb=0 max_used_kb=0 serial_desired_kb=0 serial_required_kb=0}
+non_parallel_reason: "TSQLUserDefinedFunctionsNotParallelizable"
+notes: ["Plan retrieved from the plan cache", "Compile CPU: 3 ms", "Compile memory: 208 kB", "Cached plan size: 16 kB"]
+optimization_level: "TRIVIAL"
+planning_time_ms: 3
+query_hash: "0xF3F4002FB8F39E23"
+query_plan_hash: "0x5593B0F3533BFEC4"
+settings: [{name="QUOTED_IDENTIFIER" value="false"}, {name="ARITHABORT" value="false"}, {name="CONCAT_NULL_YIELDS_NULL" value="true"}, {name="ANSI_NULLS" value="true"}, {name="ANSI_PADDING" value="true"}, {name="ANSI_WARNINGS" value="true"}, {name="NUMERIC_ROUNDABORT" value="false"}]
+source_format: "sqlserver-xml"
+statement_text: "SELECT TOP (5) order_id, dbo.fn_tax(total) AS tax FROM dbo.orders ORDER BY order_id"
+statement_type: "SELECT"
+total_subtree_cost: 0.003342
+warnings: ["RowGoal"]
+operators: 3
+  #0 Compute Scalar [Compute Scalar]
+      actual_cpu_ms: 2
+      actual_rows: 5
+      actual_rows_total: 5
+      actual_self_time_ms: 2
+      actual_time_ms: 2
+      estimated_cost: 0.003342
+      estimated_cpu: 0.000001
+      estimated_executions: 1
+      estimated_row_width: 20
+      estimated_rows: 5
+      execution_mode: "Row"
+      loops: 1
+      output_columns: ["orders.order_id", "Expr1002"]
+      output_list: ["orders.order_id", "Expr1002"]
+      properties: [{name="Defined Values" value="Expr1002 = [Shop].[dbo].[fn_tax]([Shop].[dbo].[orders].[total])"}, {name="User Defined Function" value="[Shop].[dbo].[fn_tax]"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}]
+      row_count: 5
+      udf_cpu_ms: 1
+      udf_elapsed_ms: 1
+    #1 Top [Top]
+        actual_rows: 5
+        actual_rows_total: 5
+        estimated_cost: 0.003342
+        estimated_cpu: 0.000001
+        estimated_executions: 1
+        estimated_row_width: 20
+        estimated_rows: 5
+        execution_mode: "Row"
+        loops: 1
+        output_columns: ["orders.order_id", "orders.total"]
+        output_list: ["orders.order_id", "orders.total"]
+        properties: [{name="Top Expression" value="(5)"}, {name="RowCount" value="0"}, {name="IsPercent" value="0"}, {name="WithTies" value="0"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}]
+        row_count: 5
+      #2 Clustered Index Scan [Clustered Index Scan]
+          actual_rows: 5
+          actual_rows_total: 5
+          buffers: {logical_reads=3 physical_reads=0 read_aheads=0}
+          database: "Shop"
+          estimated_cost: 0.003341
+          estimated_cpu: 0.330157
+          estimated_executions: 1
+          estimated_io: 4.04312
+          estimated_row_width: 20
+          estimated_rows: 5
+          estimated_rows_read: 300000
+          execution_mode: "Row"
+          index_name: "PK__orders__46596229A6DBB338"
+          loops: 1
+          output_columns: ["orders.order_id", "orders.total"]
+          output_list: ["orders.order_id", "orders.total"]
+          properties: [{name="Ordered" value="1"}, {name="ScanDirection" value="FORWARD"}, {name="ForcedIndex" value="0"}, {name="ForceSeek" value="0"}, {name="ForceScan" value="0"}, {name="NoExpandHint" value="0"}, {name="Storage" value="RowStore"}, {name="TableCardinality" value="300000"}, {name="EstimateRowsWithoutRowGoal" value="300000"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}, {name="IndexKind" value="Clustered"}, {name="Storage" value="RowStore"}, {name="Actual Scans" value="1"}]
+          relation: "orders"
+          row_count: 5
+          rows_read: 5
+          schema: "dbo"
+          table_cardinality: 300000
+          warnings: ["RowGoal"]
+
+== statement 4
+cardinality_estimator_version: 160
+degree_of_parallelism: 1
+dialect: "SqlServer"
+early_abort_reason: "GoodEnoughPlanFound"
+estimated_rows: 1
+has_actuals: yes
+memory_grant: {granted_kb=0 max_used_kb=0 serial_desired_kb=0 serial_required_kb=0}
+notes: ["Plan retrieved from the plan cache", "Compile CPU: 1 ms", "Compile memory: 248 kB", "Cached plan size: 24 kB"]
+optimization_level: "FULL"
+planning_time_ms: 1
+query_hash: "0x502B4ACE60D7B711"
+query_plan_hash: "0x074E1CDEA81A7C7A"
+settings: [{name="QUOTED_IDENTIFIER" value="false"}, {name="ARITHABORT" value="false"}, {name="CONCAT_NULL_YIELDS_NULL" value="true"}, {name="ANSI_NULLS" value="true"}, {name="ANSI_PADDING" value="true"}, {name="ANSI_WARNINGS" value="true"}, {name="NUMERIC_ROUNDABORT" value="false"}]
+source_format: "sqlserver-xml"
+statement_text: "IF EXISTS (SELECT 1 FROM dbo.customers WHERE country = 'JP')"
+statement_type: "COND WITH QUERY"
+statistics_used: [{last_update="2026-11-23T23:04:12.66" modification_count=0 sampling_percent=100 schema="dbo" statistics="_WA_Sys_00000003_35BCFE0A" table="customers"}, {last_update="2026-11-23T23:03:32.10" modification_count=0 sampling_percent=100 schema="dbo" statistics="IX_customers_email" table="customers"}]
+total_subtree_cost: 0.003313
+warnings: [{TableScan={schema="dbo" table="customers"}}, "RowGoal"]
+operators: 4
+  #0 Compute Scalar [Compute Scalar]
+      estimated_cost: 0.003313
+      estimated_cpu: 0
+      estimated_executions: 1
+      estimated_row_width: 11
+      estimated_rows: 1
+      execution_mode: "Row"
+      output_columns: ["Expr1003"]
+      output_list: ["Expr1003"]
+      properties: [{name="Defined Values" value="Expr1003 = CASE WHEN [Expr1004] THEN (1) ELSE (0) END"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}]
+    #1 Nested Loops [Left Semi Join]
+        actual_rows: 1
+        actual_rows_total: 1
+        estimated_cost: 0.003313
+        estimated_cpu: 0.000004
+        estimated_executions: 1
+        estimated_row_width: 9
+        estimated_rows: 1
+        execution_mode: "Row"
+        join_type: "Left Semi"
+        loops: 1
+        output_columns: ["Expr1004"]
+        output_list: ["Expr1004"]
+        properties: [{name="Probe Column" value="Expr1004"}, {name="Optimized" value="0"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}]
+        row_count: 1
+      #2 Constant Scan [Constant Scan]
+          actual_rows: 1
+          actual_rows_total: 1
+          estimated_cost: 0.000001
+          estimated_cpu: 0.000001
+          estimated_executions: 1
+          estimated_row_width: 9
+          estimated_rows: 1
+          execution_mode: "Row"
+          loops: 1
+          properties: [{name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}]
+          row_count: 1
+      #3 Clustered Index Scan [Clustered Index Scan]
+          actual_rows: 1
+          actual_rows_total: 1
+          buffers: {logical_reads=2 physical_reads=0 read_aheads=0}
+          database: "Shop"
+          estimated_cost: 0.003305
+          estimated_cpu: 0.055157
+          estimated_executions: 1
+          estimated_io: 0.222384
+          estimated_row_width: 9
+          estimated_rows: 1
+          estimated_rows_read: 50000
+          execution_mode: "Row"
+          filter: "[Shop].[dbo].[customers].[country]='JP'"
+          index_name: "PK__customer__CD65CB850EC2D984"
+          loops: 1
+          properties: [{name="Ordered" value="0"}, {name="ForcedIndex" value="0"}, {name="ForceScan" value="0"}, {name="NoExpandHint" value="0"}, {name="Storage" value="RowStore"}, {name="TableCardinality" value="50000"}, {name="EstimateRowsWithoutRowGoal" value="10000"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}, {name="IndexKind" value="Clustered"}, {name="Storage" value="RowStore"}, {name="Actual Scans" value="1"}]
+          relation: "customers"
+          row_count: 1
+          rows_read: 3
+          schema: "dbo"
+          table_cardinality: 50000
+          warnings: [{TableScan={schema="dbo" table="customers"}}, "RowGoal"]
+
+== statement 5
+cardinality_estimator_version: 160
+cpu_time_ms: 4
+degree_of_parallelism: 1
+dialect: "SqlServer"
+estimated_rows: 1
+execution_time_ms: 4
+has_actuals: yes
+memory_grant: {granted_kb=0 max_used_kb=0 serial_desired_kb=0 serial_required_kb=0}
+notes: ["Plan retrieved from the plan cache", "Compile CPU: 0 ms", "Compile memory: 176 kB", "Cached plan size: 16 kB"]
+optimization_level: "TRIVIAL"
+query_hash: "0xCF50D4D5BDCC49BE"
+query_plan_hash: "0xC2E0E12DF3F7280B"
+settings: [{name="QUOTED_IDENTIFIER" value="false"}, {name="ARITHABORT" value="false"}, {name="CONCAT_NULL_YIELDS_NULL" value="true"}, {name="ANSI_NULLS" value="true"}, {name="ANSI_PADDING" value="true"}, {name="ANSI_WARNINGS" value="true"}, {name="NUMERIC_ROUNDABORT" value="false"}]
+source_format: "sqlserver-xml"
+statement_text: "SELECT COUNT(*) FROM dbo.customers"
+statement_type: "SELECT"
+total_subtree_cost: 0.249764
+operators: 3
+  #0 Compute Scalar [Compute Scalar]
+      estimated_cost: 0.249764
+      estimated_executions: 1
+      estimated_row_width: 11
+      estimated_rows: 1
+      execution_mode: "Row"
+      output_columns: ["Expr1002"]
+      output_list: ["Expr1002"]
+      properties: [{name="Defined Values" value="Expr1002 = CONVERT_IMPLICIT(int,[Expr1003],0)"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}]
+    #1 Stream Aggregate [Aggregate]
+        actual_cpu_ms: 4
+        actual_rows: 1
+        actual_rows_total: 1
+        actual_self_time_ms: 1
+        actual_time_ms: 4
+        estimated_cost: 0.249764
+        estimated_cpu: 0.030001
+        estimated_executions: 1
+        estimated_row_width: 11
+        estimated_rows: 1
+        execution_mode: "Row"
+        loops: 1
+        output_columns: ["Expr1003"]
+        output_list: ["Expr1003"]
+        properties: [{name="Defined Values" value="Expr1003 = Count(*)"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}]
+        row_count: 1
+      #2 Index Scan [Index Scan]
+          actual_cpu_ms: 3
+          actual_rows: 50000
+          actual_rows_total: 50000
+          actual_self_time_ms: 3
+          actual_time_ms: 3
+          buffers: {logical_reads=223 physical_reads=0 read_aheads=0}
+          database: "Shop"
+          estimated_cost: 0.219763
+          estimated_cpu: 0.055157
+          estimated_executions: 1
+          estimated_io: 0.164606
+          estimated_row_width: 9
+          estimated_rows: 50000
+          estimated_rows_read: 50000
+          execution_mode: "Row"
+          index_name: "IX_customers_email"
+          loops: 1
+          properties: [{name="Ordered" value="0"}, {name="ForcedIndex" value="0"}, {name="ForceSeek" value="0"}, {name="ForceScan" value="0"}, {name="NoExpandHint" value="0"}, {name="Storage" value="RowStore"}, {name="TableCardinality" value="50000"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}, {name="IndexKind" value="NonClustered"}, {name="Storage" value="RowStore"}, {name="Actual Scans" value="1"}]
+          relation: "customers"
+          row_count: 50000
+          rows_read: 50000
+          schema: "dbo"
+          table_cardinality: 50000

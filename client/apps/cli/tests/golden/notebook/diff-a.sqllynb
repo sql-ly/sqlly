@@ -1,0 +1,15 @@
+{
+  "format": "sqlly.notebook",
+  "format_version": 2,
+  "notebook_id": "nb_demo",
+  "title": "Refund review",
+  "connection_refs": [{"id": "primary", "label": "Sales"}],
+  "parameters": [{"id": "region", "name": "region", "type": "string", "default": "EU"}],
+  "cells": [
+    {"id": "c_intro", "kind": "markdown", "source": "# Refunds\nWeekly review."},
+    {"id": "c_orders", "name": "orders", "kind": "sql", "connection_ref": "primary",
+     "source": "SELECT id, total\nFROM orders\nWHERE region = :region"},
+    {"id": "c_tmp", "name": "scratch", "kind": "sql", "source": "SELECT 1"},
+    {"id": "c_check", "kind": "assertion", "spec": {"input": "c_orders", "kind": "row_count", "min": 1}}
+  ]
+}

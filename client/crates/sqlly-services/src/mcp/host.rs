@@ -629,6 +629,17 @@ mod imp {
                 runtime.runtime_entra_access_token = token;
                 return Ok((runtime, database));
             }
+            // PostgreSQL OAuth device sign-in needs a browser; headless callers
+            // bring a token (the bearer-token flow resolves its stored one).
+            if runtime.authentication.is_pg_oauth_device_flow()
+                && runtime.runtime_cloud_iam_token.is_none()
+            {
+                let token = std::env::var("SQLLY_PG_OAUTH_TOKEN").ok().ok_or_else(|| {
+                    "this connection needs an interactive OAuth sign-in; open it in SQLLY first, or set SQLLY_PG_OAUTH_TOKEN"
+                        .to_string()
+                })?;
+                runtime.runtime_cloud_iam_token = Some(token);
+            }
             if runtime.authentication.is_cloud_iam() && runtime.runtime_cloud_iam_token.is_none() {
                 if let Ok(token) = std::env::var("SQLLY_CLOUD_IAM_TOKEN") {
                     runtime.runtime_cloud_iam_token = Some(token);
@@ -1124,6 +1135,7 @@ mod imp {
                         schema: Some("dbo".into()),
                         kind: ObjectKind::Table,
                         detail: None,
+                        partition_of: None,
                     }],
                     columns: vec![],
                 }),

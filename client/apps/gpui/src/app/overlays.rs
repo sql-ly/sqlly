@@ -239,6 +239,9 @@ pub(super) struct OverlayHost {
     /// setup.
     #[cfg(not(target_arch = "wasm32"))]
     pub(super) host_key_dialog: Option<Entity<crate::host_key_dialog::HostKeyDialog>>,
+    /// PostgreSQL OAuth device code, while a browser sign-in is pending.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub(super) pg_oauth_dialog: Option<Entity<crate::pg_oauth_dialog::PgOAuthDialog>>,
     /// SSH keyboard-interactive prompt (a one-time code), when a tunnel's
     /// server asks for more after the key or password.
     #[cfg(not(target_arch = "wasm32"))]

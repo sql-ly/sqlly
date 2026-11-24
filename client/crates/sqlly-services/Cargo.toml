@@ -1,6 +1,6 @@
 [package]
 name = "sqlly-services"
-version = "1.39.0"
+version = "1.43.0"
 edition.workspace = true
 license.workspace = true
 publish = false
@@ -20,6 +20,12 @@ uuid = { workspace = true }
 base64 = "0.23"
 rand = { workspace = true }
 sha2 = { workspace = true }
+# Notebook assertion patterns; linear-time matching with compile size limits.
+regex = "1"
+# Markdown cells in notebook reports, parsed to a tree and re-emitted safely.
+markdown = { workspace = true }
+# Freshness checks read zone-less timestamps in a named time zone.
+chrono-tz = { workspace = true }
 
 # Database sockets, spill-to-disk, the data-dir spill/catalog roots, the
 # cloud-credential providers, and the remote-engine client are all native-only;
@@ -52,6 +58,15 @@ gcp_auth = { version = "0.12", default-features = false, features = ["webpki-roo
 # CNAME the user typed is followed one hop at a time (the system resolver only
 # reports the last name in the chain, which is an internal EC2 host).
 hickory-resolver = "0.26"
+# Notebook report PDF and PNG renderers (`report::pdf`, `report::png`).
+pdf-writer = { workspace = true }
+skrifa = { workspace = true }
+subsetter = { workspace = true }
+miniz_oxide = { workspace = true }
+resvg = { workspace = true }
+# Notebook result cache: the encryption key lives in the OS credential store.
+keyring = { workspace = true }
+chacha20poly1305 = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 # chrono's clock reads via JS on wasm (Utc::now panics otherwise).
@@ -78,7 +93,11 @@ gloo-timers = { version = "0.4", features = ["futures"] }
 [dev-dependencies]
 sqlly-testkit = { workspace = true }
 sqlly-engines = { workspace = true }
+# Notebook expansion tests run the expanded SQL on an in-process SQLite.
+rusqlite = { workspace = true }
 tempfile = "3"
 filetime = "0.2"
 tokio = { workspace = true }
 uuid = { workspace = true }
+calamine = { workspace = true }
+lopdf = { workspace = true }

@@ -1,0 +1,51 @@
+                                                                                  QUERY PLAN                                                                                  
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=26383.80..26383.82 rows=8 width=43) (actual time=108.134..111.453 rows=2.00 loops=1)
+   Sort Key: (sum(((oi.quantity)::numeric * oi.unit_price))) DESC
+   Sort Method: quicksort  Memory: 25kB
+   Buffers: shared hit=12909 read=506
+   ->  Finalize GroupAggregate  (cost=26381.18..26383.68 rows=8 width=43) (actual time=108.108..111.428 rows=2.00 loops=1)
+         Group Key: c.country
+         Buffers: shared hit=12906 read=506
+         ->  Gather Merge  (cost=26381.18..26383.39 rows=19 width=43) (actual time=108.102..111.422 rows=6.00 loops=1)
+               Workers Planned: 2
+               Workers Launched: 2
+               Buffers: shared hit=12906 read=506
+               ->  Sort  (cost=25381.16..25381.18 rows=8 width=43) (actual time=106.640..106.642 rows=2.00 loops=3)
+                     Sort Key: c.country
+                     Sort Method: quicksort  Memory: 25kB
+                     Buffers: shared hit=12906 read=506
+                     Worker 0:  Sort Method: quicksort  Memory: 25kB
+                     Worker 1:  Sort Method: quicksort  Memory: 25kB
+                     ->  Partial HashAggregate  (cost=25380.94..25381.04 rows=8 width=43) (actual time=106.620..106.622 rows=2.00 loops=3)
+                           Group Key: c.country
+                           Batches: 1  Memory Usage: 32kB
+                           Buffers: shared hit=12890 read=506
+                           Worker 0:  Batches: 1  Memory Usage: 32kB
+                           Worker 1:  Batches: 1  Memory Usage: 32kB
+                           ->  Hash Join  (cost=8359.31..23823.01 rows=124634 width=13) (actual time=16.750..93.449 rows=100000.00 loops=3)
+                                 Hash Cond: (o.customer_id = c.id)
+                                 Buffers: shared hit=12890 read=506
+                                 ->  Parallel Hash Join  (cost=6728.31..21864.83 rows=124634 width=14) (actual time=10.853..69.364 rows=100000.00 loops=3)
+                                       Hash Cond: (oi.order_id = o.id)
+                                       Buffers: shared hit=11878
+                                       ->  Parallel Seq Scan on order_items oi  (cost=0.00..13824.00 rows=500000 width=14) (actual time=0.007..13.438 rows=400000.00 loops=3)
+                                             Buffers: shared hit=8824
+                                       ->  Parallel Hash  (cost=5995.18..5995.18 rows=58651 width=8) (actual time=10.618..10.618 rows=33333.33 loops=3)
+                                             Buckets: 131072  Batches: 1  Memory Usage: 4960kB
+                                             Buffers: shared hit=3054
+                                             ->  Parallel Seq Scan on orders o  (cost=0.00..5995.18 rows=58651 width=8) (actual time=0.010..6.690 rows=33333.33 loops=3)
+                                                   Filter: (status = 'paid'::text)
+                                                   Rows Removed by Filter: 100000
+                                                   Buffers: shared hit=3054
+                                 ->  Hash  (cost=1006.00..1006.00 rows=50000 width=7) (actual time=5.779..5.779 rows=50000.00 loops=3)
+                                       Buckets: 65536  Batches: 1  Memory Usage: 2466kB
+                                       Buffers: shared hit=1012 read=506
+                                       ->  Seq Scan on customers c  (cost=0.00..1006.00 rows=50000 width=7) (actual time=0.054..2.447 rows=50000.00 loops=3)
+                                             Buffers: shared hit=1012 read=506
+ Planning:
+   Buffers: shared hit=371
+ Planning Time: 0.570 ms
+ Execution Time: 111.549 ms
+(47 rows)
+

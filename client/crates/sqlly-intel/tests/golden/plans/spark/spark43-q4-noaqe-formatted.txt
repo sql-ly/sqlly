@@ -1,0 +1,79 @@
+== Physical Plan ==
+* Union (14)
+:- * Project (9)
+:  +- * BroadcastHashJoin LeftSemi BuildRight (8)
+:     :- * ColumnarToRow (2)
+:     :  +- Scan parquet spark_catalog.default.customers (1)
+:     +- BroadcastExchange (7)
+:        +- * Project (6)
+:           +- * Filter (5)
+:              +- * ColumnarToRow (4)
+:                 +- Scan parquet spark_catalog.default.orders (3)
++- * Project (13)
+   +- * Filter (12)
+      +- * ColumnarToRow (11)
+         +- Scan parquet spark_catalog.default.order_items (10)
+
+
+(1) Scan parquet spark_catalog.default.customers
+Output [2]: [id#31L, name#32]
+Batched: true
+Location: InMemoryFileIndex [file:/tmp/spark-warehouse/customers]
+ReadSchema: struct<id:bigint,name:string>
+
+(2) ColumnarToRow [codegen id : 2]
+Input [2]: [id#31L, name#32]
+
+(3) Scan parquet spark_catalog.default.orders
+Output [2]: [customer_id#14L, total#15]
+Batched: true
+Location: InMemoryFileIndex [file:/tmp/spark-warehouse/orders]
+PushedFilters: [IsNotNull(total), GreaterThan(total,499.00)]
+ReadSchema: struct<customer_id:bigint,total:decimal(11,2)>
+
+(4) ColumnarToRow [codegen id : 1]
+Input [2]: [customer_id#14L, total#15]
+
+(5) Filter [codegen id : 1]
+Input [2]: [customer_id#14L, total#15]
+Condition : (isnotnull(total#15) AND (total#15 > 499.00))
+
+(6) Project [codegen id : 1]
+Output [1]: [customer_id#14L]
+Input [2]: [customer_id#14L, total#15]
+
+(7) BroadcastExchange
+Input [1]: [customer_id#14L]
+Arguments: HashedRelationBroadcastMode(List(input[0, bigint, true]),false), [plan_id=616]
+
+(8) BroadcastHashJoin [codegen id : 2]
+Left keys [1]: [id#31L]
+Right keys [1]: [customer_id#14L]
+Join type: LeftSemi
+Join condition: None
+
+(9) Project [codegen id : 2]
+Output [1]: [name#32]
+Input [2]: [id#31L, name#32]
+
+(10) Scan parquet spark_catalog.default.order_items
+Output [3]: [sku#75, price#76, qty#77L]
+Batched: true
+Location: CatalogFileIndex [file:/tmp/spark-warehouse/order_items]
+PushedFilters: [IsNotNull(price), LessThan(price,1.00)]
+ReadSchema: struct<sku:string,price:decimal(11,2)>
+
+(11) ColumnarToRow
+Input [3]: [sku#75, price#76, qty#77L]
+
+(12) Filter
+Input [3]: [sku#75, price#76, qty#77L]
+Condition : (isnotnull(price#76) AND (price#76 < 1.00))
+
+(13) Project
+Output [1]: [sku#75]
+Input [3]: [sku#75, price#76, qty#77L]
+
+(14) Union [codegen id : 2]
+
+

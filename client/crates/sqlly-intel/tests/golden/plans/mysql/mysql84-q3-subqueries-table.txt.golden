@@ -1,0 +1,51 @@
+format: mysql-table (Certain)
+statements: 1
+
+== statement 1
+dialect: "MySql"
+estimated_rows: 40131
+source_format: "mysql-table"
+statement_type: "EXPLAIN"
+operators: 7
+  #1 Query Block [Query Block]
+      properties: [{name="select_id" value="1"}, {name="select_type" value="PRIMARY"}]
+      subplan_name: "Select #1"
+    #2 Table: c [Access: ALL]
+        estimated_rows: 4973
+        estimated_rows_read: 4973
+        extra: ["Using where", "Using filesort"]
+        filtered_percent: 100
+        output_list: ["c"]
+        properties: [{name="possible_keys" value="PRIMARY"}]
+        relation: "c"
+        warnings: [{TableScan={table="c"}}]
+    #3 Table: <subquery3> [Access: eq_ref]
+        estimated_rows: 1
+        estimated_rows_read: 1
+        filtered_percent: 100
+        index_name: "<auto_distinct_key>"
+        output_list: ["<subquery3>", "Key: <auto_distinct_key>"]
+        properties: [{name="possible_keys" value="<auto_distinct_key>"}, {name="key_len" value="4"}, {name="ref" value="shop.c.id"}]
+      #4 Query Block [Query Block]
+          properties: [{name="select_id" value="3"}, {name="select_type" value="MATERIALIZED"}]
+          subplan_name: "Select #3"
+        #5 Table: orders [Access: ALL]
+            estimated_rows: 40131
+            estimated_rows_read: 40131
+            extra: ["Using where"]
+            filtered_percent: 33.33
+            output_list: ["orders"]
+            properties: [{name="possible_keys" value="orders_customer_idx"}]
+            relation: "orders"
+            warnings: [{TableScan={table="orders"}}]
+    #6 Query Block [Query Block]
+        properties: [{name="select_id" value="2"}, {name="select_type" value="DEPENDENT SUBQUERY"}]
+        subplan_name: "Select #2"
+      #7 Table: o [Access: ref]
+          estimated_rows: 8
+          estimated_rows_read: 8
+          filtered_percent: 100
+          index_name: "orders_customer_idx"
+          output_list: ["o", "Key: orders_customer_idx"]
+          properties: [{name="possible_keys" value="orders_customer_idx"}, {name="key_len" value="4"}, {name="ref" value="shop.c.id"}]
+          relation: "o"

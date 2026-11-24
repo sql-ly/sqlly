@@ -1,0 +1,37 @@
+format: cockroachdb-text (Certain)
+statements: 1
+
+== statement 1
+cpu_time_ms: 3
+estimated_rows: 1343
+execution_time_ms: 6
+has_actuals: yes
+notes: ["planning time: 127µs", "execution time: 6ms", "distribution: full", "vectorized: true", "plan type: generic, reused", "rows decoded from KV: 20,000 (1.1 MiB, 1 gRPC calls)", "cumulative time spent in KV: 6ms", "maximum memory usage: 1.2 MiB", "network usage: 0 B (0 messages)", "sql cpu time: 3ms", "isolation level: serializable", "priority: normal", "quality of service: regular"]
+planning_time_ms: 0.127
+source_format: "cockroachdb-text"
+statement_type: "EXPLAIN ANALYZE"
+operators: 2
+  #1 filter [filter]
+      actual_cpu_ms: 0.225
+      actual_rows: 1334
+      actual_rows_total: 1334
+      actual_self_time_ms: 0.225
+      actual_time_ms: 6.225
+      estimated_rows: 1343
+      filter: "(status = 'paid') AND (total > 400)"
+      output_list: ["Filter: (status = 'paid') AND (total > 400)"]
+      properties: [{name="sql nodes" value="n1"}]
+    #2 scan [scan]
+        actual_cpu_ms: 3
+        actual_rows: 20000
+        actual_rows_total: 20000
+        actual_self_time_ms: 6
+        actual_time_ms: 6
+        estimated_rows: 20000
+        index_name: "orders_pkey"
+        output_list: ["orders", "Index: orders_pkey"]
+        peak_memory_kb: 1228.8
+        properties: [{name="sql nodes" value="n1"}, {name="kv nodes" value="n1"}, {name="KV time" value="6ms"}, {name="KV contention time" value="0µs"}, {name="KV rows decoded" value="20,000"}, {name="KV bytes read" value="1.1 MiB"}, {name="KV gRPC calls" value="1"}, {name="estimated row count" value="20,000 (100% of the table; stats collected 1 second ago)"}, {name="spans" value="FULL SCAN"}]
+        relation: "orders"
+        rows_read: 20000
+        warnings: [{TableScan={table="orders"}}]

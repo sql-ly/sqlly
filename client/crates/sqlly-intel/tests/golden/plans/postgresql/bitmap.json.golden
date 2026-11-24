@@ -1,0 +1,70 @@
+format: postgresql-json (Certain)
+statements: 1
+
+== statement 1
+dialect: "Postgres"
+estimated_rows: 1492
+execution_time_ms: 0.233
+has_actuals: yes
+notes: ["Planning buffers: shared hit=154"]
+planning_time_ms: 0.243
+source_format: "postgresql-json"
+statement_type: "EXPLAIN ANALYZE"
+total_subtree_cost: 2613.25
+operators: 4
+  #1 Bitmap Heap Scan [Bitmap Heap Scan]
+      actual_rows: 1463
+      actual_rows_total: 1463
+      actual_self_time_ms: 0.156
+      actual_startup_ms: 0.044
+      actual_time_ms: 0.189
+      buffers: {local_dirtied=0 local_hit=0 local_read=0 local_written=0 logical_reads=44 physical_reads=0 shared_dirtied=0 shared_hit=44 shared_read=0 shared_written=0 temp_read=0 temp_written=0 writes=0}
+      estimated_cost: 2613.25
+      estimated_row_width: 27
+      estimated_rows: 1492
+      estimated_startup_cost: 45.63
+      exact_heap_blocks: 35
+      index_cond: "((customer_id = ANY ('{1,2,3}'::integer[])) OR (placed_at < '2023-01-02 00:00:00+00'::timestamp with time zone))"
+      loops: 1
+      output_list: ["orders", "Recheck Cond: ((customer_id = ANY ('{1,2,3}'::integer[])) OR (placed_at < '2023-01-02 00:00:00+00'::timestamp with time zone))"]
+      relation: "orders"
+    #2 BitmapOr [BitmapOr]
+        actual_self_time_ms: 0.001
+        actual_startup_ms: 0.033
+        actual_time_ms: 0.033
+        buffers: {local_dirtied=0 local_hit=0 local_read=0 local_written=0 logical_reads=9 physical_reads=0 shared_dirtied=0 shared_hit=9 shared_read=0 shared_written=0 temp_read=0 temp_written=0 writes=0}
+        estimated_cost: 45.63
+        estimated_rows: 1492
+        estimated_startup_cost: 45.63
+        loops: 1
+        parent_relationship: "Outer"
+      #3 Bitmap Index Scan [Bitmap Index Scan]
+          actual_rows: 24
+          actual_rows_total: 24
+          actual_self_time_ms: 0.01
+          actual_startup_ms: 0.01
+          actual_time_ms: 0.01
+          buffers: {local_dirtied=0 local_hit=0 local_read=0 local_written=0 logical_reads=3 physical_reads=0 shared_dirtied=0 shared_hit=3 shared_read=0 shared_written=0 temp_read=0 temp_written=0 writes=0}
+          estimated_cost: 13.45
+          estimated_rows: 24
+          index_cond: "(customer_id = ANY ('{1,2,3}'::integer[]))"
+          index_name: "orders_customer_idx"
+          loops: 1
+          output_list: ["Index Cond: (customer_id = ANY ('{1,2,3}'::integer[]))", "Index: orders_customer_idx"]
+          parent_relationship: "Member"
+          properties: [{name="Index Searches" value="1"}]
+      #4 Bitmap Index Scan [Bitmap Index Scan]
+          actual_rows: 1439
+          actual_rows_total: 1439
+          actual_self_time_ms: 0.022
+          actual_startup_ms: 0.022
+          actual_time_ms: 0.022
+          buffers: {local_dirtied=0 local_hit=0 local_read=0 local_written=0 logical_reads=6 physical_reads=0 shared_dirtied=0 shared_hit=6 shared_read=0 shared_written=0 temp_read=0 temp_written=0 writes=0}
+          estimated_cost: 31.43
+          estimated_rows: 1468
+          index_cond: "(placed_at < '2023-01-02 00:00:00+00'::timestamp with time zone)"
+          index_name: "orders_placed_idx"
+          loops: 1
+          output_list: ["Index Cond: (placed_at < '2023-01-02 00:00:00+00'::timestamp with time zone)", "Index: orders_placed_idx"]
+          parent_relationship: "Member"
+          properties: [{name="Index Searches" value="1"}]

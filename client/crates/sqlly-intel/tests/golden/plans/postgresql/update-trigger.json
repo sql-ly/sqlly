@@ -1,0 +1,99 @@
+                  QUERY PLAN                   
+-----------------------------------------------
+ [                                            +
+   {                                          +
+     "Plan": {                                +
+       "Node Type": "ModifyTable",            +
+       "Operation": "Update",                 +
+       "Parallel Aware": false,               +
+       "Async Capable": false,                +
+       "Relation Name": "orders",             +
+       "Alias": "orders",                     +
+       "Startup Cost": 0.42,                  +
+       "Total Cost": 12.98,                   +
+       "Plan Rows": 0,                        +
+       "Plan Width": 0,                       +
+       "Actual Startup Time": 0.968,          +
+       "Actual Total Time": 0.972,            +
+       "Actual Rows": 0.00,                   +
+       "Actual Loops": 1,                     +
+       "Disabled": false,                     +
+       "Shared Hit Blocks": 3337,             +
+       "Shared Read Blocks": 0,               +
+       "Shared Dirtied Blocks": 2,            +
+       "Shared Written Blocks": 2,            +
+       "Local Hit Blocks": 0,                 +
+       "Local Read Blocks": 0,                +
+       "Local Dirtied Blocks": 0,             +
+       "Local Written Blocks": 0,             +
+       "Temp Read Blocks": 0,                 +
+       "Temp Written Blocks": 0,              +
+       "WAL Records": 997,                    +
+       "WAL FPI": 0,                          +
+       "WAL Bytes": 70726,                    +
+       "WAL Buffers Full": 0,                 +
+       "Plans": [                             +
+         {                                    +
+           "Node Type": "Index Scan",         +
+           "Parent Relationship": "Outer",    +
+           "Parallel Aware": false,           +
+           "Async Capable": false,            +
+           "Scan Direction": "Forward",       +
+           "Index Name": "orders_pkey",       +
+           "Relation Name": "orders",         +
+           "Alias": "orders",                 +
+           "Startup Cost": 0.42,              +
+           "Total Cost": 12.98,               +
+           "Plan Rows": 203,                  +
+           "Plan Width": 38,                  +
+           "Actual Startup Time": 0.006,      +
+           "Actual Total Time": 0.049,        +
+           "Actual Rows": 199.00,             +
+           "Actual Loops": 1,                 +
+           "Disabled": false,                 +
+           "Index Cond": "(id < 200)",        +
+           "Rows Removed by Index Recheck": 0,+
+           "Index Searches": 1,               +
+           "Shared Hit Blocks": 404,          +
+           "Shared Read Blocks": 0,           +
+           "Shared Dirtied Blocks": 0,        +
+           "Shared Written Blocks": 0,        +
+           "Local Hit Blocks": 0,             +
+           "Local Read Blocks": 0,            +
+           "Local Dirtied Blocks": 0,         +
+           "Local Written Blocks": 0,         +
+           "Temp Read Blocks": 0,             +
+           "Temp Written Blocks": 0,          +
+           "WAL Records": 0,                  +
+           "WAL FPI": 0,                      +
+           "WAL Bytes": 0,                    +
+           "WAL Buffers Full": 0              +
+         }                                    +
+       ]                                      +
+     },                                       +
+     "Planning": {                            +
+       "Shared Hit Blocks": 99,               +
+       "Shared Read Blocks": 0,               +
+       "Shared Dirtied Blocks": 0,            +
+       "Shared Written Blocks": 0,            +
+       "Local Hit Blocks": 0,                 +
+       "Local Read Blocks": 0,                +
+       "Local Dirtied Blocks": 0,             +
+       "Local Written Blocks": 0,             +
+       "Temp Read Blocks": 0,                 +
+       "Temp Written Blocks": 0               +
+     },                                       +
+     "Planning Time": 0.194,                  +
+     "Triggers": [                            +
+       {                                      +
+         "Trigger Name": "orders_audit",      +
+         "Relation": "orders",                +
+         "Time": 0.961,                       +
+         "Calls": 199                         +
+       }                                      +
+     ],                                       +
+     "Execution Time": 1.975                  +
+   }                                          +
+ ]
+(1 row)
+

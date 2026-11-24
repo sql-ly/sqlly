@@ -300,6 +300,11 @@ fn config_from_profile(profile: &ConnectionProfile) -> StudioResult<Config> {
                 "Auth-token sign-in applies to libSQL / Turso, not SQL Server".into(),
             ));
         }
+        AuthenticationType::PostgresOAuth { .. } => {
+            return Err(StudioError::InvalidProfile(
+                "PostgreSQL OAuth sign-in applies to PostgreSQL, not SQL Server".into(),
+            ));
+        }
     };
     config.authentication(auth);
 

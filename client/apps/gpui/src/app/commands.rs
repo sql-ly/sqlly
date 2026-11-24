@@ -3,8 +3,9 @@ use crate::command_palette::ObjectAction;
 use gpui_component::WindowExt as _;
 
 impl AppView {
-    /// Reinstall the application menus when the connection state has toggled
-    /// or the active engine has changed since they were last built, so the
+    /// Reinstall the application menus when the connection state has toggled,
+    /// the active engine or the theme has changed since they were last built
+    /// (View ▸ Theme checks the current theme), so the
     /// Tools menu shows Connect while disconnected and Disconnect while
     /// connected, and the in-window menu bar grays engine-gated tools with
     /// the capability reason. Compared against cached fingerprints so
@@ -16,15 +17,18 @@ impl AppView {
         let connected = self.active_profile.is_some();
         let engine = self.active_profile.as_ref().map(|p| p.database_type);
         let localization_revision = crate::localization::chrome_revision();
+        let theme = Some(crate::menu_bar::ThemeMenuState::current());
         if connected == self.menus_reflect_connected
             && engine == self.menus_reflect_engine
             && localization_revision == self.menus_reflect_localization_revision
+            && theme == self.menus_reflect_theme
         {
             return;
         }
         self.menus_reflect_connected = connected;
         self.menus_reflect_engine = engine;
         self.menus_reflect_localization_revision = localization_revision;
+        self.menus_reflect_theme = theme;
         self.production_unlock = None;
         self.production_unlock_tick = None;
         let bar = self.window_menu_bar.clone();
@@ -234,7 +238,7 @@ impl AppView {
         match cmd_id {
             "file.newQuery" => self.new_tab(cx, None),
             "file.newNotebook" => {
-                self.new_notebook_tab(crate::notebook_model::Notebook::new(), None, cx);
+                self.new_notebook_tab(crate::notebook::files::new_document(), None, cx);
             }
             "file.openNotebook" => self.open_notebook(cx),
             "file.saveNotebook" => {
@@ -246,6 +250,27 @@ impl AppView {
             }
             "query.runNotebookCell" => self.handle_run_notebook_cell_inner(window, cx),
             "query.runAllNotebookCells" => self.handle_run_all_notebook_cells_inner(cx),
+            "query.openAsNotebook" => self.promote_tab_to_notebook(self.active_tab, false, cx),
+            "query.openAsNotebookSplit" => self.promote_tab_to_notebook(self.active_tab, true, cx),
+            "notebook.convertToSqlScript" => self.convert_notebook_to_script(self.active_tab, cx),
+            "notebook.present" | "notebook.export" => {
+                match self.active_notebook() {
+                    Some((_, nb)) if cmd_id == "notebook.present" => {
+                        nb.update(cx, |nb, cx| nb.start_presentation(None, window, cx))
+                    }
+                    Some((_, nb)) => {
+                        nb.update(cx, |nb, cx| nb.open_export_dialog(None, None, window, cx))
+                    }
+                    None => self.notebook_required_status(),
+                }
+                cx.notify();
+            }
+            id if super::notebook_host::NOTEBOOK_COMMAND_IDS
+                .iter()
+                .any(|(known, _)| *known == id) =>
+            {
+                self.run_notebook_command(id, cx);
+            }
             "file.saveWorkspaceAs" => self.handle_save_workspace_as(&SaveWorkspaceAs, window, cx),
             "file.openWorkspace" => self.handle_open_workspace(&OpenWorkspace, window, cx),
             "file.manageWorkspaces" => self.handle_manage_workspaces(&ManageWorkspaces, window, cx),
@@ -879,6 +904,64 @@ impl AppView {
         "query.runPicker",
         "query.runNotebookCell",
         "query.runAllNotebookCells",
+        "query.openAsNotebook",
+        "query.openAsNotebookSplit",
+        "notebook.convertToSqlScript",
+        "notebook.runCellAndAdvance",
+        "notebook.runCellAndInsertBelow",
+        "notebook.commandMode",
+        "notebook.selectNextCell",
+        "notebook.selectPreviousCell",
+        "notebook.insertCellAbove",
+        "notebook.insertCellBelow",
+        "notebook.deleteCell",
+        "notebook.convertToMarkdown",
+        "notebook.convertToSql",
+        "notebook.editCell",
+        "notebook.stop",
+        "notebook.trust",
+        "notebook.allowWrites",
+        "notebook.materializeLocally",
+        "notebook.toggleLocalTarget",
+        "notebook.showLocalData",
+        "notebook.insertAttachment",
+        "notebook.openDashboard",
+        "notebook.viewDashboard",
+        "notebook.present",
+        "notebook.export",
+        "notebook.toggleZen",
+        "notebook.toggleDense",
+        "notebook.selectAllCells",
+        "notebook.extendSelectionDown",
+        "notebook.extendSelectionUp",
+        "notebook.clearSelection",
+        "notebook.copyCells",
+        "notebook.cutCells",
+        "notebook.pasteCells",
+        "notebook.pasteCellsAbove",
+        "notebook.duplicateCell",
+        "notebook.undoStructure",
+        "notebook.redoStructure",
+        "notebook.moveCellUp",
+        "notebook.moveCellDown",
+        "notebook.toggleCollapse",
+        "notebook.runSelected",
+        "notebook.splitCell",
+        "notebook.mergeCellBelow",
+        "notebook.mergeCellAbove",
+        "notebook.insertCellMenu",
+        "notebook.findInNotebook",
+        "notebook.replaceInNotebook",
+        "notebook.toggleBookmark",
+        "notebook.nextBookmark",
+        "notebook.previousBookmark",
+        "notebook.showBookmarks",
+        "notebook.toggleFoldSection",
+        "notebook.unfoldAll",
+        "notebook.togglePinOutput",
+        "notebook.toggleEmbedded",
+        "notebook.embedAllOutputs",
+        "notebook.toggleEmbeddedConfig",
         "query.executeNoRollback",
         "safety.unlockWrites1m",
         "safety.unlockWrites5m",
@@ -1062,7 +1145,7 @@ impl AppView {
         _window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        self.new_notebook_tab(crate::notebook_model::Notebook::new(), None, cx);
+        self.new_notebook_tab(crate::notebook::files::new_document(), None, cx);
         self.save_workspace_session(cx);
     }
 
@@ -1168,6 +1251,7 @@ impl AppView {
                     .cancel_text(crate::localization::text("shell.commands.ai_quit_cancel"))
                     .on_ok(move |_ev, window, cx| {
                         let _ = app_view.update(cx, |this, cx| {
+                            this.flush_notebooks_for_quit(cx);
                             this.save_workspace_session(cx);
                         });
                         exit_app(window, cx);
@@ -1178,6 +1262,7 @@ impl AppView {
         }
         // Save the workspace session (including unsaved editor content) so
         // it survives app restart.
+        self.flush_notebooks_for_quit(cx);
         self.save_workspace_session(cx);
         exit_app(window, cx);
     }
@@ -1878,7 +1963,7 @@ impl AppView {
         // choice and the editor would keep using the values from launch.
         self.fim_prefs = crate::fim_completion::FimPreferences::load();
         self.editor_prefs = crate::preferences::EditorPreferences::load();
-        self.editor_prefs.apply_match_options();
+        self.editor_prefs.apply_completion_options();
         self.query_history_prefs = crate::preferences::QueryHistoryPreferences::load();
         #[cfg(not(target_arch = "wasm32"))]
         {

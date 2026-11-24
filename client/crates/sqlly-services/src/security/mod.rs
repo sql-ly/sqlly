@@ -23,6 +23,10 @@ pub mod token_flow;
 pub mod browser_signin;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod loopback_redirect;
+/// PostgreSQL 18 OAuth (OpenID Connect device-code) sign-in; native only,
+/// like the PostgreSQL driver itself.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod pg_oauth;
 
 #[async_trait]
 pub trait SecretStore: Send + Sync {

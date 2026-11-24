@@ -723,6 +723,8 @@ impl AdminToolsService for DefaultAdminToolsService {
             subsystem: "TSQL".to_string(),
             command: command.to_string(),
             database_name: None,
+            on_success: None,
+            on_failure: None,
         };
         JobWriter::create_job_sql(&job, &[step])
     }
@@ -1420,6 +1422,28 @@ mod tests {
             .security_query_for(sqlly_core::DatabaseType::MySql, "users")
             .unwrap();
         assert!(sql.contains("mysql.user"));
+    }
+
+    // https://github.com/Sequel-Ace/Sequel-Ace/issues/2479
+    #[test]
+    fn mariadb_accounts_fallback_never_reads_the_missing_account_locked_column() {
+        let svc = DefaultAdminToolsService;
+        let db = sqlly_core::DatabaseType::MariaDb;
+        assert_eq!(
+            crate::tool_dialects::security_dialect(db),
+            Some(crate::tool_dialects::SecurityDialect::MariaDb),
+            "the accounts view retries with users-compat only for this dialect"
+        );
+        // MariaDB's mysql.user is a view over mysql.global_priv with no
+        // account_locked column; the fallback supplies it as a literal.
+        let compat = svc.security_query_for(db, "users-compat").unwrap();
+        assert!(compat.contains("FROM mysql.user"), "{compat}");
+        assert!(
+            !compat
+                .replace("'N' AS account_locked", "")
+                .contains("account_locked"),
+            "{compat}"
+        );
     }
 
     #[test]

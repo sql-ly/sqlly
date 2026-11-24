@@ -235,6 +235,18 @@ fn file_paths_match(a: &std::path::Path, b: &std::path::Path) -> bool {
         }
 }
 
+/// Whether two notebook paths name the same file.
+pub(super) fn same_notebook_path(a: &str, b: &str) -> bool {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        file_paths_match(std::path::Path::new(a), std::path::Path::new(b))
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        a == b
+    }
+}
+
 /// The status line after Export for Other Tools saved its file.
 #[cfg(not(target_arch = "wasm32"))]
 fn tool_export_status(
@@ -342,9 +354,10 @@ pub(super) fn load_recent_files() -> Vec<String> {
         .unwrap_or_default()
 }
 
+/// Browser build: the recent list lives with the browser's notebooks.
 #[cfg(target_arch = "wasm32")]
 pub(super) fn load_recent_files() -> Vec<String> {
-    Vec::new()
+    crate::notebook::browser::recent_in(crate::notebook::browser::store())
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -355,7 +368,9 @@ fn save_recent_files(files: &[String]) {
 }
 
 #[cfg(target_arch = "wasm32")]
-fn save_recent_files(_files: &[String]) {}
+fn save_recent_files(files: &[String]) {
+    crate::notebook::browser::save_recent_in(crate::notebook::browser::store(), files)
+}
 
 /// Write a schema-documentation set relative to a chosen base path. The
 /// empty-suffix file goes to `base` itself; every other file becomes a sibling
@@ -2064,13 +2079,17 @@ impl AppView {
         cx: &mut Context<Self>,
     ) {
         let path_str = path.to_string_lossy();
-        if path_str.ends_with(&format!(".{}", crate::notebook_model::NOTEBOOK_EXTENSION))
-            || crate::notebook_model::is_ipynb_path(&path_str)
-        {
-            match crate::notebook_model::Notebook::from_file_text(&path_str, &content) {
-                Ok(model) => {
+        if crate::notebook::files::is_notebook_path(&path_str) {
+            if let Some(index) = self.notebook_tab_for_path(&path_str) {
+                self.select_tab(index, cx);
+                return;
+            }
+            let db = self.active_profile.as_ref().map(|p| p.database_type);
+            match crate::notebook::files::load_file(&path_str, &content, db) {
+                Ok(loaded) => {
                     self.note_recent_file(&path_str);
-                    self.new_notebook_tab(model, Some(path_str.into_owned()), cx);
+                    let index = self.new_notebook_tab(loaded.doc, Some(path_str.into_owned()), cx);
+                    self.note_scan_warnings(index, &content, cx);
                 }
                 Err(message) => {
                     self.set_status(StatusLevel::Error, message);
@@ -2816,7 +2835,7 @@ impl AppView {
     /// Open a recent file directly (from the tab context menu's Recent
     /// Files section). Missing files are dropped from the list.
     pub(super) fn open_recent_file(&mut self, path: String, cx: &mut Context<Self>) {
-        match std::fs::read_to_string(&path) {
+        match crate::notebook::files::read_text(&path) {
             Ok(content) => {
                 self.finish_opening_sql_file(std::path::PathBuf::from(&path), content, cx)
             }
@@ -3304,16 +3323,7 @@ impl AppView {
 
     pub(super) fn open_notebook(&mut self, cx: &mut Context<Self>) {
         #[cfg(target_arch = "wasm32")]
-        {
-            self.set_status(
-                StatusLevel::Error,
-                crate::browser_preview::unavailable(&crate::localization::text(
-                    "shell.files.notebook_open_disk_unavailable",
-                ))
-                .to_string(),
-            );
-            cx.notify();
-        }
+        self.open_notebook_in_browser(cx);
         #[cfg(not(target_arch = "wasm32"))]
         {
             let prompt: SharedString =
@@ -3344,11 +3354,22 @@ impl AppView {
     }
 
     pub(super) fn open_notebook_from_path(&mut self, path: &str, cx: &mut Context<Self>) -> bool {
-        match std::fs::read_to_string(path) {
-            Ok(text) => match crate::notebook_model::Notebook::from_file_text(path, &text) {
-                Ok(model) => {
+        // One tab per file: a second would save over the first's changes
+        // and share its local data, history and recovery copy.
+        if let Some(index) = self.notebook_tab_for_path(path) {
+            self.select_tab(index, cx);
+            return true;
+        }
+        match crate::notebook::files::read_text(path) {
+            Ok(text) => match crate::notebook::files::load_file(
+                path,
+                &text,
+                self.active_profile.as_ref().map(|p| p.database_type),
+            ) {
+                Ok(loaded) => {
                     self.note_recent_file(path);
-                    self.new_notebook_tab(model, Some(path.to_string()), cx);
+                    let index = self.new_notebook_tab(loaded.doc, Some(path.to_string()), cx);
+                    self.note_scan_warnings(index, &text, cx);
                     true
                 }
                 Err(message) => {
@@ -3373,14 +3394,7 @@ impl AppView {
 
     pub(super) fn save_notebook(&mut self, tab_idx: usize, save_as: bool, cx: &mut Context<Self>) {
         #[cfg(target_arch = "wasm32")]
-        {
-            let _ = (tab_idx, save_as);
-            self.set_status(
-                StatusLevel::Error,
-                crate::localization::text("shell.files.notebook_save_unavailable"),
-            );
-            cx.notify();
-        }
+        self.save_notebook_in_browser(tab_idx, save_as, cx);
         #[cfg(not(target_arch = "wasm32"))]
         {
             let Some(tab) = self.tabs.get(tab_idx) else {
@@ -3389,14 +3403,40 @@ impl AppView {
             let Some(notebook) = tab.notebook.clone() else {
                 return;
             };
-            let model = notebook.read(cx).model().clone();
-            if let Some(path) = tab.notebook_path.clone().filter(|_| !save_as) {
-                match std::fs::write(&path, model.to_file_text(&path)) {
+            let notebook_path = tab.notebook_path.clone();
+            let tab_id = tab.id.clone();
+            // Older SQLLY builds cannot read the current format, so a
+            // `.sqlnb.json` file is never overwritten: Save offers a `.sqllynb`.
+            let save_as = save_as
+                || notebook_path
+                    .as_deref()
+                    .is_some_and(crate::notebook::files::is_legacy_path);
+            if let Some(path) = notebook_path.clone().filter(|_| !save_as) {
+                if !notebook.update(cx, |nb, cx| nb.may_overwrite_file(cx)) {
+                    self.set_status(
+                        StatusLevel::Warning,
+                        crate::localization::format(
+                            "notebook.fix_runtime.save.changed_on_disk",
+                            &[("path", path.as_str())],
+                        ),
+                    );
+                    cx.notify();
+                    return;
+                }
+                let model = notebook.update(cx, |nb, cx| {
+                    nb.take_own_identity(cx);
+                    nb.model_for_save()
+                });
+                match crate::fs_safe::write_document_atomic(
+                    std::path::Path::new(&path),
+                    crate::notebook::files::file_text(&path, &model).as_bytes(),
+                ) {
                     Ok(()) => {
                         if let Some(tab) = self.tabs.get_mut(tab_idx) {
                             tab.dirty = false;
                         }
-                        notebook.update(cx, |nb, _| nb.clear_dirty());
+                        let saved = path.clone();
+                        notebook.update(cx, |nb, cx| nb.saved_to(saved, cx));
                         self.set_status(
                             StatusLevel::Success,
                             crate::localization::format(
@@ -3421,28 +3461,59 @@ impl AppView {
                 return;
             }
             // A notebook opened from Jupyter keeps offering its own format.
-            let extension = if tab
-                .notebook_path
-                .as_deref()
-                .is_some_and(crate::notebook_model::is_ipynb_path)
-            {
-                crate::notebook_model::IPYNB_EXTENSION
-            } else {
-                crate::notebook_model::NOTEBOOK_EXTENSION
-            };
+            let extension = crate::notebook::files::save_extension(notebook_path.as_deref());
             let rx = cx.prompt_for_new_path(
                 std::path::Path::new("."),
                 Some(&format!("notebook.{extension}")),
             );
+            // The dialog is asynchronous: tabs may close or move and the
+            // notebook may change meanwhile, so the tab is found again by
+            // its id and the notebook read again when a path comes back.
             let weak_self = cx.weak_entity();
             let async_cx = cx.to_async();
             cx.spawn(async move |_this, _cx| {
                 if let Ok(Ok(Some(path))) = rx.await {
-                    match std::fs::write(&path, model.to_file_text(&path.to_string_lossy())) {
+                    let mut cx = async_cx.clone();
+                    let target = path.to_string_lossy().to_string();
+                    let Some(Some(model)) = weak_self
+                        .update(&mut cx, |this, cx| {
+                            let tab_idx = this.tab_index_by_id(&tab_id)?;
+                            if this
+                                .notebook_tab_for_path(&target)
+                                .is_some_and(|other| other != tab_idx)
+                            {
+                                this.set_status(
+                                    StatusLevel::Warning,
+                                    crate::localization::format(
+                                        "notebook.fix_runtime.save.open_in_another_tab",
+                                        &[("path", target.as_str())],
+                                    ),
+                                );
+                                cx.notify();
+                                return None;
+                            }
+                            let nb = this.tabs.get(tab_idx)?.notebook.clone()?;
+                            Some(nb.update(cx, |nb, cx| {
+                                nb.take_own_identity(cx);
+                                nb.model_for_save()
+                            }))
+                        })
+                        .ok()
+                    else {
+                        return;
+                    };
+                    match crate::fs_safe::write_document_atomic(
+                        &path,
+                        crate::notebook::files::file_text(&path.to_string_lossy(), &model)
+                            .as_bytes(),
+                    ) {
                         Ok(()) => {
                             let mut cx = async_cx.clone();
                             weak_self
                                 .update(&mut cx, |this, cx| {
+                                    let Some(tab_idx) = this.tab_index_by_id(&tab_id) else {
+                                        return;
+                                    };
                                     if let Some(tab) = this.tabs.get_mut(tab_idx) {
                                         tab.notebook_path =
                                             Some(path.to_string_lossy().to_string());
@@ -3460,7 +3531,8 @@ impl AppView {
                                     if let Some(nb) =
                                         this.tabs.get(tab_idx).and_then(|t| t.notebook.clone())
                                     {
-                                        nb.update(cx, |nb, _| nb.clear_dirty());
+                                        let saved = path.to_string_lossy().to_string();
+                                        nb.update(cx, |nb, cx| nb.saved_to(saved, cx));
                                     }
                                     this.set_status(
                                         StatusLevel::Success,
@@ -3496,52 +3568,108 @@ impl AppView {
         }
     }
 
-    /// The browser preview can't write files, so both notebook exports say so.
-    #[cfg(target_arch = "wasm32")]
-    fn notebook_export_unavailable(&mut self, cx: &mut Context<Self>) {
-        self.set_status(
-            StatusLevel::Error,
-            crate::browser_preview::unavailable(&crate::localization::text(
-                "shell.files.notebook_export_unavailable",
-            ))
-            .to_string(),
+    /// Writes a sanitized copy of the notebook as a Jupyter `.ipynb` file
+    /// (Azure Data Studio, VS Code, Jupyter) without changing where the tab
+    /// saves, through the Export dialog's pipeline.
+    pub(super) fn export_notebook_ipynb(&mut self, tab_idx: usize, cx: &mut Context<Self>) {
+        self.quick_export_notebook(
+            tab_idx,
+            crate::notebook::export_dialog::ExportFormat::Jupyter,
+            cx,
         );
-        cx.notify();
     }
 
-    /// Writes a copy of the notebook as a Jupyter `.ipynb` file (Azure Data
-    /// Studio, VS Code, Jupyter) without changing where the tab saves.
-    pub(super) fn export_notebook_ipynb(&mut self, tab_idx: usize, cx: &mut Context<Self>) {
+    /// Writes the notebook as Markdown (SQL inline, results as tables, chart
+    /// pictures next to it), through the Export dialog's pipeline.
+    pub(super) fn export_notebook_markdown(&mut self, tab_idx: usize, cx: &mut Context<Self>) {
+        self.quick_export_notebook(
+            tab_idx,
+            crate::notebook::export_dialog::ExportFormat::Markdown,
+            cx,
+        );
+    }
+
+    /// The toolbar exports: the same redaction, rendering and atomic write
+    /// as the Export dialog with its defaults. When sensitive data needs a
+    /// go-ahead the dialog opens instead, so the user sees what is removed.
+    fn quick_export_notebook(
+        &mut self,
+        tab_idx: usize,
+        format: crate::notebook::export_dialog::ExportFormat,
+        cx: &mut Context<Self>,
+    ) {
+        // The browser downloads through the same pipeline.
         #[cfg(target_arch = "wasm32")]
-        {
-            let _ = tab_idx;
-            self.notebook_export_unavailable(cx);
+        if let Some(notebook) = self.tabs.get(tab_idx).and_then(|t| t.notebook.clone()) {
+            let options = crate::notebook::export_dialog::ExportOptions {
+                format,
+                sql: crate::notebook::export_dialog::SqlPlacement::Inline,
+                ..Default::default()
+            };
+            notebook.update(cx, |nb, cx| nb.export_in_browser(options, cx));
         }
         #[cfg(not(target_arch = "wasm32"))]
         {
+            use crate::notebook::export_dialog::{
+                ExportDecision, ExportOptions, SqlPlacement, build_export, write_files,
+            };
             let Some(notebook) = self.tabs.get(tab_idx).and_then(|t| t.notebook.clone()) else {
                 return;
             };
-            let model = notebook.read(cx).model();
-            let text = model.to_ipynb();
-            let cell_count = model.cells.len();
-            let rx = cx.prompt_for_new_path(std::path::Path::new("."), Some("notebook.ipynb"));
+            let snapshot = notebook.read(cx).export_snapshot(cx);
+            let cell_count = snapshot.doc.cells.len();
+            let options = ExportOptions {
+                format,
+                sql: SqlPlacement::Inline,
+                ..ExportOptions::default()
+            };
+            let preview = match build_export(&snapshot, &options, false) {
+                Ok(preview) if preview.decision == ExportDecision::Allowed => preview,
+                Ok(_) => {
+                    notebook.update(cx, |nb, cx| nb.open_export_dialog_with(options, cx));
+                    return;
+                }
+                Err(error) => {
+                    self.set_status(
+                        StatusLevel::Error,
+                        crate::localization::format(
+                            "shell.files.notebook_export_failed",
+                            &[("error", &error)],
+                        ),
+                    );
+                    cx.notify();
+                    return;
+                }
+            };
+            let name = preview
+                .files
+                .first()
+                .map(|f| f.path.clone())
+                .unwrap_or_else(|| format!("notebook.{}", format.extension()));
+            let rx = cx.prompt_for_new_path(std::path::Path::new("."), Some(&name));
             let weak_self = cx.weak_entity();
             let async_cx = cx.to_async();
             cx.spawn(async move |_this, _cx| {
                 let Ok(Ok(Some(path))) = rx.await else {
                     return;
                 };
-                let (level, message) = match std::fs::write(&path, &text) {
-                    Ok(()) => (
+                let (level, message) = match write_files(&path, &preview.files) {
+                    Ok(_) => (
                         StatusLevel::Success,
-                        crate::localization::format(
-                            "shell.files.notebook_exported_ipynb",
-                            &[
-                                ("count", &cell_count.to_string()),
-                                ("path", &path.display().to_string()),
-                            ],
-                        ),
+                        if format == crate::notebook::export_dialog::ExportFormat::Jupyter {
+                            crate::localization::format(
+                                "shell.files.notebook_exported_ipynb",
+                                &[
+                                    ("count", &cell_count.to_string()),
+                                    ("path", &path.display().to_string()),
+                                ],
+                            )
+                        } else {
+                            crate::localization::format(
+                                "shell.files.notebook_exported",
+                                &[("count", &cell_count.to_string())],
+                            )
+                        },
                     ),
                     Err(error) => (
                         StatusLevel::Error,
@@ -3558,75 +3686,6 @@ impl AppView {
                         cx.notify();
                     })
                     .ok();
-            })
-            .detach();
-        }
-    }
-
-    pub(super) fn export_notebook_markdown(&mut self, tab_idx: usize, cx: &mut Context<Self>) {
-        #[cfg(target_arch = "wasm32")]
-        {
-            let _ = tab_idx;
-            self.notebook_export_unavailable(cx);
-        }
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            let Some(tab) = self.tabs.get(tab_idx) else {
-                return;
-            };
-            let Some(notebook) = tab.notebook.clone() else {
-                return;
-            };
-            let title = tab.name.clone();
-            let tables = notebook.read(cx).result_markdown_tables(cx);
-            let results: Vec<crate::notebook_model::MarkdownCellResult<'_>> = tables
-                .iter()
-                .map(|(id, table)| crate::notebook_model::MarkdownCellResult {
-                    cell_id: id,
-                    table: table.clone(),
-                })
-                .collect();
-            let markdown =
-                crate::notebook_model::export_markdown(notebook.read(cx).model(), &title, &results);
-            let cell_count = notebook.read(cx).model().cells.len();
-            let rx = cx.prompt_for_new_path(std::path::Path::new("."), Some("notebook.md"));
-            let weak_self = cx.weak_entity();
-            let async_cx = cx.to_async();
-            cx.spawn(async move |_this, _cx| {
-                if let Ok(Ok(Some(path))) = rx.await {
-                    match std::fs::write(&path, &markdown) {
-                        Ok(()) => {
-                            let mut cx = async_cx.clone();
-                            weak_self
-                                .update(&mut cx, |this, cx| {
-                                    this.set_status(
-                                        StatusLevel::Success,
-                                        crate::localization::format(
-                                            "shell.files.notebook_exported",
-                                            &[("count", &cell_count.to_string())],
-                                        ),
-                                    );
-                                    cx.notify();
-                                })
-                                .ok();
-                        }
-                        Err(error) => {
-                            let mut cx = async_cx.clone();
-                            weak_self
-                                .update(&mut cx, |this, cx| {
-                                    this.set_status(
-                                        StatusLevel::Error,
-                                        crate::localization::format(
-                                            "shell.files.notebook_export_failed",
-                                            &[("error", &error.to_string())],
-                                        ),
-                                    );
-                                    cx.notify();
-                                })
-                                .ok();
-                        }
-                    }
-                }
             })
             .detach();
         }

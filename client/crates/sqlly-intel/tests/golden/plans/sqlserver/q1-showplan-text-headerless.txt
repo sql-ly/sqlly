@@ -1,0 +1,18 @@
+Changed database context to 'Shop'.
+SELECT c.country, COUNT(*) AS orders, SUM(o.total) AS revenue FROM dbo.orders o JOIN dbo.customers c ON c.customer_id = o.customer_id WHERE o.status = 'refunded' AND o.total > 1200 GROUP BY c.country ORDER BY revenue DESC;
+
+(1 rows affected)
+  |--Sort(ORDER BY:([Expr1003] DESC))
+       |--Compute Scalar(DEFINE:([Expr1002]=CONVERT_IMPLICIT(int,[globalagg1005],0)))
+            |--Stream Aggregate(GROUP BY:([c].[country]) DEFINE:([globalagg1005]=SUM([partialagg1004]), [Expr1003]=SUM([partialagg1006])))
+                 |--Sort(ORDER BY:([c].[country] ASC))
+                      |--Parallelism(Gather Streams)
+                           |--Hash Match(Partial Aggregate, HASH:([c].[country]), RESIDUAL:([Shop].[dbo].[customers].[country] as [c].[country] = [Shop].[dbo].[customers].[country] as [c].[country]) DEFINE:([partialagg1004]=COUNT(*), [partialagg1006]=SUM([Shop].[dbo].[orders].[total] as [o].[total])))
+                                |--Hash Match(Inner Join, HASH:([o].[customer_id])=([c].[customer_id]))
+                                     |--Bitmap(HASH:([o].[customer_id]), DEFINE:([Bitmap1007]))
+                                     |    |--Parallelism(Repartition Streams, Hash Partitioning, PARTITION COLUMNS:([o].[customer_id]))
+                                     |         |--Clustered Index Scan(OBJECT:([Shop].[dbo].[orders].[PK__orders__46596229A6DBB338] AS [o]), WHERE:([Shop].[dbo].[orders].[total] as [o].[total]>(1200.00) AND [Shop].[dbo].[orders].[status] as [o].[status]='refunded'))
+                                     |--Parallelism(Repartition Streams, Hash Partitioning, PARTITION COLUMNS:([c].[customer_id]))
+                                          |--Clustered Index Scan(OBJECT:([Shop].[dbo].[customers].[PK__customer__CD65CB850EC2D984] AS [c]), WHERE:(PROBE([Bitmap1007],[Shop].[dbo].[customers].[customer_id] as [c].[customer_id],N'[IN ROW]')))
+
+(12 rows affected)

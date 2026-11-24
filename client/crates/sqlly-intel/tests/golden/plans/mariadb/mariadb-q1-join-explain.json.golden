@@ -1,0 +1,48 @@
+format: mariadb-json (Certain)
+statements: 1
+
+== statement 1
+dialect: "MariaDb"
+estimated_rows: 40131
+source_format: "mariadb-json"
+statement_type: "EXPLAIN"
+total_subtree_cost: 155.831382
+operators: 6
+  #1 Query Block [Query Block]
+      estimated_cost: 155.831382
+      properties: [{name="cost" value="155.8313818"}, {name="select_id" value="1"}]
+      subplan_name: "Select #1"
+    #2 Filesort [Filesort]
+        sort_keys: ["sum(oi.quantity * oi.unit_price) desc"]
+      #3 Temporary table [Temporary table]
+        #4 Table: o [Access: ALL]
+            estimated_cost: 6.688976
+            estimated_executions: 1
+            estimated_rows: 40131
+            estimated_rows_read: 40131
+            filter: "o.`status` = 'paid'"
+            filtered_percent: 100
+            output_list: ["o", "Condition: o.`status` = 'paid'"]
+            properties: [{name="cost" value="6.6889758"}, {name="loops" value="1"}, {name="possible_keys" value="PRIMARY, orders_customer_idx"}]
+            relation: "o"
+            warnings: [{TableScan={table="o"}}]
+        #5 Table: c [Access: eq_ref]
+            estimated_cost: 35.912794
+            estimated_executions: 40131
+            estimated_rows: 1
+            estimated_rows_read: 1
+            filtered_percent: 100
+            index_name: "PRIMARY"
+            output_list: ["c", "Key: PRIMARY"]
+            properties: [{name="cost" value="35.91279404"}, {name="key_length" value="4"}, {name="loops" value="40131"}, {name="possible_keys" value="PRIMARY"}, {name="ref" value="shop.o.customer_id"}, {name="used_key_parts" value="id"}]
+            relation: "c"
+        #6 Table: oi [Access: ref]
+            estimated_cost: 113.229612
+            estimated_executions: 40131
+            estimated_rows: 2
+            estimated_rows_read: 2
+            filtered_percent: 100
+            index_name: "order_items_order_idx"
+            output_list: ["oi", "Key: order_items_order_idx"]
+            properties: [{name="cost" value="113.229612"}, {name="key_length" value="4"}, {name="loops" value="40131"}, {name="possible_keys" value="order_items_order_idx"}, {name="ref" value="shop.o.id"}, {name="used_key_parts" value="order_id"}]
+            relation: "oi"

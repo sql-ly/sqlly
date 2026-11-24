@@ -1,0 +1,117 @@
+format: cockroachdb-text (Certain)
+statements: 1
+
+== statement 1
+cpu_time_ms: 3
+execution_time_ms: 7
+has_actuals: yes
+notes: ["planning time: 430µs", "execution time: 7ms", "distribution: local", "vectorized: true", "plan type: custom", "rows decoded from KV: 21,000 (1.1 MiB, 21,000 KVs, 2 gRPC calls)", "cumulative time spent in KV: 5ms", "maximum memory usage: 2.6 MiB", "network usage: 0 B (0 messages)", "sql cpu time: 3ms", "isolation level: serializable", "priority: normal", "quality of service: regular"]
+planning_time_ms: 0.43
+source_format: "cockroachdb-text"
+statement_type: "EXPLAIN ANALYZE"
+operators: 11
+  #1 root [root]
+      actual_time_ms: 6.758
+      output_columns: ["name", "t", "row_number"]
+    #2 project [project]
+        actual_time_ms: 0.601
+        output_columns: ["name", "t", "row_number"]
+      #3 window [window]
+          actual_cpu_ms: 0.083
+          actual_rows: 500
+          actual_rows_total: 500
+          actual_self_time_ms: 0.083
+          actual_time_ms: 0.601
+          estimated_rows: 333
+          output_columns: ["customer_id", "t", "id", "name", "row_number"]
+          peak_memory_kb: 90
+          properties: [{name="sql nodes" value="n1"}, {name="vectorized batch count" value="1"}, {name="estimated max sql temp disk usage" value="0 B"}, {name="window 0" value="row_number() OVER (ORDER BY sum DESC RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)"}]
+        #4 hash join (inner) [hash join (inner)]
+            actual_cpu_ms: 0.04
+            actual_rows: 500
+            actual_rows_total: 500
+            actual_self_time_ms: 0.04
+            actual_time_ms: 0.518
+            estimated_rows: 333
+            extra: ["left cols are key", "right cols are key"]
+            join_predicate: "(id) = (customer_id)"
+            join_type: "Inner"
+            output_columns: ["customer_id", "sum", "id", "name"]
+            output_list: ["Condition: (id) = (customer_id)"]
+            peak_memory_kb: 100
+            properties: [{name="sql nodes" value="n1"}, {name="vectorized batch count" value="1"}, {name="estimated max sql temp disk usage" value="0 B"}]
+          #5 scan [scan]
+              actual_cpu_ms: 0.101
+              actual_rows: 1000
+              actual_rows_total: 1000
+              actual_self_time_ms: 0.372
+              actual_time_ms: 0.372
+              estimated_rows: 1000
+              index_name: "customers_pkey"
+              output_columns: ["id", "name"]
+              output_list: ["customers", "Index: customers_pkey"]
+              peak_memory_kb: 100
+              properties: [{name="sql nodes" value="n1"}, {name="kv nodes" value="n1"}, {name="vectorized batch count" value="1"}, {name="KV time" value="372µs"}, {name="KV contention time" value="0µs"}, {name="KV rows decoded" value="1,000"}, {name="KV pairs read" value="1,000"}, {name="KV bytes read" value="48 KiB"}, {name="KV gRPC calls" value="1"}, {name="MVCC step count (ext/int)" value="1,000/1,000"}, {name="MVCC seek count (ext/int)" value="1/1"}, {name="estimated row count" value="1,000 (100% of the table; stats collected 9 seconds ago)"}, {name="spans" value="FULL SCAN"}]
+              relation: "customers"
+              rows_read: 1000
+              warnings: [{TableScan={table="customers"}}]
+          #6 filter [filter]
+              actual_cpu_ms: 0.028
+              actual_rows: 500
+              actual_rows_total: 500
+              actual_self_time_ms: 0.028
+              actual_time_ms: 0.106
+              estimated_rows: 333
+              filter: "sum > 5000"
+              output_columns: ["customer_id", "sum"]
+              output_list: ["Filter: sum > 5000"]
+              properties: [{name="sql nodes" value="n1"}, {name="vectorized batch count" value="3"}]
+            #7 scan buffer [scan buffer]
+                actual_cpu_ms: 0.078
+                actual_rows: 1000
+                actual_rows_total: 1000
+                actual_self_time_ms: 0.078
+                actual_time_ms: 0.078
+                cte_name: "big"
+                estimated_rows: 1000
+                output_columns: ["customer_id", "sum"]
+                properties: [{name="sql nodes" value="n1"}, {name="vectorized batch count" value="10"}, {name="label" value="buffer 1 (big)"}]
+    #8 subquery [subquery]
+        actual_time_ms: 6.157
+        properties: [{name="original sql" value="SELECT customer_id, sum(total) AS t FROM orders GROUP BY customer_id"}, {name="exec mode" value="all rows"}]
+        subplan_name: "@S1"
+      #9 buffer [buffer]
+          actual_cpu_ms: 0.156
+          actual_rows: 1000
+          actual_rows_total: 1000
+          actual_self_time_ms: 0.157
+          actual_time_ms: 6.157
+          cte_name: "big"
+          output_columns: ["customer_id", "sum"]
+          properties: [{name="sql nodes" value="n1"}, {name="vectorized batch count" value="10"}, {name="label" value="buffer 1 (big)"}]
+        #10 group (hash) [group (hash)]
+            actual_cpu_ms: 1
+            actual_rows: 1000
+            actual_rows_total: 1000
+            actual_self_time_ms: 1
+            actual_time_ms: 6
+            estimated_rows: 1000
+            group_keys: ["customer_id"]
+            output_columns: ["customer_id", "sum"]
+            peak_memory_kb: 1638.4
+            properties: [{name="sql nodes" value="n1"}, {name="vectorized batch count" value="1"}, {name="estimated max sql temp disk usage" value="0 B"}, {name="aggregate 0" value="sum(total)"}]
+          #11 scan [scan]
+              actual_cpu_ms: 2
+              actual_rows: 20000
+              actual_rows_total: 20000
+              actual_self_time_ms: 5
+              actual_time_ms: 5
+              estimated_rows: 20000
+              index_name: "orders_pkey"
+              output_columns: ["customer_id", "total"]
+              output_list: ["orders", "Index: orders_pkey"]
+              peak_memory_kb: 1126.4
+              properties: [{name="sql nodes" value="n1"}, {name="kv nodes" value="n1"}, {name="vectorized batch count" value="20"}, {name="KV time" value="5ms"}, {name="KV contention time" value="0µs"}, {name="KV rows decoded" value="20,000"}, {name="KV pairs read" value="20,000"}, {name="KV bytes read" value="1.1 MiB"}, {name="KV gRPC calls" value="1"}, {name="MVCC step count (ext/int)" value="20,000/20,000"}, {name="MVCC seek count (ext/int)" value="1/1"}, {name="estimated row count" value="20,000 (100% of the table; stats collected 9 seconds ago)"}, {name="spans" value="FULL SCAN"}]
+              relation: "orders"
+              rows_read: 20000
+              warnings: [{TableScan={table="orders"}}]

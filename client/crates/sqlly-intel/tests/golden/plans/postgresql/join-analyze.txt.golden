@@ -1,0 +1,214 @@
+format: postgresql-text (Certain)
+statements: 1
+
+== statement 1
+dialect: "Postgres"
+estimated_rows: 8
+execution_time_ms: 111.549
+has_actuals: yes
+notes: ["Planning buffers: shared hit=371"]
+planning_time_ms: 0.57
+source_format: "postgresql-text"
+statement_type: "EXPLAIN ANALYZE"
+total_subtree_cost: 26383.82
+operators: 12
+  #1 Sort [Sort]
+      actual_rows: 2
+      actual_rows_total: 2
+      actual_self_time_ms: 0.025
+      actual_startup_ms: 108.134
+      actual_time_ms: 111.453
+      buffers: {logical_reads=13415 physical_reads=506 shared_hit=12909 shared_read=506}
+      estimated_cost: 26383.82
+      estimated_row_width: 43
+      estimated_rows: 8
+      estimated_startup_cost: 26383.8
+      loops: 1
+      sort_keys: ["(sum(((oi.quantity)::numeric * oi.unit_price))) DESC"]
+      sort_method: "quicksort"
+      sort_space_kb: 25
+      sort_space_type: "Memory"
+    #2 Aggregate [Finalize GroupAggregate]
+        actual_rows: 2
+        actual_rows_total: 2
+        actual_self_time_ms: 0.006
+        actual_startup_ms: 108.108
+        actual_time_ms: 111.428
+        buffers: {logical_reads=13412 physical_reads=506 shared_hit=12906 shared_read=506}
+        estimated_cost: 26383.68
+        estimated_row_width: 43
+        estimated_rows: 8
+        estimated_startup_cost: 26381.18
+        group_keys: ["c.country"]
+        loops: 1
+        parent_relationship: "Outer"
+        properties: [{name="Strategy" value="Sorted"}, {name="Partial Mode" value="Finalize"}]
+      #3 Gather Merge [Gather Merge]
+          actual_rows: 6
+          actual_rows_total: 6
+          actual_self_time_ms: 4.78
+          actual_startup_ms: 108.102
+          actual_time_ms: 111.422
+          buffers: {logical_reads=13412 physical_reads=506 shared_hit=12906 shared_read=506}
+          estimated_cost: 26383.39
+          estimated_row_width: 43
+          estimated_rows: 19
+          estimated_startup_cost: 26381.18
+          loops: 1
+          parent_relationship: "Outer"
+          workers_launched: 2
+          workers_planned: 2
+        #4 Sort [Sort]
+            actual_rows: 2
+            actual_rows_total: 6
+            actual_self_time_ms: 0.02
+            actual_startup_ms: 106.64
+            actual_time_ms: 106.642
+            buffers: {logical_reads=13412 physical_reads=506 shared_hit=12906 shared_read=506}
+            estimated_cost: 25381.18
+            estimated_row_width: 43
+            estimated_rows: 8
+            estimated_startup_cost: 25381.16
+            loops: 3
+            parent_relationship: "Outer"
+            properties: [{name="Worker 0" value="Sort Method: quicksort Memory: 25kB"}, {name="Worker 1" value="Sort Method: quicksort Memory: 25kB"}]
+            sort_keys: ["c.country"]
+            sort_method: "quicksort"
+            sort_space_kb: 25
+            sort_space_type: "Memory"
+          #5 Aggregate [Partial HashAggregate]
+              actual_rows: 2
+              actual_rows_total: 6
+              actual_self_time_ms: 13.173
+              actual_startup_ms: 106.62
+              actual_time_ms: 106.622
+              buffers: {logical_reads=13396 physical_reads=506 shared_hit=12890 shared_read=506}
+              estimated_cost: 25381.04
+              estimated_row_width: 43
+              estimated_rows: 8
+              estimated_startup_cost: 25380.94
+              group_keys: ["c.country"]
+              hash_batches: 1
+              loops: 3
+              parent_relationship: "Outer"
+              peak_memory_kb: 32
+              properties: [{name="Strategy" value="Hashed"}, {name="Partial Mode" value="Partial"}, {name="Worker 0" value="Batches: 1 Memory Usage: 32kB"}, {name="Worker 1" value="Batches: 1 Memory Usage: 32kB"}]
+            #6 Hash Join [Hash Join]
+                actual_rows: 100000
+                actual_rows_total: 300000
+                actual_self_time_ms: 18.306
+                actual_startup_ms: 16.75
+                actual_time_ms: 93.449
+                buffers: {logical_reads=13396 physical_reads=506 shared_hit=12890 shared_read=506}
+                estimated_cost: 23823.01
+                estimated_row_width: 13
+                estimated_rows: 124634
+                estimated_startup_cost: 8359.31
+                join_predicate: "(o.customer_id = c.id)"
+                join_type: "Inner"
+                loops: 3
+                output_list: ["Hash Cond: (o.customer_id = c.id)"]
+                parent_relationship: "Outer"
+              #7 Hash Join [Parallel Hash Join]
+                  actual_rows: 100000
+                  actual_rows_total: 300000
+                  actual_self_time_ms: 45.308
+                  actual_startup_ms: 10.853
+                  actual_time_ms: 69.364
+                  buffers: {logical_reads=11878 physical_reads=0 shared_hit=11878}
+                  estimated_cost: 21864.83
+                  estimated_row_width: 14
+                  estimated_rows: 124634
+                  estimated_startup_cost: 6728.31
+                  join_predicate: "(oi.order_id = o.id)"
+                  join_type: "Inner"
+                  loops: 3
+                  output_list: ["Hash Cond: (oi.order_id = o.id)"]
+                  parallel: yes
+                  parent_relationship: "Outer"
+                #8 Seq Scan [Parallel Seq Scan]
+                    actual_rows: 400000
+                    actual_rows_total: 1200000
+                    actual_self_time_ms: 13.438
+                    actual_startup_ms: 0.007
+                    actual_time_ms: 13.438
+                    alias: "oi"
+                    buffers: {logical_reads=8824 physical_reads=0 shared_hit=8824}
+                    estimated_cost: 13824
+                    estimated_row_width: 14
+                    estimated_rows: 500000
+                    loops: 3
+                    output_list: ["order_items"]
+                    parallel: yes
+                    parent_relationship: "Outer"
+                    relation: "order_items"
+                    warnings: [{TableScan={table="order_items"}}]
+                #9 Hash [Parallel Hash]
+                    actual_rows: 33333.33
+                    actual_rows_total: 99999.99
+                    actual_self_time_ms: 3.928
+                    actual_startup_ms: 10.618
+                    actual_time_ms: 10.618
+                    buffers: {logical_reads=3054 physical_reads=0 shared_hit=3054}
+                    estimated_cost: 5995.18
+                    estimated_row_width: 8
+                    estimated_rows: 58651
+                    estimated_startup_cost: 5995.18
+                    hash_batches: 1
+                    hash_buckets: 131072
+                    loops: 3
+                    parallel: yes
+                    parent_relationship: "Inner"
+                    peak_memory_kb: 4960
+                  #10 Seq Scan [Parallel Seq Scan]
+                      actual_rows: 33333.33
+                      actual_rows_total: 99999.99
+                      actual_self_time_ms: 6.69
+                      actual_startup_ms: 0.01
+                      actual_time_ms: 6.69
+                      alias: "o"
+                      buffers: {logical_reads=3054 physical_reads=0 shared_hit=3054}
+                      estimated_cost: 5995.18
+                      estimated_row_width: 8
+                      estimated_rows: 58651
+                      filter: "(status = 'paid'::text)"
+                      loops: 3
+                      output_list: ["orders", "Filter: (status = 'paid'::text)"]
+                      parallel: yes
+                      parent_relationship: "Outer"
+                      relation: "orders"
+                      rows_read: 399999.99
+                      rows_removed_by_filter: 300000
+                      warnings: [{TableScan={table="orders"}}]
+              #11 Hash [Hash]
+                  actual_rows: 50000
+                  actual_rows_total: 150000
+                  actual_self_time_ms: 3.332
+                  actual_startup_ms: 5.779
+                  actual_time_ms: 5.779
+                  buffers: {logical_reads=1518 physical_reads=506 shared_hit=1012 shared_read=506}
+                  estimated_cost: 1006
+                  estimated_row_width: 7
+                  estimated_rows: 50000
+                  estimated_startup_cost: 1006
+                  hash_batches: 1
+                  hash_buckets: 65536
+                  loops: 3
+                  parent_relationship: "Inner"
+                  peak_memory_kb: 2466
+                #12 Seq Scan [Seq Scan]
+                    actual_rows: 50000
+                    actual_rows_total: 150000
+                    actual_self_time_ms: 2.447
+                    actual_startup_ms: 0.054
+                    actual_time_ms: 2.447
+                    alias: "c"
+                    buffers: {logical_reads=1518 physical_reads=506 shared_hit=1012 shared_read=506}
+                    estimated_cost: 1006
+                    estimated_row_width: 7
+                    estimated_rows: 50000
+                    loops: 3
+                    output_list: ["customers"]
+                    parent_relationship: "Outer"
+                    relation: "customers"
+                    warnings: [{TableScan={table="customers"}}]

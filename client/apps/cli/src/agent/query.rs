@@ -271,7 +271,7 @@ fn read_stdin() -> Result<String, CliError> {
     Ok(buffer)
 }
 
-async fn drain_events(
+pub(crate) async fn drain_events(
     services: &sqlly_services::Services,
     mut handle: sqlly_services::query::QueryHandle,
     limit: usize,

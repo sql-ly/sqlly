@@ -58,6 +58,18 @@ pub struct TableBody {
 }
 
 impl TableBody {
+    /// [`Self::options`] key marking the table as a partition of another
+    /// table (PostgreSQL declarative partitioning); the value is the parent's
+    /// `schema.name`.
+    pub const PARTITION_OF_OPTION: &'static str = "partition_of";
+
+    /// The parent table's `schema.name` when this table is a partition.
+    pub fn partition_of(&self) -> Option<&str> {
+        self.options
+            .get(Self::PARTITION_OF_OPTION)
+            .map(String::as_str)
+    }
+
     pub fn column(&self, name: &SqlName) -> Option<&ColumnDef> {
         self.columns.iter().find(|c| c.name.matches(name))
     }

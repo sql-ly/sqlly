@@ -1,0 +1,41 @@
+format: mariadb-table (Certain)
+statements: 1
+
+== statement 1
+dialect: "MariaDb"
+estimated_rows: 40131
+has_actuals: yes
+source_format: "mariadb-table"
+statement_type: "ANALYZE"
+operators: 4
+  #1 Query Block [Query Block]
+      properties: [{name="select_id" value="1"}, {name="select_type" value="SIMPLE"}]
+      subplan_name: "Select #1"
+    #2 Table: o [Access: ALL]
+        actual_rows: 40000
+        estimated_rows: 40131
+        estimated_rows_read: 40131
+        extra: ["Using where", "Using temporary", "Using filesort"]
+        filtered_percent: 100
+        output_list: ["o"]
+        properties: [{name="possible_keys" value="PRIMARY,orders_customer_idx"}, {name="r_filtered" value="25.00"}]
+        relation: "o"
+        warnings: [{TableScan={table="o"}}]
+    #3 Table: c [Access: eq_ref]
+        actual_rows: 1
+        estimated_rows: 1
+        estimated_rows_read: 1
+        filtered_percent: 100
+        index_name: "PRIMARY"
+        output_list: ["c", "Key: PRIMARY"]
+        properties: [{name="possible_keys" value="PRIMARY"}, {name="key_len" value="4"}, {name="ref" value="shop.o.customer_id"}, {name="r_filtered" value="100.00"}]
+        relation: "c"
+    #4 Table: oi [Access: ref]
+        actual_rows: 2.5
+        estimated_rows: 2
+        estimated_rows_read: 2
+        filtered_percent: 100
+        index_name: "order_items_order_idx"
+        output_list: ["oi", "Key: order_items_order_idx"]
+        properties: [{name="possible_keys" value="order_items_order_idx"}, {name="key_len" value="4"}, {name="ref" value="shop.o.id"}, {name="r_filtered" value="100.00"}]
+        relation: "oi"

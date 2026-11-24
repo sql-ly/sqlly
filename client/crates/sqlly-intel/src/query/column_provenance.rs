@@ -709,6 +709,16 @@ impl StatementProvenance {
         })
     }
 
+    /// The names the statement projects, in order, when every item's name
+    /// is known statically; `None` when it selects `*` or a computed
+    /// expression without an alias.
+    pub fn output_names(&self) -> Option<Vec<String>> {
+        if self.has_star {
+            return None;
+        }
+        self.items.iter().map(|item| item.output.clone()).collect()
+    }
+
     /// Resolves the source column behind result column `label`, clicked at
     /// result position `column_index`. `label_occurrences` is how many result
     /// columns share this label — pass the count from the actual result set
@@ -1350,5 +1360,22 @@ mod tests {
             ),
             Some((vec!["Shared", "Permission"], "Name"))
         );
+    }
+
+    #[test]
+    fn output_names_are_known_only_without_star_or_unnamed_expressions() {
+        let names = |sql: &str| StatementProvenance::parse(sql).and_then(|p| p.output_names());
+        assert_eq!(
+            names(
+                "SELECT o.id, o.total AS amount, c.name FROM orders o JOIN customers c ON c.id = o.cid"
+            ),
+            Some(vec![
+                "id".to_string(),
+                "amount".to_string(),
+                "name".to_string()
+            ])
+        );
+        assert_eq!(names("SELECT * FROM orders"), None);
+        assert_eq!(names("SELECT count(*) FROM orders"), None);
     }
 }

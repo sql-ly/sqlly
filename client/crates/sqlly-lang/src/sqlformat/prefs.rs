@@ -227,36 +227,6 @@ impl KeywordGroupCasing {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
-pub enum IdentifierCase {
-    #[default]
-    Preserve,
-    Lowercase,
-    Uppercase,
-    PascalCase,
-}
-
-impl IdentifierCase {
-    pub fn display_title(self) -> &'static str {
-        match self {
-            IdentifierCase::Preserve => "Preserve",
-            IdentifierCase::Lowercase => "lowercase",
-            IdentifierCase::Uppercase => "UPPERCASE",
-            IdentifierCase::PascalCase => "PascalCase",
-        }
-    }
-
-    pub fn all() -> &'static [IdentifierCase] {
-        &[
-            IdentifierCase::Preserve,
-            IdentifierCase::Lowercase,
-            IdentifierCase::Uppercase,
-            IdentifierCase::PascalCase,
-        ]
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "camelCase")]
 pub enum IdentifierQuoting {
     #[default]
     PreserveExisting,
@@ -859,8 +829,8 @@ pub struct SqlFormattingPreferences {
     // §3 Keyword groups
     pub keyword_group_casing: KeywordGroupCasing,
 
-    // §4 Identifier formatting
-    pub identifier_case: IdentifierCase,
+    // §4 Identifier formatting. User-defined names are never re-cased, so
+    // only quoting is configurable (an old `identifierCase` key is ignored).
     pub identifier_quoting: IdentifierQuoting,
 
     // §5 Clause layout
@@ -980,7 +950,6 @@ impl Default for SqlFormattingPreferences {
             preset: Preset::Default,
             keyword_case: KeywordCase::Uppercase,
             keyword_group_casing: KeywordGroupCasing::default(),
-            identifier_case: IdentifierCase::Preserve,
             identifier_quoting: IdentifierQuoting::PreserveExisting,
             major_clause_placement: MajorClausePlacement::EachOnNewLine,
             break_after_select: true,

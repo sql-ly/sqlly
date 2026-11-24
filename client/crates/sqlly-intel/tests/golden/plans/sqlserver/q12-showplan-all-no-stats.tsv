@@ -1,0 +1,12 @@
+Changed database context to 'Shop'.
+StmtText	StmtId	NodeId	Parent	PhysicalOp	LogicalOp	Argument	DefinedValues	EstimateRows	EstimateIO	EstimateCPU	AvgRowSize	TotalSubtreeCost	OutputList	Warnings	Type	Parallel	EstimateExecutions
+--------	------	------	------	----------	---------	--------	-------------	------------	----------	-----------	----------	----------------	----------	--------	----	--------	------------------
+SELECT COUNT(*) AS n FROM dbo.nostats2 n JOIN dbo.customers c ON c.customer_id = n.grp WHERE n.amt > 100 OPTION (RECOMPILE);	1	1	0	NULL	NULL	1	NULL	1.0	NULL	NULL	NULL	0.35249114	NULL	NULL	SELECT	0	NULL
+  |--Compute Scalar(DEFINE:([Expr1003]=CONVERT_IMPLICIT(int,[globalagg1005],0)))	1	3	1	Compute Scalar	Compute Scalar	DEFINE:([Expr1003]=CONVERT_IMPLICIT(int,[globalagg1005],0))	[Expr1003]=CONVERT_IMPLICIT(int,[globalagg1005],0)	1.0	0.0	0.0000001	11	0.35249114	[Expr1003]	NULL	PLAN_ROW	0	1.0
+       |--Stream Aggregate(DEFINE:([globalagg1005]=SUM([partialagg1004])))	1	4	3	Stream Aggregate	Aggregate	NULL	[globalagg1005]=SUM([partialagg1004])	1.0	0.0	4.6975802E-5	15	0.35249105	[globalagg1005]	NULL	PLAN_ROW	0	1.0
+            |--Nested Loops(Inner Join, OUTER REFERENCES:([n].[grp], [Expr1006]) WITH UNORDERED PREFETCH)	1	5	4	Nested Loops	Inner Join	OUTER REFERENCES:([n].[grp], [Expr1006]) WITH UNORDERED PREFETCH	NULL	77.459671	0.0	3.2378142E-4	15	0.35244405	[partialagg1004]	NULL	PLAN_ROW	0	1.0
+                 |--Hash Match(Aggregate, HASH:([n].[grp]) DEFINE:([partialagg1004]=COUNT(*)))	1	7	5	Hash Match	Aggregate	HASH:([n].[grp])	[partialagg1004]=COUNT(*)	77.459671	0.0	4.6614569E-2	19	0.12890397	[n].[grp], [partialagg1004]	NULL	PLAN_ROW	0	1.0
+                 |    |--Table Scan(OBJECT:([Shop].[dbo].[nostats2] AS [n]), WHERE:([Shop].[dbo].[nostats2].[amt] as [n].[amt]>(100.00)))	1	8	7	Table Scan	Table Scan	OBJECT:([Shop].[dbo].[nostats2] AS [n]), WHERE:([Shop].[dbo].[nostats2].[amt] as [n].[amt]>(100.00))	[n].[grp]	6000.0	5.0532408E-2	0.022157	20	7.2689407E-2	[n].[grp]	NO STATS:([nostats2].[grp])	PLAN_ROW	0	1.0
+                 |--Clustered Index Seek(OBJECT:([Shop].[dbo].[customers].[PK__customer__CD65CB850EC2D984] AS [c]), SEEK:([c].[customer_id]=[Shop].[dbo].[nostats2].[grp] as [n].[grp]) ORDERED FORWARD)	1	9	5	Clustered Index Seek	Clustered Index Seek	OBJECT:([Shop].[dbo].[customers].[PK__customer__CD65CB850EC2D984] AS [c]), SEEK:([c].[customer_id]=[Shop].[dbo].[nostats2].[grp] as [n].[grp]) ORDERED FORWARD	NULL	1.0	0.003125	0.0001581	9	0.22321631	NULL	NULL	PLAN_ROW	0	77.459671
+
+(7 rows affected)

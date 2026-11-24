@@ -1,0 +1,39 @@
+format: sqlite-eqp (Certain)
+statements: 1
+
+== statement 1
+dialect: "Sqlite"
+source_format: "sqlite-eqp"
+statement_type: "EXPLAIN QUERY PLAN"
+operators: 11
+  #1 MERGE (UNION ALL) [MERGE]
+    #2 LEFT [LEFT]
+      #3 SEARCH c USING INTEGER PRIMARY KEY (rowid=?) [SEARCH]
+          extra: ["INTEGER PRIMARY KEY"]
+          index_cond: "rowid=?"
+          output_list: ["c", "Index Cond: rowid=?"]
+          properties: [{name="Access" value="INTEGER PRIMARY KEY"}]
+          relation: "c"
+      #4 LIST SUBQUERY 2 [LIST]
+          subplan_name: "LIST SUBQUERY 2"
+        #5 SCAN orders [SCAN]
+            output_list: ["orders"]
+            relation: "orders"
+            warnings: [{TableScan={table="orders"}}]
+      #6 CORRELATED SCALAR SUBQUERY 1 [CORRELATED]
+          subplan_name: "CORRELATED SCALAR SUBQUERY 1"
+        #7 SEARCH o USING INDEX orders_customer_idx (customer_id=?) [SEARCH]
+            index_cond: "customer_id=?"
+            index_name: "orders_customer_idx"
+            output_list: ["o", "Index Cond: customer_id=?", "Index: orders_customer_idx"]
+            properties: [{name="Access" value="INDEX"}]
+            relation: "o"
+      #8 USE TEMP B-TREE FOR ORDER BY [USE]
+          properties: [{name="Temp B-tree for" value="ORDER BY"}]
+    #9 RIGHT [RIGHT]
+      #10 SCAN customers [SCAN]
+          output_list: ["customers"]
+          relation: "customers"
+          warnings: [{TableScan={table="customers"}}]
+      #11 USE TEMP B-TREE FOR ORDER BY [USE]
+          properties: [{name="Temp B-tree for" value="ORDER BY"}]

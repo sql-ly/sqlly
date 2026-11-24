@@ -9,6 +9,16 @@ use std::collections::{BTreeMap, HashMap};
 use crate::plans::warning::PlanWarning;
 use crate::plans::{ExecutionPlan, PlanNode};
 
+mod changes;
+#[cfg(test)]
+mod changes_tests;
+
+pub(crate) use changes::PHRASES;
+pub use changes::{
+    PlanChange, PlanChangeEffect, PlanChangeKind, PlanChangeReport, StatementChanges,
+    explain_plan_changes, explain_statement_changes,
+};
+
 /// Default per-side limit. A pathological plan should not make opening the
 /// comparison pane allocate or sort without bound.
 pub const DEFAULT_MAX_COMPARISON_NODES: usize = 2_000;
@@ -193,46 +203,11 @@ pub fn compare_plans(
     comparison: &[ExecutionPlan],
     node_limit: usize,
 ) -> Result<PlanComparison, PlanComparisonError> {
-    if baseline.is_empty() || comparison.is_empty() {
-        return Err(PlanComparisonError::Empty);
-    }
-    if baseline.len() != comparison.len() {
-        return Err(PlanComparisonError::StatementCount {
-            baseline: baseline.len(),
-            comparison: comparison.len(),
-        });
-    }
-    let baseline_node_count = baseline.iter().map(|plan| plan.nodes.len()).sum();
-    let comparison_node_count = comparison.iter().map(|plan| plan.nodes.len()).sum();
-    if baseline_node_count > node_limit {
-        return Err(PlanComparisonError::TooLarge {
-            side: "baseline",
-            nodes: baseline_node_count,
-            limit: node_limit,
-        });
-    }
-    if comparison_node_count > node_limit {
-        return Err(PlanComparisonError::TooLarge {
-            side: "comparison",
-            nodes: comparison_node_count,
-            limit: node_limit,
-        });
-    }
+    let (baseline_node_count, comparison_node_count) =
+        check_batches(baseline, comparison, node_limit)?;
 
     let mut operator_deltas = Vec::new();
     for (statement_index, (before, after)) in baseline.iter().zip(comparison).enumerate() {
-        if !before.statement_type.is_empty()
-            && !after.statement_type.is_empty()
-            && !before
-                .statement_type
-                .eq_ignore_ascii_case(&after.statement_type)
-        {
-            return Err(PlanComparisonError::StatementType {
-                index: statement_index,
-                baseline: before.statement_type.clone(),
-                comparison: after.statement_type.clone(),
-            });
-        }
         compare_statement(statement_index, before, after, &mut operator_deltas);
     }
 
@@ -259,6 +234,56 @@ pub fn compare_plans(
         comparison_warning_count: warning_count(comparison),
         operator_deltas,
     })
+}
+
+/// The checks both comparisons share: non-empty batches of equal length and
+/// matching statement types, within the node limit. Returns the node counts
+/// of the two sides.
+pub(crate) fn check_batches(
+    baseline: &[ExecutionPlan],
+    comparison: &[ExecutionPlan],
+    node_limit: usize,
+) -> Result<(usize, usize), PlanComparisonError> {
+    if baseline.is_empty() || comparison.is_empty() {
+        return Err(PlanComparisonError::Empty);
+    }
+    if baseline.len() != comparison.len() {
+        return Err(PlanComparisonError::StatementCount {
+            baseline: baseline.len(),
+            comparison: comparison.len(),
+        });
+    }
+    let baseline_node_count = baseline.iter().map(|plan| plan.nodes.len()).sum();
+    let comparison_node_count = comparison.iter().map(|plan| plan.nodes.len()).sum();
+    if baseline_node_count > node_limit {
+        return Err(PlanComparisonError::TooLarge {
+            side: "baseline",
+            nodes: baseline_node_count,
+            limit: node_limit,
+        });
+    }
+    if comparison_node_count > node_limit {
+        return Err(PlanComparisonError::TooLarge {
+            side: "comparison",
+            nodes: comparison_node_count,
+            limit: node_limit,
+        });
+    }
+    for (index, (before, after)) in baseline.iter().zip(comparison).enumerate() {
+        if !before.statement_type.is_empty()
+            && !after.statement_type.is_empty()
+            && !before
+                .statement_type
+                .eq_ignore_ascii_case(&after.statement_type)
+        {
+            return Err(PlanComparisonError::StatementType {
+                index,
+                baseline: before.statement_type.clone(),
+                comparison: after.statement_type.clone(),
+            });
+        }
+    }
+    Ok((baseline_node_count, comparison_node_count))
 }
 
 fn compare_statement(
@@ -410,6 +435,7 @@ mod tests {
             row_count: None,
             output_list: Vec::new(),
             warnings,
+            ..Default::default()
         }
     }
 
@@ -422,6 +448,7 @@ mod tests {
             edges: Vec::<PlanEdge>::new(),
             warnings: Vec::new(),
             nodes,
+            ..Default::default()
         }
     }
 

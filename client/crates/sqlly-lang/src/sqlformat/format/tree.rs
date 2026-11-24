@@ -2,8 +2,9 @@
 //! the paren tree ([`Node`]) that classifies each parenthesized group
 //! ([`ParenKind`]) before layout.
 
+use super::casing::{TYPE_WORDS, word_in};
 use crate::sqllex::{CommentShape, IdentQuote, ParamStyle, StringShape, Token, TokenKind};
-use crate::sqlmodel::{Dialect, Span};
+use crate::sqlmodel::{Dialect, Span, is_reserved_in_dialect};
 
 /// A significant token plus how many newlines separated it from the previous
 /// significant token in the source (0 = same line).
@@ -17,6 +18,13 @@ pub(super) struct Item<'a> {
     /// Set on structural words the dialect keyword tables don't list but
     /// that read as keywords in context (`INCLUDE (…)` of an index).
     pub(super) is_context_keyword: bool,
+    /// Set on a non-reserved keyword standing alone where a value goes
+    /// (`SELECT type, key FROM`, `SET type = 1`): a user's column, so it
+    /// keeps its own casing.
+    pub(super) is_keyword_name: bool,
+    /// Set on the target type of `CAST(x AS type)` (and `TRY_CAST`,
+    /// `SAFE_CAST`), so data-type casing reaches it.
+    pub(super) is_cast_type: bool,
     /// Print directly against the previous token, with no separator: the
     /// two were written touching, and a space would change how the server
     /// reads them (Snowflake `src:path`, MySQL `user@host`, Oracle
@@ -131,7 +139,109 @@ pub(super) fn collect_items<'a>(
         i += 1;
     }
     mark_context_keywords(&mut items);
+    mark_keyword_names(&mut items, dialect);
+    mark_cast_types(&mut items);
     items
+}
+
+/// Mark the word after `AS` whose innermost open paren is a
+/// `CAST` / `TRY_CAST` / `SAFE_CAST` call.
+fn mark_cast_types(items: &mut [Item<'_>]) {
+    let code: Vec<usize> = (0..items.len())
+        .filter(|&k| !matches!(items[k].tok.kind, TokenKind::Comment(_)))
+        .collect();
+    // For each open paren: whether it opens a cast call.
+    let mut parens: Vec<bool> = Vec::new();
+    for p in 0..code.len() {
+        let t = items[code[p]].tok;
+        match t.kind {
+            TokenKind::LParen => {
+                let callee = p.checked_sub(1).map(|q| items[code[q]].tok);
+                parens.push(callee.is_some_and(|c| {
+                    ["cast", "try_cast", "safe_cast"]
+                        .iter()
+                        .any(|w| is_word(&c, w))
+                }));
+            }
+            TokenKind::RParen => {
+                parens.pop();
+            }
+            _ if parens.last() == Some(&true)
+                && t.is_word()
+                && p.checked_sub(1)
+                    .is_some_and(|q| is_word(&items[code[q]].tok, "as")) =>
+            {
+                items[code[p]].is_cast_type = true;
+            }
+            _ => {}
+        }
+    }
+}
+
+/// Non-reserved keywords that start or steer a statement where a value
+/// could also stand (`ELSE ROLLBACK;`, `THEN RETURN;`, `OVER (ROWS …`), so
+/// a lone one there is never taken for a column.
+const STATEMENT_KEYWORDS: &[&str] = &[
+    "begin",
+    "commit",
+    "rollback",
+    "return",
+    "returns",
+    "declare",
+    "go",
+    "revoke",
+    "vacuum",
+    "rows",
+    "delimiter",
+];
+
+/// Mark keywords the dialect does not reserve that sit in an operand slot,
+/// between a list/expression separator and the end of the operand
+/// (`SELECT Type, Key FROM t`, `SET Type = 1`, `WHERE Status = 1`). Those
+/// are user names that happen to be spelled like a keyword: re-casing them
+/// would change the user's spelling, so the emitter treats them as names.
+/// Built-in type words keep their data-type casing (`CONVERT(int, x)`).
+fn mark_keyword_names(items: &mut [Item<'_>], dialect: Dialect) {
+    let code: Vec<usize> = (0..items.len())
+        .filter(|&k| !matches!(items[k].tok.kind, TokenKind::Comment(_)))
+        .collect();
+    for p in 0..code.len() {
+        let t = items[code[p]].tok;
+        if t.kind != TokenKind::Keyword
+            || is_reserved_in_dialect(dialect, t.text)
+            || word_in(TYPE_WORDS, t.text)
+            || word_in(STATEMENT_KEYWORDS, t.text)
+        {
+            continue;
+        }
+        let prev = p.checked_sub(1).map(|q| items[code[q]].tok);
+        let next = code.get(p + 1).map(|&k| items[k].tok);
+        let opens_operand = prev.is_some_and(|t| {
+            matches!(
+                t.kind,
+                TokenKind::Comma | TokenKind::LParen | TokenKind::Operator
+            ) || [
+                "select", "distinct", "where", "and", "or", "on", "by", "set", "having", "when",
+                "then", "else",
+            ]
+            .iter()
+            .any(|w| is_word(&t, w))
+        });
+        let closes_operand = next.is_none_or(|t| {
+            matches!(
+                t.kind,
+                TokenKind::Comma | TokenKind::RParen | TokenKind::Semicolon | TokenKind::Operator
+            ) || [
+                "from", "as", "where", "and", "or", "asc", "desc", "is", "in", "like", "between",
+                "not", "then", "else", "end", "when", "order", "group", "having", "union",
+            ]
+            .iter()
+            .any(|w| is_word(&t, w))
+        });
+        if opens_operand && closes_operand {
+            items[code[p]].is_keyword_name = true;
+        }
+    }
 }
 
 /// Words the dialect keyword tables leave as plain names (they are
@@ -228,6 +338,8 @@ fn item(tok: Token<'_>, newlines_before: u32, attach: bool) -> Item<'_> {
         newlines_before,
         is_function_name: false,
         is_context_keyword: false,
+        is_keyword_name: false,
+        is_cast_type: false,
         attach,
     }
 }

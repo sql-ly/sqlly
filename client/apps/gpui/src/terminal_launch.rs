@@ -324,6 +324,8 @@ fn credentials(profile: &ConnectionProfile) -> (Option<String>, Option<String>) 
             profile.runtime_cloud_iam_token.clone(),
         ),
         AuthenticationType::AuthToken { secret_ref } => (None, resolved(secret_ref)),
+        // psql runs its own OAuth sign-in; only the role travels.
+        AuthenticationType::PostgresOAuth { username, .. } => (Some(username.clone()), None),
         AuthenticationType::Integrated
         | AuthenticationType::EntraDeviceCode
         | AuthenticationType::EntraBrowser => (None, None),

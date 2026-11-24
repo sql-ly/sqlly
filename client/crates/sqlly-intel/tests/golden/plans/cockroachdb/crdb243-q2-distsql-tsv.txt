@@ -1,0 +1,28 @@
+info
+distribution: local
+vectorized: true
+
+• sort
+│ estimated row count: 2
+│ order: -sum
+│
+└── • group (hash)
+"    │ estimated row count: 2"
+"    │ group by: region"
+"    │"
+"    └── • hash join"
+"        │ estimated row count: 10,000"
+"        │ equality: (customer_id) = (id)"
+"        │ right cols are key"
+"        │"
+"        ├── • scan"
+"        │     estimated row count: 20,000 (100% of the table; stats collected 3 seconds ago)"
+"        │     table: orders@orders_pkey"
+"        │     spans: FULL SCAN"
+"        │"
+"        └── • scan"
+"              estimated row count: 500 (50% of the table; stats collected 3 seconds ago)"
+"              table: customers@customers_region_idx"
+"              spans: [/'east' - /'east'] [/'west' - /'west']"
+
+Diagram: https://cockroachdb.github.io/distsqlplan/decode.html#eJyck9tu4zYQhu_7FMTcxC7oWCcXiYAFnMZq1wtHSiUH20XXEBhxLAsriy5JNVkEfveCUtYHIU7hXpmcGX_z_zPUC6i_S_Ah-PN-djMNSW8yTebJH7M-SYJZcDsn2aXEvBAVJZmoK937uU9uElJRoup1T1xqoVnZhCT-g1WN5Lc4uiNZrbRYo1Qmk5FP0TQkQvLXgCBRSMTlj6K04OQDyS4LTj5_DOJg15MYQRfIlL6g5OIJlb7ok9_j6OGe_PplXxXFkyA2kR8SJkFyCxQqwTFka1Tg_wU2LChspMhQKSFN6KUpmPJn8C0KRbWptQkvKGRCIvgvoAtdIvgwZ48lxsg4yqEFFDhqVpQNtjU1bn_SzTf8DhRuRVmvK-WTA4eUNKMCCsmGmdwAFlsKotb7vkqzHMG3D4ROJ-BbW_r_tNrHWndLGe9OaTvCtODPh7qN3Daz1zv8CmYTX2GwOw3vJS6L56DihFWc2EToFcqTvpyOL_ukr72dumpGi_zIysL8879K3hjOR6ZWn0RRoRw6x7Mpcal7Y7v_QRb5qjkBhajWPhl7dOyc9OR2PDnn7OomzyXmTAs5dI_ljM3qbsIvaRjN0_BhNntVdBs9hPM0jj4nPXNNHu56Y6d_Up3XUeeeoy4RUqMceh1l7umHO-q0885pF6PaiEphd9FvdrI6nQa2WTfyHNvno0QtM7yXImtq22vUgJoAR6XbrNNeplWTsk0HiWy9--4OSfYZJOeQZHdJzrsk94hkHZKcLsl9l-SdJrldkvcuaXSaZJnZL0vxlBYcfHD44_UVs6wBw1_4wHOt0eDKux4NbA-vefaYjdwr87qXJcuVeQDJSjw12Pn3jVnfkpUKKdyxbzhBjXJdVIXSRfaa2W5_-jcAAP__PVku1g==

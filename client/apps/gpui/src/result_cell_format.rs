@@ -323,43 +323,9 @@ pub fn column_is_numeric(column: Option<&ResultColumn>) -> bool {
     )
 }
 
-/// The trimmed text when it is a plain decimal literal — optional sign,
-/// digits, optional fraction, optional exponent — that a typed export (XLSX,
-/// JSON, a SQL script) can emit verbatim as a number. Deliberately stricter
-/// than `f64::from_str`: it rejects `inf`, `NaN`, and anything carrying a
-/// currency symbol, grouping separator, or trailing unit, all of which must
-/// stay text.
-///
-/// The original digits are returned rather than a reparsed `f64` so a
-/// `decimal(38,10)` keeps every digit it came with. A leading `+` is dropped
-/// because neither xsd:double nor JSON accepts it.
-pub fn numeric_literal(text: &str) -> Option<&str> {
-    let trimmed = text.trim();
-    let body = trimmed.strip_prefix(['-', '+']).unwrap_or(trimmed);
-    let (mantissa, exponent) = match body.split_once(['e', 'E']) {
-        Some((m, e)) => (m, Some(e)),
-        None => (body, None),
-    };
-    let (int_part, frac_part) = match mantissa.split_once('.') {
-        Some((i, f)) => (i, f),
-        None => (mantissa, ""),
-    };
-    if int_part.is_empty() && frac_part.is_empty() {
-        return None;
-    }
-    if !int_part.bytes().all(|b| b.is_ascii_digit())
-        || !frac_part.bytes().all(|b| b.is_ascii_digit())
-    {
-        return None;
-    }
-    if let Some(exp) = exponent {
-        let digits = exp.strip_prefix(['-', '+']).unwrap_or(exp);
-        if digits.is_empty() || !digits.bytes().all(|b| b.is_ascii_digit()) {
-            return None;
-        }
-    }
-    Some(trimmed.strip_prefix('+').unwrap_or(trimmed))
-}
+/// The trimmed text when it is a plain decimal literal a typed export can
+/// write verbatim as a number; shared with the notebook report exporters.
+pub use sqlly_services::report::format::numeric_literal;
 
 /// The text of a numeric cell in `column` as a bare number literal: the
 /// digits of a `String` cell that `numeric_literal` accepts when the column

@@ -475,6 +475,65 @@ mod tests {
         c.is_ascii_alphanumeric() || c == '_' || c == '$' || c == '@'
     }
 
+    /// The formatter's built-in name tables (sqlly-lang, which cannot read
+    /// these files) must list exactly this catalog's functions and types, or
+    /// a system name goes un-cased or a user's name gets re-cased.
+    #[test]
+    fn builtin_names_match_catalog() {
+        let dialects = [
+            ("SQLSERVER", Dialect::SqlServer),
+            ("POSTGRES", Dialect::Postgres),
+            ("MYSQL", Dialect::MySql),
+            ("ORACLE", Dialect::Oracle),
+            ("SQLITE", Dialect::Sqlite),
+        ];
+        let mut expected =
+            String::from("//! Generated — do not edit. See `mod.rs` for how to regenerate.\n");
+        let mut table = |name: String, mut names: Vec<String>| {
+            names.sort();
+            names.dedup();
+            expected.push_str(&format!("\npub(super) const {name}: &[&str] = &[\n"));
+            for n in names {
+                expected.push_str(&format!("    \"{n}\",\n"));
+            }
+            expected.push_str("];\n");
+        };
+        for (name, dialect) in dialects {
+            let catalog = builtins(dialect);
+            table(
+                format!("{name}_FUNCTIONS"),
+                catalog
+                    .functions()
+                    .iter()
+                    .filter(|f| !f.name.starts_with("@@"))
+                    .map(|f| f.name.to_ascii_uppercase())
+                    .collect(),
+            );
+            table(
+                format!("{name}_TYPES"),
+                catalog
+                    .type_docs()
+                    .map(|t| t.name.to_ascii_uppercase())
+                    .collect(),
+            );
+        }
+        let path = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../sqlly-lang/src/sqlmodel/builtin_names/data.rs"
+        );
+        if std::env::var_os("SQLLY_REGEN_BUILTIN_NAMES").is_some() {
+            std::fs::write(path, &expected).expect("write data.rs");
+            return;
+        }
+        let actual = std::fs::read_to_string(path)
+            .expect("read data.rs")
+            .replace("\r\n", "\n");
+        assert!(
+            actual == expected,
+            "sqlly-lang builtin_names/data.rs is stale; rerun with SQLLY_REGEN_BUILTIN_NAMES=1"
+        );
+    }
+
     /// Structural rules every data file must follow. Collects every problem
     /// so one run reports a file's whole list.
     #[test]

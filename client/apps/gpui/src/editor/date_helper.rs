@@ -122,7 +122,7 @@ impl SqlEditor {
     /// date (or the phrase typed so far already reads as one).
     pub(super) fn date_helper_at_cursor(&self) -> Option<DateHelper> {
         let prefs = self.editor_prefs.natural_dates;
-        if !prefs.enabled || self.database_type.is_command_engine() {
+        if !prefs.enabled || self.database_type.is_command_engine() || self.is_markdown() {
             return None;
         }
         let cursor = self.cursor.min(self.content.len());
@@ -360,7 +360,7 @@ impl SqlEditor {
     pub(crate) fn date_markers(&self) -> std::rc::Rc<Vec<MarkedPredicate>> {
         let mut cache = self.date_marker_cache.borrow_mut();
         if cache.0 != Some(self.content_revision) {
-            let has_any = self.content.contains("date:");
+            let has_any = !self.is_markdown() && self.content.contains("date:");
             cache.1 = std::rc::Rc::new(if has_any {
                 nd::find_marked_predicates(&self.content)
             } else {

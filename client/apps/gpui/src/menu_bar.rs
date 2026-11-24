@@ -23,13 +23,18 @@ use crate::app::{
     ToggleResultsPane, ToggleSidebar, Undo, UnlockSqlly, ValidateActiveQuery, ZoomEditorIn,
     ZoomEditorOut, ZoomEditorReset, ZoomWindow,
 };
+use crate::app::{
+    ConvertNotebookToScript, NewNotebook, OpenAsNotebook, OpenNotebook, RunAllNotebookCells,
+    RunNotebookCell, SaveNotebook, StopNotebookRun,
+};
 use crate::editor::{
     AddCursorAbove, AddCursorBelow, AddCursorForNextOccurrence, AddLineComment,
     ConvertDelimitedList, End, Find, FindNext, FindPrev, FormatDocument, Home,
     InsertDistinctValuesAsInList, PageDown, PageUp, PasteAsInList, RemoveLineComment, Replace,
-    SelectAllOccurrences, SelectEnd, SelectHome, SelectPageDown, SelectPageUp, ToggleLineComment,
-    TriggerCompletions, TriggerValueLookup,
+    SelectAllOccurrences, SelectEnd, SelectHome, SelectPageDown, SelectPageUp, ToggleBlockComment,
+    ToggleLineComment, TriggerCompletions, TriggerValueLookup,
 };
+use crate::theme::ThemeKind;
 
 macro_rules! action {
     ($key:expr, $action:expr) => {
@@ -83,7 +88,7 @@ fn build_macos_menus(connected: bool) -> Vec<Menu> {
         ),
         file_menu(FileMenuStyle::MacOs),
         edit_menu(),
-        view_menu(),
+        view_menu(ThemeMenuState::current()),
         query_menu(),
         tools_menu(connected),
         window_menu(WindowMenuStyle::MacOs),
@@ -95,7 +100,7 @@ fn build_windows_menus(connected: bool) -> Vec<Menu> {
     vec![
         file_menu(FileMenuStyle::Windows),
         edit_menu(),
-        view_menu(),
+        view_menu(ThemeMenuState::current()),
         query_menu(),
         tools_menu(connected),
         window_menu(WindowMenuStyle::Windows),
@@ -113,9 +118,11 @@ fn file_menu(style: FileMenuStyle) -> Menu {
     let mut items = vec![
         action!("menu.file.new_query", NewQueryTab),
         action!("menu.file.new_window", NewWindow),
+        action!("notebook.shell.menu.new_notebook", NewNotebook),
         MenuItem::separator(),
         action!("menu.file.open_sql", OpenSql),
         action!("menu.file.open_sql_file", OpenSqlFile),
+        action!("notebook.shell.menu.open_notebook", OpenNotebook),
         #[cfg(not(target_arch = "wasm32"))]
         action!("menu.file.run_sql_file", RunSqlFile),
         action!("menu.file.open_project_file", OpenProjectFile),
@@ -137,6 +144,7 @@ fn file_menu(style: FileMenuStyle) -> Menu {
         action!("menu.file.manage_workspaces", ManageWorkspaces),
         MenuItem::separator(),
         action!("menu.file.save_sql", SaveSql),
+        action!("notebook.shell.menu.save_notebook", SaveNotebook),
         action!("menu.file.save_library", SaveToLibrary),
         action!("menu.file.save_results", SaveResultsCsv),
         MenuItem::separator(),
@@ -211,6 +219,7 @@ fn edit_menu() -> Menu {
             action!("menu.edit.toggle_line_comment", ToggleLineComment),
             action!("menu.edit.add_line_comment", AddLineComment),
             action!("menu.edit.remove_line_comment", RemoveLineComment),
+            action!("menu.edit.toggle_block_comment", ToggleBlockComment),
             MenuItem::separator(),
             action!("menu.edit.move_end", End),
             action!("menu.edit.move_beginning", Home),
@@ -224,7 +233,7 @@ fn edit_menu() -> Menu {
     )
 }
 
-fn view_menu() -> Menu {
+fn view_menu(theme: ThemeMenuState) -> Menu {
     menu(
         "menu.view.title",
         vec![
@@ -250,12 +259,55 @@ fn view_menu() -> Menu {
             action!("menu.view.zoom_out", ZoomEditorOut),
             action!("menu.view.actual_size", ZoomEditorReset),
             MenuItem::separator(),
-            action!("menu.view.theme_system", ThemeSystem),
-            action!("menu.view.theme_light", ThemeLight),
-            action!("menu.view.theme_dark", ThemeDark),
-            action!("menu.view.theme_high_contrast", ThemeHighContrast),
+            theme_menu(theme),
         ],
     )
+}
+
+/// What View ▸ Theme checks: the chosen mode, and whether the palette that
+/// mode paints right now is High Contrast. Also the fingerprint the
+/// workbench compares to know the installed menus have gone stale.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct ThemeMenuState {
+    pub mode: ThemeKind,
+    pub high_contrast: bool,
+}
+
+impl ThemeMenuState {
+    pub(crate) fn current() -> Self {
+        use crate::theme::ColorTheme;
+        let painted = match crate::theme::resolved_kind() {
+            ThemeKind::Light => crate::theme::light_theme(),
+            _ => crate::theme::dark_theme(),
+        };
+        Self {
+            // Legacy High Contrast mode paints as Dark + High Contrast Dark.
+            mode: match crate::theme::kind() {
+                ThemeKind::HighContrast => ThemeKind::Dark,
+                kind => kind,
+            },
+            high_contrast: matches!(
+                painted,
+                ColorTheme::HighContrastLight | ColorTheme::HighContrastDark
+            ),
+        }
+    }
+}
+
+/// View ▸ Theme: the three modes, then the High Contrast palette, which
+/// layers on whichever mode is chosen.
+fn theme_menu(theme: ThemeMenuState) -> MenuItem {
+    MenuItem::submenu(menu(
+        "menu.view.theme",
+        vec![
+            action!("menu.view.theme_system", ThemeSystem).checked(theme.mode == ThemeKind::System),
+            action!("menu.view.theme_light", ThemeLight).checked(theme.mode == ThemeKind::Light),
+            action!("menu.view.theme_dark", ThemeDark).checked(theme.mode == ThemeKind::Dark),
+            MenuItem::separator(),
+            action!("menu.view.theme_high_contrast", ThemeHighContrast)
+                .checked(theme.high_contrast),
+        ],
+    ))
 }
 
 fn query_menu() -> Menu {
@@ -270,6 +322,15 @@ fn query_menu() -> Menu {
             action!("menu.query.run_multiple", RunOnTargets),
             action!("menu.query.explain_actual", ExecutionPlanViewer),
             action!("menu.query.explain_estimated", EstimatedPlanViewer),
+            MenuItem::separator(),
+            action!("notebook.shell.menu.run_cell", RunNotebookCell),
+            action!("notebook.shell.menu.run_all", RunAllNotebookCells),
+            action!("notebook.shell.menu.stop", StopNotebookRun),
+            action!("notebook.shell.menu.open_as_notebook", OpenAsNotebook),
+            action!(
+                "notebook.shell.menu.convert_to_script",
+                ConvertNotebookToScript
+            ),
             MenuItem::separator(),
             action!("menu.query.generate_sql", GenerateSql),
             action!("menu.query.ask_schema", AskSchema),
@@ -458,9 +519,137 @@ mod tests {
     }
 
     #[test]
+    fn file_and_query_menus_carry_the_notebook_items() {
+        for style in [FileMenuStyle::MacOs, FileMenuStyle::Windows] {
+            let names = action_names(&file_menu(style));
+            for key in [
+                "notebook.shell.menu.new_notebook",
+                "notebook.shell.menu.open_notebook",
+                "notebook.shell.menu.save_notebook",
+            ] {
+                assert!(
+                    names.contains(&crate::localization::text(key)),
+                    "{key}: {names:?}"
+                );
+            }
+        }
+        let names = action_names(&query_menu());
+        for key in [
+            "notebook.shell.menu.run_cell",
+            "notebook.shell.menu.run_all",
+            "notebook.shell.menu.stop",
+            "notebook.shell.menu.open_as_notebook",
+            "notebook.shell.menu.convert_to_script",
+        ] {
+            assert!(
+                names.contains(&crate::localization::text(key)),
+                "{key}: {names:?}"
+            );
+        }
+    }
+
+    #[test]
     fn view_menu_has_sql_library() {
-        let names = action_names(&view_menu());
+        let names = action_names(&view_menu(ThemeMenuState {
+            mode: ThemeKind::System,
+            high_contrast: false,
+        }));
         assert!(names.contains(&crate::localization::text("menu.view.show_sql_library")));
+    }
+
+    /// The checks follow the painted palette: High Contrast is on only when
+    /// the palette the resolved mode paints is a High Contrast one, System
+    /// follows the OS, and the legacy High Contrast mode reads as Dark.
+    #[test]
+    fn theme_menu_state_follows_the_painted_palette() {
+        use crate::theme::{
+            ColorTheme, THEME_LOCK, set_dark_theme, set_kind, set_light_theme, set_system_dark,
+        };
+        let _guard = THEME_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let state = |mode, high_contrast| ThemeMenuState {
+            mode,
+            high_contrast,
+        };
+
+        set_light_theme(ColorTheme::Light);
+        set_dark_theme(ColorTheme::HighContrastDark);
+        set_kind(ThemeKind::Light);
+        assert_eq!(
+            ThemeMenuState::current(),
+            state(ThemeKind::Light, false),
+            "a Dark High Contrast palette is not painted in Light"
+        );
+        set_kind(ThemeKind::Dark);
+        assert_eq!(ThemeMenuState::current(), state(ThemeKind::Dark, true));
+
+        set_kind(ThemeKind::System);
+        set_system_dark(true);
+        assert_eq!(ThemeMenuState::current(), state(ThemeKind::System, true));
+        set_system_dark(false);
+        assert_eq!(ThemeMenuState::current(), state(ThemeKind::System, false));
+
+        set_kind(ThemeKind::HighContrast);
+        assert_eq!(ThemeMenuState::current(), state(ThemeKind::Dark, true));
+
+        set_dark_theme(ColorTheme::Dark);
+        set_kind(ThemeKind::Dark);
+    }
+
+    /// The four theme items live in one View ▸ Theme submenu, not loose in
+    /// View, and only the chosen mode (plus High Contrast when on) is checked.
+    #[test]
+    fn theme_choices_are_one_submenu_checking_the_current_theme() {
+        let _guard = crate::localization::test_language(crate::localization::Language::English);
+        let theme = |mode, high_contrast| {
+            let view = view_menu(ThemeMenuState {
+                mode,
+                high_contrast,
+            });
+            let loose = action_names(&view);
+            assert!(
+                !loose
+                    .iter()
+                    .any(|n| n == &crate::localization::text("menu.view.theme_dark")),
+                "{loose:?}"
+            );
+            let submenus: Vec<_> = view
+                .items
+                .iter()
+                .filter_map(|item| match item {
+                    MenuItem::Submenu(submenu) => Some(submenu),
+                    _ => None,
+                })
+                .filter(|submenu| submenu.name == crate::localization::text("menu.view.theme"))
+                .collect();
+            assert_eq!(submenus.len(), 1);
+            submenus[0]
+                .items
+                .iter()
+                .filter_map(|item| match item {
+                    MenuItem::Action { name, checked, .. } => Some((name.to_string(), *checked)),
+                    _ => None,
+                })
+                .collect::<Vec<_>>()
+        };
+        let row = |label: &str, checked: bool| (label.to_string(), checked);
+        assert_eq!(
+            theme(ThemeKind::System, false),
+            vec![
+                row("System", true),
+                row("Light", false),
+                row("Dark", false),
+                row("High Contrast", false),
+            ]
+        );
+        assert_eq!(
+            theme(ThemeKind::Dark, true),
+            vec![
+                row("System", false),
+                row("Light", false),
+                row("Dark", true),
+                row("High Contrast", true),
+            ]
+        );
     }
 
     #[test]

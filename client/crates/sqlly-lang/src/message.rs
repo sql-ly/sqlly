@@ -10,6 +10,9 @@ use std::fmt;
 pub struct DisplayMessage {
     key: Option<&'static str>,
     arguments: Vec<(String, String)>,
+    /// Arguments that are messages themselves, translated before they are
+    /// placed; `arguments` holds their English text under the same name.
+    nested: Vec<(String, DisplayMessage)>,
     fallback: String,
 }
 
@@ -18,6 +21,7 @@ impl DisplayMessage {
         Self {
             key: Some(key),
             arguments: Vec::new(),
+            nested: Vec::new(),
             fallback: fallback.into(),
         }
     }
@@ -26,12 +30,23 @@ impl DisplayMessage {
         Self {
             key: None,
             arguments: Vec::new(),
+            nested: Vec::new(),
             fallback: fallback.into(),
         }
     }
 
     pub fn with_arg(mut self, name: impl Into<String>, value: impl Into<String>) -> Self {
         self.arguments.push((name.into(), value.into()));
+        self
+    }
+
+    /// An argument that is itself a message, so the UI translates it too
+    /// instead of placing its English text inside a translated sentence.
+    pub fn with_message_arg(mut self, name: impl Into<String>, message: DisplayMessage) -> Self {
+        let name = name.into();
+        self.arguments
+            .push((name.clone(), message.fallback().to_string()));
+        self.nested.push((name, message));
         self
     }
 
@@ -47,6 +62,12 @@ impl DisplayMessage {
         self.arguments
             .iter()
             .map(|(name, value)| (name.as_str(), value.as_str()))
+    }
+
+    pub fn nested_arguments(&self) -> impl Iterator<Item = (&str, &DisplayMessage)> {
+        self.nested
+            .iter()
+            .map(|(name, message)| (name.as_str(), message))
     }
 
     pub fn into_fallback(self) -> String {
@@ -112,6 +133,22 @@ mod tests {
             vec![("count", "12")]
         );
         assert_eq!(message.to_string(), "Read {count} rows");
+    }
+
+    #[test]
+    fn message_arguments_keep_the_inner_message_and_its_english() {
+        let inner = DisplayMessage::new("services.example.inner", "too long").with_arg("max", "3");
+        let message = DisplayMessage::new("services.example.outer", "a: too long")
+            .with_arg("name", "a")
+            .with_message_arg("error", inner.clone());
+        assert_eq!(
+            message.arguments().collect::<Vec<_>>(),
+            vec![("name", "a"), ("error", "too long")]
+        );
+        assert_eq!(
+            message.nested_arguments().collect::<Vec<_>>(),
+            vec![("error", &inner)]
+        );
     }
 
     #[test]

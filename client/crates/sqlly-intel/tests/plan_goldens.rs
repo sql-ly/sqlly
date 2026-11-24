@@ -512,3 +512,475 @@ fn fk_value_completion_items_carry_source_column_parent_and_schema() {
     assert_eq!(item.schema.as_deref(), Some("dbo"));
     assert_eq!(item.value.as_deref(), Some("1"));
 }
+
+/// Imported plan documents: every file under `tests/golden/plans/<engine>/`
+/// goes through the full import pipeline (decode, clean, detect, parse) and
+/// the result is compared with the `.golden` file next to it. Refresh with
+/// `SQLLY_UPDATE_GOLDEN=1`.
+mod plan_documents {
+    use std::collections::HashMap;
+    use std::fmt::Write as _;
+    use std::path::{Path, PathBuf};
+
+    use serde_json::Value;
+    use sqlly_intel::plans::{
+        ExecutionPlan, PlanEngine, PlanError, clean_plan_text, decode_plan_bytes,
+        detect_plan_format, import_plan_document, import_plan_document_as,
+    };
+    use sqlly_testkit::GoldenTest;
+
+    fn plans_dir() -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/golden/plans")
+    }
+
+    /// The engine a fixture folder holds plans of.
+    fn folder_engine(folder: &str) -> PlanEngine {
+        match folder {
+            "sqlserver" => PlanEngine::SqlServer,
+            "postgresql" => PlanEngine::Postgres,
+            "mysql" => PlanEngine::MySql,
+            "mariadb" => PlanEngine::MariaDb,
+            "oracle" => PlanEngine::Oracle,
+            "sqlite" => PlanEngine::Sqlite,
+            "duckdb" => PlanEngine::DuckDb,
+            "clickhouse" => PlanEngine::ClickHouse,
+            "cockroachdb" => PlanEngine::CockroachDb,
+            "trino" => PlanEngine::Trino,
+            "spark" => PlanEngine::Spark,
+            other => panic!("no engine for fixture folder {other}"),
+        }
+    }
+
+    /// Every fixture as `(folder, path)`, sorted.
+    fn fixtures() -> Vec<(String, PathBuf)> {
+        let mut out = Vec::new();
+        let mut folders: Vec<PathBuf> = std::fs::read_dir(plans_dir())
+            .expect("fixture folder")
+            .filter_map(|entry| entry.ok().map(|entry| entry.path()))
+            .filter(|path| path.is_dir())
+            .collect();
+        folders.sort();
+        for folder in folders {
+            let name = folder.file_name().unwrap().to_string_lossy().to_string();
+            let mut files: Vec<PathBuf> = std::fs::read_dir(&folder)
+                .expect("engine folder")
+                .filter_map(|entry| entry.ok().map(|entry| entry.path()))
+                .filter(|path| {
+                    path.is_file()
+                        && path.extension().is_none_or(|ext| ext != "golden")
+                        && !path
+                            .file_name()
+                            .is_some_and(|name| name.to_string_lossy().starts_with('.'))
+                })
+                .collect();
+            files.sort();
+            out.extend(files.into_iter().map(|file| (name.clone(), file)));
+        }
+        out
+    }
+
+    fn read(path: &Path) -> String {
+        decode_plan_bytes(&std::fs::read(path).expect("fixture"))
+    }
+
+    fn same_family(a: PlanEngine, b: PlanEngine) -> bool {
+        let mysql = |engine| matches!(engine, PlanEngine::MySql | PlanEngine::MariaDb);
+        a == b || (mysql(a) && mysql(b))
+    }
+
+    /// Numbers print with at most six decimals so sums and differences of
+    /// times do not put float noise in the goldens.
+    fn number(value: f64) -> String {
+        let rounded = (value * 1e6).round() / 1e6;
+        if rounded == rounded.trunc() && rounded.abs() < 1e15 {
+            format!("{}", rounded as i64)
+        } else {
+            format!("{rounded}")
+        }
+    }
+
+    fn short(text: &str) -> String {
+        let flat: String = text.split_whitespace().collect::<Vec<_>>().join(" ");
+        if flat.chars().count() > 160 {
+            let head: String = flat.chars().take(160).collect();
+            format!("{head}...")
+        } else {
+            flat
+        }
+    }
+
+    /// A value on one line. Empty, false and absent values return `None`
+    /// so only what the document said shows up.
+    fn compact(value: &Value) -> Option<String> {
+        match value {
+            Value::Null | Value::Bool(false) => None,
+            Value::Bool(true) => Some("yes".into()),
+            Value::Number(n) => n.as_f64().map(number),
+            Value::String(text) if text.is_empty() => None,
+            Value::String(text) => Some(format!("{:?}", short(text))),
+            Value::Array(items) => {
+                let parts: Vec<String> = items.iter().filter_map(compact).collect();
+                (!parts.is_empty()).then(|| format!("[{}]", parts.join(", ")))
+            }
+            Value::Object(map) => {
+                let parts: Vec<String> = map
+                    .iter()
+                    .filter_map(|(key, value)| compact(value).map(|value| format!("{key}={value}")))
+                    .collect();
+                (!parts.is_empty()).then(|| format!("{{{}}}", parts.join(" ")))
+            }
+        }
+    }
+
+    fn fields(out: &mut String, indent: &str, value: &Value, skip: &[&str]) {
+        let Some(map) = value.as_object() else { return };
+        for (key, value) in map {
+            if skip.contains(&key.as_str()) {
+                continue;
+            }
+            // Zero is the default of the required numeric fields.
+            if value.as_f64() == Some(0.0) {
+                continue;
+            }
+            if let Some(text) = compact(value) {
+                let _ = writeln!(out, "{indent}{key}: {text}");
+            }
+        }
+    }
+
+    fn dump_plan(out: &mut String, plan: &ExecutionPlan) {
+        let value = serde_json::to_value(plan).expect("plan serializes");
+        fields(out, "", &value, &["nodes", "edges"]);
+        let parents: HashMap<i32, i32> = plan
+            .edges
+            .iter()
+            .map(|edge| (edge.to_node, edge.from_node))
+            .collect();
+        let _ = writeln!(out, "operators: {}", plan.nodes.len());
+        for node in &plan.nodes {
+            let mut depth = 0usize;
+            let mut at = node.id;
+            while let Some(parent) = parents.get(&at) {
+                depth += 1;
+                at = *parent;
+                if depth > plan.nodes.len() {
+                    panic!("edges form a cycle at node {}", node.id);
+                }
+            }
+            let indent = "  ".repeat(depth + 1);
+            let _ = writeln!(
+                out,
+                "{indent}#{} {} [{}]",
+                node.id, node.physical_op, node.logical_op
+            );
+            let value = serde_json::to_value(node).expect("node serializes");
+            fields(
+                out,
+                &format!("{indent}    "),
+                &value,
+                &["id", "physical_op", "logical_op"],
+            );
+        }
+    }
+
+    fn dump(text: &str) -> String {
+        let mut out = String::new();
+        match import_plan_document(text) {
+            Ok(imported) => {
+                let _ = writeln!(
+                    out,
+                    "format: {} ({:?})",
+                    imported.format.id(),
+                    imported.confidence
+                );
+                let _ = writeln!(out, "statements: {}", imported.plans.len());
+                for (index, plan) in imported.plans.iter().enumerate() {
+                    let _ = writeln!(out, "\n== statement {}", index + 1);
+                    dump_plan(&mut out, plan);
+                }
+            }
+            Err(error) => {
+                let _ = writeln!(out, "error: {error}");
+            }
+        }
+        out
+    }
+
+    #[test]
+    fn every_fixture_matches_its_golden() {
+        let mut mismatched = Vec::new();
+        let mut count = 0usize;
+        for (_, path) in fixtures() {
+            count += 1;
+            let actual = dump(&read(&path));
+            let golden = PathBuf::from(format!("{}.golden", path.display()));
+            let ok = GoldenTest::compare(&actual, &golden)
+                .unwrap_or_else(|e| panic!("golden read failed for {}: {e}", golden.display()));
+            if !ok {
+                mismatched.push(golden.display().to_string());
+            }
+        }
+        assert!(count > 100, "only {count} fixtures found");
+        assert!(
+            mismatched.is_empty(),
+            "golden mismatch, re-run with SQLLY_UPDATE_GOLDEN=1:\n{}",
+            mismatched.join("\n")
+        );
+    }
+
+    /// A fixture is detected as its own engine with certainty, or it is one
+    /// of the shapes that are not plans (bytecode, a diagram link) and the
+    /// error says what it is. It is never taken for another engine's plan.
+    #[test]
+    fn every_fixture_is_detected_as_its_own_engine() {
+        let mut problems = Vec::new();
+        for (folder, path) in fixtures() {
+            let engine = folder_engine(&folder);
+            let name = path.file_name().unwrap().to_string_lossy().to_string();
+            let cleaned = clean_plan_text(&read(&path));
+            match detect_plan_format(&cleaned) {
+                Some(found) if same_family(found.format.engine(), engine) => {
+                    match import_plan_document(&read(&path)) {
+                        Ok(imported) => {
+                            for plan in &imported.plans {
+                                if plan.source_format.is_none()
+                                    || (plan.dialect.is_none() && engine.dialect().is_some())
+                                {
+                                    problems.push(format!(
+                                        "{folder}/{name}: plan without source_format or dialect"
+                                    ));
+                                }
+                            }
+                        }
+                        // A recognized document the engine printed no
+                        // plan in: the error names the format.
+                        Err(PlanError::Import(error)) if error.format_id.is_some() => {}
+                        Err(error) => problems.push(format!("{folder}/{name}: {error}")),
+                    }
+                }
+                Some(found) => problems.push(format!(
+                    "{folder}/{name}: detected as {} ({})",
+                    found.format.id(),
+                    found.evidence
+                )),
+                None => match import_plan_document(&read(&path)) {
+                    Err(PlanError::Import(error)) if error.format_label.is_some() => {}
+                    other => problems.push(format!(
+                        "{folder}/{name}: not detected, and no named reason ({:?})",
+                        other.map(|imported| imported.format.id())
+                    )),
+                },
+            }
+        }
+        assert!(problems.is_empty(), "{}", problems.join("\n"));
+    }
+
+    /// Picking the engine by hand reads the same plan auto-detection does.
+    #[test]
+    fn picking_the_engine_gives_the_detected_result() {
+        for (folder, path) in fixtures() {
+            let text = read(&path);
+            let Ok(auto) = import_plan_document(&text) else {
+                continue;
+            };
+            let picked = import_plan_document_as(folder_engine(&folder), &text)
+                .unwrap_or_else(|e| panic!("{}: {e}", path.display()));
+            assert_eq!(picked.format, auto.format, "{}", path.display());
+            assert_eq!(picked.plans.len(), auto.plans.len(), "{}", path.display());
+        }
+    }
+
+    /// Truncated and garbled variants of every fixture go through the whole
+    /// pipeline. The importer may fail on them; it may not panic, and a
+    /// watchdog fails the test if any single document takes too long.
+    #[test]
+    fn mangled_fixtures_never_panic_or_hang() {
+        let (done_tx, done_rx) = std::sync::mpsc::channel::<String>();
+        let worker = std::thread::Builder::new()
+            .stack_size(16 * 1024 * 1024)
+            .spawn(move || {
+                for (folder, path) in fixtures() {
+                    let sample = read(&path);
+                    // Large captures are sampled; the per-parser tests cover
+                    // them in full.
+                    let sample: String = if sample.len() > 60_000 {
+                        sample.chars().take(60_000).collect()
+                    } else {
+                        sample
+                    };
+                    for variant in variants(&sample) {
+                        let _ = import_plan_document(&variant);
+                        let _ = import_plan_document_as(folder_engine(&folder), &variant);
+                    }
+                    let bytes = std::fs::read(&path).expect("fixture");
+                    for cut in [
+                        1usize,
+                        2,
+                        3,
+                        5,
+                        7,
+                        bytes.len() / 2,
+                        bytes.len().saturating_sub(1),
+                    ] {
+                        let _ = import_plan_document(&decode_plan_bytes(
+                            &bytes[..cut.min(bytes.len())],
+                        ));
+                    }
+                    done_tx
+                        .send(path.display().to_string())
+                        .expect("watchdog alive");
+                }
+            })
+            .expect("worker thread");
+        let mut last = String::from("(none)");
+        loop {
+            match done_rx.recv_timeout(std::time::Duration::from_secs(120)) {
+                Ok(path) => last = path,
+                Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => break,
+                Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
+                    panic!("the fixture after {last} took more than 120 s")
+                }
+            }
+        }
+        worker
+            .join()
+            .expect("a mangled fixture made the importer panic");
+    }
+
+    fn variants(sample: &str) -> Vec<String> {
+        let mut out = Vec::new();
+        let boundaries: Vec<usize> = sample
+            .char_indices()
+            .map(|(index, _)| index)
+            .chain(std::iter::once(sample.len()))
+            .collect();
+        let step = (boundaries.len() / 24).max(1);
+        for cut in boundaries.iter().step_by(step) {
+            out.push(sample[..*cut].to_string());
+            out.push(sample[*cut..].to_string());
+        }
+        let lines: Vec<&str> = sample.lines().collect();
+        let line_step = (lines.len() / 12).max(1);
+        for skip in (0..lines.len()).step_by(line_step) {
+            let without: Vec<&str> = lines
+                .iter()
+                .enumerate()
+                .filter(|(index, _)| *index != skip)
+                .map(|(_, line)| *line)
+                .collect();
+            out.push(without.join("\n"));
+        }
+        out.push(lines.iter().rev().copied().collect::<Vec<_>>().join("\n"));
+        out.push(format!("{sample}\n{sample}"));
+        for (from, to) in [
+            ("(", ""),
+            (")", ""),
+            ("|", ""),
+            (":", ""),
+            ("=", ""),
+            ("\"", ""),
+            ("{", "["),
+            ("}", ""),
+            ("<", ""),
+            (">", "<"),
+            ("-", ""),
+            (" ", ""),
+            (" ", "\t"),
+            ("\n", " "),
+            ("\n", "\r\n"),
+            ("0", "99999999999999999999999999"),
+            ("1", "-1"),
+            ("1", "NaN"),
+            ("a", "\u{00e9}\u{4e2d}"),
+            (",", ""),
+        ] {
+            out.push(sample.replace(from, to));
+        }
+        out.push(
+            lines
+                .iter()
+                .map(|l| l.trim_start())
+                .collect::<Vec<_>>()
+                .join("\n"),
+        );
+        out.push(
+            lines
+                .iter()
+                .enumerate()
+                .map(|(index, line)| format!("{:>4}  {line}", index + 1))
+                .collect::<Vec<_>>()
+                .join("\n"),
+        );
+        out.push(format!("```\n{sample}\n```"));
+        out.push(sample.to_uppercase());
+        out.push(serde_json::to_string(sample).expect("string serializes"));
+        out
+    }
+
+    /// What surrounds a plan on its way to the clipboard does not change
+    /// what is read: each wrapping of a fixture imports to the same plans.
+    #[test]
+    fn wrapped_fixtures_read_the_same() {
+        let mut problems = Vec::new();
+        for (_, path) in fixtures() {
+            let text = read(&path);
+            let Ok(plain) = import_plan_document(&text) else {
+                continue;
+            };
+            let expected = dump(&text);
+            let numbered = text
+                .lines()
+                .enumerate()
+                .map(|(index, line)| format!("{:>3}  {line}", index + 1))
+                .collect::<Vec<_>>()
+                .join("\n");
+            let wrappings = [
+                ("CRLF", text.replace('\n', "\r\n")),
+                ("BOM", format!("\u{feff}{text}")),
+                (
+                    "code fence",
+                    format!("Here is the plan:\n\n```\n{text}\n```\n\nThanks!"),
+                ),
+                ("sql fence", format!("```sql\n{text}\n```")),
+                ("line numbers", numbered),
+                ("JSON string", serde_json::to_string(&text).expect("string")),
+                (
+                    "UTF-16",
+                    decode_plan_bytes(
+                        &[0xFF, 0xFE]
+                            .into_iter()
+                            .chain(text.encode_utf16().flat_map(u16::to_le_bytes))
+                            .collect::<Vec<u8>>(),
+                    ),
+                ),
+            ];
+            for (name, wrapped) in wrappings {
+                // Line numbers on a document whose lines start with numbers
+                // (plan table rows) cannot be told from data.
+                if name == "line numbers"
+                    && (text.lines().count() < 3
+                        || matches!(
+                            plain.format.id(),
+                            "oracle-rows"
+                                | "sqlite-eqp"
+                                | "mysql-table"
+                                | "mariadb-table"
+                                | "sqlserver-text"
+                        ))
+                {
+                    continue;
+                }
+                let got = dump(&wrapped);
+                if got != expected {
+                    let first = got.lines().next().unwrap_or_default();
+                    problems.push(format!(
+                        "{} wrapped as {name}: {}",
+                        path.display(),
+                        first.chars().take(160).collect::<String>()
+                    ));
+                }
+            }
+        }
+        assert!(problems.is_empty(), "{}", problems.join("\n"));
+    }
+}

@@ -40,6 +40,7 @@ pub(crate) fn auth_key(auth: &AuthenticationType) -> String {
         AuthenticationType::AwsRdsIam { username, .. } => format!("aws-rds-iam:{username}"),
         AuthenticationType::GcpCloudSqlIam { username } => format!("gcp-cloud-sql-iam:{username}"),
         AuthenticationType::AuthToken { .. } => "auth-token".to_string(),
+        AuthenticationType::PostgresOAuth { username, .. } => format!("pg-oauth:{username}"),
     }
 }
 

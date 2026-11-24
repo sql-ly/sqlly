@@ -16,13 +16,14 @@ use gpui_component::Disableable as _;
 use gpui_component::button::Button;
 use gpui_component::checkbox::Checkbox;
 use gpui_component::input::{InputEvent, InputState, TextareaState};
+use gpui_component::select::{Select, SelectEvent, SelectState};
 
 use crate::field_input::FieldInput;
 use sqlly_core::CellValue;
 use sqlly_datatable::SqllyDataTable;
 use sqlly_services::{
     AdminToolsService, AlertDefinition, JobDefinition, JobStepDefinition, OperatorDefinition,
-    ScheduleDefinition, describe_schedule, next_run_after,
+    ScheduleDefinition, StepFlow, describe_schedule, next_run_after,
 };
 
 use crate::dialog::{Dialog, DialogFrame};
@@ -98,6 +99,11 @@ pub struct SqlAgentPane {
     editor_inputs: [FieldInput; 8],
     editor_values: [String; 8],
     editor_enabled: bool,
+    /// On success / On failure dropdowns of the job step editor, each with
+    /// the box for its Go to step target.
+    flow_selects: [Entity<SelectState<Vec<String>>>; 2],
+    flow_step_inputs: [Entity<InputState>; 2],
+    flow: JobFlowFields,
     _editor_subscriptions: Vec<gpui::Subscription>,
     focus_handle: FocusHandle,
     frame: DialogFrame,
@@ -165,6 +171,68 @@ const OPERATOR_FIELDS: [&str; 2] = [
     "explorer.sql_agent.field_operator_name",
     "explorer.sql_agent.field_email",
 ];
+
+/// Labels of the job step editor's On success / On failure dropdowns.
+const FLOW_FIELDS: [&str; 2] = [
+    "explorer.sql_agent.field_on_success",
+    "explorer.sql_agent.field_on_failure",
+];
+
+/// The On success / On failure dropdown options, in row order; row 0 sets
+/// nothing, so an edited step keeps what it has.
+const FLOW_CHOICES: [&str; 5] = [
+    "explorer.sql_agent.flow_unchanged",
+    "explorer.sql_agent.flow_next_step",
+    "explorer.sql_agent.flow_quit_success",
+    "explorer.sql_agent.flow_quit_failure",
+    "explorer.sql_agent.flow_go_to_step",
+];
+const FLOW_GO_TO_STEP: usize = 4;
+
+/// The job step editor's flow settings: the chosen [`FLOW_CHOICES`] row and
+/// the typed Go to step target, on success then on failure.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+struct JobFlowFields {
+    choice: [usize; 2],
+    step: [String; 2],
+}
+
+/// The step flow one dropdown asks for. `own_step` is the step being
+/// scripted (the typed step ID, or 1 for a new job's only step): SQL Server
+/// refuses a step that goes to itself.
+fn step_flow(
+    flow: &JobFlowFields,
+    which: usize,
+    own_step: Option<i32>,
+) -> Result<Option<StepFlow>, String> {
+    let label = || crate::localization::text(FLOW_FIELDS[which]);
+    Ok(match flow.choice[which] {
+        1 => Some(StepFlow::NextStep),
+        2 => Some(StepFlow::QuitWithSuccess),
+        3 => Some(StepFlow::QuitWithFailure),
+        FLOW_GO_TO_STEP => {
+            let target = flow.step[which]
+                .trim()
+                .parse::<i32>()
+                .ok()
+                .filter(|step| *step >= 1)
+                .ok_or_else(|| {
+                    crate::localization::format(
+                        "explorer.sql_agent.flow_target_step_required",
+                        &[("label", &label())],
+                    )
+                })?;
+            if own_step == Some(target) {
+                return Err(crate::localization::format(
+                    "explorer.sql_agent.flow_target_step_self",
+                    &[("label", &label())],
+                ));
+            }
+            Some(StepFlow::GoToStep(target))
+        }
+        _ => None,
+    })
+}
 
 /// What a Jobs-tab script action produces. Script-first: each variant maps
 /// to reviewed SQL, never to direct execution.
@@ -331,6 +399,7 @@ fn editor_script(
     editor: &AgentEditor,
     values: &[String; 8],
     enabled: bool,
+    flow: &JobFlowFields,
 ) -> Result<String, String> {
     let body = match editor.tab {
         AgentTab::Jobs => {
@@ -346,12 +415,25 @@ fn editor_script(
                 description: values[1].trim().into(),
                 owner_login: (!values[2].trim().is_empty()).then(|| values[2].trim().into()),
             };
-            let has_step = !values[4].trim().is_empty() || !values[7].trim().is_empty();
+            let has_step = !values[4].trim().is_empty()
+                || !values[7].trim().is_empty()
+                || flow.choice.iter().any(|choice| *choice != 0);
             if has_step && (values[4].trim().is_empty() || values[7].trim().is_empty()) {
                 return Err(crate::localization::text(
                     "explorer.sql_agent.step_name_command_required",
                 ));
             }
+            let step_id = if values[3].trim().is_empty() {
+                None
+            } else {
+                Some(parse_i32_field(&values[3], "explorer.sql_agent.field_step_id")?.max(1))
+            };
+            let own_step = match editor.mode {
+                EditorMode::Create => Some(1),
+                EditorMode::Edit => step_id,
+            };
+            let on_success = step_flow(flow, 0, own_step)?;
+            let on_failure = step_flow(flow, 1, own_step)?;
             let step = has_step.then(|| JobStepDefinition {
                 step_name: values[4].trim().into(),
                 subsystem: if values[5].trim().is_empty() {
@@ -361,6 +443,8 @@ fn editor_script(
                 },
                 command: values[7].clone(),
                 database_name: (!values[6].trim().is_empty()).then(|| values[6].trim().into()),
+                on_success,
+                on_failure,
             });
             match editor.mode {
                 EditorMode::Create => admin.agent_create_job_full_sql(&job, step.as_slice()),
@@ -368,14 +452,6 @@ fn editor_script(
                     let original = editor.original_name.as_deref().unwrap_or(name);
                     let mut sql = admin.agent_update_job_sql(original, &job);
                     if let Some(step) = step {
-                        let step_id = if values[3].trim().is_empty() {
-                            None
-                        } else {
-                            Some(
-                                parse_i32_field(&values[3], "explorer.sql_agent.field_step_id")?
-                                    .max(1),
-                            )
-                        };
                         sql.push('\n');
                         sql.push_str(&admin.agent_upsert_job_step_sql(name, step_id, &step));
                     }
@@ -574,6 +650,60 @@ impl SqlAgentPane {
                 },
             ));
         }
+        let flow_selects: [Entity<SelectState<Vec<String>>>; 2] = std::array::from_fn(|_| {
+            cx.new(|cx| {
+                SelectState::new(
+                    crate::localization::select_labels(window, cx, || {
+                        FLOW_CHOICES
+                            .iter()
+                            .map(|key| crate::localization::text(key))
+                            .collect()
+                    }),
+                    Some(gpui_component::IndexPath::new(0)),
+                    window,
+                    cx,
+                )
+            })
+        });
+        let flow_step_inputs: [Entity<InputState>; 2] = std::array::from_fn(|_| {
+            cx.new(|cx| {
+                let placeholder = crate::localization::input_placeholder(
+                    window,
+                    cx,
+                    "explorer.sql_agent.flow_step_placeholder",
+                );
+                InputState::new(window, cx).placeholder(placeholder)
+            })
+        });
+        for (which, select) in flow_selects.iter().enumerate() {
+            editor_subscriptions.push(cx.subscribe_in(
+                select,
+                window,
+                move |this: &mut Self, select, event: &SelectEvent<Vec<String>>, _window, cx| {
+                    let SelectEvent::Confirm(value) = event;
+                    if value.is_some() {
+                        this.flow.choice[which] = select
+                            .read(cx)
+                            .selected_index(cx)
+                            .map(|ix| ix.row)
+                            .unwrap_or(0);
+                        cx.notify();
+                    }
+                },
+            ));
+        }
+        for (which, input) in flow_step_inputs.iter().enumerate() {
+            editor_subscriptions.push(cx.subscribe_in(
+                input,
+                window,
+                move |this: &mut Self, input, event: &InputEvent, _window, cx| {
+                    if let InputEvent::Change = event {
+                        this.flow.step[which] = input.read(cx).value().to_string();
+                        cx.notify();
+                    }
+                },
+            ));
+        }
         let mut this = Self {
             context,
             capability: Capability::Checking,
@@ -588,6 +718,9 @@ impl SqlAgentPane {
             editor_inputs,
             editor_values: std::array::from_fn(|_| String::new()),
             editor_enabled: true,
+            flow_selects,
+            flow_step_inputs,
+            flow: JobFlowFields::default(),
             _editor_subscriptions: editor_subscriptions,
             focus_handle: cx.focus_handle(),
             frame: DialogFrame::new(Theme::scaled(900.0), Theme::scaled(540.0)),
@@ -792,6 +925,15 @@ impl SqlAgentPane {
         for (input, value) in self.editor_inputs.iter().zip(values) {
             input.set_value(value, window, cx);
         }
+        self.flow = JobFlowFields::default();
+        for select in &self.flow_selects {
+            select.update(cx, |select, cx| {
+                select.set_selected_index(Some(gpui_component::IndexPath::new(0)), window, cx);
+            });
+        }
+        for input in &self.flow_step_inputs {
+            input.update(cx, |input, cx| input.set_value("", window, cx));
+        }
         cx.notify();
     }
 
@@ -804,6 +946,7 @@ impl SqlAgentPane {
             editor,
             &self.editor_values,
             self.editor_enabled,
+            &self.flow,
         ) {
             Ok(sql) => {
                 let title = editor.title();
@@ -873,6 +1016,35 @@ impl SqlAgentPane {
                     ),
             );
         }
+        if editor.tab == AgentTab::Jobs {
+            for (which, label) in FLOW_FIELDS.iter().enumerate() {
+                form = form.child(
+                    div()
+                        .flex()
+                        .flex_row()
+                        .items_center()
+                        .gap(px(s(8.0)))
+                        .child(
+                            div()
+                                .w(px(s(165.0)))
+                                .flex_shrink_0()
+                                .text_color(Theme::text_dim())
+                                .text_size(px(Theme::font_size_ratio(0.84)))
+                                .child(crate::localization::text(label)),
+                        )
+                        .child(
+                            div()
+                                .w(px(s(260.0)))
+                                .child(Select::new(&self.flow_selects[which]).w_full()),
+                        )
+                        .when(self.flow.choice[which] == FLOW_GO_TO_STEP, |row| {
+                            row.child(div().w(px(s(90.0))).child(
+                                gpui_component::input::Input::new(&self.flow_step_inputs[which]),
+                            ))
+                        }),
+                );
+            }
+        }
         let this = cx.entity().downgrade();
         form = form.child(
             div().pl(px(s(173.0))).child(
@@ -896,6 +1068,7 @@ impl SqlAgentPane {
             editor,
             &self.editor_values,
             self.editor_enabled,
+            &self.flow,
         );
         form.child(
             div()
@@ -1275,7 +1448,7 @@ mod tests {
             original_name: None,
             record_id: None,
         };
-        let sql = editor_script(&admin, &editor, &values, true).unwrap();
+        let sql = editor_script(&admin, &editor, &values, true, &JobFlowFields::default()).unwrap();
         assert!(
             sql.contains("sp_add_operator @name = N'On-call DBA'"),
             "{sql}"
@@ -1291,7 +1464,8 @@ mod tests {
             original_name: Some("Old Name".into()),
             record_id: Some(3),
         };
-        let sql = editor_script(&admin, &editor, &values, false).unwrap();
+        let sql =
+            editor_script(&admin, &editor, &values, false, &JobFlowFields::default()).unwrap();
         assert!(
             sql.contains("sp_update_operator @name = N'Old Name'"),
             "{sql}"
@@ -1299,7 +1473,7 @@ mod tests {
         assert!(sql.contains("@enabled = 0"), "{sql}");
 
         values[0] = String::new();
-        assert!(editor_script(&admin, &editor, &values, true).is_err());
+        assert!(editor_script(&admin, &editor, &values, true, &JobFlowFields::default()).is_err());
     }
 
     #[test]
@@ -1317,7 +1491,7 @@ mod tests {
             original_name: None,
             record_id: None,
         };
-        let sql = editor_script(&admin, &editor, &values, true).unwrap();
+        let sql = editor_script(&admin, &editor, &values, true, &JobFlowFields::default()).unwrap();
         assert!(sql.contains("sp_add_alert"), "{sql}");
         assert!(
             sql.contains(
@@ -1327,7 +1501,7 @@ mod tests {
         );
 
         values[4] = String::new();
-        let sql = editor_script(&admin, &editor, &values, true).unwrap();
+        let sql = editor_script(&admin, &editor, &values, true, &JobFlowFields::default()).unwrap();
         assert!(!sql.contains("sp_add_notification"), "{sql}");
     }
 
@@ -1388,6 +1562,7 @@ mod tests {
             },
             &values,
             true,
+            &JobFlowFields::default(),
         )
         .unwrap();
         assert!(create.starts_with("-- Review this SQL Agent change"));
@@ -1405,11 +1580,72 @@ mod tests {
             },
             &values,
             false,
+            &JobFlowFields::default(),
         )
         .unwrap();
         assert!(edit.contains("sp_update_job"));
         assert!(edit.contains("sp_update_jobstep"));
         assert!(edit.contains("@step_id = 2"));
+    }
+
+    #[test]
+    fn job_editor_scripts_step_flow_and_checks_go_to_targets() {
+        let admin = DefaultAdminToolsService;
+        let mut values: [String; 8] = std::array::from_fn(|_| String::new());
+        values[0] = "Nightly".into();
+        values[3] = "2".into();
+        values[4] = "Load".into();
+        values[5] = "TSQL".into();
+        values[7] = "EXEC dbo.Load".into();
+        let edit = AgentEditor {
+            tab: AgentTab::Jobs,
+            mode: EditorMode::Edit,
+            original_name: Some("Nightly".into()),
+            record_id: None,
+        };
+        let mut flow = JobFlowFields {
+            choice: [FLOW_GO_TO_STEP, 3],
+            step: ["4".into(), String::new()],
+        };
+        let sql = editor_script(&admin, &edit, &values, true, &flow).unwrap();
+        assert!(
+            sql.contains("@on_success_action = 4, @on_success_step_id = 4, @on_fail_action = 2;"),
+            "{sql}"
+        );
+
+        // Unchanged settings add nothing, so an edit keeps the step's flow.
+        let plain = editor_script(&admin, &edit, &values, true, &JobFlowFields::default()).unwrap();
+        assert!(!plain.contains("@on_success_action"), "{plain}");
+        assert!(!plain.contains("@on_fail_action"), "{plain}");
+
+        flow.step[0] = "two".into();
+        assert!(editor_script(&admin, &edit, &values, true, &flow).is_err());
+        flow.step[0] = "2".into();
+        assert!(
+            editor_script(&admin, &edit, &values, true, &flow).is_err(),
+            "a step cannot go to itself"
+        );
+
+        // A new job's only step is step 1.
+        let create = AgentEditor {
+            mode: EditorMode::Create,
+            original_name: None,
+            ..edit
+        };
+        flow.step[0] = "1".into();
+        assert!(editor_script(&admin, &create, &values, true, &flow).is_err());
+        flow.choice = [1, FLOW_GO_TO_STEP];
+        flow.step[1] = "3".into();
+        let sql = editor_script(&admin, &create, &values, true, &flow).unwrap();
+        assert!(
+            sql.contains("@on_success_action = 3, @on_fail_action = 4, @on_fail_step_id = 3;"),
+            "{sql}"
+        );
+
+        // A flow choice needs a step to apply to.
+        values[4].clear();
+        values[7].clear();
+        assert!(editor_script(&admin, &create, &values, true, &flow).is_err());
     }
 
     #[test]
@@ -1431,6 +1667,7 @@ mod tests {
             },
             &values,
             true,
+            &JobFlowFields::default(),
         )
         .unwrap();
         assert!(script.contains("sp_update_schedule @schedule_id = 7"));
@@ -1447,6 +1684,7 @@ mod tests {
                 },
                 &values,
                 true,
+                &JobFlowFields::default(),
             )
             .unwrap_err()
             .contains("HHMMSS")
@@ -1471,6 +1709,7 @@ mod tests {
             },
             &values,
             true,
+            &JobFlowFields::default(),
         )
         .unwrap();
         assert!(script.contains("sp_update_alert"));
@@ -1487,6 +1726,7 @@ mod tests {
                 },
                 &values,
                 true,
+                &JobFlowFields::default(),
             )
             .is_err()
         );

@@ -807,6 +807,11 @@ mod tests {
 
     #[test]
     fn token_color_uses_theme_syntax_accessors() {
+        // Both sides read the global palette; hold the lock so a test that
+        // switches themes can't change it between the two reads.
+        let _guard = crate::theme::THEME_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
         assert_eq!(token_color(SyntaxTokenKind::Keyword), Theme::keyword());
         assert_eq!(token_color(SyntaxTokenKind::Function), Theme::function());
         assert_eq!(token_color(SyntaxTokenKind::String), Theme::string());

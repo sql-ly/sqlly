@@ -6,7 +6,8 @@ set -euo pipefail
 #
 # macOS:  produces dist/SQLLY.app with Contents/{MacOS,Resources} + Info.plist,
 #         AND dist/SQLLY.dmg (unsigned, ad-hoc signed).
-#         Apple Silicon (arm64) preferred; x86_64 is allowed but not recommended.
+#         Defaults to Apple Silicon (arm64); TARGET=x86_64-apple-darwin builds
+#         the Intel app (cross-compiles fine on an Apple Silicon host).
 # Linux:  produces dist/SQLLY (standalone binary) + dist/io.zebrasoft.sqlly.desktop
 #         + dist/icons/hicolor/*/apps/io.zebrasoft.sqlly.png (freedesktop.org icon
 #         theme) + dist/install.sh, which copies both into the user's XDG dirs.
@@ -20,6 +21,7 @@ set -euo pipefail
 #   APP_NAME="SQLLY Beta" ./scripts/build-app.sh
 #   CARGO_FEATURES=app-store ./scripts/build-app.sh   # extra cargo features
 #   TARGET=x86_64-unknown-linux-gnu ./scripts/build-app.sh  # cross-compile
+#   TARGET=x86_64-apple-darwin ./scripts/build-app.sh       # Intel Mac app
 # ─────────────────────────────────────────────────────────────────────────────
 
 APP_NAME="${APP_NAME:-SQLLY}"
@@ -49,6 +51,18 @@ elif [ "$(uname -s)" = "Darwin" ]; then
 else
   # Let cargo pick the native host target
   CARGO_TARGET=""
+fi
+
+# The slice lipo must find in the bundle. Only the explicit Intel target
+# produces x86_64; every other macOS build (including the App Store one, which
+# never sets TARGET) stays arm64-only.
+EXPECTED_MAC_ARCH="arm64"
+if [ "$CARGO_TARGET" = "x86_64-apple-darwin" ]; then
+  EXPECTED_MAC_ARCH="x86_64"
+  # rustc's x86_64-apple-darwin default minimum is 10.12; match
+  # LSMinimumSystemVersion (13.0) below so the binary and its cc-built C
+  # dependencies agree with the Info.plist.
+  export MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-13.0}"
 fi
 
 # ── Build the Rust binary ───────────────────────────────────────────────────
@@ -203,12 +217,12 @@ PLIST
 
   plutil -lint "$APP_BUNDLE/Contents/Info.plist"
 
-  # ── Guard: arm64 only (no x86_64 / universal) ─────────────────────────────
+  # ── Guard: exactly one slice, the one the target asked for (no universal) ──
   if command -v lipo >/dev/null 2>&1; then
     archs="$(lipo -archs "$APP_BUNDLE/Contents/MacOS/$EXECUTABLE_NAME" 2>/dev/null || true)"
-    if [ "$archs" != "arm64" ]; then
-      echo "error: $EXECUTABLE_NAME has architectures '$archs', expected only 'arm64'" >&2
-      echo "       x86_64 / Intel Macs are NOT supported." >&2
+    if [ "$archs" != "$EXPECTED_MAC_ARCH" ]; then
+      echo "error: $EXECUTABLE_NAME has architectures '$archs', expected only '$EXPECTED_MAC_ARCH'" >&2
+      echo "       Intel and Apple Silicon ship as separate single-arch builds." >&2
       exit 1
     fi
   fi

@@ -1,0 +1,48 @@
+format: mariadb-json (Certain)
+statements: 1
+
+== statement 1
+dialect: "MariaDb"
+estimated_rows: 8
+execution_time_ms: 0.010581
+has_actuals: yes
+planning_time_ms: 0.092482
+source_format: "mariadb-json"
+statement_type: "ANALYZE"
+total_subtree_cost: 0.019606
+operators: 3
+  #1 Query Block [Query Block]
+      actual_self_time_ms: 0.002916
+      actual_time_ms: 0.010581
+      estimated_cost: 0.019606
+      loops: 1
+      output_list: ["Actual time: 0.010581311 ms"]
+      properties: [{name="cost" value="0.0196056"}, {name="r_loops" value="1"}, {name="r_total_time_ms" value="0.010581311"}, {name="select_id" value="1"}]
+      subplan_name: "Select #1"
+    #2 Table: c [Access: ref]
+        actual_rebinds: 1
+        actual_self_time_ms: 0.007665
+        actual_time_ms: 0.007665
+        buffers: {logical_reads=4}
+        estimated_cost: 0.003459
+        estimated_executions: 1
+        estimated_rows: 1
+        estimated_rows_read: 1
+        filtered_percent: 100
+        index_cond: "c.email = 'nobody@example.com'"
+        index_name: "customers_email_idx"
+        loops: 1
+        output_list: ["c", "Key: customers_email_idx", "Actual time: 0.004999045 ms", "Actual filtered: 100%"]
+        properties: [{name="cost" value="0.00345856"}, {name="key_length" value="322"}, {name="loops" value="1"}, {name="possible_keys" value="PRIMARY, customers_email_idx"}, {name="r_engine_stats.pages_accessed" value="4"}, {name="r_filtered" value="100"}, {name="r_icp_filtered" value="0"}, {name="r_index_rows" value="0"}, {name="r_other_time_ms" value="0.002666157"}, {name="r_table_time_ms" value="0.004999045"}, {name="r_total_filtered" value="100"}, {name="ref" value="const"}, {name="used_key_parts" value="email"}]
+        relation: "c"
+    #3 Table: o [Access: ref]
+        estimated_cost: 0.016147
+        estimated_executions: 1
+        estimated_rows: 8
+        estimated_rows_read: 8
+        filtered_percent: 100
+        index_name: "orders_customer_idx"
+        never_executed: yes
+        output_list: ["o", "Key: orders_customer_idx"]
+        properties: [{name="cost" value="0.01614704"}, {name="key_length" value="4"}, {name="loops" value="1"}, {name="possible_keys" value="orders_customer_idx"}, {name="ref" value="shop.c.id"}, {name="used_key_parts" value="customer_id"}]
+        relation: "o"

@@ -4570,6 +4570,32 @@ mod tests {
         assert_eq!(out[0], vec![CellValue::I64(11), CellValue::I64(12)]);
     }
 
+    // https://github.com/TablePlus/TablePlus/issues/3968
+    #[test]
+    fn copy_selected_as_csv_with_header_copies_every_selected_cell() {
+        let (columns, rows) = export_fixture();
+        let csv = |sel: &sqlly_datatable::Selection| {
+            let (cols, out) = selection_export_data(&columns, rows.clone(), sel);
+            crate::results::export_text_for_format_with(
+                ExportFormat::Csv,
+                sqlly_lang::sqlmodel::DatabaseType::Postgres,
+                &cols,
+                &out,
+                &crate::export_options::ExportOptions::default_for(ExportFormat::Csv),
+            )
+            .expect("CSV is a text format")
+            .replace("\r\n", "\n")
+        };
+        // A dragged block (rows 1-2 of columns b-c), then right-clicked on
+        // its bottom-right cell: the grid keeps the block, so the copy holds
+        // the header plus all four cells, not just the one under the pointer.
+        let block = sqlly_datatable::Selection::CellRange(1, 1, 2, 2);
+        assert_eq!(csv(&block).trim_end(), "b,c\n11,12\n21,22");
+        // Cmd-clicked cells keep every picked value too.
+        let picked = sqlly_datatable::Selection::Cells(vec![(0, 0), (0, 1), (3, 0), (3, 1)]);
+        assert_eq!(csv(&picked).trim_end(), "a,b\n0,1\n30,31");
+    }
+
     #[test]
     fn selection_export_sparse_cells_fill_unselected_with_null() {
         let (columns, rows) = export_fixture();

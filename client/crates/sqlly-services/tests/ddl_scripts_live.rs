@@ -574,6 +574,118 @@ async fn pg_table_ddl_keeps_shared_sequence_default_and_keys() {
     assert_eq!(keys_after, keys_before, "{body}");
 }
 
+/// A PostgreSQL partitioned table's DDL keeps its `PARTITION BY` key and
+/// every partition below it (a sub-partitioned one and default partitions
+/// included), and one partition's DDL re-attaches it to its parent: both
+/// rebuild the same partition tree, indexes and keys.
+#[tokio::test]
+async fn pg_partitioned_table_ddl_rebuilds_the_partition_tree() {
+    use sqlly_intel::intellisense::{ClickedRole, NavigationTarget};
+    let Some(profile) = pg_profile() else {
+        eprintln!("skipping: SQLLY_PG_* env vars not set");
+        return;
+    };
+    let database = profile.database.clone().unwrap();
+    let services = Services::new();
+    let tree = "SELECT c.relname || ' ' || c.relkind::text || ' ' || COALESCE(pg_get_partkeydef(c.oid), '-') || ' ' || COALESCE(pg_get_expr(c.relpartbound, c.oid), '-') || ' ' || COALESCE((SELECT p.relname FROM pg_inherits i JOIN pg_class p ON p.oid = i.inhparent WHERE i.inhrelid = c.oid), '-') FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'sqlly_part_live' AND c.relkind IN ('r', 'p') ORDER BY c.relname";
+    let indexes =
+        "SELECT indexdef FROM pg_indexes WHERE schemaname = 'sqlly_part_live' ORDER BY indexdef";
+    let read = |sql: &'static str| {
+        let services = &services;
+        let profile = &profile;
+        async move {
+            rows(services, profile, sql)
+                .await
+                .iter()
+                .map(|r| text(&r[0]))
+                .collect::<Vec<_>>()
+        }
+    };
+    let ddl_of = |name: &'static str| {
+        let services = &services;
+        let profile = &profile;
+        let database = &database;
+        async move {
+            let doc = sqlly_services::fetch_ddl_document(
+                services.queries.as_ref(),
+                profile,
+                database,
+                &NavigationTarget::Table {
+                    catalog: None,
+                    schema: "sqlly_part_live".into(),
+                    name: name.into(),
+                    clicked: ClickedRole::Table,
+                },
+            )
+            .await
+            .unwrap();
+            assert!(doc.error.is_none(), "{:?}", doc.error);
+            doc.primary_source()
+                .map(|s| s.body.clone())
+                .unwrap_or_default()
+        }
+    };
+    run(
+        &services,
+        &profile,
+        "DROP SCHEMA IF EXISTS sqlly_part_live CASCADE",
+    )
+    .await;
+    run(
+        &services,
+        &profile,
+        "CREATE SCHEMA sqlly_part_live; \
+         CREATE TABLE sqlly_part_live.events (id bigint NOT NULL, created_at date NOT NULL, region text NOT NULL, PRIMARY KEY (id, created_at, region)) PARTITION BY RANGE (created_at); \
+         CREATE INDEX events_region_idx ON sqlly_part_live.events (region); \
+         CREATE TABLE sqlly_part_live.events_2026 PARTITION OF sqlly_part_live.events FOR VALUES FROM ('2026-01-01') TO ('2027-01-01') PARTITION BY LIST (region); \
+         CREATE TABLE sqlly_part_live.events_2026_eu PARTITION OF sqlly_part_live.events_2026 FOR VALUES IN ('eu'); \
+         CREATE TABLE sqlly_part_live.events_2026_rest PARTITION OF sqlly_part_live.events_2026 DEFAULT; \
+         CREATE TABLE sqlly_part_live.events_old PARTITION OF sqlly_part_live.events DEFAULT",
+    )
+    .await;
+    let tree_before = read(tree).await;
+    let indexes_before = read(indexes).await;
+
+    let whole = ddl_of("events").await;
+    run(&services, &profile, "DROP TABLE sqlly_part_live.events").await;
+    let whole_replay = try_run(&services, &profile, &whole).await;
+    let (tree_whole, indexes_whole) = if whole_replay.is_ok() {
+        (read(tree).await, read(indexes).await)
+    } else {
+        (vec![], vec![])
+    };
+
+    let leaf = if whole_replay.is_ok() {
+        ddl_of("events_old").await
+    } else {
+        String::new()
+    };
+    let leaf_replay = if whole_replay.is_ok() {
+        run(&services, &profile, "DROP TABLE sqlly_part_live.events_old").await;
+        try_run(&services, &profile, &leaf).await
+    } else {
+        Err("skipped".into())
+    };
+    let (tree_leaf, indexes_leaf) = if leaf_replay.is_ok() {
+        (read(tree).await, read(indexes).await)
+    } else {
+        (vec![], vec![])
+    };
+    run(&services, &profile, "DROP SCHEMA sqlly_part_live CASCADE").await;
+
+    assert!(
+        whole.contains(") PARTITION BY RANGE (created_at);"),
+        "{whole}"
+    );
+    whole_replay.unwrap_or_else(|e| panic!("replay failed: {e}\n{whole}"));
+    assert_eq!(tree_whole, tree_before, "{whole}");
+    assert_eq!(indexes_whole, indexes_before, "{whole}");
+    assert!(leaf.contains("ATTACH PARTITION"), "{leaf}");
+    leaf_replay.unwrap_or_else(|e| panic!("replay failed: {e}\n{leaf}"));
+    assert_eq!(tree_leaf, tree_before, "{leaf}");
+    assert_eq!(indexes_leaf, indexes_before, "{leaf}");
+}
+
 /// The generated CREATE TABLE for a MySQL/MariaDB table is the server's own:
 /// `unsigned`, every default (MariaDB's `nextval(seq)` included), the
 /// primary key and the engine survive, and it recreates the same table.

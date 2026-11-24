@@ -1,0 +1,96 @@
+format: postgresql-json (Certain)
+statements: 1
+
+== statement 1
+dialect: "Postgres"
+estimated_rows: 4
+execution_time_ms: 353.507
+has_actuals: yes
+notes: ["Planning buffers: shared hit=278"]
+planning_time_ms: 0.332
+source_format: "postgresql-json"
+statement_type: "EXPLAIN ANALYZE"
+total_subtree_cost: 55312.07
+operators: 5
+  #1 Aggregate [HashAggregate]
+      actual_rows: 4
+      actual_rows_total: 4
+      actual_self_time_ms: 83.5
+      actual_startup_ms: 353.455
+      actual_time_ms: 353.467
+      buffers: {local_dirtied=0 local_hit=0 local_read=0 local_written=0 logical_reads=11878 physical_reads=0 shared_dirtied=0 shared_hit=11878 shared_read=0 shared_written=0 temp_read=4948 temp_written=4948 writes=0}
+      estimated_cost: 55312.07
+      estimated_row_width: 14
+      estimated_rows: 4
+      estimated_startup_cost: 55312.03
+      group_keys: ["o.status"]
+      hash_batches: 1
+      loops: 1
+      peak_memory_kb: 32
+      properties: [{name="Strategy" value="Hashed"}, {name="Planned Partitions" value="0"}]
+    #2 Hash Join [Hash Join]
+        actual_rows: 1200000
+        actual_rows_total: 1200000
+        actual_self_time_ms: 178.363
+        actual_startup_ms: 44.607
+        actual_time_ms: 269.967
+        buffers: {local_dirtied=0 local_hit=0 local_read=0 local_written=0 logical_reads=11878 physical_reads=0 shared_dirtied=0 shared_hit=11878 shared_read=0 shared_written=0 temp_read=4948 temp_written=4948 writes=0}
+        estimated_cost: 49312.03
+        estimated_row_width: 6
+        estimated_rows: 1200000
+        estimated_startup_cost: 14008
+        join_predicate: "(oi.order_id = o.id)"
+        join_type: "Inner"
+        loops: 1
+        output_list: ["Hash Cond: (oi.order_id = o.id)"]
+        parent_relationship: "Outer"
+        properties: [{name="Inner Unique" value="true"}]
+      #3 Seq Scan [Seq Scan]
+          actual_rows: 1200000
+          actual_rows_total: 1200000
+          actual_self_time_ms: 47.142
+          actual_startup_ms: 0.008
+          actual_time_ms: 47.142
+          alias: "oi"
+          buffers: {local_dirtied=0 local_hit=0 local_read=0 local_written=0 logical_reads=8824 physical_reads=0 shared_dirtied=0 shared_hit=8824 shared_read=0 shared_written=0 temp_read=0 temp_written=0 writes=0}
+          estimated_cost: 20824
+          estimated_row_width: 4
+          estimated_rows: 1200000
+          loops: 1
+          output_list: ["order_items"]
+          parent_relationship: "Outer"
+          relation: "order_items"
+          warnings: [{TableScan={table="order_items"}}]
+      #4 Hash [Hash]
+          actual_rows: 400000
+          actual_rows_total: 400000
+          actual_self_time_ms: 27.352
+          actual_startup_ms: 44.461
+          actual_time_ms: 44.462
+          buffers: {local_dirtied=0 local_hit=0 local_read=0 local_written=0 logical_reads=3054 physical_reads=0 shared_dirtied=0 shared_hit=3054 shared_read=0 shared_written=0 temp_read=0 temp_written=1498 writes=0}
+          estimated_cost: 7054
+          estimated_row_width: 10
+          estimated_rows: 400000
+          estimated_startup_cost: 7054
+          hash_batches: 32
+          hash_buckets: 32768
+          loops: 1
+          parent_relationship: "Inner"
+          peak_memory_kb: 796
+          spill: {kind="hash"}
+        #5 Seq Scan [Seq Scan]
+            actual_rows: 400000
+            actual_rows_total: 400000
+            actual_self_time_ms: 17.11
+            actual_startup_ms: 0.004
+            actual_time_ms: 17.11
+            alias: "o"
+            buffers: {local_dirtied=0 local_hit=0 local_read=0 local_written=0 logical_reads=3054 physical_reads=0 shared_dirtied=0 shared_hit=3054 shared_read=0 shared_written=0 temp_read=0 temp_written=0 writes=0}
+            estimated_cost: 7054
+            estimated_row_width: 10
+            estimated_rows: 400000
+            loops: 1
+            output_list: ["orders"]
+            parent_relationship: "Outer"
+            relation: "orders"
+            warnings: [{TableScan={table="orders"}}]

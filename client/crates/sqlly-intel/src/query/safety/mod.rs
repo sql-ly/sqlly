@@ -30,9 +30,9 @@ pub use classify::{
     statement_kind_hint_for,
 };
 pub use policy::{
-    EffectiveSql, apply_connection_policy, apply_connection_policy_for,
-    check_connection_policy_for, preview_effective_sql, wrap_in_rollback_transaction,
-    wrap_in_rollback_transaction_for,
+    EffectiveSql, apply_connection_policy, apply_connection_policy_compile_only,
+    apply_connection_policy_for, check_connection_policy_for, preview_effective_sql,
+    showplan_toggle, wrap_in_rollback_transaction, wrap_in_rollback_transaction_for,
 };
 pub use production::{ProductionDecision, ProductionGuard, UnlockWindow, WriteUnlock};
 pub use read_only::{

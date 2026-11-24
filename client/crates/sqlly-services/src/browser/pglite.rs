@@ -159,7 +159,10 @@ pub fn query_scalar_strings(
 
 /// Map bridge result sets onto the [`QueryEvent`] sequence the streaming
 /// contract promises (everything between `Started` and `Completed`).
-pub(super) fn events_from_results(results: Vec<BridgeResultSet>) -> Vec<QueryEvent> {
+pub(super) fn events_from_results(
+    results: Vec<BridgeResultSet>,
+    limits: &CellLimits,
+) -> Vec<QueryEvent> {
     let mut events = Vec::new();
     let mut index = 0usize;
     for set in results {
@@ -186,7 +189,7 @@ pub(super) fn events_from_results(results: Vec<BridgeResultSet>) -> Vec<QueryEve
             .map(|row| row.iter().map(json_to_cell).collect())
             .collect();
         let count = rows.len() as u64;
-        let truncated = truncate_rows(&mut rows, 0, &CellLimits::default());
+        let truncated = truncate_rows(&mut rows, 0, limits);
         events.push(QueryEvent::Rows { index, rows });
         if !truncated.is_empty() {
             events.push(QueryEvent::TruncatedCells {

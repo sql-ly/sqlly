@@ -1,0 +1,60 @@
+{
+  "query_optimization": {
+    "r_total_time_ms": 0.100480796
+  },
+  "query_block": {
+    "select_id": 1,
+    "cost": 23.57318802,
+    "r_loops": 1,
+    "r_total_time_ms": 4.692853078,
+    "filesort": {
+      "sort_key": "orders.`status`",
+      "r_loops": 1,
+      "r_total_time_ms": 0.002457864,
+      "r_used_priority_queue": false,
+      "r_output_rows": 4,
+      "r_buffer_size": "3KiB",
+      "r_sort_mode": "sort_key,rowid",
+      "window_functions_computation": {
+        "sorts": [
+          {
+            "filesort": {
+              "sort_key": "count(0) desc",
+              "r_loops": 1,
+              "r_total_time_ms": 0.005832219,
+              "r_used_priority_queue": false,
+              "r_output_rows": 4,
+              "r_buffer_size": "360",
+              "r_sort_mode": "sort_key,rowid"
+            }
+          }
+        ],
+        "temporary_table": {
+          "nested_loop": [
+            {
+              "table": {
+                "table_name": "orders",
+                "access_type": "ALL",
+                "possible_keys": ["orders_placed_idx"],
+                "loops": 1,
+                "r_loops": 1,
+                "rows": 40131,
+                "r_rows": 40000,
+                "cost": 6.6889758,
+                "r_table_time_ms": 1.897553997,
+                "r_other_time_ms": 2.766512917,
+                "r_engine_stats": {
+                  "pages_accessed": 130
+                },
+                "filtered": 63.07343292,
+                "r_total_filtered": 31.6,
+                "attached_condition": "orders.placed_at > '2023-01-20'",
+                "r_filtered": 31.6
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

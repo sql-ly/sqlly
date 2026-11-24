@@ -45,6 +45,8 @@ const PAGE_UP_KEY: char = char::from_u32(0xF72C).unwrap();
 const PAGE_DOWN_KEY: char = char::from_u32(0xF72D).unwrap();
 const LEFT_KEY: char = char::from_u32(0xF702).unwrap();
 const RIGHT_KEY: char = char::from_u32(0xF703).unwrap();
+const UP_KEY: char = char::from_u32(0xF700).unwrap();
+const DOWN_KEY: char = char::from_u32(0xF701).unwrap();
 const ESC: char = char::from_u32(0x1B).unwrap();
 const BACKSPACE_KEY: char = '\u{8}';
 const DELETE_KEY: char = char::from_u32(0xF728).unwrap();
@@ -292,6 +294,8 @@ fn display_key(key: char) -> &'static str {
             PAGE_DOWN_KEY => "Page Down",
             LEFT_KEY => "â",
             RIGHT_KEY => "â",
+            UP_KEY => "↑",
+            DOWN_KEY => "↓",
             ' ' => "Space",
             '\r' => "Enter",
             '\t' => "Tab",
@@ -327,6 +331,8 @@ fn descriptor_key(key: char) -> &'static str {
             PAGE_DOWN_KEY => "pagedown",
             LEFT_KEY => "left",
             RIGHT_KEY => "right",
+            UP_KEY => "up",
+            DOWN_KEY => "down",
             ' ' => "space",
             '\r' => "enter",
             '\t' => "tab",
@@ -744,6 +750,89 @@ pub fn default_bindings() -> HashMap<String, Vec<KeyBinding>> {
         "results.refresh".into(),
         vec![results_pane(KeyStroke::new('r', Modifiers::command()))],
     );
+    // Notebook keys. Run cell, run and advance and run and insert below
+    // fire from the notebook and from inside a cell editor; the single-key
+    // commands only in command mode, so they never reach typing.
+    let in_notebook = |stroke: KeyStroke| KeyBinding {
+        strokes: vec![stroke],
+        when: Some(crate::notebook::KEY_CONTEXT.to_string()),
+    };
+    let in_cell_editor = |stroke: KeyStroke| KeyBinding {
+        strokes: vec![stroke],
+        when: Some(format!("{} > SqlEditor", crate::notebook::KEY_CONTEXT)),
+    };
+    let command_mode = |strokes: Vec<KeyStroke>| KeyBinding {
+        strokes,
+        when: Some(crate::notebook::COMMAND_KEY_CONTEXT.to_string()),
+    };
+    let key = |k: char| KeyStroke::new(k, Modifiers::none());
+    m.insert(
+        "query.runNotebookCell".into(),
+        vec![in_notebook(KeyStroke::new('\r', Modifiers::command()))],
+    );
+    m.insert(
+        "notebook.runCellAndAdvance".into(),
+        vec![
+            in_notebook(KeyStroke::new('\r', Modifiers::shift())),
+            in_cell_editor(KeyStroke::new('\r', Modifiers::shift())),
+        ],
+    );
+    let option = Modifiers {
+        option: true,
+        ..Modifiers::none()
+    };
+    m.insert(
+        "notebook.runCellAndInsertBelow".into(),
+        vec![
+            in_notebook(KeyStroke::new('\r', option)),
+            in_cell_editor(KeyStroke::new('\r', option)),
+        ],
+    );
+    m.insert(
+        "notebook.commandMode".into(),
+        vec![in_cell_editor(KeyStroke::new(ESC, Modifiers::none()))],
+    );
+    m.insert(
+        "notebook.selectNextCell".into(),
+        vec![
+            command_mode(vec![key('j')]),
+            command_mode(vec![key(DOWN_KEY)]),
+        ],
+    );
+    m.insert(
+        "notebook.selectPreviousCell".into(),
+        vec![
+            command_mode(vec![key('k')]),
+            command_mode(vec![key(UP_KEY)]),
+        ],
+    );
+    m.insert(
+        "notebook.insertCellAbove".into(),
+        vec![command_mode(vec![key('a')])],
+    );
+    m.insert(
+        "notebook.insertCellBelow".into(),
+        vec![command_mode(vec![key('b')])],
+    );
+    m.insert(
+        "notebook.deleteCell".into(),
+        vec![command_mode(vec![key('d'), key('d')])],
+    );
+    m.insert(
+        "notebook.convertToMarkdown".into(),
+        vec![command_mode(vec![key('m')])],
+    );
+    m.insert(
+        "notebook.convertToSql".into(),
+        vec![command_mode(vec![key('y')])],
+    );
+    m.insert(
+        "notebook.editCell".into(),
+        vec![command_mode(vec![key('\r')])],
+    );
+    m.insert("notebook.stop".into(), Vec::new());
+    crate::notebook::editing::keys::insert_defaults(&mut m);
+    crate::notebook::embedded::keys::insert_defaults(&mut m);
     // F6 jumps keyboard focus between the SQL editor and the result grid, so
     // it has to fire from both key contexts.
     let editor_pane = |stroke: KeyStroke| KeyBinding {
@@ -1013,6 +1102,36 @@ pub fn register_app_keybindings_from(settings: &KeybindingSettings, cx: &mut App
             "query.runAllNotebookCells" => {
                 load_binding(&stroke, crate::app::RunAllNotebookCells, ctx, cx)
             }
+            "notebook.runCellAndAdvance" => {
+                load_binding(&stroke, crate::notebook::RunCellAndAdvance, ctx, cx)
+            }
+            "notebook.runCellAndInsertBelow" => {
+                load_binding(&stroke, crate::notebook::RunCellAndInsertBelow, ctx, cx)
+            }
+            "notebook.commandMode" => {
+                load_binding(&stroke, crate::notebook::EnterCommandMode, ctx, cx)
+            }
+            "notebook.selectNextCell" => {
+                load_binding(&stroke, crate::notebook::SelectNextCell, ctx, cx)
+            }
+            "notebook.selectPreviousCell" => {
+                load_binding(&stroke, crate::notebook::SelectPreviousCell, ctx, cx)
+            }
+            "notebook.insertCellAbove" => {
+                load_binding(&stroke, crate::notebook::InsertCellAbove, ctx, cx)
+            }
+            "notebook.insertCellBelow" => {
+                load_binding(&stroke, crate::notebook::InsertCellBelow, ctx, cx)
+            }
+            "notebook.deleteCell" => load_binding(&stroke, crate::notebook::DeleteCell, ctx, cx),
+            "notebook.convertToMarkdown" => {
+                load_binding(&stroke, crate::notebook::ConvertToMarkdown, ctx, cx)
+            }
+            "notebook.convertToSql" => {
+                load_binding(&stroke, crate::notebook::ConvertToSql, ctx, cx)
+            }
+            "notebook.editCell" => load_binding(&stroke, crate::notebook::EditCell, ctx, cx),
+            "notebook.stop" => load_binding(&stroke, crate::app::StopNotebookRun, ctx, cx),
             "query.cancel" => load_binding(&stroke, crate::app::CancelActiveQuery, ctx, cx),
             "transaction.commit" => load_binding(&stroke, crate::app::CommitTransaction, ctx, cx),
             "transaction.rollback" => {
@@ -1096,6 +1215,12 @@ pub fn register_app_keybindings_from(settings: &KeybindingSettings, cx: &mut App
             }
             "connection.quickSwitch9" => {
                 load_binding(&stroke, crate::app::QuickSwitchConnection9, ctx, cx)
+            }
+            id if crate::notebook::editing::keys::command_for(id).is_some() => {
+                crate::notebook::editing::keys::load(id, &stroke, ctx, cx)
+            }
+            id if crate::notebook::embedded::keys::command_for(id).is_some() => {
+                crate::notebook::embedded::keys::load(id, &stroke, ctx, cx)
             }
             _ => continue,
         };
@@ -1267,6 +1392,8 @@ fn parse_descriptor_stroke(token: &str) -> Option<KeyStroke> {
         "pagedown" => PAGE_DOWN_KEY,
         "left" => LEFT_KEY,
         "right" => RIGHT_KEY,
+        "up" => UP_KEY,
+        "down" => DOWN_KEY,
         "/" => '/',
         "." => '.',
         "," => ',',

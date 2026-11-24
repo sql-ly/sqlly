@@ -100,11 +100,16 @@ async fn sqlite_plan_capture_end_to_end_hermetic() {
     let plans = parse_captured_plan(PlanDialect::Sqlite, &doc).unwrap();
     assert_eq!(plans.len(), 1);
     assert!(!plans[0].nodes.is_empty(), "{doc}");
-    let findings = sqlly_services::plans::findings_for_plan(&plans[0]);
+    // EXPLAIN QUERY PLAN prints no predicate and no row counts, so a lone
+    // SCAN is not reported as a finding; the scan itself must be in the plan.
     assert!(
-        findings.iter().any(|f| f.summary.contains("plan_demo")),
-        "SCAN finding expected: {doc}"
+        plans[0].nodes.iter().any(|node| {
+            node.physical_op.to_ascii_uppercase().contains("SCAN")
+                && node.relation.as_deref() == Some("plan_demo")
+        }),
+        "SCAN of plan_demo expected: {doc}"
     );
+    let _ = sqlly_services::plans::findings_for_plan(&plans[0]);
     std::fs::remove_dir_all(&dir).ok();
 }
 

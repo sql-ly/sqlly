@@ -1,0 +1,103 @@
+format: trino-text (Certain)
+statements: 1
+
+== statement 1
+estimated_rows: 10
+execution_time_ms: 223.58
+has_actuals: yes
+notes: ["Trino version: 484", "Queued: 155.38us, Analysis: 1.55ms, Planning: 15.87ms, Execution: 223.58ms, Finishing: 0.00ns"]
+planning_time_ms: 15.87
+source_format: "trino-text"
+statement_type: "EXPLAIN ANALYZE"
+operators: 12
+  #1 TopN [TopN]
+      actual_time_ms: 251
+      estimated_rows: 10
+      output_columns: ["partkey:bigint", "quantity:double", "orderkey_1:bigint", "totalprice:double"]
+      properties: [{name="count" value="10"}, {name="Fragment" value="1 [SINGLE]"}, {name="Fragment CPU" value="591.71us, Scheduled: 1.93ms, Blocked 778.46ms (Input: 699.62ms, Output: 0.00ns), Input: 0 rows (0B); per task: avg.: 0.00 std.dev.: 0.00, Output: 0 rows (0B)"}, {name="Fragment Peak Memory" value="0B, Tasks count: 1; per task: max: 0B"}, {name="Fragment Output layout" value="[partkey, quantity, orderkey_1, totalprice]"}, {name="Fragment Output partitioning" value="SINGLE []"}, {name="Estimates" value="{rows: 10 (360B), cpu: ?, memory: ?, network: ?}"}, {name="CPU" value="0.00ns (0.00%)"}, {name="Scheduled" value="0.00ns (0.00%)"}, {name="Blocked" value="0.00ns (0.00%)"}, {name="Output" value="0 rows (0B)"}, {name="Input avg." value="0.00 rows"}, {name="Input std.dev." value="?%"}]
+      sort_keys: ["totalprice DESC NULLS LAST"]
+    #2 LocalExchange [LocalExchange]
+        actual_time_ms: 251
+        estimated_rows: 10
+        output_columns: ["partkey:bigint", "quantity:double", "orderkey_1:bigint", "totalprice:double"]
+        properties: [{name="partitioning" value="SINGLE"}, {name="Estimates" value="{rows: 10 (360B), cpu: 0, memory: 0B, network: 0B}"}, {name="CPU" value="0.00ns (0.00%)"}, {name="Scheduled" value="0.00ns (0.00%)"}, {name="Blocked" value="79.00ms (4.59%)"}, {name="Output" value="0 rows (0B)"}, {name="Input avg." value="0.00 rows"}, {name="Input std.dev." value="?%"}]
+      #3 RemoteSource [RemoteSource]
+          actual_time_ms: 251
+          output_columns: ["partkey:bigint", "quantity:double", "orderkey_1:bigint", "totalprice:double"]
+          properties: [{name="sourceFragmentIds" value="[2]"}, {name="CPU" value="0.00ns (0.00%)"}, {name="Scheduled" value="0.00ns (0.00%)"}, {name="Blocked" value="700.00ms (40.70%)"}, {name="Output" value="0 rows (0B)"}, {name="Input avg." value="0.00 rows"}, {name="Input std.dev." value="?%"}]
+        #4 TopNPartial [TopNPartial]
+            actual_time_ms: 251
+            estimated_rows: 10
+            output_columns: ["orderkey_1:bigint", "partkey:bigint", "quantity:double", "totalprice:double"]
+            properties: [{name="count" value="10"}, {name="Fragment" value="2 [tpch:orders:15000]"}, {name="Fragment CPU" value="239.29ms, Scheduled: 253.49ms, Blocked 1.01s (Input: 0.00ns, Output: 0.00ns), Input: 15000 rows (131.84kB); per task: avg.: 15000.00 std.dev.: 0.00, Output: 0 r..."}, {name="Fragment Peak Memory" value="128kB, Tasks count: 1; per task: max: 128kB"}, {name="Fragment Output layout" value="[partkey, quantity, orderkey_1, totalprice]"}, {name="Fragment Output partitioning" value="SINGLE []"}, {name="Estimates" value="{rows: 10 (360B), cpu: ?, memory: ?, network: ?}"}, {name="CPU" value="0.00ns (0.00%)"}, {name="Scheduled" value="0.00ns (0.00%)"}, {name="Blocked" value="0.00ns (0.00%)"}, {name="Output" value="0 rows (0B)"}, {name="Input avg." value="0.00 rows"}, {name="Input std.dev." value="?%"}]
+            sort_keys: ["totalprice DESC NULLS LAST"]
+          #5 LocalExchange [LocalExchange]
+              actual_time_ms: 251
+              estimated_rows: 10
+              output_columns: ["orderkey_1:bigint", "partkey:bigint", "quantity:double", "totalprice:double"]
+              properties: [{name="partitioning" value="SINGLE"}, {name="Estimates" value="{rows: 10 (360B), cpu: 0, memory: 0B, network: 0B}"}, {name="CPU" value="0.00ns (0.00%)"}, {name="Scheduled" value="0.00ns (0.00%)"}, {name="Blocked" value="0.00ns (0.00%)"}, {name="Output" value="0 rows (0B)"}, {name="Input avg." value="0.00 rows"}, {name="Input std.dev." value="?%"}]
+            #6 TopNPartial [TopNPartial]
+                actual_time_ms: 251
+                estimated_rows: 10
+                output_columns: ["orderkey_1:bigint", "partkey:bigint", "quantity:double", "totalprice:double"]
+                properties: [{name="count" value="10"}, {name="Estimates" value="{rows: 10 (360B), cpu: ?, memory: ?, network: ?}"}, {name="CPU" value="0.00ns (0.00%)"}, {name="Scheduled" value="0.00ns (0.00%)"}, {name="Blocked" value="0.00ns (0.00%)"}, {name="Output" value="0 rows (0B)"}, {name="Input avg." value="0.00 rows"}, {name="Input std.dev." value="?%"}]
+                sort_keys: ["totalprice DESC NULLS LAST"]
+              #7 LocalExchange [LocalExchange]
+                  actual_time_ms: 251
+                  estimated_cpu: 360
+                  estimated_rows: 10
+                  output_columns: ["orderkey_1:bigint", "partkey:bigint", "quantity:double", "totalprice:double"]
+                  properties: [{name="partitioning" value="ROUND_ROBIN"}, {name="Estimates" value="{rows: 10 (360B), cpu: 360, memory: 0B, network: 0B}"}, {name="CPU" value="0.00ns (0.00%)"}, {name="Scheduled" value="0.00ns (0.00%)"}, {name="Blocked" value="591.00ms (34.36%)"}, {name="Output" value="0 rows (0B)"}, {name="Input avg." value="0.00 rows"}, {name="Input std.dev." value="?%"}]
+                #8 TopNPartial [TopNPartial]
+                    actual_cpu_ms: 1
+                    actual_self_time_ms: 1
+                    actual_time_ms: 251
+                    estimated_rows: 10
+                    output_columns: ["orderkey_1:bigint", "partkey:bigint", "quantity:double", "totalprice:double"]
+                    properties: [{name="count" value="10"}, {name="Estimates" value="{rows: 10 (360B), cpu: ?, memory: ?, network: ?}"}, {name="CPU" value="1.00ms (0.42%)"}, {name="Scheduled" value="1.00ms (0.40%)"}, {name="Blocked" value="0.00ns (0.00%)"}, {name="Output" value="0 rows (0B)"}, {name="Input avg." value="0.00 rows"}, {name="Input std.dev." value="?%"}]
+                    sort_keys: ["totalprice DESC NULLS LAST"]
+                  #9 InnerJoin [InnerJoin]
+                      actual_cpu_ms: 5
+                      actual_self_time_ms: 6
+                      actual_time_ms: 250
+                      estimated_cpu: 1550000
+                      estimated_rows: 60
+                      join_predicate: "orderkey_1 = orderkey"
+                      join_type: "Inner"
+                      output_columns: ["orderkey_1:bigint", "partkey:bigint", "quantity:double", "totalprice:double"]
+                      output_list: ["Condition: orderkey_1 = orderkey"]
+                      properties: [{name="distribution" value="PARTITIONED"}, {name="Estimates" value="{rows: 60 (2.12kB), cpu: 1.55M, memory: 270B, network: 0B}"}, {name="CPU" value="5.00ms (2.10%)"}, {name="Scheduled" value="6.00ms (2.39%)"}, {name="Blocked" value="281.00ms (16.34%)"}, {name="Output" value="0 rows (0B)"}, {name="Left (probe) Input avg." value="0.00 rows"}, {name="Input std.dev." value="?%"}, {name="Right (build) Input avg." value="0.00 rows"}, {name="Input std.dev." value="?%"}, {name="Distribution" value="PARTITIONED"}, {name="dynamicFilterAssignments" value="{orderkey -> #df_405}"}]
+                    #10 ScanFilter [ScanFilter]
+                        actual_cpu_ms: 1
+                        actual_self_time_ms: 1
+                        actual_time_ms: 1
+                        database: "tpch"
+                        estimated_cpu: 1550000
+                        estimated_rows: 60175
+                        estimated_rows_read: 60175
+                        output_columns: ["orderkey_1:bigint", "partkey:bigint", "quantity:double"]
+                        output_list: ["lineitem"]
+                        properties: [{name="table" value="tpch:tiny:lineitem"}, {name="dynamicFilters" value="{orderkey_1 = #df_405}"}, {name="Estimates" value="{rows: 60175 (1.55MB), cpu: 1.55M, memory: 0B, network: 0B}/{rows: 60175 (1.55MB), cpu: 1.55M, memory: 0B, network: 0B}"}, {name="CPU" value="1.00ms (0.42%)"}, {name="Scheduled" value="1.00ms (0.40%)"}, {name="Blocked" value="0.00ns (0.00%)"}, {name="Output" value="0 rows (0B)"}, {name="Input avg." value="0.00 rows"}, {name="Input std.dev." value="?%"}, {name="quantity" value="tpch:quantity"}, {name="orderkey_1" value="tpch:orderkey"}, {name="partkey" value="tpch:partkey"}, {name="Input" value="0 rows (0B)"}, {name="Filtered" value="?%"}, {name="Splits" value="4"}, {name="Splits generation wait time" value="0.00ms"}, {name="Dynamic filters" value="- df_405, NONE, collection time=98.60ms"}]
+                        relation: "lineitem"
+                        schema: "tiny"
+                    #11 LocalExchange [LocalExchange]
+                        actual_time_ms: 243
+                        estimated_rows: 15
+                        output_columns: ["orderkey:bigint", "totalprice:double"]
+                        properties: [{name="partitioning" value="SINGLE"}, {name="Estimates" value="{rows: 15 (270B), cpu: 0, memory: 0B, network: 0B}"}, {name="CPU" value="0.00ns (0.00%)"}, {name="Scheduled" value="0.00ns (0.00%)"}, {name="Blocked" value="69.00ms (4.01%)"}, {name="Output" value="0 rows (0B)"}, {name="Input avg." value="0.00 rows"}, {name="Input std.dev." value="?%"}]
+                      #12 ScanFilterProject [ScanFilterProject]
+                          actual_cpu_ms: 231
+                          actual_self_time_ms: 243
+                          actual_time_ms: 243
+                          database: "tpch"
+                          estimated_cpu: 270
+                          estimated_rows: 15
+                          estimated_rows_read: 15000
+                          filter: "custkey = bigint '42'"
+                          output_columns: ["orderkey:bigint", "totalprice:double"]
+                          output_list: ["orders", "Filter: custkey = bigint '42'"]
+                          properties: [{name="table" value="tpch:tiny:orders"}, {name="Estimates" value="{rows: 15000 (263.67kB), cpu: 395.51k, memory: 0B, network: 0B}/{rows: 15 (270B), cpu: 395.51k, memory: 0B, network: 0B}/{rows: 15 (270B), cpu: 270, memory: 0B,..."}, {name="CPU" value="231.00ms (97.06%)"}, {name="Scheduled" value="243.00ms (96.81%)"}, {name="Blocked" value="0.00ns (0.00%)"}, {name="Output" value="0 rows (0B)"}, {name="Input avg." value="3750.00 rows"}, {name="Input std.dev." value="0.00%"}, {name="totalprice" value="tpch:totalprice"}, {name="orderkey" value="tpch:orderkey"}, {name="custkey" value="tpch:custkey"}, {name="tpch:orderstatus" value=":: [[F], [O], [P]]"}, {name="Input" value="15000 rows (131.84kB)"}, {name="Filtered" value="100.00%"}, {name="Splits" value="4"}, {name="Splits generation wait time" value="0.01ms"}]
+                          relation: "orders"
+                          rows_read: 15000
+                          rows_removed_by_filter: 15000
+                          schema: "tiny"

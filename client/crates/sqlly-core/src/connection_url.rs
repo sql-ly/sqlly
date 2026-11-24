@@ -1447,6 +1447,36 @@ mod tests {
         assert!(valkey.redis_sentinel.unwrap().prefer_replica_reads);
     }
 
+    // https://github.com/RedisInsight/RedisInsight/issues/6554
+    #[test]
+    fn redis_url_accepts_a_bracketed_ipv6_host() {
+        let loopback = parse_connection_url("redis://[::1]:6379").unwrap();
+        assert_eq!(loopback.engine, DatabaseType::Redis);
+        assert_eq!(loopback.server, "::1");
+        assert_eq!(loopback.port, Some(6379));
+        assert!(loopback.hosts.is_empty());
+
+        let full = parse_connection_url("rediss://user:pass@[2001:db8::1]:6380/2").unwrap();
+        assert_eq!(full.engine, DatabaseType::Redis);
+        assert_eq!(full.server, "2001:db8::1");
+        assert_eq!(full.port, Some(6380));
+        assert_eq!(full.database.as_deref(), Some("2"));
+        assert_eq!(full.username.as_deref(), Some("user"));
+        assert_eq!(full.password.as_deref(), Some("pass"));
+        assert_eq!(full.tls_mode, Some(TlsMode::Require));
+
+        // The deep link and the unsaved profile built from a pasted URL go
+        // through the same parser and keep the bare address.
+        let crate::deep_link::DeepLink::ConnectUrl { parsed } =
+            crate::deep_link::parse_deep_link("redis://[::1]:6379").unwrap()
+        else {
+            panic!("a raw redis:// URL is a connect deep link");
+        };
+        let profile = crate::connect_url::unsaved_profile(&parsed).unwrap();
+        assert_eq!(profile.server, "::1");
+        assert_eq!(profile.port, 6379);
+    }
+
     #[test]
     fn redis_url_with_three_hosts_keeps_all_three() {
         let parsed = parse_connection_url("redis://:pw@node-a:7000,node-b:7001,node-c/0").unwrap();

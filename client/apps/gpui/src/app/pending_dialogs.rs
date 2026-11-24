@@ -21,6 +21,9 @@ pub(crate) struct PendingMutationReview {
     /// When set, confirming this review re-enters execute for a notebook cell
     /// rather than the tab's hidden editor/results pair.
     pub(crate) notebook_cell: Option<String>,
+    /// The connection and read-only mode that notebook cell runs under, so
+    /// the confirmed run lands on the same target.
+    pub(crate) notebook_target: Option<crate::notebook::connection::CellRunTarget>,
     /// When set, confirming runs on these connection ids instead of the active profile.
     pub(crate) multi_targets: Option<Vec<uuid::Uuid>>,
 }
@@ -262,6 +265,9 @@ pub(crate) struct PendingDialogs {
     /// unparseable; a missing key means not yet probed this session.
     pub(crate) server_versions: HashMap<String, Option<sqlly_services::plans::ServerVersion>>,
     pub(crate) explain_prefs: crate::preferences::ExplainPreferences,
+    /// The status-bar summary of a large plan still being analysed; written
+    /// when the analysis lands.
+    pub(crate) plan_summary: Option<super::explain::PendingPlanSummary>,
 }
 
 #[cfg(all(test, not(target_arch = "wasm32")))]

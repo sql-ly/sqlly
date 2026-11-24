@@ -1,0 +1,97 @@
+format: sqlserver-text (Certain)
+statements: 5
+
+== statement 1
+dialect: "SqlServer"
+source_format: "sqlserver-text"
+statement_text: "DECLARE @t TABLE (id INT PRIMARY KEY, v INT); INSERT @t SELECT TOP (2000) order_id, customer_id FROM dbo.orders;"
+operators: 3
+  #1 Clustered Index Insert [Clustered Index Insert]
+      properties: [{name="SET" value="[id] = [Shop].[dbo].[orders].[order_id],[v] = [Shop].[dbo].[orders].[customer_id]"}, {name="TableVariable" value="true"}]
+      relation: "@t"
+    #2 Top [Top]
+        properties: [{name="TOP EXPRESSION" value="(2000)"}]
+      #3 Clustered Index Scan [Clustered Index Scan]
+          database: "Shop"
+          extra: ["ORDERED FORWARD"]
+          index_name: "PK__orders__46596229A6DBB338"
+          relation: "orders"
+          schema: "dbo"
+
+== statement 2
+dialect: "SqlServer"
+source_format: "sqlserver-text"
+statement_text: "SELECT COUNT(*) FROM @t t JOIN dbo.orders o ON o.order_id = t.id;"
+statement_type: "SELECT"
+operators: 5
+  #1 Compute Scalar [Compute Scalar]
+      properties: [{name="DEFINE" value="[Expr1002]=CONVERT_IMPLICIT(int,[Expr1005],0)"}]
+    #2 Stream Aggregate [Stream Aggregate]
+        properties: [{name="DEFINE" value="[Expr1005]=Count(*)"}]
+      #3 Hash Match [Inner Join]
+          join_predicate: "t.id = o.order_id"
+          join_type: "Inner"
+        #4 Clustered Index Scan [Clustered Index Scan]
+            alias: "t"
+            properties: [{name="TableVariable" value="true"}]
+            relation: "@t"
+        #5 Index Scan [Index Scan]
+            alias: "o"
+            database: "Shop"
+            index_name: "IX_orders_customer"
+            relation: "orders"
+            schema: "dbo"
+
+== statement 3
+dialect: "SqlServer"
+source_format: "sqlserver-text"
+statement_text: "SELECT TOP (5) order_id, dbo.fn_tax(total) AS tax FROM dbo.orders ORDER BY order_id;"
+statement_type: "SELECT"
+operators: 3
+  #1 Compute Scalar [Compute Scalar]
+      properties: [{name="DEFINE" value="[Expr1002]=[Shop].[dbo].[fn_tax]([Shop].[dbo].[orders].[total])"}]
+    #2 Top [Top]
+        properties: [{name="TOP EXPRESSION" value="(5)"}]
+      #3 Clustered Index Scan [Clustered Index Scan]
+          database: "Shop"
+          extra: ["ORDERED FORWARD"]
+          index_name: "PK__orders__46596229A6DBB338"
+          relation: "orders"
+          schema: "dbo"
+
+== statement 4
+dialect: "SqlServer"
+source_format: "sqlserver-text"
+statement_text: "IF EXISTS (SELECT 1 FROM dbo.customers WHERE country = 'JP')"
+statement_type: "COND WITH QUERY"
+warnings: [{TableScan={schema="dbo" table="customers"}}]
+operators: 4
+  #1 Compute Scalar [Compute Scalar]
+      properties: [{name="DEFINE" value="[Expr1003]=CASE WHEN [Expr1004] THEN (1) ELSE (0) END"}]
+    #2 Nested Loops [Left Semi Join]
+        join_type: "Left Semi"
+        properties: [{name="DEFINE" value="[Expr1004] = [PROBE VALUE]"}]
+      #3 Constant Scan [Constant Scan]
+      #4 Clustered Index Scan [Clustered Index Scan]
+          database: "Shop"
+          filter: "[Shop].[dbo].[customers].[country]='JP'"
+          index_name: "PK__customer__CD65CB850EC2D984"
+          relation: "customers"
+          schema: "dbo"
+          warnings: [{TableScan={schema="dbo" table="customers"}}]
+
+== statement 5
+dialect: "SqlServer"
+source_format: "sqlserver-text"
+statement_text: "SELECT COUNT(*) FROM dbo.customers;"
+statement_type: "SELECT"
+operators: 3
+  #1 Compute Scalar [Compute Scalar]
+      properties: [{name="DEFINE" value="[Expr1002]=CONVERT_IMPLICIT(int,[Expr1003],0)"}]
+    #2 Stream Aggregate [Stream Aggregate]
+        properties: [{name="DEFINE" value="[Expr1003]=Count(*)"}]
+      #3 Index Scan [Index Scan]
+          database: "Shop"
+          index_name: "IX_customers_email"
+          relation: "customers"
+          schema: "dbo"

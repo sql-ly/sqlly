@@ -18,6 +18,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod builtin_names;
 pub mod db_type;
 pub mod dialect;
 pub mod identifier_quoting;
@@ -26,6 +27,10 @@ pub mod snapshot;
 pub mod transfer_types;
 pub mod types;
 
+pub use builtin_names::{
+    builtin_function_names, builtin_type_names, is_builtin_function,
+    is_builtin_function_in_any_dialect, is_builtin_type, is_builtin_type_in_any_dialect,
+};
 pub use db_type::{
     ConnectionKind, DatabaseType, DbFeature, DbTypeMetadata, IdentifierQuoting, LogicalType,
     RowLimitSyntax, SqlKeyword, SqlOperation, TypeMapping, TypeStorage, UpsertPattern,

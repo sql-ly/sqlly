@@ -1,0 +1,32 @@
+
+Explained.
+
+Plan hash value: 3160566349
+
+---------------------------------------------------------------------------------------------
+| Id  | Operation             | Name        | Rows  | Bytes |TempSpc| Cost (%CPU)| Time     |
+---------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT      |             |  1000 | 25000 |       |  3105   (1)| 00:00:01 |
+|   1 |  SORT ORDER BY        |             |  1000 | 25000 |       |  3105   (1)| 00:00:01 |
+|   2 |   HASH GROUP BY       |             |  1000 | 25000 |       |  3105   (1)| 00:00:01 |
+|*  3 |    HASH JOIN          |             |   148K|  3626K|    16M|  3099   (1)| 00:00:01 |
+|   4 |     TABLE ACCESS FULL | ORDER_ITEMS |   600K|  9960K|       |   610   (1)| 00:00:01 |
+|   5 |     VIEW              | VW_GBF_5    | 75000 |   585K|       |  1593   (1)| 00:00:01 |
+|*  6 |      TABLE ACCESS FULL| ORDERS      | 75000 |  1025K|       |  1593   (1)| 00:00:01 |
+---------------------------------------------------------------------------------------------
+
+Predicate Information (identified by operation id):
+---------------------------------------------------
+
+   3 - access("ITEM_1"="OI"."ORDER_ID")
+   6 - filter("O"."STATUS"='shipped')
+
+Hint Report (identified by operation id / Query Block Name / Object Alias):
+Total hints for statement: 1 (U - Unused (1))
+---------------------------------------------------------------------------
+
+   0 -  STATEMENT
+         U -  PARALLEL(4)
+
+26 rows selected.
+

@@ -1,0 +1,93 @@
+{
+  "query_optimization": {
+    "r_total_time_ms": 0.320105487
+  },
+  "query_block": {
+    "select_id": 1,
+    "cost": 155.8313818,
+    "r_loops": 1,
+    "r_total_time_ms": 28.68135161,
+    "filesort": {
+      "sort_key": "sum(oi.quantity * oi.unit_price) desc",
+      "r_loops": 1,
+      "r_total_time_ms": 0.026453277,
+      "r_used_priority_queue": false,
+      "r_output_rows": 2,
+      "r_buffer_size": "544",
+      "r_sort_mode": "sort_key,rowid",
+      "temporary_table": {
+        "nested_loop": [
+          {
+            "table": {
+              "table_name": "o",
+              "access_type": "ALL",
+              "possible_keys": ["PRIMARY", "orders_customer_idx"],
+              "loops": 1,
+              "r_loops": 1,
+              "rows": 40131,
+              "r_rows": 40000,
+              "cost": 6.6889758,
+              "r_table_time_ms": 2.737393482,
+              "r_other_time_ms": 1.157403791,
+              "r_engine_stats": {
+                "pages_accessed": 118
+              },
+              "filtered": 100,
+              "r_total_filtered": 25,
+              "attached_condition": "o.`status` = 'paid'",
+              "r_filtered": 25
+            }
+          },
+          {
+            "table": {
+              "table_name": "c",
+              "access_type": "eq_ref",
+              "possible_keys": ["PRIMARY"],
+              "key": "PRIMARY",
+              "key_length": "4",
+              "used_key_parts": ["id"],
+              "ref": ["shop.o.customer_id"],
+              "loops": 40131,
+              "r_loops": 10000,
+              "rows": 1,
+              "r_rows": 1,
+              "cost": 35.91279404,
+              "r_table_time_ms": 4.802915376,
+              "r_other_time_ms": 0.214042424,
+              "r_engine_stats": {
+                "pages_accessed": 20080
+              },
+              "filtered": 100,
+              "r_total_filtered": 100,
+              "r_filtered": 100
+            }
+          },
+          {
+            "table": {
+              "table_name": "oi",
+              "access_type": "ref",
+              "possible_keys": ["order_items_order_idx"],
+              "key": "order_items_order_idx",
+              "key_length": "4",
+              "used_key_parts": ["order_id"],
+              "ref": ["shop.o.id"],
+              "loops": 40131,
+              "r_loops": 10000,
+              "rows": 2,
+              "r_rows": 2.5,
+              "cost": 113.229612,
+              "r_table_time_ms": 14.67856956,
+              "r_other_time_ms": 5.049076662,
+              "r_engine_stats": {
+                "pages_accessed": 70065
+              },
+              "filtered": 100,
+              "r_total_filtered": 100,
+              "r_filtered": 100
+            }
+          }
+        ]
+      }
+    }
+  }
+}

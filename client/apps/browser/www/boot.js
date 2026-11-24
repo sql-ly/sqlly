@@ -64,6 +64,18 @@ function validateLanguage(language) {
   }
 }
 
+function validateTranslationKey(key) {
+  if (typeof key !== 'string' || !key.split('.').every((segment) => KEY_SEGMENT.test(segment))) {
+    throw new TranslationError('key_invalid', 'Translation key is invalid', { key: String(key) });
+  }
+}
+
+function requireLocatorExport(name) {
+  if (typeof wasmModule?.[name] !== 'function') {
+    throw new TranslationError('locator_unavailable', 'This preview build does not support translation locating');
+  }
+}
+
 /* UTF-8 needs one to three bytes per UTF-16 code unit, so the string length
    bounds the encoded size: only payloads in between need encoding. */
 function exceedsTranslationLimit(json) {
@@ -216,10 +228,35 @@ function clearOverrides() {
   applyClearOverrides();
 }
 
+function highlightKey(key) {
+  validateTranslationKey(key);
+  requireReady();
+  requireLocatorExport('highlight_translation_key');
+  wasmModule.highlight_translation_key(key);
+}
+
+function clearHighlight() {
+  requireReady();
+  requireLocatorExport('clear_translation_highlight');
+  wasmModule.clear_translation_highlight();
+}
+
+function setPickMode(enabled) {
+  if (typeof enabled !== 'boolean') {
+    throw new TranslationError('command_shape', 'Pick mode enabled must be a boolean');
+  }
+  requireReady();
+  requireLocatorExport('set_translation_pick_mode');
+  wasmModule.set_translation_pick_mode(enabled);
+}
+
 globalThis.sqllyTranslations = Object.freeze({
   setLanguage,
   replaceOverrides,
   clearOverrides,
+  highlightKey,
+  clearHighlight,
+  setPickMode,
 });
 
 function acknowledge(source, requestId, requestType, result) {
@@ -245,8 +282,12 @@ function prepareCommand(data) {
     expectedFields = ['channel', 'requestId', 'type', 'language'];
   } else if (data.type === 'replace_overrides') {
     expectedFields = ['channel', 'requestId', 'type', 'overrides'];
-  } else if (data.type === 'clear_overrides') {
+  } else if (data.type === 'clear_overrides' || data.type === 'clear_highlight') {
     expectedFields = ['channel', 'requestId', 'type'];
+  } else if (data.type === 'highlight_key') {
+    expectedFields = ['channel', 'requestId', 'type', 'key'];
+  } else if (data.type === 'set_pick_mode') {
+    expectedFields = ['channel', 'requestId', 'type', 'enabled'];
   } else {
     throw new TranslationError('command_unknown', 'Unknown translation command');
   }
@@ -262,6 +303,21 @@ function prepareCommand(data) {
     const prepared = prepareOverrides(data.overrides);
     return { slot: 'overrides', apply: () => applyPreparedOverrides(prepared) };
   }
+  if (data.type === 'highlight_key') {
+    validateTranslationKey(data.key);
+    const key = data.key;
+    return { slot: 'highlight', apply: () => (highlightKey(key), {}) };
+  }
+  if (data.type === 'clear_highlight') {
+    return { slot: 'highlight', apply: () => (clearHighlight(), {}) };
+  }
+  if (data.type === 'set_pick_mode') {
+    if (typeof data.enabled !== 'boolean') {
+      throw new TranslationError('command_shape', 'Pick mode enabled must be a boolean');
+    }
+    const enabled = data.enabled;
+    return { slot: 'pick', apply: () => (setPickMode(enabled), {}) };
+  }
   return { slot: 'overrides', apply: () => (applyClearOverrides(), {}) };
 }
 
@@ -275,8 +331,8 @@ function runCommand(apply) {
 }
 
 /* Commands that arrive before WASM is ready are queued and flushed in arrival
-   order once it is. Only the latest command per slot survives (the latest
-   set_language, and the latest replace_overrides or clear_overrides), since
+   order once it is. Only the latest command per slot survives (language,
+   overrides, highlight, and pick mode are independent slots), since
    each one replaces the whole state of its slot; the survivors keep their
    relative order, so a set_language is still followed by the overrides sent
    after it. Superseded commands are acknowledged with the result of the
@@ -341,7 +397,13 @@ window.addEventListener('message', onTranslationMessage);
 
 function notifyParentReady() {
   if (window.parent !== window) {
-    window.parent.postMessage({ channel: TRANSLATION_CHANNEL, type: 'ready' }, location.origin);
+    const message = { channel: TRANSLATION_CHANNEL, type: 'ready' };
+    if (typeof wasmModule?.highlight_translation_key === 'function' &&
+        typeof wasmModule?.clear_translation_highlight === 'function' &&
+        typeof wasmModule?.set_translation_pick_mode === 'function') {
+      message.features = ['locator'];
+    }
+    window.parent.postMessage(message, location.origin);
   }
 }
 
@@ -660,6 +722,17 @@ function installSpillBridge() {
   };
 }
 
+/* Wait until notebook-files.js has read the browser's notebooks folder into
+   memory, so the app finds recovery copies, trust and run history at launch.
+   Never fatal: without it notebooks last only as long as the tab. */
+async function notebookFilesReady() {
+  try {
+    await globalThis.sqllyNotebookFilesReady;
+  } catch (error) {
+    console.warn('notebook storage unavailable; notebooks are kept for this tab only', error);
+  }
+}
+
 async function boot() {
   try {
     installSpillBridge();
@@ -699,6 +772,7 @@ async function boot() {
       proxy ? 'browser.boot.connecting' : 'browser.boot.starting',
       proxy ? 'Connecting to your server…' : 'Starting SQLLY…',
     );
+    await notebookFilesReady();
     await launchApplication(wasm, northwindDb, proxy);
 
     // Hold the reveal until Chinook is queryable (or its load failed),

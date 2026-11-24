@@ -229,7 +229,13 @@ impl ConnectionManagement {
         let environment = self.environment;
         let auth_mode = self.auth_mode;
         let file_engine = crate::engine_form::is_file_engine(self.database_type);
-        let iam_tls = matches!(auth_mode, AuthMode::AwsRdsIam | AuthMode::GcpCloudSqlIam);
+        let iam_tls = matches!(
+            auth_mode,
+            AuthMode::AwsRdsIam
+                | AuthMode::GcpCloudSqlIam
+                | AuthMode::PgOAuth
+                | AuthMode::PgOAuthToken
+        );
         let tls_required = self.database_type.requires_tls() || iam_tls;
         let encrypt = self.encrypt || tls_required;
         let trust = self.trust;
@@ -500,6 +506,57 @@ impl ConnectionManagement {
                 Self::field_control(aws_profile),
             ));
             auth_rows.push(self.render_aws_iam_hint());
+        } else if !file_engine && matches!(auth_mode, AuthMode::PgOAuth | AuthMode::PgOAuthToken) {
+            // The secret's keyring id rides in `connection_sql_account`
+            // here, so the role field is never locked by it.
+            auth_rows.push(Self::card_row(
+                &crate::localization::text("connections.management.pg_oauth_user_label"),
+                Self::field_control(Input::new(&self.username_input)),
+            ));
+            if auth_mode == AuthMode::PgOAuth {
+                for (key, input) in [
+                    (
+                        "connections.management.pg_oauth_client_id_label",
+                        &self.pg_oauth_client_id_input,
+                    ),
+                    (
+                        "connections.management.pg_oauth_issuer_label",
+                        &self.pg_oauth_issuer_input,
+                    ),
+                    (
+                        "connections.management.pg_oauth_scope_label",
+                        &self.pg_oauth_scope_input,
+                    ),
+                ] {
+                    auth_rows.push(Self::card_row(
+                        &crate::localization::text(key),
+                        Self::field_control(Input::new(input)),
+                    ));
+                }
+            }
+            auth_rows.push(Self::card_row(
+                &crate::localization::text(if auth_mode == AuthMode::PgOAuth {
+                    "connections.management.pg_oauth_client_secret_label"
+                } else {
+                    "connections.management.pg_oauth_token_label"
+                }),
+                Self::field_control(password),
+            ));
+            auth_rows.push(
+                div()
+                    .px(px(s(12.0)))
+                    .py(px(s(8.0)))
+                    .text_size(px(Theme::font_size()))
+                    .text_color(Theme::text_dim())
+                    .child(crate::localization::text(
+                        if auth_mode == AuthMode::PgOAuth {
+                            "connections.management.pg_oauth_hint"
+                        } else {
+                            "connections.management.pg_oauth_token_hint"
+                        },
+                    ))
+                    .into_any_element(),
+            );
         } else if !file_engine && auth_mode == AuthMode::GcpCloudSqlIam {
             auth_rows.push(Self::card_row(
                 &crate::localization::text("connections.management.iam_user_label"),

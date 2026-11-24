@@ -203,6 +203,11 @@ enum Commands {
         #[arg(long)]
         no_owner: bool,
     },
+    /// Run, check, compare, schedule and export notebooks (.sqllynb, .sqlnb.json, .ipynb).
+    Notebook {
+        #[command(subcommand)]
+        action: agent::notebook::NotebookAction,
+    },
     /// Persistent framed IPC engine used by the macOS app for low-latency queries.
     #[command(hide = true)]
     Engine {
@@ -573,7 +578,9 @@ enum ConnectionAction {
         /// Target database (defaults to master for Azure modes).
         #[arg(long)]
         database: Option<String>,
-        /// Auth mode: sql | entra-browser | entra-device-code.
+        /// Auth mode: sql | entra-browser | entra-device-code | aws-rds-iam |
+        /// gcp-cloud-sql-iam | auth-token | pg-oauth (PostgreSQL 18 OAuth bearer
+        /// token via --access-token or SQLLY_PG_OAUTH_TOKEN).
         #[arg(long, default_value = "sql")]
         auth: String,
     },
@@ -1642,6 +1649,11 @@ fn profile_from_args(args: ConnectionArgs) -> ConnectionProfile {
             sqlly_core::DatabaseType::Postgres,
             &args.username,
         ),
+        // PostgreSQL 18 OAuth: the bearer token comes from --access-token
+        // (or SQLLY_PG_OAUTH_TOKEN).
+        "pg-oauth" => {
+            ConnectionProfile::postgres_oauth(&args.server, &args.server, args.port, &args.username)
+        }
         // libSQL / Turso: `--password` carries the auth token (blank for an
         // anonymous local sqld).
         "auth-token" => ConnectionProfile::auth_token(
@@ -1670,6 +1682,11 @@ fn profile_from_args(args: ConnectionArgs) -> ConnectionProfile {
             .access_token
             .clone()
             .or_else(|| std::env::var("SQLLY_CLOUD_IAM_TOKEN").ok());
+    } else if profile.authentication.is_pg_oauth() {
+        profile.runtime_cloud_iam_token = args
+            .access_token
+            .clone()
+            .or_else(|| std::env::var("SQLLY_PG_OAUTH_TOKEN").ok());
     } else {
         profile.runtime_entra_access_token = args.access_token;
     }

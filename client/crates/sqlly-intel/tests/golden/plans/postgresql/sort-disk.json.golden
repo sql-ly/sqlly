@@ -1,0 +1,46 @@
+format: postgresql-json (Certain)
+statements: 1
+
+== statement 1
+dialect: "Postgres"
+estimated_rows: 400000
+execution_time_ms: 223.77
+has_actuals: yes
+notes: ["Planning buffers: shared hit=129"]
+planning_time_ms: 0.164
+source_format: "postgresql-json"
+statement_type: "EXPLAIN ANALYZE"
+total_subtree_cost: 83563.28
+operators: 2
+  #1 Sort [Sort]
+      actual_rows: 400000
+      actual_rows_total: 400000
+      actual_self_time_ms: 201.985
+      actual_startup_ms: 174.866
+      actual_time_ms: 214.567
+      buffers: {local_dirtied=0 local_hit=0 local_read=0 local_written=0 logical_reads=3060 physical_reads=0 shared_dirtied=0 shared_hit=3060 shared_read=0 shared_written=0 temp_read=8039 temp_written=8526 writes=0}
+      estimated_cost: 83563.28
+      estimated_row_width: 27
+      estimated_rows: 400000
+      estimated_startup_cost: 82563.28
+      loops: 1
+      sort_keys: ["total", "placed_at"]
+      sort_method: "external merge"
+      sort_space_kb: 16128
+      sort_space_type: "Disk"
+      spill: {kind="sort" written_kb=16128}
+    #2 Seq Scan [Seq Scan]
+        actual_rows: 400000
+        actual_rows_total: 400000
+        actual_self_time_ms: 12.582
+        actual_startup_ms: 0.01
+        actual_time_ms: 12.582
+        buffers: {local_dirtied=0 local_hit=0 local_read=0 local_written=0 logical_reads=3054 physical_reads=0 shared_dirtied=0 shared_hit=3054 shared_read=0 shared_written=0 temp_read=0 temp_written=0 writes=0}
+        estimated_cost: 7054
+        estimated_row_width: 27
+        estimated_rows: 400000
+        loops: 1
+        output_list: ["orders"]
+        parent_relationship: "Outer"
+        relation: "orders"
+        warnings: [{TableScan={table="orders"}}]

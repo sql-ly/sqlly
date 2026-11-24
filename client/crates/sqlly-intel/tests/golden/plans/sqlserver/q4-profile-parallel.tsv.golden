@@ -1,0 +1,133 @@
+format: sqlserver-text (Certain)
+statements: 1
+
+== statement 1
+dialect: "SqlServer"
+estimated_rows: 1000
+has_actuals: yes
+source_format: "sqlserver-text"
+statement_text: "SELECT oi.product_id, SUM(oi.quantity * oi.price) AS revenue FROM dbo.order_items oi JOIN dbo.orders o ON o.order_id = oi.order_id WHERE o.status = 'shipped' GR..."
+statement_type: "SELECT"
+total_subtree_cost: 3.338819
+warnings: [{TableScan={schema="dbo" table="orders"}}, {TableScan={schema="dbo" table="order_items"}}]
+operators: 7
+  #1 Parallelism [Gather Streams]
+      actual_rows: 600
+      actual_rows_total: 600
+      estimated_cost: 3.338819
+      estimated_cpu: 0.03496
+      estimated_executions: 1
+      estimated_row_width: 28
+      estimated_rows: 1000
+      loops: 1
+      output_columns: ["oi.product_id", "Expr1002"]
+      output_list: ["oi.product_id", "Expr1002"]
+      parallel: yes
+      properties: [{name="NodeId" value="2"}, {name="EstimateRows" value="1000.0"}]
+      row_count: 600
+      sort_keys: ["Expr1002 DESC"]
+    #2 Sort [Sort]
+        actual_rows: 600
+        actual_rows_total: 600
+        estimated_cost: 3.303859
+        estimated_cpu: 0.000552
+        estimated_executions: 1
+        estimated_io: 0.001251
+        estimated_row_width: 28
+        estimated_rows: 1000
+        loops: 7
+        output_columns: ["oi.product_id", "Expr1002"]
+        output_list: ["oi.product_id", "Expr1002"]
+        parallel: yes
+        properties: [{name="NodeId" value="3"}, {name="EstimateRows" value="1000.0"}]
+        row_count: 600
+        sort_keys: ["Expr1002 DESC"]
+      #3 Hash Match [Aggregate]
+          actual_rows: 600
+          actual_rows_total: 600
+          estimated_cost: 3.302056
+          estimated_cpu: 0.060835
+          estimated_executions: 1
+          estimated_row_width: 28
+          estimated_rows: 1000
+          group_keys: ["oi.product_id"]
+          loops: 7
+          output_columns: ["oi.product_id", "Expr1002"]
+          output_list: ["oi.product_id", "Expr1002"]
+          parallel: yes
+          properties: [{name="Defined Values" value="[Expr1002]=SUM([Expr1003])"}, {name="NodeId" value="4"}, {name="EstimateRows" value="1000.0"}]
+          row_count: 600
+        #4 Hash Match [Inner Join]
+            actual_rows: 360000
+            actual_rows_total: 360000
+            estimated_cost: 3.241221
+            estimated_cpu: 0.179307
+            estimated_executions: 1
+            estimated_row_width: 24
+            estimated_rows: 359817.72
+            join_predicate: "o.order_id = oi.order_id"
+            join_type: "Inner"
+            loops: 7
+            output_columns: ["oi.product_id", "Expr1003"]
+            output_list: ["oi.product_id", "Expr1003"]
+            parallel: yes
+            properties: [{name="Defined Values" value="[Opt_Bitmap1005]"}, {name="NodeId" value="5"}, {name="EstimateRows" value="359817.72"}]
+            row_count: 360000
+          #5 Index Scan [Index Scan]
+              actual_rows: 180000
+              actual_rows_total: 180000
+              alias: "o"
+              database: "Shop"
+              estimated_cost: 0.921326
+              estimated_cpu: 0.110052
+              estimated_executions: 1
+              estimated_io: 0.811273
+              estimated_row_width: 22
+              estimated_rows: 179908.86
+              filter: "[Shop].[dbo].[orders].[status] as [o].[status]='shipped'"
+              index_name: "IX_orders_date"
+              loops: 7
+              output_columns: ["o.order_id"]
+              output_list: ["o.order_id"]
+              parallel: yes
+              properties: [{name="Defined Values" value="[o].[order_id]"}, {name="NodeId" value="6"}, {name="EstimateRows" value="179908.86"}]
+              relation: "orders"
+              row_count: 180000
+              schema: "dbo"
+              warnings: [{TableScan={schema="dbo" table="orders"}}]
+          #6 Compute Scalar [Compute Scalar]
+              actual_rows: 360000
+              actual_rows_total: 360000
+              estimated_cost: 2.092585
+              estimated_cpu: 0.002
+              estimated_executions: 1
+              estimated_row_width: 28
+              estimated_rows: 600000
+              loops: 7
+              output_columns: ["oi.order_id", "oi.product_id", "Expr1003"]
+              output_list: ["oi.order_id", "oi.product_id", "Expr1003"]
+              parallel: yes
+              properties: [{name="DEFINE" value="[Expr1003]=CONVERT_IMPLICIT(decimal(10,0),[Shop].[dbo].[order_items].[quantity] as [oi].[quantity],0)*[Shop].[dbo].[order_items].[price] as [oi].[price]"}, {name="Defined Values" value="[Expr1003]=CONVERT_IMPLICIT(decimal(10,0),[Shop].[dbo].[order_items].[quantity] as [oi].[quantity],0)*[Shop].[dbo].[order_items].[price] as [oi].[price]"}, {name="NodeId" value="7"}, {name="EstimateRows" value="600000.0"}]
+              row_count: 360000
+            #7 Clustered Index Scan [Clustered Index Scan]
+                actual_rows: 360000
+                actual_rows_total: 360000
+                alias: "oi"
+                database: "Shop"
+                estimated_cost: 2.090585
+                estimated_cpu: 0.220052
+                estimated_executions: 1
+                estimated_io: 1.870532
+                estimated_row_width: 28
+                estimated_rows: 600000
+                filter: "PROBE([Opt_Bitmap1005],[Shop].[dbo].[order_items].[order_id] as [oi].[order_id])"
+                index_name: "PK__order_it__52020FDD2726D56F"
+                loops: 7
+                output_columns: ["oi.order_id", "oi.product_id", "oi.quantity", "oi.price"]
+                output_list: ["oi.order_id", "oi.product_id", "oi.quantity", "oi.price"]
+                parallel: yes
+                properties: [{name="Defined Values" value="[oi].[order_id], [oi].[product_id], [oi].[quantity], [oi].[price]"}, {name="NodeId" value="9"}, {name="EstimateRows" value="600000.0"}]
+                relation: "order_items"
+                row_count: 360000
+                schema: "dbo"
+                warnings: [{TableScan={schema="dbo" table="order_items"}}]

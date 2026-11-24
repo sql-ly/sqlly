@@ -25,6 +25,8 @@
 //! On native targets this crate compiles as an empty rlib so the workspace
 //! `cargo check`/`cargo test` cover it on every platform.
 
+pub mod fonts;
+
 #[cfg(target_arch = "wasm32")]
 mod embedded_assets {
     //! Serve gpui-component's icon SVGs from the wasm binary itself.
@@ -191,10 +193,17 @@ mod web {
             // A host command can arrive while gpui is inside an update (a
             // re-entrant JS callback during a frame). Report that instead of
             // panicking on the RefCell, so the host can retry.
-            let mut app = app
+            let async_app = app
                 .try_borrow_mut()
-                .map_err(|_| JsValue::from_str("SQLLY is busy; try again"))?;
-            update(&mut app).map_err(|error| JsValue::from_str(&error))
+                .map_err(|_| JsValue::from_str("SQLLY is busy; try again"))?
+                .to_async();
+            // Run the command as a gpui update so its effects flush when it
+            // returns. Mutating the borrowed App directly left them queued:
+            // `cx.refresh_windows()` from a locator highlight or pick-mode
+            // change then waited for the next input event to repaint.
+            async_app
+                .update(update)
+                .map_err(|error| JsValue::from_str(&error))
         })
     }
 
@@ -276,6 +285,76 @@ mod web {
         with_app(sqlly_gpui::clear_host_overrides)
     }
 
+    #[cfg(feature = "translator-locator")]
+    #[wasm_bindgen]
+    pub fn highlight_translation_key(key: String) -> Result<(), JsValue> {
+        with_app(|cx| {
+            sqlly_gpui::highlight_translation_key(key, cx);
+            Ok(())
+        })
+    }
+
+    #[cfg(feature = "translator-locator")]
+    #[wasm_bindgen]
+    pub fn clear_translation_highlight() -> Result<(), JsValue> {
+        with_app(|cx| {
+            sqlly_gpui::clear_translation_highlight(cx);
+            Ok(())
+        })
+    }
+
+    #[cfg(feature = "translator-locator")]
+    #[wasm_bindgen]
+    pub fn set_translation_pick_mode(enabled: bool) -> Result<(), JsValue> {
+        with_app(|cx| {
+            sqlly_gpui::set_translation_pick_mode(enabled, cx);
+            Ok(())
+        })
+    }
+
+    /// Posts a translation-manager event to the embedding page, same origin
+    /// only.
+    #[cfg(feature = "translator-locator")]
+    fn post_translation_event(kind: &str, fill: impl FnOnce(&js_sys::Object)) {
+        let Some(window) = web_sys::window() else {
+            return;
+        };
+        let message = js_sys::Object::new();
+        js_sys::Reflect::set(&message, &"channel".into(), &"sqlly.translations.v1".into()).ok();
+        js_sys::Reflect::set(&message, &"type".into(), &kind.into()).ok();
+        fill(&message);
+        if let Ok(Some(parent)) = window.parent()
+            && let Ok(origin) = window.location().origin()
+        {
+            parent.post_message(&message, &origin).ok();
+        }
+    }
+
+    /// `keys` holds every key that produced the picked wording, most recently
+    /// resolved first; `key` repeats the first for older managers.
+    #[cfg(feature = "translator-locator")]
+    fn notify_translation_picked(keys: &[Box<str>]) {
+        post_translation_event("translation_picked", |message| {
+            let list = js_sys::Array::new();
+            for key in keys {
+                list.push(&JsValue::from_str(key));
+            }
+            if let Some(first) = keys.first() {
+                js_sys::Reflect::set(message, &"key".into(), &JsValue::from_str(first)).ok();
+            }
+            js_sys::Reflect::set(message, &"keys".into(), &list).ok();
+        });
+    }
+
+    /// Pick mode ended inside the preview (Escape), so the manager's toggle
+    /// must follow.
+    #[cfg(feature = "translator-locator")]
+    fn notify_pick_mode_changed(enabled: bool) {
+        post_translation_event("pick_mode_changed", |message| {
+            js_sys::Reflect::set(message, &"enabled".into(), &JsValue::from_bool(enabled)).ok();
+        });
+    }
+
     /// Entry point called from the host page after the wasm module loads.
     ///
     /// Returns a promise that resolves once the application has launched
@@ -313,17 +392,24 @@ mod web {
         // Large results go to browser storage (OPFS) when the tab has it.
         sqlly_services::browser::spill::start();
         sqlly_gpui::install_browser_task_mailbox();
+        #[cfg(feature = "translator-locator")]
+        sqlly_gpui::initialize_translation_locator(sqlly_gpui::TranslationLocatorCallbacks {
+            picked: notify_translation_picked,
+            pick_mode_changed: notify_pick_mode_changed,
+        });
         gpui_platform::web_init();
         let app = {
             // A shared-memory (atomics) build runs gpui's background executor
             // on Web Workers; the dispatcher still falls back to the main
-            // thread when the page is not cross-origin isolated.
-            #[cfg(target_feature = "atomics")]
-            let app = gpui_platform::application_with_web_backend(
-                gpui_platform::WebBackendPreference::Auto,
+            // thread when the page is not cross-origin isolated. Characters
+            // no registered font covers (CJK the subsets lack, emoji) are
+            // drawn with the browser's own fonts rather than as tofu.
+            let platform = gpui_web::WebPlatform::new_with_backend_and_font_fallback(
+                cfg!(target_feature = "atomics"),
+                gpui_web::WebBackendPreference::Auto,
+                gpui_web::CanvasFontFallback::EmojiAndCjk,
             );
-            #[cfg(not(target_feature = "atomics"))]
-            let app = gpui_platform::single_threaded_web();
+            let app = Application::with_platform(Rc::new(platform));
 
             // Keep the application alive for the page's lifetime: `run` never
             // returns control to a blocking main loop on wasm, so the Rc that
@@ -394,8 +480,10 @@ mod web {
                 // symbol glyphs the UI draws as literal text (tree twisties,
                 // close crosses, plan warnings, keybinding hints, …). Native
                 // gets these from the OS font stack; the browser has none, so
-                // any uncovered codepoint renders as tofu. `fonts/build-symbols.py`
-                // merges them in — re-run it if the subsets are regenerated.
+                // any uncovered codepoint renders as tofu. `fonts/build-fonts.py`
+                // builds the subsets and `fonts/build-symbols.py` merges the
+                // symbols in. Japanese, Korean and Traditional Chinese faces
+                // are fetched when the language needs them (see fonts.rs).
                 let fonts: Vec<Cow<'static, [u8]>> = vec![
                     Cow::Borrowed(include_bytes!("../fonts/NotoSansSC-Regular-subset.ttf")),
                     Cow::Borrowed(include_bytes!("../fonts/NotoSans-Regular-subset.ttf")),
@@ -407,7 +495,10 @@ mod web {
                 // The real application — identical bootstrap to the desktop.
                 sqlly_gpui::init_ui(services.clone(), cx);
 
-                cx.global_mut::<gpui_component::theme::Theme>().font_family = "Noto Sans SC".into();
+                // Point the interface at the restored language's face, and
+                // follow every later switch (Settings or the host page).
+                crate::fonts::loader::sync(cx);
+                sqlly_gpui::observe_localization(cx, crate::fonts::loader::sync).detach();
 
                 // Only now is the host's translation state safe to apply.
                 signal.resolve();

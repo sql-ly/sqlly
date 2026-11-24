@@ -45,6 +45,11 @@ impl Capability {
     pub fn reason(self) -> Option<String> {
         self.reason_key().map(crate::localization::text)
     }
+
+    /// [`Self::reason`] kept as its key, worded when drawn.
+    pub fn reason_message(self) -> Option<sqlly_core::DisplayMessage> {
+        self.reason_key().map(crate::localization::deferred_text)
+    }
 }
 
 /// Admin surfaces whose SQL and live-query paths vary by engine. Keeping the
@@ -426,13 +431,39 @@ impl PlanCaptureGate {
 /// An engine with no plans at all reads "Query plans are disabled…"; one
 /// that only lacks runtime (actual) plans reads "Actual execution plans are
 /// disabled…" so the Estimated route stays discoverable.
-pub fn plan_unavailable_reason(db: DatabaseType, kind: PlanKind) -> Option<String> {
-    let detail = plan(db, kind).reason()?;
-    let key = if estimated_plan(db).is_available() {
+/// [`plan_unavailable_reason`] kept as catalog keys, for notebook cells that
+/// store the reason and word it when drawn.
+pub fn plan_unavailable_message(
+    db: DatabaseType,
+    kind: PlanKind,
+) -> Option<sqlly_core::DisplayMessage> {
+    let reason = plan(db, kind).reason_message()?;
+    let key = plan_unavailable_key(db);
+    let engine = db.display_name();
+    let fallback = sqlly_i18n::format_compiled_with(
+        sqlly_i18n::Language::English,
+        key,
+        &[("engine", engine), ("reason", reason.fallback())],
+    )
+    .unwrap_or_else(|_| reason.fallback().to_string());
+    Some(
+        sqlly_core::DisplayMessage::new(key, fallback)
+            .with_arg("engine", engine)
+            .with_message_arg("reason", reason),
+    )
+}
+
+fn plan_unavailable_key(db: DatabaseType) -> &'static str {
+    if estimated_plan(db).is_available() {
         "explorer.capabilities.actual_plans_disabled"
     } else {
         "explorer.capabilities.query_plans_disabled"
-    };
+    }
+}
+
+pub fn plan_unavailable_reason(db: DatabaseType, kind: PlanKind) -> Option<String> {
+    let detail = plan(db, kind).reason()?;
+    let key = plan_unavailable_key(db);
     let engine = db.display_name().to_string();
     let detail = detail.trim_end_matches('.').to_string();
     Some(crate::localization::format(
@@ -452,6 +483,9 @@ pub fn compatibility_notes(db: DatabaseType) -> Option<&'static str> {
         }
         YugabyteDb => {
             "Connects over the PostgreSQL protocol (YSQL, port 5433). Catalog details may differ; designers and the Security editor are unavailable."
+        }
+        WarehousePg => {
+            "Connects over the PostgreSQL protocol. Table DDL includes each table's DISTRIBUTED BY clause; designers are unavailable."
         }
         TiDb => {
             "Connects over the MySQL protocol (port 4000). TiDB has no stored procedures, so routine folders are empty; designers and the Security editor are unavailable."
@@ -1926,5 +1960,28 @@ mod tests {
                 "{db:?}"
             );
         }
+    }
+
+    #[test]
+    fn notebook_plan_reasons_keep_their_keys_and_read_like_the_menu() {
+        for (db, kind) in [
+            (DatabaseType::Redis, PlanKind::Estimated),
+            (DatabaseType::Db2, PlanKind::Estimated),
+        ] {
+            let message = plan_unavailable_message(db, kind).expect("gated");
+            assert!(
+                message
+                    .key()
+                    .is_some_and(|k| k.starts_with("explorer.capabilities.")),
+                "{message:?}"
+            );
+            assert!(message.nested_arguments().any(|(name, _)| name == "reason"));
+            assert_eq!(
+                crate::localization::message(&message),
+                plan_unavailable_reason(db, kind).unwrap(),
+                "the same sentence the plan commands show"
+            );
+        }
+        assert!(plan_unavailable_message(DatabaseType::SqlServer, PlanKind::Estimated).is_none());
     }
 }

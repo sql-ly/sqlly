@@ -1,0 +1,28 @@
+format: mysql-table (Certain)
+statements: 1
+
+== statement 1
+dialect: "MySql"
+estimated_rows: 4973
+source_format: "mysql-table"
+statement_type: "EXPLAIN"
+operators: 3
+  #1 Query Block [Query Block]
+      properties: [{name="select_id" value="1"}, {name="select_type" value="SIMPLE"}]
+      subplan_name: "Select #1"
+    #2 Table: p [Access: ALL]
+        estimated_rows: 2000
+        estimated_rows_read: 2000
+        extra: ["Using where"]
+        filtered_percent: 33.33
+        output_list: ["p"]
+        relation: "p"
+        warnings: [{TableScan={table="p"}}]
+    #3 Table: c [Access: ALL]
+        estimated_rows: 4973
+        estimated_rows_read: 4973
+        extra: ["Using where", "Using join buffer (hash join)"]
+        filtered_percent: 10
+        output_list: ["c"]
+        relation: "c"
+        warnings: [{TableScan={table="c"}}]

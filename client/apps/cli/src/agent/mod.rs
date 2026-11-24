@@ -8,6 +8,7 @@ pub mod context;
 pub mod doctor;
 pub mod dump_database;
 pub mod format;
+pub mod notebook;
 pub mod query;
 pub mod restore_file;
 pub mod run_file;
@@ -26,6 +27,8 @@ pub enum ExitCode {
     Error = 1,
     Usage = 2,
     PolicyRefused = 3,
+    /// `notebook run`: a check failed (`--fail-on assertion`).
+    AssertionFailed = 4,
     Cancelled = 130,
 }
 
@@ -219,9 +222,11 @@ fn print_json<T: Serialize>(value: &T) {
 /// Dispatch agent-facing commands. Returns `None` for legacy harness commands.
 pub async fn dispatch_agent(cli: &crate::Cli) -> Option<ExitCode> {
     use crate::Commands::{
-        Connections, Context, Doctor, DumpDatabase, Query, RestoreFile, RunFile, Schema, Transfer,
+        Connections, Context, Doctor, DumpDatabase, Notebook, Query, RestoreFile, RunFile, Schema,
+        Transfer,
     };
     let code = match &cli.command {
+        Notebook { action } => notebook::dispatch(action, cli.json).await,
         Doctor => doctor::run(cli.json).await,
         Connections { action } => match action {
             crate::AgentConnectionsAction::List { format } => {

@@ -1,0 +1,68 @@
+Changed database context to 'Shop'.
+StmtText                                                                                                          
+------------------------------------------------------------------------------------------------------------------
+DECLARE @t TABLE (id INT PRIMARY KEY, v INT);
+INSERT @t SELECT TOP (2000) order_id, customer_id FROM dbo.orders;  
+
+(1 rows affected)
+StmtText                                                                                                                          
+----------------------------------------------------------------------------------------------------------------------------------
+  |--Clustered Index Insert(OBJECT:(@t), SET:([id] = [Shop].[dbo].[orders].[order_id],[v] = [Shop].[dbo].[orders].[customer_id])) 
+       |--Top(TOP EXPRESSION:((2000)))                                                                                            
+            |--Clustered Index Scan(OBJECT:([Shop].[dbo].[orders].[PK__orders__46596229A6DBB338]), ORDERED FORWARD)               
+
+(3 rows affected)
+StmtText                                                           
+-------------------------------------------------------------------
+SELECT COUNT(*) FROM @t t JOIN dbo.orders o ON o.order_id = t.id;  
+
+(1 rows affected)
+StmtText                                                                                   
+-------------------------------------------------------------------------------------------
+  |--Compute Scalar(DEFINE:([Expr1002]=CONVERT_IMPLICIT(int,[Expr1005],0)))                
+       |--Stream Aggregate(DEFINE:([Expr1005]=Count(*)))                                   
+            |--Hash Match(Inner Join, HASH:([t].[id])=([o].[order_id]))                    
+                 |--Clustered Index Scan(OBJECT:(@t AS [t]))                               
+                 |--Index Scan(OBJECT:([Shop].[dbo].[orders].[IX_orders_customer] AS [o])) 
+
+(5 rows affected)
+StmtText                                                                              
+--------------------------------------------------------------------------------------
+SELECT TOP (5) order_id, dbo.fn_tax(total) AS tax FROM dbo.orders ORDER BY order_id;  
+
+(1 rows affected)
+StmtText                                                                                                            
+--------------------------------------------------------------------------------------------------------------------
+  |--Compute Scalar(DEFINE:([Expr1002]=[Shop].[dbo].[fn_tax]([Shop].[dbo].[orders].[total])))                       
+       |--Top(TOP EXPRESSION:((5)))                                                                                 
+            |--Clustered Index Scan(OBJECT:([Shop].[dbo].[orders].[PK__orders__46596229A6DBB338]), ORDERED FORWARD) 
+
+(3 rows affected)
+StmtText                                                                                                                                                      
+--------------------------------------------------------------------------------------------------------------------------------------------------------------
+  UDF: [Shop].[dbo].[fn_tax]                                                                                                                                  
+    CREATE FUNCTION dbo.fn_tax (@amount DECIMAL(12,2)) RETURNS DECIMAL(12,2) WITH INLINE = OFF AS BEGIN DECLARE @r DECIMAL(12,2); SELECT @r = @amount * 0.2;  
+    RETURN @r; END                                                                                                                                            
+IF EXISTS (SELECT 1 FROM dbo.customers WHERE country = 'JP')                                                                                                  
+
+(4 rows affected)
+StmtText                                                                                                                                                 
+---------------------------------------------------------------------------------------------------------------------------------------------------------
+  |--Compute Scalar(DEFINE:([Expr1003]=CASE WHEN [Expr1004] THEN (1) ELSE (0) END))                                                                      
+       |--Nested Loops(Left Semi Join, DEFINE:([Expr1004] = [PROBE VALUE]))                                                                              
+            |--Constant Scan                                                                                                                             
+            |--Clustered Index Scan(OBJECT:([Shop].[dbo].[customers].[PK__customer__CD65CB850EC2D984]), WHERE:([Shop].[dbo].[customers].[country]='JP')) 
+
+(4 rows affected)
+StmtText                                
+----------------------------------------
+  SELECT COUNT(*) FROM dbo.customers;   
+
+(1 rows affected)
+StmtText                                                                               
+---------------------------------------------------------------------------------------
+       |--Compute Scalar(DEFINE:([Expr1002]=CONVERT_IMPLICIT(int,[Expr1003],0)))       
+            |--Stream Aggregate(DEFINE:([Expr1003]=Count(*)))                          
+                 |--Index Scan(OBJECT:([Shop].[dbo].[customers].[IX_customers_email])) 
+
+(3 rows affected)

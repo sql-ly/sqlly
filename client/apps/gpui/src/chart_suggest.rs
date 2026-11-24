@@ -27,8 +27,8 @@ pub const MIN_LABEL_CONFIDENCE: f32 = 0.6;
 pub const MIN_SERIES_PROBABILITY: f32 = 0.5;
 
 /// At most this many value columns are suggested, keeping the first chart
-/// readable.
-pub const MAX_SERIES: usize = 4;
+/// readable. Shared with the notebook's rule-based suggestions.
+pub use sqlly_services::analytics::suggest::MAX_SERIES;
 
 /// The chart kinds offered to the model, with plain descriptions. Mirrors
 /// the variants [`crate::result_chart::ResultChartSpec`] round-trips.

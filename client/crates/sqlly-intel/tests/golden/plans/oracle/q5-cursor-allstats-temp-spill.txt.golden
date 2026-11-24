@@ -1,0 +1,85 @@
+format: oracle-xplan (Certain)
+statements: 1
+
+== statement 1
+dialect: "Oracle"
+execution_time_ms: 210
+has_actuals: yes
+notes: ["child number 0"]
+query_hash: "1wgwh5rfac000"
+query_plan_hash: "2339632338"
+source_format: "oracle-xplan"
+statement_text: "SELECT /*+ GATHER_PLAN_STATISTICS */ COUNT(*) FROM (SELECT o.id, o.padding, o.total, ROW_NUMBER() OVER (ORDER BY o.total DESC, o.padding) rn FROM orders o) WHER..."
+statement_type: "ACTUAL PLAN"
+total_subtree_cost: 11322
+operators: 5
+  #0 SELECT STATEMENT [SELECT STATEMENT]
+      actual_rebinds: 1
+      actual_rows: 1
+      actual_rows_total: 1
+      actual_time_ms: 210
+      buffers: {logical_reads=5814 physical_reads=4180 writes=4180}
+      estimated_cost: 11322
+      loops: 1
+      output_list: ["actual: 1 rows, 1 starts, 210.000 ms"]
+      properties: [{name="Cost %CPU" value="100"}]
+    #1 SORT AGGREGATE [SORT]
+        actual_rebinds: 1
+        actual_rows: 1
+        actual_rows_total: 1
+        actual_time_ms: 210
+        buffers: {logical_reads=5814 physical_reads=4180 writes=4180}
+        estimated_row_width: 13
+        estimated_rows: 1
+        loops: 1
+        output_columns: ["COUNT(*)"]
+        output_list: ["actual: 1 rows, 1 starts, 210.000 ms"]
+        properties: [{name="Bytes" value="13"}, {name="Query Block" value="SEL$1"}, {name="Projection" value="#keys=0"}]
+      #2 VIEW [VIEW]
+          actual_rebinds: 1
+          actual_rows: 10
+          actual_rows_total: 10
+          actual_time_ms: 210
+          alias: "from$_subquery$_001"
+          buffers: {logical_reads=5814 physical_reads=4180 writes=4180}
+          estimated_cost: 11322
+          estimated_row_width: 12.997973
+          estimated_rows: 300000
+          filter: "\"RN\">299990"
+          loops: 1
+          output_columns: ["\"RN\""]
+          output_list: ["filter: \"RN\">299990", "actual: 10 rows, 1 starts, 210.000 ms"]
+          properties: [{name="Bytes" value="3899392"}, {name="Cost %CPU" value="1"}, {name="Query Block" value="SEL$2"}, {name="Object Alias" value="\"from$_subquery$_001\"@\"SEL$1\""}, {name="Projection" value="rowset=256"}]
+        #3 WINDOW SORT [WINDOW]
+            actual_rebinds: 1
+            actual_rows: 300000
+            actual_rows_total: 300000
+            actual_self_time_ms: 190
+            actual_time_ms: 210
+            buffers: {logical_reads=5814 physical_reads=4180 writes=4180}
+            estimated_cost: 11322
+            estimated_row_width: 104.8576
+            estimated_rows: 300000
+            loops: 1
+            output_columns: ["\"O\".\"TOTAL\"", "\"O\".\"PADDING\"", "ROW_NUMBER() OVER ( ORDER BY \"O\".\"TOTAL\" DESC ,\"O\".\"PADDING\")"]
+            output_list: ["actual: 300000 rows, 1 starts, 210.000 ms"]
+            peak_memory_kb: 977
+            properties: [{name="Bytes" value="31457280"}, {name="Cost %CPU" value="1"}, {name="E-Temp" value="33M"}, {name="OMem" value="36M"}, {name="1Mem" value="2159K"}, {name="Used-Mem" value="977K (1)"}, {name="Passes" value="1"}, {name="Used-Tmp" value="33M"}, {name="Query Block" value="SEL$2"}, {name="Projection" value="#keys=2; rowset=256"}]
+            spill: {kind="sort" written_kb=33792}
+          #4 TABLE ACCESS FULL ORDERS [TABLE ACCESS]
+              actual_rebinds: 1
+              actual_rows: 300000
+              actual_rows_total: 300000
+              actual_self_time_ms: 20
+              actual_time_ms: 20
+              alias: "O"
+              buffers: {logical_reads=5773 physical_reads=0 writes=0}
+              estimated_cost: 1593
+              estimated_row_width: 104.8576
+              estimated_rows: 300000
+              loops: 1
+              output_columns: ["\"O\".\"TOTAL\"", "\"O\".\"PADDING\""]
+              output_list: ["actual: 300000 rows, 1 starts, 20.000 ms"]
+              properties: [{name="Bytes" value="31457280"}, {name="Cost %CPU" value="1"}, {name="Query Block" value="SEL$2"}, {name="Object Alias" value="\"O\"@\"SEL$2\""}, {name="Projection" value="rowset=256"}]
+              relation: "ORDERS"
+              warnings: [{TableScan={table="ORDERS"}}]

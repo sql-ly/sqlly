@@ -463,6 +463,72 @@ impl ConnectionManagement {
                 }
                 None => profile,
             };
+            // PostgreSQL OAuth (browser sign-in): reuse or refresh the stored
+            // token, or show the device code while the user approves it.
+            #[cfg(not(target_arch = "wasm32"))]
+            let profile = if profile.authentication.is_pg_oauth_device_flow() {
+                let (challenge_tx, challenge_rx) = tokio::sync::oneshot::channel();
+                let on_challenge: Box<dyn FnOnce(crate::pg_oauth_token::DeviceChallenge) + Send> =
+                    Box::new(move |challenge| {
+                        let _ = crate::browser_open::open_in_browser(&challenge.browser_url);
+                        let _ = challenge_tx.send(challenge);
+                    });
+                let show = weak.clone();
+                async_cx
+                    .spawn(async move |cx: &mut gpui::AsyncApp| {
+                        let Ok(challenge) = challenge_rx.await else {
+                            return;
+                        };
+                        let _ = show.update(cx, |this, cx| {
+                            this.status_message = crate::localization::format(
+                                "connections.management.pg_oauth_enter_code",
+                                &[
+                                    ("code", &challenge.user_code),
+                                    ("url", &challenge.verification_uri),
+                                ],
+                            );
+                            cx.notify();
+                        });
+                    })
+                    .detach();
+                match crate::pg_oauth_token::ensure_token(
+                    profile.clone(),
+                    Some(on_challenge),
+                    tokio_util::sync::CancellationToken::new(),
+                )
+                .await
+                {
+                    Ok(token) => {
+                        let mut profile = profile;
+                        profile.runtime_cloud_iam_token = Some(token);
+                        profile
+                    }
+                    Err(message) => {
+                        let message = crate::localization::message(message);
+                        ConnectionStore::global().record_failure(
+                            profile_id,
+                            chrono::Utc::now(),
+                            &message,
+                        );
+                        let mut cx = async_cx.clone();
+                        weak.update(&mut cx, |this, cx| {
+                            this.testing = false;
+                            this.test_success = false;
+                            this.test_result = Some(crate::localization::format(
+                                "connections.management.connection_failed",
+                                &[("error", &message)],
+                            ));
+                            this.status_message = message;
+                            this.refresh_tree(cx);
+                            cx.notify();
+                        })
+                        .ok();
+                        return;
+                    }
+                }
+            } else {
+                profile
+            };
             let result = services.connections.test_connection(&profile).await;
             match &result {
                 Ok(()) => log.log_verbose(
@@ -555,6 +621,9 @@ impl ConnectionManagement {
         {
             let _ = crate::sql_credentials::delete_password(secret_id);
         }
+        // A PostgreSQL OAuth connection's cached sign-in goes with it.
+        #[cfg(not(target_arch = "wasm32"))]
+        crate::pg_oauth_token::forget(id);
         store.remove(id);
         self.refresh_tree(cx);
         self.add_server(window, cx);

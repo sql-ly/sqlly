@@ -1,0 +1,87 @@
+{
+  "query": "/* select#1 */ select `c`.`name` AS `name`,`o`.`id` AS `id`,`o`.`total` AS `total` from `shop`.`customers` `c` join `shop`.`orders` `o` where ((`o`.`customer_id` = `c`.`id`) and (`c`.`id` between 100 and 140) and (`o`.`total` > 500.00))",
+  "inputs": [
+    {
+      "inputs": [
+        {
+          "alias": "c",
+          "ranges": [
+            "(100 <= id <= 140)"
+          ],
+          "covering": false,
+          "operation": "Index range scan on c using PRIMARY over (100 <= id <= 140)",
+          "index_name": "PRIMARY",
+          "table_name": "customers",
+          "access_type": "index",
+          "actual_rows": 41.0,
+          "schema_name": "shop",
+          "actual_loops": 1,
+          "used_columns": [
+            "id",
+            "name"
+          ],
+          "estimated_rows": 41.0,
+          "index_access_type": "index_range_scan",
+          "actual_last_row_ms": 0.027208,
+          "actual_first_row_ms": 0.015834,
+          "estimated_total_cost": 8.470486421130953
+        }
+      ],
+      "condition": "(c.id between 100 and 140)",
+      "operation": "Filter: (c.id between 100 and 140)",
+      "access_type": "filter",
+      "actual_rows": 41.0,
+      "actual_loops": 1,
+      "estimated_rows": 41.0,
+      "actual_last_row_ms": 0.032789,
+      "actual_first_row_ms": 0.017584,
+      "estimated_total_cost": 8.470486421130953
+    },
+    {
+      "inputs": [
+        {
+          "alias": "o",
+          "covering": false,
+          "operation": "Index lookup on o using orders_customer_idx (customer_id=c.id)",
+          "index_name": "orders_customer_idx",
+          "table_name": "orders",
+          "access_type": "index",
+          "actual_rows": 8.0,
+          "schema_name": "shop",
+          "actual_loops": 41,
+          "used_columns": [
+            "id",
+            "customer_id",
+            "total"
+          ],
+          "estimated_rows": 8.055198669433594,
+          "lookup_condition": "customer_id=c.id",
+          "index_access_type": "index_lookup",
+          "actual_last_row_ms": 0.015185975609756097,
+          "actual_first_row_ms": 0.014367853658536585,
+          "estimated_total_cost": 2.0203479543631944
+        }
+      ],
+      "condition": "(o.total > 500.00)",
+      "operation": "Filter: (o.total > 500.00)",
+      "access_type": "filter",
+      "actual_rows": 3.6341463414634148,
+      "actual_loops": 41,
+      "estimated_rows": 2.6847976719664075,
+      "actual_last_row_ms": 0.01683026829268293,
+      "actual_first_row_ms": 0.015501073170731707,
+      "estimated_total_cost": 2.0203479543631944
+    }
+  ],
+  "join_type": "inner join",
+  "operation": "Nested loop inner join",
+  "query_type": "select",
+  "access_type": "join",
+  "actual_rows": 149.0,
+  "actual_loops": 1,
+  "estimated_rows": 110.07670455062271,
+  "join_algorithm": "nested_loop",
+  "actual_last_row_ms": 0.7391709999999999,
+  "actual_first_row_ms": 0.052751,
+  "estimated_total_cost": 124.06258732750302
+}

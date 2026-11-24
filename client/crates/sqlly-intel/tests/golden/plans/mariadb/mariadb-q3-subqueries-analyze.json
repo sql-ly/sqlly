@@ -1,0 +1,134 @@
+{
+  "query_optimization": {
+    "r_total_time_ms": 0.103688516
+  },
+  "query_block": {
+    "select_id": 1,
+    "cost": 15.08391288,
+    "r_loops": 1,
+    "r_total_time_ms": 4.878442608,
+    "nested_loop": [
+      {
+        "read_sorted_file": {
+          "r_rows": 295,
+          "filesort": {
+            "sort_key": "c.`name`",
+            "r_loops": 1,
+            "r_total_time_ms": 1.429810061,
+            "r_used_priority_queue": false,
+            "r_output_rows": 5000,
+            "r_buffer_size": "2047KiB",
+            "r_sort_mode": "packed_sort_key,rowid",
+            "table": {
+              "table_name": "c",
+              "access_type": "ALL",
+              "possible_keys": ["PRIMARY"],
+              "loops": 1,
+              "r_loops": 1,
+              "rows": 4989,
+              "r_rows": 5000,
+              "cost": 0.8420126,
+              "r_table_time_ms": 0.381635393,
+              "r_other_time_ms": 1.200062305,
+              "r_engine_stats": {
+                "pages_accessed": 614
+              },
+              "filtered": 100,
+              "r_total_filtered": 100,
+              "r_filtered": 100
+            }
+          }
+        }
+      },
+      {
+        "table": {
+          "table_name": "<subquery3>",
+          "access_type": "eq_ref",
+          "possible_keys": ["distinct_key"],
+          "key": "distinct_key",
+          "key_length": "4",
+          "used_key_parts": ["customer_id"],
+          "ref": ["func"],
+          "r_loops": 295,
+          "r_table_loops": 691,
+          "rows": 1,
+          "r_rows": 0.06779661,
+          "r_table_time_ms": 0.034368431,
+          "r_other_time_ms": 0.035159947,
+          "filtered": 100,
+          "r_total_filtered": 100,
+          "r_filtered": 100,
+          "materialized": {
+            "unique": 1,
+            "query_block": {
+              "select_id": 3,
+              "nested_loop": [
+                {
+                  "table": {
+                    "table_name": "orders",
+                    "access_type": "ALL",
+                    "possible_keys": ["orders_customer_idx"],
+                    "loops": 1,
+                    "r_loops": 1,
+                    "rows": 40131,
+                    "r_rows": 40000,
+                    "cost": 6.6889758,
+                    "r_table_time_ms": 1.989994662,
+                    "r_other_time_ms": 1.02559565,
+                    "r_engine_stats": {
+                      "pages_accessed": 118
+                    },
+                    "filtered": 100,
+                    "r_total_filtered": 0.99,
+                    "attached_condition": "orders.total > 900",
+                    "r_filtered": 0.99
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    ],
+    "subqueries": [
+      {
+        "subquery_cache": {
+          "r_loops": 20,
+          "r_hit_ratio": 0,
+          "query_block": {
+            "select_id": 2,
+            "cost": 0.01614704,
+            "r_loops": 20,
+            "r_total_time_ms": 0.160344354,
+            "nested_loop": [
+              {
+                "table": {
+                  "table_name": "o",
+                  "access_type": "ref",
+                  "possible_keys": ["orders_customer_idx"],
+                  "key": "orders_customer_idx",
+                  "key_length": "4",
+                  "used_key_parts": ["customer_id"],
+                  "ref": ["shop.c.id"],
+                  "loops": 1,
+                  "r_loops": 20,
+                  "rows": 8,
+                  "r_rows": 8,
+                  "cost": 0.01614704,
+                  "r_table_time_ms": 0.138681828,
+                  "r_other_time_ms": 0.01349742,
+                  "r_engine_stats": {
+                    "pages_accessed": 360
+                  },
+                  "filtered": 100,
+                  "r_total_filtered": 100,
+                  "r_filtered": 100
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

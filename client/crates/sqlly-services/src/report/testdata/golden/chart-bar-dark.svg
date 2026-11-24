@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360" role="img" aria-labelledby="bar-dark-title bar-dark-desc" font-family="&apos;Noto Sans&apos;, -apple-system, &apos;Segoe UI&apos;, &apos;Helvetica Neue&apos;, Arial, sans-serif">
+<title id="bar-dark-title">bar chart</title>
+<desc id="bar-dark-desc">bar · month, revenue, region · 36</desc>
+<rect width="640" height="360" fill="#0a1a38"/>
+<text x="12" y="26" font-size="14" fill="#e4f1ff" font-weight="600">bar chart</text>
+<rect x="12" y="333.5" width="9" height="9" fill="#8ec8ff"/>
+<text x="26" y="342" font-size="10.5" fill="#8ab4e0">West</text>
+<rect x="64.51" y="333.5" width="9" height="9" fill="#ff8a5c"/>
+<text x="78.51" y="342" font-size="10.5" fill="#8ab4e0">East</text>
+<rect x="113.06" y="333.5" width="9" height="9" fill="#3cc9a0"/>
+<text x="127.06" y="342" font-size="10.5" fill="#8ab4e0">North</text>
+<line x1="57" y1="309.5" x2="628" y2="309.5" stroke="#2a4a7a" stroke-width="1"/>
+<text x="51" y="313" font-size="10" fill="#8ab4e0" text-anchor="end">$0</text>
+<line x1="57" y1="219.67" x2="628" y2="219.67" stroke="#163056" stroke-width="1"/>
+<text x="51" y="223.17" font-size="10" fill="#8ab4e0" text-anchor="end">$10,000</text>
+<line x1="57" y1="129.83" x2="628" y2="129.83" stroke="#163056" stroke-width="1"/>
+<text x="51" y="133.33" font-size="10" fill="#8ab4e0" text-anchor="end">$20,000</text>
+<line x1="57" y1="40" x2="628" y2="40" stroke="#163056" stroke-width="1"/>
+<text x="51" y="43.5" font-size="10" fill="#8ab4e0" text-anchor="end">$30,000</text>
+<text x="128.38" y="323.5" font-size="10" fill="#8ab4e0" text-anchor="middle">2026-Q1</text>
+<text x="271.13" y="323.5" font-size="10" fill="#8ab4e0" text-anchor="middle">2026-Q2</text>
+<text x="413.88" y="323.5" font-size="10" fill="#8ab4e0" text-anchor="middle">2026-Q3</text>
+<text x="556.63" y="323.5" font-size="10" fill="#8ab4e0" text-anchor="middle">2026-Q4</text>
+<rect x="71.27" y="277.94" width="114.2" height="31.56" fill="#8ec8ff"/>
+<rect x="214.03" y="271.03" width="114.2" height="38.47" fill="#8ec8ff"/>
+<rect x="356.78" y="256.03" width="114.2" height="53.47" fill="#8ec8ff"/>
+<rect x="499.53" y="257.2" width="114.2" height="52.3" fill="#8ec8ff"/>
+<rect x="71.27" y="241.77" width="114.2" height="36.17" fill="#ff8a5c"/>
+<rect x="214.03" y="221.04" width="114.2" height="49.99" fill="#ff8a5c"/>
+<rect x="356.78" y="192.21" width="114.2" height="63.82" fill="#ff8a5c"/>
+<rect x="499.53" y="179.56" width="114.2" height="77.64" fill="#ff8a5c"/>
+<rect x="71.27" y="201" width="114.2" height="40.78" fill="#3cc9a0"/>
+<rect x="214.03" y="159.52" width="114.2" height="61.51" fill="#3cc9a0"/>
+<rect x="356.78" y="109.96" width="114.2" height="82.25" fill="#3cc9a0"/>
+<rect x="499.53" y="76.57" width="114.2" height="102.99" fill="#3cc9a0"/>
+<line x1="57" y1="201.7" x2="628" y2="201.7" stroke="#42d751" stroke-width="1.25" stroke-dasharray="5 3"/>
+<text x="626" y="198.7" font-size="10" fill="#42d751" text-anchor="end">Target</text>
+</svg>

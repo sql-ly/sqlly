@@ -1,0 +1,88 @@
+
+PL/SQL procedure successfully completed.
+
+
+PLAN_TABLE_OUTPUT
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+SQL_ID  bkmv4mzc3r009, child number 0
+-------------------------------------
+SELECT /*+ GATHER_PLAN_STATISTICS */ o.id, o.total FROM orders o WHERE
+o.customer_id = :cid
+
+Plan hash value: 368317174
+
+----------------------------------------------------------------------------------------------------------------------------------------------------
+| Id  | Operation                           | Name               | Starts | E-Rows |E-Bytes| Cost (%CPU)| E-Time   | A-Rows |   A-Time   | Buffers |
+----------------------------------------------------------------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT                    |                    |      1 |        |       |     9 (100)|          |      6 |00:00:00.01 |      11 |
+|   1 |  TABLE ACCESS BY INDEX ROWID BATCHED| ORDERS             |      1 |      6 |    90 |     9   (0)| 00:00:01 |      6 |00:00:00.01 |      11 |
+|*  2 |   INDEX RANGE SCAN                  | IX_ORDERS_CUSTOMER |      1 |      6 |       |     3   (0)| 00:00:01 |      6 |00:00:00.01 |       4 |
+----------------------------------------------------------------------------------------------------------------------------------------------------
+
+Query Block Name / Object Alias (identified by operation id):
+-------------------------------------------------------------
+
+   1 - SEL$1 / "O"@"SEL$1"
+   2 - SEL$1 / "O"@"SEL$1"
+
+Outline Data
+-------------
+
+  /*+
+      BEGIN_OUTLINE_DATA
+      IGNORE_OPTIM_EMBEDDED_HINTS
+      OPTIMIZER_FEATURES_ENABLE('23.1.0')
+      DB_VERSION('23.1.0')
+      ALL_ROWS
+      OUTLINE_LEAF(@"SEL$1")
+      INDEX_RS_ASC(@"SEL$1" "O"@"SEL$1" ("ORDERS"."CUSTOMER_ID"))
+      BATCH_TABLE_ACCESS_BY_ROWID(@"SEL$1" "O"@"SEL$1")
+      END_OUTLINE_DATA
+  */
+
+Peeked Binds (identified by position):
+--------------------------------------
+
+   1 - (NUMBER): 77
+
+Predicate Information (identified by operation id):
+---------------------------------------------------
+
+   2 - access("O"."CUSTOMER_ID"=:CID)
+
+Column Projection Information (identified by operation id):
+-----------------------------------------------------------
+
+   1 - "O"."ID"[NUMBER,22], "O"."TOTAL"[NUMBER,22]
+   2 - "O".ROWID[ROWID,10]
+
+Query Block Registry:
+---------------------
+
+  SEL$1 (PARSER) [FINAL]
+
+
+
+PLAN_TABLE_OUTPUT
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+SQL_ID  546krzryacdta, child number 0
+-------------------------------------
+SELECT /*+ GATHER_PLAN_STATISTICS */ region, SUM(amount) FROM sales
+WHERE sold_at >= TO_DATE(:d1, 'YYYY-MM-DD') GROUP BY region
+
+Plan hash value: 2436019392
+
+-------------------------------------------------------------------------------------------------------------
+| Id  | Operation                 | Name  | Starts | E-Rows | Pstart| Pstop | A-Rows |   A-Time   | Buffers |
+-------------------------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT          |       |      1 |        |       |       |      4 |00:00:00.01 |    3425 |
+|   1 |  HASH GROUP BY            |       |      1 |      4 |       |       |      4 |00:00:00.01 |    3425 |
+|   2 |   PARTITION RANGE ITERATOR|       |      1 |  94863 |   KEY |     5 |  94563 |00:00:00.02 |    3425 |
+|*  3 |    TABLE ACCESS FULL      | SALES |      3 |  94863 |   KEY |     5 |  94563 |00:00:00.02 |    3425 |
+-------------------------------------------------------------------------------------------------------------
+
+Predicate Information (identified by operation id):
+---------------------------------------------------
+
+   3 - filter("SOLD_AT">=TO_DATE(:D1,'YYYY-MM-DD'))
+

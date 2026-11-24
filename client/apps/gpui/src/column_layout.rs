@@ -499,7 +499,8 @@ fn default_schema_for(db: DatabaseType) -> String {
         | DatabaseType::AzurePostgresFlexible
         | DatabaseType::CloudSqlPostgres
         | DatabaseType::Neon
-        | DatabaseType::Supabase => "public".to_string(),
+        | DatabaseType::Supabase
+        | DatabaseType::WarehousePg => "public".to_string(),
         DatabaseType::MySql
         | DatabaseType::MariaDb
         | DatabaseType::Sqlite
@@ -530,6 +531,19 @@ fn eq_ascii_ignore_case(left: &str, right: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Every PostgreSQL-compatible engine resolves unqualified tables in
+    /// `public`, so saved column layouts match across them.
+    #[test]
+    fn postgres_compatible_engines_default_to_public() {
+        for db in DatabaseType::ALL {
+            if db == DatabaseType::Postgres || db.compatible_with() == Some(DatabaseType::Postgres)
+            {
+                assert_eq!(default_schema_for(db), "public", "{db:?}");
+            }
+        }
+        assert_eq!(default_schema_for(DatabaseType::WarehousePg), "public");
+    }
 
     fn table_key(server: &str, database: &str, schema: &str, table: &str) -> ColumnLayoutKey {
         ColumnLayoutKey::Table {

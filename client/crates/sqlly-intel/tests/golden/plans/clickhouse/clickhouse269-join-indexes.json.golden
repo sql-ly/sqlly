@@ -1,0 +1,47 @@
+format: clickhouse-json (Certain)
+statements: 1
+
+== statement 1
+dialect: "ClickHouse"
+estimated_rows: 49152
+source_format: "clickhouse-json"
+statement_type: "EXPLAIN"
+operators: 14
+  #1 Expression Project names [Expression]
+      properties: [{name="Node Id" value="Expression_12"}]
+    #2 Limit preliminary LIMIT [Limit]
+        properties: [{name="Node Id" value="Limit_11"}]
+      #3 Sorting Sorting for ORDER BY [Sorting]
+          properties: [{name="Node Id" value="Sorting_10"}]
+        #4 Expression (Before ORDER BY + Projection) [Expression]
+            properties: [{name="Node Id" value="Expression_17"}]
+          #5 Aggregating [Aggregating]
+              properties: [{name="Node Id" value="Aggregating_7"}]
+            #6 Expression ((Before GROUP BY + ) + Post Join Actions) [Expression]
+                properties: [{name="Node Id" value="Expression_25"}]
+              #7 Join JOIN FillRightFirst [Join]
+                  properties: [{name="Node Id" value="Join_23"}]
+                #8 Expression Left Pre Join Actions [Expression]
+                    properties: [{name="Node Id" value="Expression_21"}]
+                  #9 Expression (Apply runtime join filter + Change column names to column identifiers) [Expression]
+                      properties: [{name="Node Id" value="Expression_27"}]
+                    #10 ReadFromMergeTree default.customers [ReadFromMergeTree]
+                        estimated_rows: 49152
+                        output_list: ["PrimaryKey: true parts 1/1 granules 6/6"]
+                        properties: [{name="Node Id" value="ReadFromMergeTree_2"}, {name="PrimaryKey index condition" value="true"}, {name="PrimaryKey index parts" value="1/1"}, {name="PrimaryKey index granules" value="6/6"}]
+                        relation: "customers"
+                        schema: "default"
+                        warnings: [{TableScan={schema="default" table="customers"}}]
+                #11 Expression Right Pre Join Actions [Expression]
+                    properties: [{name="Node Id" value="Expression_22"}]
+                  #12 BuildRuntimeFilter Build runtime join filter on __table1.customer_id [BuildRuntimeFilter]
+                      properties: [{name="Node Id" value="BuildRuntimeFilter_19"}]
+                    #13 Expression (WHERE + Change column names to column identifiers) [Expression]
+                        properties: [{name="Node Id" value="Expression_28"}]
+                      #14 ReadFromMergeTree default.orders [ReadFromMergeTree]
+                          estimated_rows: 1466368
+                          index_cond: "(placed_at in [1685577600, +Inf))"
+                          output_list: ["Min-Max: (placed_at in [1685577600, +Inf)) parts 5/10 granules 179/392", "Partition: (toYYYYMM(placed_at) in [202306, +Inf)) parts 5/5 granules 179/179", "PrimaryKey: (placed_at in [1685577600, +Inf)) parts 5/5 granules 179/179"]
+                          properties: [{name="Node Id" value="ReadFromMergeTree_0"}, {name="Min-Max index keys" value="placed_at"}, {name="Min-Max index condition" value="(placed_at in [1685577600, +Inf))"}, {name="Min-Max index parts" value="5/10"}, {name="Min-Max index granules" value="179/392"}, {name="Partition index keys" value="toYYYYMM(placed_at)"}, {name="Partition index condition" value="(toYYYYMM(placed_at) in [202306, +Inf))"}, {name="Partition index parts" value="5/5"}, {name="Partition index granules" value="179/179"}, {name="PrimaryKey index keys" value="placed_at"}, {name="PrimaryKey index condition" value="(placed_at in [1685577600, +Inf))"}, {name="PrimaryKey index parts" value="5/5"}, {name="PrimaryKey index granules" value="179/179"}, {name="PrimaryKey index search" value="generic exclusion search"}]
+                          relation: "orders"
+                          schema: "default"

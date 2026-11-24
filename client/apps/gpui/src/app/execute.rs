@@ -7,10 +7,20 @@ use std::ops::Range;
 pub(super) enum ExecuteOrigin {
     UserRun,
     AiRun,
-    AgentGrant { sql: String },
-    MutationConfirm { sql: String },
-    AutoRefresh { sql: String },
-    NotebookCell { cell_id: String, sql: String },
+    AgentGrant {
+        sql: String,
+    },
+    MutationConfirm {
+        sql: String,
+    },
+    AutoRefresh {
+        sql: String,
+    },
+    NotebookCell {
+        cell_id: String,
+        sql: String,
+        target: crate::notebook::connection::CellRunTarget,
+    },
 }
 
 impl ExecuteOrigin {
@@ -546,7 +556,7 @@ fn parse_count_from_event(event: &sqlly_services::QueryEvent) -> Option<u64> {
 }
 
 impl AppView {
-    fn query_cancelled_status(&mut self, _cx: &mut Context<Self>) {
+    pub(super) fn query_cancelled_status(&mut self, _cx: &mut Context<Self>) {
         self.set_status(
             StatusLevel::Info,
             crate::localization::text("shell.execute.query_cancelled"),
@@ -561,6 +571,7 @@ impl AppView {
     }
 
     pub(super) fn cancel_tab_query(&mut self, index: usize, cx: &mut Context<Self>) -> bool {
+        let notebook_stopped = self.cancel_notebook_queries(index, cx);
         let task_id = self
             .tabs
             .get_mut(index)
@@ -578,7 +589,7 @@ impl AppView {
             .get(index)
             .is_some_and(|tab| tab.transaction_mode == crate::tabs::TransactionMode::Manual);
         if task_id.is_none() && multi_run.is_none() && !proc_was_running {
-            return false;
+            return notebook_stopped;
         }
         let services = if index == self.active_tab {
             self.active_profile
@@ -664,35 +675,11 @@ impl AppView {
         };
         if let Some(id) = cell_id
             && let Some(nb) = &tab.notebook
-            && let Some(pair) = nb.read(cx).cell_entities(id)
+            && let Some(pair) = nb.read(cx).cell_run_targets(id, &tab.editor)
         {
             return Some(pair);
         }
         Some((tab.editor.clone(), tab.results.clone()))
-    }
-
-    pub(super) fn run_notebook_cell(
-        &mut self,
-        tab_idx: usize,
-        cell_id: String,
-        cx: &mut Context<Self>,
-    ) {
-        let Some(nb) = self.tabs.get(tab_idx).and_then(|t| t.notebook.clone()) else {
-            return;
-        };
-        match nb.read(cx).sql_for_run(&cell_id) {
-            Ok(sql) => {
-                self.execute_query_with_origin(
-                    tab_idx,
-                    ExecuteOrigin::NotebookCell { cell_id, sql },
-                    cx,
-                );
-            }
-            Err(message) => {
-                self.set_status(StatusLevel::Error, message);
-                cx.notify();
-            }
-        }
     }
 
     /// `fallback_db_type` stands in for the active connection's engine when
@@ -920,18 +907,41 @@ impl AppView {
             }
         }
 
-        let profile = match self.active_profile.clone() {
-            Some(p) => p,
-            None => {
-                self.pending.run_statement_offset = None;
-                self.set_status(
-                    StatusLevel::Error,
-                    crate::localization::text("shell.execute.no_active_connection"),
-                );
-                cx.notify();
-                return;
-            }
+        // A notebook cell runs on its own target (another profile, or the
+        // tab's with the database's read-only mode); everything else on the
+        // active connection.
+        let notebook_target = match &origin {
+            ExecuteOrigin::NotebookCell { target, .. } => Some(target.clone()),
+            ExecuteOrigin::MutationConfirm { .. } => self
+                .pending
+                .mutation_review
+                .as_ref()
+                .and_then(|r| r.notebook_target.clone()),
+            _ => None,
         };
+        let profile = match &notebook_target {
+            Some(target) => match self.notebook_cell_profile(tab_idx, target, cx) {
+                Ok(profile) => profile,
+                Err(message) => {
+                    self.set_status(StatusLevel::Error, message);
+                    cx.notify();
+                    return;
+                }
+            },
+            None => match self.active_profile.clone() {
+                Some(p) => p,
+                None => {
+                    self.pending.run_statement_offset = None;
+                    self.set_status(
+                        StatusLevel::Error,
+                        crate::localization::text("shell.execute.no_active_connection"),
+                    );
+                    cx.notify();
+                    return;
+                }
+            },
+        };
+        let notebook_read_only = notebook_target.as_ref().is_some_and(|t| t.read_only);
 
         let Some((editor_entity, results_entity)) = self.run_targets_for(tab_idx, &origin, cx)
         else {
@@ -960,7 +970,8 @@ impl AppView {
             .tabs
             .get(tab_idx)
             .is_some_and(|tab| tab.proc_mode.enabled);
-        let Some((user_sql, region_start)) = self.current_user_sql(tab_idx, &origin, None, cx)
+        let Some((user_sql, region_start)) =
+            self.current_user_sql(tab_idx, &origin, Some(profile.database_type), cx)
         else {
             return;
         };
@@ -987,12 +998,10 @@ impl AppView {
             None
         };
 
-        let tenant_execute_block = self.active_profile.as_ref().and_then(|profile| {
-            crate::tenant_scoping::execute_block_for_fail_closed(
-                profile,
-                editor_entity.read(cx).validation_diagnostics(),
-            )
-        });
+        let tenant_execute_block = crate::tenant_scoping::execute_block_for_fail_closed(
+            &profile,
+            editor_entity.read(cx).validation_diagnostics(),
+        );
 
         let store = ConnectionStore::global();
         let tab_id = self.tabs[tab_idx].id.clone();
@@ -1001,7 +1010,7 @@ impl AppView {
             &origin,
             &tab_id,
             self.pending.mutation_review.as_ref(),
-            self.active_profile.as_ref(),
+            Some(&profile),
             tenant_execute_block.as_deref(),
             store,
             self.production_unlock.as_ref(),
@@ -1015,6 +1024,26 @@ impl AppView {
             } => {
                 self.mutation_review_generation += 1;
                 let generation = self.mutation_review_generation;
+                // A notebook cell's review names the connection it writes to.
+                let bottom_line = if notebook_target.is_some() {
+                    crate::localization::format(
+                        "notebook.shell.safety.review_target",
+                        &[
+                            ("connection_name", profile.name.as_str()),
+                            (
+                                "environment",
+                                &crate::localization::text(
+                                    crate::notebook::connection::environment_label_key(
+                                        profile.environment,
+                                    ),
+                                ),
+                            ),
+                            ("bottom_line", bottom_line.as_str()),
+                        ],
+                    )
+                } else {
+                    bottom_line
+                };
                 self.pending.mutation_review = Some(PendingMutationReview {
                     sql: user_sql.clone(),
                     tab_id: self.tabs[tab_idx].id.clone(),
@@ -1028,6 +1057,7 @@ impl AppView {
                         ExecuteOrigin::NotebookCell { cell_id, .. } => Some(cell_id.clone()),
                         _ => None,
                     },
+                    notebook_target: notebook_target.clone(),
                     multi_targets: None,
                 });
                 if ai_review_required {
@@ -1183,6 +1213,9 @@ impl AppView {
                 app.production_unlock.as_ref(),
                 now,
             );
+            if notebook_read_only {
+                crate::notebook::connection::apply_read_only(&mut profile);
+            }
             let is_manual = app
                 .tabs
                 .get(tab_idx)
@@ -1317,6 +1350,10 @@ impl AppView {
         run_region: crate::execution_error::RunRegion,
         cx: &mut Context<Self>,
     ) {
+        let history_sql = self
+            .notebook_history_redactions
+            .remove(&run_sql)
+            .unwrap_or_else(|| sql.clone());
         // Seal a Run version at dispatch. The version id is parked on the tab
         // so `attach_run_results` can hang the results snapshot on it when the
         // query completes.
@@ -1325,7 +1362,11 @@ impl AppView {
             if self.query_history_prefs.enabled {
                 let now = chrono::Utc::now().timestamp_millis();
                 let sealed = self.history_store_for_tab(tab_idx).and_then(|store| {
-                    match store.seal(crate::query_version_history::VersionKind::Run, &sql, now) {
+                    match store.seal(
+                        crate::query_version_history::VersionKind::Run,
+                        &history_sql,
+                        now,
+                    ) {
                         Ok(crate::query_version_history::SealOutcome::Sealed(id)) => Some(id),
                         _ => None,
                     }
@@ -1381,16 +1422,46 @@ impl AppView {
             StatusLevel::Busy,
             crate::localization::text("shell.execute.query_running"),
         );
-        self.pending.mutation_review = None;
+        // Only this tab's review is answered by this run starting; a query
+        // starting in another tab (a background notebook, auto-refresh)
+        // leaves that review open.
+        if self
+            .pending
+            .mutation_review
+            .as_ref()
+            .is_some_and(|review| review.tab_id == tab_id)
+        {
+            self.pending.mutation_review = None;
+        }
+
+        // A notebook cell runs into its own results view, side by side with
+        // the notebook's other cells: its query id is kept per cell, and only
+        // the cell's own earlier run is superseded.
+        let notebook_cell = self
+            .tabs
+            .get(tab_idx)
+            .and_then(|t| t.notebook.clone())
+            .and_then(|nb| {
+                let id = nb.read(cx).cell_for_results(&results_entity)?;
+                Some((nb, id))
+            });
+        let prior_query = match &notebook_cell {
+            Some((nb, _)) => nb.read(cx).cell_query(results_entity.entity_id()),
+            None => self
+                .tabs
+                .get_mut(tab_idx)
+                .and_then(|t| t.active_query_id.take()),
+        };
+        let caps = notebook_cell
+            .as_ref()
+            .map(|(nb, id)| nb.read(cx).run_caps(id))
+            .and_then(crate::notebook::local::caps::RowCapper::new);
+        let cap_services = self.services_for_profile(&profile);
 
         // A superseded run's producer would otherwise keep streaming from the
         // server (and spilling to disk) until it completes on its own —
         // cancel it now that its events can no longer land anywhere.
-        if let Some(prior) = self
-            .tabs
-            .get_mut(tab_idx)
-            .and_then(|t| t.active_query_id.take())
-        {
+        if let Some(prior) = prior_query {
             // Route the cancel to the same services that started the prior run:
             // a Via-Relay run's cancel must reach the relay-backed executor, not
             // the in-process one. (For Direct this resolves to `self.services`.)
@@ -1426,7 +1497,7 @@ impl AppView {
         // services (when a relay session is established); Direct profiles use the
         // in-process services exactly as before.
         let services = self.services_for_profile(&profile);
-        let history_sql = sql.clone();
+        let route_services = services.clone();
         let history_server = profile.server.clone();
         let history_database = profile.database.clone();
         // Sealed at dispatch for the completion summary: the pump only sees
@@ -1449,7 +1520,16 @@ impl AppView {
         // across runs; tabs never share sessions (temp tables, SET options,
         // SESSION_CONTEXT stay tab-local), matching the engine's
         // `connection_key` isolation.
-        let tab_lane = self.tabs.get(tab_idx).map(|tab| tab.id.clone());
+        // Cells in one notebook session group share a lane of their own.
+        let tab_lane = self.tabs.get(tab_idx).map(|tab| {
+            match notebook_cell
+                .as_ref()
+                .and_then(|(nb, id)| nb.read(cx).session_lane(id))
+            {
+                Some(group) => format!("{}#{group}", tab.id),
+                None => tab.id.clone(),
+            }
+        });
         let (tx, mut rx) = tokio::sync::mpsc::channel::<sqlly_services::QueryEvent>(64);
         // `execute` mints the cancellation task id; route it back to the tab
         // so `query.cancel` has something to act on.
@@ -1501,7 +1581,10 @@ impl AppView {
         let weak_self = cx.weak_entity();
         let log = self.log.clone();
         let tab_id_for_pump = tab_id.clone();
+        let pump_notebook = notebook_cell.as_ref().map(|(nb, _)| nb.clone());
+        let pump_cell = notebook_cell.map(|(_, id)| id);
         cx.spawn(async move |_this, _cx| {
+            let mut pump_task_id: Option<String> = None;
             // Store the task id for cancellation — but only while this run is
             // still current, so a slow superseded pump can't clobber the id
             // of the run that replaced it.
@@ -1512,20 +1595,116 @@ impl AppView {
                         let Some(tab_idx) = this.tab_index_by_id(&tab_id_for_pump) else {
                             return;
                         };
-                        if results_entity.read(cx).run_generation() == run
-                            && let Some(tab) = this.tabs.get_mut(tab_idx)
-                        {
-                            tab.active_query_id = Some(task_id);
+                        if results_entity.read(cx).run_generation() != run {
+                            return;
+                        }
+                        if let Some(nb) = pump_notebook.as_ref() {
+                            nb.update(cx, |nb, _| {
+                                nb.set_cell_query(
+                                    results_entity.entity_id(),
+                                    Some(task_id.clone()),
+                                );
+                                nb.route_query(&task_id, route_services.clone());
+                            });
+                        } else if let Some(tab) = this.tabs.get_mut(tab_idx) {
+                            tab.active_query_id = Some(task_id.clone());
                         }
                     })
                     .ok();
+                pump_task_id = Some(task_id);
             }
+            let pump_started = chrono::Utc::now();
+            let mut capper = caps;
+            // A row cap hit by a result set past the spill threshold: the
+            // query is canceled and its end reported as cut short.
+            let mut spill_cap: Option<crate::notebook::local::Truncation> = None;
             let mut completed_ms: Option<u64> = None;
             let mut last_error: Option<String> = None;
             let mut saw_cancel = false;
             let mut affected_rows: Option<u64> = None;
             let mut located = false;
-            while let Some(event) = rx.recv().await {
+            while let Some(mut event) = rx.recv().await {
+                // A cell's row or download cap: rows past it never reach the
+                // grid, and the run stops there as cut short.
+                let mut capped = None;
+                let mut spill_capped = None;
+                if let Some(capper) = capper.as_mut() {
+                    match &mut event {
+                        sqlly_services::QueryEvent::Rows { index, rows } => {
+                            capped = capper.admit(*index, rows);
+                        }
+                        sqlly_services::QueryEvent::SpillWindow {
+                            index,
+                            rows_available,
+                            ..
+                        } => {
+                            spill_capped = capper.observe(*index, *rows_available as u64);
+                            *rows_available = capper.clamp(*rows_available);
+                        }
+                        sqlly_services::QueryEvent::RowsProgress { index, rows_seen } => {
+                            spill_capped = capper.observe(*index, *rows_seen as u64);
+                            *rows_seen = capper.clamp(*rows_seen);
+                        }
+                        sqlly_services::QueryEvent::SpillManifest { manifest } => {
+                            for set in &mut manifest.result_sets {
+                                spill_capped = spill_capped
+                                    .or(capper.observe(set.result_set_index, set.row_count as u64));
+                                set.row_count = capper.clamp(set.row_count);
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                if let Some(truncation) = spill_capped
+                    && spill_cap.is_none()
+                {
+                    spill_cap = Some(truncation);
+                    let mut cx = async_cx.clone();
+                    let _ = weak_self.update(&mut cx, |_this, cx| {
+                        if let (Some(nb), Some(cell)) = (pump_notebook.as_ref(), pump_cell.as_ref())
+                        {
+                            nb.update(cx, |nb, cx| nb.mark_truncated(cell, truncation, cx));
+                        }
+                    });
+                    if let Some(task) = pump_task_id.clone() {
+                        let services = cap_services.clone();
+                        async_cx
+                            .background_spawn(async move {
+                                crate::tokio_handle()
+                                    .spawn(async move {
+                                        let _ = services.queries.cancel(&task).await;
+                                    })
+                                    .await
+                                    .ok();
+                            })
+                            .detach();
+                    }
+                }
+                if let Some(truncation) = spill_cap
+                    && matches!(
+                        event,
+                        sqlly_services::QueryEvent::Cancelled
+                            | sqlly_services::QueryEvent::Completed { .. }
+                    )
+                {
+                    let elapsed = (chrono::Utc::now() - pump_started)
+                        .num_milliseconds()
+                        .max(0) as u128;
+                    let note = crate::notebook::local::caps_message(truncation);
+                    let mut cx = async_cx.clone();
+                    let _ = weak_self.update(&mut cx, |_this, cx| {
+                        results_entity.update(cx, |r, cx| {
+                            r.handle_event_for_run(
+                                run,
+                                sqlly_services::QueryEvent::Message { text: note },
+                                cx,
+                            );
+                        });
+                    });
+                    event = sqlly_services::QueryEvent::Completed {
+                        elapsed_ms: elapsed,
+                    };
+                }
                 // Kept for the firewall check below: `event` is moved into the
                 // results view before the update closure can look at it.
                 let mut error_message: Option<String> = None;
@@ -1625,6 +1804,48 @@ impl AppView {
                 {
                     break;
                 }
+                if let Some(truncation) = capped {
+                    let elapsed = (chrono::Utc::now() - pump_started)
+                        .num_milliseconds()
+                        .max(0) as u128;
+                    completed_ms = Some(elapsed as u64);
+                    let note = crate::notebook::local::caps_message(truncation);
+                    let mut cx = async_cx.clone();
+                    let _ = weak_self.update(&mut cx, |_this, cx| {
+                        if let (Some(nb), Some(cell)) = (pump_notebook.as_ref(), pump_cell.as_ref())
+                        {
+                            nb.update(cx, |nb, cx| nb.mark_truncated(cell, truncation, cx));
+                        }
+                        results_entity.update(cx, |r, cx| {
+                            r.handle_event_for_run(
+                                run,
+                                sqlly_services::QueryEvent::Message { text: note },
+                                cx,
+                            );
+                            r.handle_event_for_run(
+                                run,
+                                sqlly_services::QueryEvent::Completed {
+                                    elapsed_ms: elapsed,
+                                },
+                                cx,
+                            );
+                        });
+                    });
+                    if let Some(task) = pump_task_id.clone() {
+                        let services = cap_services.clone();
+                        async_cx
+                            .background_spawn(async move {
+                                crate::tokio_handle()
+                                    .spawn(async move {
+                                        let _ = services.queries.cancel(&task).await;
+                                    })
+                                    .await
+                                    .ok();
+                            })
+                            .detach();
+                    }
+                    break;
+                }
             }
             let mut cx = async_cx.clone();
             weak_self
@@ -1655,7 +1876,11 @@ impl AppView {
                     // A superseded pump ending late must not clear the id (or
                     // rewrite the status) of the run that replaced it.
                     if results_entity.read(cx).run_generation() == run {
-                        if let Some(tab_idx) = this.tab_index_by_id(&tab_id_for_pump)
+                        if let Some(nb) = pump_notebook.as_ref() {
+                            nb.update(cx, |nb, _| {
+                                nb.set_cell_query(results_entity.entity_id(), None)
+                            });
+                        } else if let Some(tab_idx) = this.tab_index_by_id(&tab_id_for_pump)
                             && let Some(tab) = this.tabs.get_mut(tab_idx)
                         {
                             tab.active_query_id = None;
@@ -1886,6 +2111,7 @@ impl AppView {
                     ai_explanation: None,
                     ai_generation: generation,
                     notebook_cell: None,
+                    notebook_target: None,
                     multi_targets: Some(
                         target_ids
                             .iter()
@@ -2002,7 +2228,14 @@ impl AppView {
             StatusLevel::Busy,
             crate::localization::text("shell.execute.multi_target_query_running"),
         );
-        self.pending.mutation_review = None;
+        if self
+            .pending
+            .mutation_review
+            .as_ref()
+            .is_some_and(|review| Some(&review.tab_id) == tab_lane_id.as_ref())
+        {
+            self.pending.mutation_review = None;
+        }
 
         if let Some(prior) = self
             .tabs
@@ -2704,6 +2937,7 @@ mod run_gate_tests {
             ai_explanation: None,
             ai_generation: 1,
             notebook_cell: None,
+            notebook_target: None,
             multi_targets: None,
         }
     }
@@ -2820,6 +3054,12 @@ mod run_gate_tests {
                 &ExecuteOrigin::NotebookCell {
                     cell_id: "cell_1".into(),
                     sql: "SELECT 1 AS x".into(),
+                    target: crate::notebook::connection::CellRunTarget {
+                        profile_id: None,
+                        read_only: true,
+                        timeout_seconds: None,
+                        local: false,
+                    },
                 },
                 "SELECT buffer",
             ),
@@ -2837,6 +3077,12 @@ mod run_gate_tests {
             &ExecuteOrigin::NotebookCell {
                 cell_id: "cell_1".into(),
                 sql: "DELETE FROM t".into(),
+                target: crate::notebook::connection::CellRunTarget {
+                    profile_id: None,
+                    read_only: true,
+                    timeout_seconds: None,
+                    local: false,
+                },
             },
             "tab-a",
             None,
@@ -3493,6 +3739,12 @@ mod execute_sql_resolution_tests {
             !ExecuteOrigin::NotebookCell {
                 cell_id: "c1".into(),
                 sql,
+                target: crate::notebook::connection::CellRunTarget {
+                    profile_id: None,
+                    read_only: true,
+                    timeout_seconds: None,
+                    local: false,
+                },
             }
             .reveals_results()
         );
@@ -3654,6 +3906,12 @@ mod execute_sql_resolution_tests {
             origin: &ExecuteOrigin::NotebookCell {
                 cell_id: "cell_1".into(),
                 sql: "SELECT 1".into(),
+                target: crate::notebook::connection::CellRunTarget {
+                    profile_id: None,
+                    read_only: true,
+                    timeout_seconds: None,
+                    local: false,
+                },
             },
             proc_mode_active: false,
             selection_range: None,
@@ -4086,7 +4344,64 @@ impl AppView {
                         cx,
                     );
                 }
+                self.notebook_review_confirmed(tab_idx, &review, cx);
             }
+        }
+    }
+
+    /// A notebook cell's review closed without running it: the cell did
+    /// not start, so its notebook moves on instead of waiting for it.
+    fn notebook_review_dropped(
+        &mut self,
+        review: &PendingMutationReview,
+        message: sqlly_core::DisplayMessage,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(cell) = review.notebook_cell.clone() else {
+            return;
+        };
+        let Some(nb) = self
+            .tab_index_by_id(&review.tab_id)
+            .and_then(|i| self.tabs.get(i))
+            .and_then(|t| t.notebook.clone())
+        else {
+            return;
+        };
+        nb.update(cx, |nb, cx| {
+            nb.dispatch_result(
+                &cell,
+                crate::notebook::view::DispatchOutcome::NotStarted(message),
+                cx,
+            )
+        });
+    }
+
+    /// A confirmed notebook cell is now running: tell its notebook, so the
+    /// cell leaves Awaiting approval and the cells held behind it go ahead.
+    fn notebook_review_confirmed(
+        &mut self,
+        tab_idx: usize,
+        review: &PendingMutationReview,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(cell) = review.notebook_cell.clone() else {
+            return;
+        };
+        let Some((nb, editor)) = self
+            .tabs
+            .get(tab_idx)
+            .and_then(|t| Some((t.notebook.clone()?, t.editor.clone())))
+        else {
+            return;
+        };
+        let running = nb
+            .read(cx)
+            .cell_run_targets(&cell, &editor)
+            .is_some_and(|(_, results)| results.read(cx).is_running());
+        if running {
+            nb.update(cx, |nb, cx| {
+                nb.dispatch_result(&cell, crate::notebook::view::DispatchOutcome::Started, cx)
+            });
         }
     }
 
@@ -4157,8 +4472,14 @@ impl AppView {
                             }
                         }
                         Err(e) => {
-                            if still_mutation {
-                                this.pending.mutation_review = None;
+                            if still_mutation
+                                && let Some(review) = this.pending.mutation_review.take()
+                            {
+                                this.notebook_review_dropped(
+                                    &review,
+                                    sqlly_core::DisplayMessage::raw(e.clone()),
+                                    cx,
+                                );
                             }
                             if still_staged {
                                 this.pending.staged_save = None;
@@ -4190,10 +4511,26 @@ impl AppView {
         if let Some(tab_id) = tab_id {
             self.reject_mcp_pending_write_if_tab(&tab_id, "user declined");
         }
-        self.pending.mutation_review = None;
+        let review = self.pending.mutation_review.take();
         // A bypass armed for this run must not survive a cancel and silently
         // disable the rollback wrap on the next, unrelated run.
         self.execute_rollback_bypass_once = false;
+        if let Some(review) = &review
+            && let Some(cell) = review.notebook_cell.clone()
+            && let Some(nb) = self
+                .tab_index_by_id(&review.tab_id)
+                .and_then(|i| self.tabs.get(i))
+                .and_then(|t| t.notebook.clone())
+        {
+            let message = crate::localization::deferred_text("shell.execute.mutation_cancelled");
+            nb.update(cx, |nb, cx| {
+                nb.dispatch_result(
+                    &cell,
+                    crate::notebook::view::DispatchOutcome::NotStarted(message),
+                    cx,
+                )
+            });
+        }
         self.set_status(
             StatusLevel::Info,
             crate::localization::text("shell.execute.mutation_cancelled"),

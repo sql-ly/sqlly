@@ -378,6 +378,7 @@ impl AppView {
             ai_explanation: None,
             ai_generation: self.mutation_review_generation,
             notebook_cell: None,
+            notebook_target: None,
             multi_targets: None,
         });
         self.set_status(

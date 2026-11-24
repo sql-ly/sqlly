@@ -1,0 +1,7 @@
+-> Aggregate: count(0)  (cost=364861 rows=1) (actual time=1.39..1.39 rows=1 loops=1)
+    -> Inner hash join (c.`name` = p.`name`)  (cost=331711 rows=331500) (actual time=1.37..1.37 rows=0 loops=1)
+        -> Table scan on c  (cost=0.088 rows=4973) (actual time=0.0746..0.442 rows=5000 loops=1)
+        -> Hash
+            -> Filter: (p.price > 100.00)  (cost=202 rows=667) (actual time=0.106..0.364 rows=1600 loops=1)
+                -> Table scan on p  (cost=202 rows=2000) (actual time=0.0745..0.239 rows=2000 loops=1)
+

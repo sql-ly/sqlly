@@ -1,0 +1,51 @@
+format: mysql-tree (Certain)
+statements: 1
+
+== statement 1
+dialect: "MySql"
+estimated_rows: 5
+execution_time_ms: 0.062
+has_actuals: yes
+source_format: "mysql-tree"
+statement_type: "EXPLAIN ANALYZE"
+total_subtree_cost: 78.8
+operators: 3
+  #1 Limit: 5 row(s) [Limit: 5 row(s)]
+      actual_rebinds: 1
+      actual_rows: 5
+      actual_rows_total: 5
+      actual_self_time_ms: 0.0009
+      actual_startup_ms: 0.061
+      actual_time_ms: 0.062
+      estimated_cost: 78.8
+      estimated_rows: 5
+      loops: 1
+      output_list: ["Actual time: 0.062 ms"]
+      properties: [{name="limit" value="5 row(s)"}]
+    #2 Filter: (orders.customer_id < 50) [Filter: (orders.customer_id < 50)]
+        actual_rebinds: 1
+        actual_rows: 5
+        actual_rows_total: 5
+        actual_self_time_ms: 0.0159
+        actual_startup_ms: 0.0603
+        actual_time_ms: 0.0611
+        estimated_cost: 78.8
+        estimated_rows: 392
+        filter: "orders.customer_id < 50"
+        loops: 1
+        output_list: ["Actual time: 0.0611 ms"]
+      #3 Covering index range scan on orders using orders_customer_idx over (customer_id < 50) (reverse) [Covering index range scan on orders using orders_customer_idx over (customer_id < 50) (reverse)]
+          actual_rebinds: 1
+          actual_rows: 5
+          actual_rows_total: 5
+          actual_self_time_ms: 0.0452
+          actual_startup_ms: 0.0446
+          actual_time_ms: 0.0452
+          estimated_cost: 78.8
+          estimated_rows: 392
+          extra: ["Using index", "Backward index scan"]
+          index_cond: "(customer_id < 50)"
+          index_name: "orders_customer_idx"
+          loops: 1
+          output_list: ["Actual time: 0.0452 ms", "orders", "Key: orders_customer_idx"]
+          relation: "orders"

@@ -1,0 +1,16 @@
+== Physical Plan ==
+AdaptiveSparkPlan isFinalPlan=false
++- Sort [revenue#32 DESC NULLS LAST], true, 0
+   +- Exchange rangepartitioning(revenue#32 DESC NULLS LAST, 200), ENSURE_REQUIREMENTS, [plan_id=194]
+      +- HashAggregate(keys=[region#40], functions=[count(1), sum(total#7)])
+         +- Exchange hashpartitioning(region#40, 200), ENSURE_REQUIREMENTS, [plan_id=191]
+            +- HashAggregate(keys=[region#40], functions=[partial_count(1), partial_sum(total#7)])
+               +- Project [region#40, total#7]
+                  +- BroadcastHashJoin [id#38L], [customer_id#6L], Inner, BuildLeft, false, false
+                     :- BroadcastExchange HashedRelationBroadcastMode(List(input[0, bigint, false]),false), [plan_id=186]
+                     :  +- Filter (region#40 IN (east,west) AND isnotnull(id#38L))
+                     :     +- FileScan parquet spark_catalog.default.customers[id#38L,region#40] Batched: true, DataFilters: [region#40 IN (east,west), isnotnull(id#38L)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/tmp/spark-warehouse/customers], PartitionFilters: [], PushedFilters: [In(region, [east,west]), IsNotNull(id)], ReadSchema: struct<id:bigint,region:string>
+                     +- Filter isnotnull(customer_id#6L)
+                        +- FileScan parquet spark_catalog.default.orders[customer_id#6L,total#7] Batched: true, DataFilters: [isnotnull(customer_id#6L)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/tmp/spark-warehouse/orders], PartitionFilters: [], PushedFilters: [IsNotNull(customer_id)], ReadSchema: struct<customer_id:bigint,total:decimal(11,2)>
+
+

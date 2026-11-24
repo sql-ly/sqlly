@@ -8,7 +8,7 @@ use async_trait::async_trait;
 use sqlly_core::{CellValue, ConnectionProfile, ObjectKind, StudioError, StudioResult};
 use sqlly_intel::metadata::{
     MetadataDialect, MetadataQuery, ObjectPropertiesSpec, ddl::render_sql_type,
-    object_properties_spec, sql_for_engine,
+    object_properties_spec, sql_for_engine, tables_partition_of_column,
 };
 
 use crate::intellisense::procedures::ProcedureParameter;
@@ -63,6 +63,9 @@ pub struct MetadataNode {
     pub kind: ObjectKind,
     /// Extra display detail (e.g., `"int, nullable"` for columns).
     pub detail: Option<String>,
+    /// For a table that is a partition of another (PostgreSQL declarative
+    /// partitioning): the parent's `schema.name`.
+    pub partition_of: Option<String>,
 }
 
 impl MetadataNode {
@@ -72,6 +75,7 @@ impl MetadataNode {
             schema: None,
             kind,
             detail: None,
+            partition_of: None,
         }
     }
 
@@ -450,13 +454,20 @@ impl MetadataService for DefaultMetadataService {
         let rows = self
             .collect_rows(profile_with_db(profile, database), &sql)
             .await?;
+        let partition_column = MetadataDialect::for_database_type(profile.database_type)
+            .and_then(tables_partition_of_column);
         Ok(rows
             .into_iter()
             .filter_map(|row| {
+                let partition_of = partition_column
+                    .and_then(|i| row.get(i).cloned())
+                    .and_then(|cell| cell_to_string(Some(cell)));
                 let mut cells = row.into_iter();
                 let schema = cell_to_string(cells.next())?;
                 let name = cell_to_string(cells.next())?;
-                Some(MetadataNode::new(name, ObjectKind::Table).with_schema(schema))
+                let mut node = MetadataNode::new(name, ObjectKind::Table).with_schema(schema);
+                node.partition_of = partition_of;
+                Some(node)
             })
             .collect())
     }

@@ -1,0 +1,51 @@
+format: oracle-xplan (Certain)
+statements: 1
+
+== statement 1
+dialect: "Oracle"
+estimated_rows: 5
+notes: ["this is an adaptive plan"]
+query_plan_hash: "2958302572"
+source_format: "oracle-xplan"
+statement_type: "EXPLAIN PLAN"
+total_subtree_cost: 1684
+operators: 6
+  #0 SELECT STATEMENT [SELECT STATEMENT]
+      estimated_cost: 1684
+      estimated_row_width: 27
+      estimated_rows: 5
+      properties: [{name="Bytes" value="135"}, {name="Cost %CPU" value="1"}, {name="Time" value="00:00:01"}]
+    #1 SORT ORDER BY [SORT]
+        estimated_cost: 1684
+        estimated_row_width: 27
+        estimated_rows: 5
+        properties: [{name="Bytes" value="135"}, {name="Cost %CPU" value="1"}, {name="Time" value="00:00:01"}]
+      #2 HASH GROUP BY [HASH]
+          estimated_cost: 1684
+          estimated_row_width: 27
+          estimated_rows: 5
+          properties: [{name="Bytes" value="135"}, {name="Cost %CPU" value="1"}, {name="Time" value="00:00:01"}]
+        #3 HASH JOIN [HASH JOIN]
+            estimated_cost: 1681
+            estimated_row_width: 26.947368
+            estimated_rows: 15010
+            join_predicate: "\"C\".\"ID\"=\"O\".\"CUSTOMER_ID\""
+            join_type: "INNER"
+            output_list: ["access: \"C\".\"ID\"=\"O\".\"CUSTOMER_ID\""]
+            properties: [{name="Bytes" value="404480"}, {name="Cost %CPU" value="1"}, {name="Time" value="00:00:01"}]
+          #4 TABLE ACCESS FULL ORDERS [TABLE ACCESS]
+              estimated_cost: 1593
+              estimated_row_width: 18.96549
+              estimated_rows: 15010
+              filter: "\"O\".\"TOTAL\">1200 AND \"O\".\"STATUS\"='refunded'"
+              output_list: ["filter: \"O\".\"TOTAL\">1200 AND \"O\".\"STATUS\"='refunded'"]
+              properties: [{name="Bytes" value="284672"}, {name="Cost %CPU" value="1"}, {name="Time" value="00:00:01"}]
+              relation: "ORDERS"
+              warnings: [{TableScan={table="ORDERS"}}]
+          #5 TABLE ACCESS FULL CUSTOMERS [TABLE ACCESS]
+              estimated_cost: 88
+              estimated_row_width: 7.9872
+              estimated_rows: 50000
+              properties: [{name="Bytes" value="399360"}, {name="Cost %CPU" value="0"}, {name="Time" value="00:00:01"}]
+              relation: "CUSTOMERS"
+              warnings: [{TableScan={table="CUSTOMERS"}}]

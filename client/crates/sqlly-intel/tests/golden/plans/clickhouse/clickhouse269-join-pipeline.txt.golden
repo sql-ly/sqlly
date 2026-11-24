@@ -1,0 +1,64 @@
+format: clickhouse-pipeline (Certain)
+statements: 1
+
+== statement 1
+dialect: "ClickHouse"
+source_format: "clickhouse-pipeline"
+statement_type: "EXPLAIN PIPELINE"
+operators: 23
+  #1 ExpressionTransform [ExpressionTransform]
+      properties: [{name="Step" value="Expression"}]
+    #2 Limit [Limit]
+        properties: [{name="Step" value="Limit"}]
+      #3 MergeSortingTransform [MergeSortingTransform]
+          properties: [{name="Step" value="Sorting"}]
+        #4 LimitsCheckingTransform [LimitsCheckingTransform]
+            properties: [{name="Step" value="Sorting"}]
+          #5 PartialSortingTransform [PartialSortingTransform]
+              properties: [{name="Step" value="Sorting"}]
+            #6 ExpressionTransform [ExpressionTransform]
+                properties: [{name="Step" value="Expression"}]
+              #7 AggregatingTransform [AggregatingTransform]
+                  properties: [{name="Step" value="Aggregating"}]
+                #8 ExpressionTransform [ExpressionTransform]
+                    properties: [{name="Step" value="Expression"}]
+                  #9 ColumnPermuteTransform [ColumnPermuteTransform]
+                      properties: [{name="Step" value="Join"}]
+                    #10 FillingRightJoinSide [FillingRightJoinSide]
+                        properties: [{name="Step" value="Join"}]
+                      #11 Resize [Resize]
+                          parallel: yes
+                          properties: [{name="Step" value="Join"}, {name="Streams" value="2"}, {name="Input ports" value="2"}, {name="Output ports" value="1"}]
+                          workers_planned: 2
+                        #12 DelayedPorts [DelayedPorts]
+                            properties: [{name="Step" value="Join"}, {name="Input ports" value="2"}, {name="Output ports" value="2"}]
+                          #13 JoiningTransform [JoiningTransform]
+                              properties: [{name="Step" value="Join"}, {name="Input ports" value="2"}, {name="Output ports" value="1"}]
+                            #14 DelayedJoinedBlocksWorkerTransform [DelayedJoinedBlocksWorkerTransform]
+                                properties: [{name="Step" value="Join"}]
+                              #15 SimpleSquashingTransform [SimpleSquashingTransform]
+                                  properties: [{name="Step" value="Join"}]
+                                #16 DelayedJoinedBlocksTransform [DelayedJoinedBlocksTransform]
+                                    properties: [{name="Step" value="Join"}, {name="Input ports" value="0"}, {name="Output ports" value="1"}]
+                                  #17 ExpressionTransform [ExpressionTransform]
+                                      properties: [{name="Step" value="Expression"}]
+                                    #18 ExpressionTransform [ExpressionTransform]
+                                        properties: [{name="Step" value="Expression"}]
+                                      #19 MergeTreeSelect(pool: ReadPoolInOrder, algorithm: InOrder) [MergeTreeSelect]
+                                          properties: [{name="Step" value="ReadFromMergeTree"}, {name="Input ports" value="0"}, {name="Output ports" value="1"}]
+                                  #20 ExpressionTransform [ExpressionTransform]
+                                      parallel: yes
+                                      properties: [{name="Step" value="Expression"}, {name="Streams" value="4"}]
+                                      workers_planned: 4
+                                    #21 BuildRuntimeFilterTransform [BuildRuntimeFilterTransform]
+                                        parallel: yes
+                                        properties: [{name="Step" value="BuildRuntimeFilter"}, {name="Streams" value="4"}]
+                                        workers_planned: 4
+                                      #22 ExpressionTransform [ExpressionTransform]
+                                          parallel: yes
+                                          properties: [{name="Step" value="Expression"}, {name="Streams" value="4"}]
+                                          workers_planned: 4
+                                        #23 MergeTreeSelect(pool: ReadPool, algorithm: Thread) [MergeTreeSelect]
+                                            parallel: yes
+                                            properties: [{name="Step" value="ReadFromMergeTree"}, {name="Streams" value="4"}, {name="Input ports" value="0"}, {name="Output ports" value="1"}]
+                                            workers_planned: 4

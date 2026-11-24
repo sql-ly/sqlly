@@ -1,0 +1,99 @@
+Row 1:
+──────
+explain: Expression ((Project names + Projection))
+
+Row 2:
+──────
+explain:   Aggregating
+
+Row 3:
+──────
+explain:     Expression (Before GROUP BY)
+
+Row 4:
+──────
+explain:       Expression
+
+Row 5:
+──────
+explain:         ReadFromMergeTree (default.orders)
+
+Row 6:
+──────
+explain:         Indexes:
+
+Row 7:
+──────
+explain:           MinMax
+
+Row 8:
+──────
+explain:             Condition: true
+
+Row 9:
+───────
+explain:             Parts: 10/10
+
+Row 10:
+───────
+explain:             Granules: 389/389
+
+Row 11:
+───────
+explain:           Partition
+
+Row 12:
+───────
+explain:             Condition: true
+
+Row 13:
+───────
+explain:             Parts: 10/10
+
+Row 14:
+───────
+explain:             Granules: 389/389
+
+Row 15:
+───────
+explain:           PrimaryKey
+
+Row 16:
+───────
+explain:             Keys: 
+
+Row 17:
+───────
+explain:               customer_id
+
+Row 18:
+───────
+explain:             Condition: and((customer_id in (-Inf, 200]), (customer_id in [100, +Inf)))
+
+Row 19:
+───────
+explain:             Parts: 10/10
+
+Row 20:
+───────
+explain:             Granules: 10/389
+
+Row 21:
+───────
+explain:           Skip
+
+Row 22:
+───────
+explain:             Name: total_idx
+
+Row 23:
+───────
+explain:             Description: minmax GRANULARITY 4
+
+Row 24:
+───────
+explain:             Parts: 10/10
+
+Row 25:
+───────
+explain:             Granules: 10/10

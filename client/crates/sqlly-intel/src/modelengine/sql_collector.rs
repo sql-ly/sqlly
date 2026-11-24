@@ -11,7 +11,9 @@
 //! and returns string rows; everything dialect-specific lives in the shared
 //! SQL layer, and everything model-specific lives here.
 
-use crate::metadata::{MetadataDialect, MetadataQuery, sql_for_dialect};
+use crate::metadata::{
+    MetadataDialect, MetadataQuery, sql_for_dialect, tables_partition_of_column,
+};
 use crate::modelengine::collect::{CatalogCollector, CollectUnit};
 use crate::modelengine::pool::{ConnectionPool, PoolError};
 use async_trait::async_trait;
@@ -195,6 +197,7 @@ impl CatalogCollector for SqlCatalogCollector {
                 }
             }
 
+            let partition_column = tables_partition_of_column(md);
             let mut fragments = Vec::new();
             for row in &tables {
                 let (Some(schema), Some(name)) = (cell(row, 0), cell(row, 1)) else {
@@ -205,6 +208,13 @@ impl CatalogCollector for SqlCatalogCollector {
                 let primary_key = pk_by_table.remove(&table_key).unwrap_or_default();
                 let foreign_keys = fk_by_table.remove(&table_key).unwrap_or_default();
                 let references = foreign_keys.iter().map(|fk| fk.target.clone()).collect();
+                let mut options = std::collections::BTreeMap::new();
+                if let Some(parent) = partition_column.and_then(|i| cell(row, i)) {
+                    options.insert(
+                        TableBody::PARTITION_OF_OPTION.to_string(),
+                        parent.to_string(),
+                    );
+                }
                 fragments.push(ObjectFragment {
                     reference: object_ref(schema, name, dialect),
                     kind: ObjectKind::Table,
@@ -221,7 +231,7 @@ impl CatalogCollector for SqlCatalogCollector {
                         unique_keys: Vec::new(),
                         foreign_keys,
                         checks: Vec::new(),
-                        options: std::collections::BTreeMap::new(),
+                        options,
                     }),
                     provenance: provenance(),
                     fidelity: Fidelity::Exact,

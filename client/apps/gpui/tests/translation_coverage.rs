@@ -10,10 +10,16 @@ use std::path::{Path, PathBuf};
 /// observe. Every entry must name the mechanism and why a direct key is
 /// impossible; do not use this list to preserve unused catalog entries.
 const INDIRECT_KEY_ALLOWLIST: &[(&str, &str)] = &[];
-const EXTERNAL_KEY_PREFIX_ALLOWLIST: &[(&str, &str)] = &[(
-    "datatable.",
-    "sqlly-datatable consumes these keys inside its external crate through the translator installed by GPUI; the dependency, installer, and behavior test are required below",
-)];
+const EXTERNAL_KEY_PREFIX_ALLOWLIST: &[(&str, &str)] = &[
+    (
+        "datatable.",
+        "sqlly-datatable consumes these keys inside its external crate through the translator installed by GPUI; the dependency, installer, and behavior test are required below",
+    ),
+    (
+        "services.plans.",
+        "the sqlly-intel plan core builds most of these keys from tables (`phrase!`, `step_phrases!`, `op!` and the finding templates) with `concat!` or a prefix, which no literal scan can see; its own tests check both directions against en.json (every key it can emit is there with the same value and location, and every catalog key is one it emits), and those tests are required below",
+    ),
+];
 const PARAMETERIZED_HELPER_CONTRACTS: &[(&str, &str, &str, &str)] = &[(
     "src/snippets.rs",
     "quick_action_title",
@@ -877,6 +883,7 @@ fn translation_calls(tokens: &[Token], relative: &str) -> (Vec<TranslationCall>,
             && tokens[at + 1].symbol('!')
             && tokens[at + 2].symbol('(')
             && let TokenKind::String(key) = &tokens[at + 3].kind
+            && looks_like_catalog_key(key)
         {
             calls.push(TranslationCall {
                 keys: BTreeSet::from([key.clone()]),
@@ -1018,7 +1025,17 @@ fn translation_manager_key_uses() -> Option<Vec<KeyUse>> {
             .chain(page.iter())
             .any(|(key, _)| key == "translation_manager.result_limit")
     );
-    Some(uses.into_iter().chain(page).collect())
+    let model = page_model_key_uses(
+        "../../../server/Sqlly.Api/Pages/Translations.cshtml.cs",
+        "translation_manager.",
+    );
+    assert!(
+        model
+            .iter()
+            .any(|(key, _)| key == "translation_manager.access_request_failed"),
+        "the page model must expose its Text keys to the coverage scan"
+    );
+    Some(uses.into_iter().chain(page).chain(model).collect())
 }
 
 /// `@T("key")` markup calls (and plain `T("key")` calls inside the page's
@@ -1026,18 +1043,41 @@ fn translation_manager_key_uses() -> Option<Vec<KeyUse>> {
 /// (`string T(string key) => Model.Messages["prefix" + key]`), so the
 /// coverage scan must resolve them the same way.
 fn razor_page_key_uses(relative: &str, prefix: &str) -> Vec<KeyUse> {
+    let uses = quoted_call_key_uses(relative, "T", prefix);
+    assert!(
+        uses.iter()
+            .any(|(key, _)| key == "translation_manager.search_placeholder")
+            && uses
+                .iter()
+                .any(|(key, _)| key == "translation_manager.page_title"),
+        "the Razor page must expose its @T keys to the coverage scan"
+    );
+    uses
+}
+
+/// `Text("key")` calls in the page model (validation and status messages it
+/// renders itself), prefixed the same way as the page's `T("key")` calls.
+fn page_model_key_uses(relative: &str, prefix: &str) -> Vec<KeyUse> {
+    quoted_call_key_uses(relative, "Text", prefix)
+}
+
+/// Every `name("literal")` call in a website source file, as `prefix` +
+/// literal. A call whose name is only the tail of a longer identifier is not
+/// counted.
+fn quoted_call_key_uses(relative: &str, name: &str, prefix: &str) -> Vec<KeyUse> {
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(relative);
     let source = std::fs::read_to_string(&path)
-        .expect("read translation workbench page")
+        .expect("read translation workbench source")
         .replace("\r\n", "\n");
+    let needle = format!("{name}(\"");
     let mut uses = Vec::new();
     let mut at = 0;
-    while let Some(found) = source[at..].find("T(\"") {
+    while let Some(found) = source[at..].find(&needle) {
         let call = at + found;
         let preceded_by_ident = call > 0
             && (source.as_bytes()[call - 1].is_ascii_alphanumeric()
                 || source.as_bytes()[call - 1] == b'_');
-        let start = call + 3;
+        let start = call + needle.len();
         let Some(end) = source[start..].find('"') else {
             break;
         };
@@ -1050,14 +1090,6 @@ fn razor_page_key_uses(relative: &str, prefix: &str) -> Vec<KeyUse> {
         }
         at = start + end;
     }
-    assert!(
-        uses.iter()
-            .any(|(key, _)| key == "translation_manager.search_placeholder")
-            && uses
-                .iter()
-                .any(|(key, _)| key == "translation_manager.page_title"),
-        "the Razor page must expose its @T keys to the coverage scan"
-    );
     uses
 }
 
@@ -1164,6 +1196,14 @@ fn command_palette_key_uses() -> Vec<KeyUse> {
     for at in 0..tokens.len().saturating_sub(1) {
         if tokens[at].ident("register") && tokens[at + 1].symbol('(') {
             let end = call_end(&tokens, at + 1);
+            // A title already read through `localization` is translated by
+            // its own key; the derived key would only override it.
+            if tokens[at + 2..end]
+                .iter()
+                .any(|token| token.ident("localization"))
+            {
+                continue;
+            }
             for field in at + 2..end.saturating_sub(3) {
                 if tokens[field].ident("id")
                     && tokens[field + 1].symbol(':')
@@ -1263,10 +1303,67 @@ fn run_label_key_uses() -> Vec<KeyUse> {
     uses
 }
 
+/// Report chrome labels: `labels! { field => "English", … }` in the report
+/// module builds each key as `notebook.report.labels.<field>`.
+fn report_label_key_uses() -> Vec<KeyUse> {
+    let relative = "../../crates/sqlly-services/src/report/labels.rs";
+    let source = std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join(relative))
+        .expect("read report label table")
+        .replace("\r\n", "\n");
+    assert!(
+        source.contains("concat!(\"notebook.report.labels.\", stringify!($field))"),
+        "report-label scanner requires the concat!(prefix, stringify!($field)) key contract"
+    );
+    let tokens = shipped_tokens(&lex_rust(&source));
+    let start = (0..tokens.len().saturating_sub(2))
+        .find(|at| {
+            tokens[*at].ident("labels") && tokens[at + 1].symbol('!') && tokens[at + 2].symbol('{')
+        })
+        .expect("labels! { … } table");
+    let mut depth = 0;
+    let end = (start + 2..tokens.len())
+        .find(|at| {
+            if tokens[*at].symbol('{') {
+                depth += 1;
+            } else if tokens[*at].symbol('}') {
+                depth -= 1;
+            }
+            depth == 0
+        })
+        .expect("end of labels! table");
+    let mut uses = Vec::new();
+    for at in start + 3..end.saturating_sub(2) {
+        if let TokenKind::Ident(field) = &tokens[at].kind
+            && tokens[at + 1].symbol('=')
+            && tokens[at + 2].symbol('>')
+        {
+            uses.push((
+                format!("notebook.report.labels.{field}"),
+                format!("{relative}:{}", tokens[at].line),
+            ));
+        }
+    }
+    assert!(
+        uses.iter()
+            .any(|(key, _)| key == "notebook.report.labels.page_of"),
+        "report-label scanner must find page_of"
+    );
+    uses
+}
+
+/// Keys that shared crates and the CLI put in `DisplayMessage`s (and run
+/// records) for the app to resolve: `services.*`, and `notebook.*` for the
+/// notebook core, security, analytics, report and local-data modules.
 fn service_descriptor_key_uses() -> Vec<KeyUse> {
-    let crates = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../crates");
+    let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
     let mut files = Vec::new();
-    rust_files(&crates, &mut files);
+    rust_files(&manifest.join("../../crates"), &mut files);
+    rust_files(&manifest.join("../cli/src"), &mut files);
+    // `#[cfg(test)] mod …_tests;` files hold test-only literals.
+    files.retain(|path| {
+        path.file_name()
+            .is_none_or(|name| !name.to_string_lossy().ends_with("_tests.rs"))
+    });
     files.sort();
     let mut uses = Vec::new();
     for path in files {
@@ -1279,8 +1376,14 @@ fn service_descriptor_key_uses() -> Vec<KeyUse> {
             .to_string_lossy()
             .replace('\\', "/");
         for token in shipped_tokens(&lex_rust(&source)) {
+            // A literal ending in `.` is a prefix a key is built from
+            // (`concat!("services.plans.", name)`), not a key.
             if let TokenKind::String(key) = &token.kind
-                && key.starts_with("services.")
+                && !key.ends_with('.')
+                && (key.starts_with("services.")
+                    || key.starts_with("notebook.")
+                        && looks_like_catalog_key(key)
+                        && key.split('.').count() > 2)
             {
                 uses.push((key.clone(), format!("{relative}:{}", token.line)));
             }
@@ -1322,6 +1425,30 @@ fn datatable_contract_violations() -> Vec<String> {
         );
     }
     violations
+}
+
+/// The `services.plans.` allowance holds only while the plan core's own
+/// two-way catalog tests exist, run as tests, and cover the finding strings.
+fn plan_core_contract_violations() -> Vec<String> {
+    let phrases = std::fs::read_to_string(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../crates/sqlly-intel/src/plans/phrases.rs"),
+    )
+    .expect("read plan phrase tables")
+    .replace("\r\n", "\n");
+    let requirements = [
+        "#[test]\n    fn the_english_catalog_holds_every_plan_phrase()",
+        "#[test]\n    fn every_english_plan_key_is_emitted_by_the_core()",
+        "entries.extend(crate::plans::findings::finding_catalog_entries());",
+    ];
+    requirements
+        .into_iter()
+        .filter(|required| !phrases.contains(required))
+        .map(|required| {
+            format!(
+                "services.plans.* external allowance requires sqlly-intel plans/phrases.rs contract `{required}`"
+            )
+        })
+        .collect()
 }
 
 #[test]
@@ -1369,6 +1496,7 @@ fn direct_translation_keys_are_known_and_catalog_keys_are_referenced() {
         .chain(translation_manager_uses)
         .chain(command_palette_key_uses())
         .chain(run_label_key_uses())
+        .chain(report_label_key_uses())
         .chain(service_descriptor_key_uses());
     for (key, location) in indirect_uses {
         referenced.insert(key.clone());
@@ -1377,6 +1505,7 @@ fn direct_translation_keys_are_known_and_catalog_keys_are_referenced() {
         }
     }
     violations.extend(datatable_contract_violations());
+    violations.extend(plan_core_contract_violations());
 
     for key in catalog.difference(&referenced) {
         if let Some(justification) = allowed.get(key.as_str()) {
@@ -1692,6 +1821,20 @@ fn is_internal_argument_name(
             .any(|name| tokens[at - 2].ident(name))
         && tokens[at - 1].symbol('(')
         && tokens.get(at + 1).is_some_and(|token| token.symbol(','));
+    // Notebook editor helpers whose string arguments are spec field names,
+    // element-id parts or format codes, never shown text.
+    let id_helper = enclosing_call_name(tokens, at).is_some_and(|name| {
+        [
+            "column_choice",
+            "currency",
+            "drop_fields",
+            "encoding",
+            "option_row",
+            "set_spec_field",
+            "toggles",
+        ]
+        .contains(&name)
+    });
     let format_argument = at >= 1
         && tokens[at - 1].symbol('(')
         && tokens.get(at + 1).is_some_and(|token| token.symbol(','))
@@ -1706,7 +1849,26 @@ fn is_internal_argument_name(
         || at >= 2 && tokens[at - 1].symbol('=') && tokens[at - 2].symbol('!')
         || tokens.get(at + 1).is_some_and(|token| token.symbol('!'))
             && tokens.get(at + 2).is_some_and(|token| token.symbol('='));
-    named_helper || format_argument || match_sentinel
+    named_helper || id_helper || format_argument || match_sentinel
+}
+
+/// The function or method named right before the innermost call around `at`.
+fn enclosing_call_name(tokens: &[Token], at: usize) -> Option<&str> {
+    let mut depth = 0;
+    for index in (0..at).rev() {
+        if tokens[index].symbol(')') {
+            depth += 1;
+        } else if tokens[index].symbol('(') {
+            if depth == 0 {
+                return match &tokens.get(index.checked_sub(1)?)?.kind {
+                    TokenKind::Ident(name) => Some(name.as_str()),
+                    _ => None,
+                };
+            }
+            depth -= 1;
+        }
+    }
+    None
 }
 
 fn is_stable_diff_class_filter_id(tokens: &[Token], at: usize) -> bool {
@@ -2123,6 +2285,36 @@ fn scanner_handles_raw_strings_named_placeholders_and_test_modules() {
 /// unresolved call site, so the list only shrinks.
 const FORMAT_CONTRACT_UNRESOLVED: &[(&str, &str, &str)] = &[
     (
+        "src/command_palette.rs",
+        "default_registry",
+        "notebook editing commands read their title through text() from the &'static str title_key of each CommandSpec in notebook::editing::keys::COMMANDS",
+    ),
+    (
+        "src/notebook/cells/plan.rs",
+        "render",
+        "the sweep note is a &'static str key from the benchmark refusal match in analysis/run.rs (notebook.analysis.sweep.*, all brace-free), read through text()",
+    ),
+    (
+        "src/notebook/editing/mod.rs",
+        "restore_step",
+        "picks nothing_to_undo or nothing_to_redo (both brace-free) with an if expression and reads it through text()",
+    ),
+    (
+        "src/notebook/export_dialog.rs",
+        "render_options",
+        "SQL placement labels come from the local key closure over SqlPlacement (sql_inline/sql_appendix/sql_none, all brace-free), read through text()",
+    ),
+    (
+        "src/notebook/local/render.rs",
+        "render_local_inspector",
+        "cache-policy and storage labels come from local (variant, key) tables of brace-free notebook.local.inspector.* keys, read through text()",
+    ),
+    (
+        "src/notebook/visual/mod.rs",
+        "render_panel",
+        "provenance labels come from provenance_rows' (key, value) pairs of brace-free notebook.visual.provenance.* keys, read through text()",
+    ),
+    (
         "src/app/mod.rs",
         "render",
         "the information-panel title key arrives through the overlays tuple (\"about.window_title\" / \"open_source.window_title\", both brace-free) and is read through text()",
@@ -2215,9 +2407,22 @@ const FORMAT_CONTRACT_UNRESOLVED: &[(&str, &str, &str)] = &[
 ];
 
 /// Keys read through `text()` whose English value shows brace syntax to the
-/// user on purpose (template variables, filename tokens), so the braces are
-/// prose rather than placeholders: `(key, justification)`.
+/// user on purpose (template variables, filename tokens, the notebook's
+/// `{{name}}` references), so the braces are prose rather than placeholders:
+/// `(key, justification)`.
 const TEXT_LITERAL_BRACES: &[(&str, &str)] = &[
+    (
+        "notebook.editing.slash.reference",
+        "slash-menu label showing the {{…}} cell reference syntax the item inserts",
+    ),
+    (
+        "notebook.params.editor.query_hint",
+        "hint showing the {{param.name}} syntax a choices query uses to read another parameter",
+    ),
+    (
+        "notebook.params.rail.hint",
+        "hint showing the {{param.name}} syntax SQL and Markdown cells use to read a parameter",
+    ),
     (
         "ai.templates.comment_selection_body",
         "AI prompt template stored verbatim; ai_templates::expand fills ${selection} later",
@@ -3135,7 +3340,7 @@ fn with_arg_chain(tokens: &[Token], mut end: usize) -> BTreeSet<String> {
     let mut names = BTreeSet::new();
     while end + 3 < tokens.len()
         && tokens[end].symbol('.')
-        && tokens[end + 1].ident("with_arg")
+        && (tokens[end + 1].ident("with_arg") || tokens[end + 1].ident("with_message_arg"))
         && tokens[end + 2].symbol('(')
     {
         if let TokenKind::String(name) = &tokens[end + 3].kind {
@@ -3160,12 +3365,28 @@ fn later_with_args(tokens: &[Token], binding_end: usize, name: &str) -> BTreeSet
                 break;
             }
         }
-        if tokens[at].ident(name) && tokens[at + 1].symbol('.') && tokens[at + 2].ident("with_arg")
+        if tokens[at].ident(name)
+            && tokens[at + 1].symbol('.')
+            && (tokens[at + 2].ident("with_arg") || tokens[at + 2].ident("with_message_arg"))
         {
             names.extend(with_arg_chain(tokens, at + 1));
         }
     }
     names
+}
+
+/// `….fold(DisplayMessage::new(key, …), |m, (name, value)| m.with_arg(…))`:
+/// the argument names come from a list the scan cannot read.
+fn is_fold_seed(tokens: &[Token], at: usize) -> bool {
+    let mut start = at;
+    while start >= 3
+        && tokens[start - 1].symbol(':')
+        && tokens[start - 2].symbol(':')
+        && matches!(tokens[start - 3].kind, TokenKind::Ident(_))
+    {
+        start -= 3;
+    }
+    start >= 2 && tokens[start - 1].symbol('(') && tokens[start - 2].ident("fold")
 }
 
 fn is_path_call(tokens: &[Token], at: usize, path: &str, name: &str) -> bool {
@@ -3417,6 +3638,9 @@ fn scan_placeholder_contract(
                     None => Resolved::Unresolved("missing arguments".into()),
                 },
                 CallKind::Text => Resolved::Value(Arguments::default()),
+                CallKind::Message if is_fold_seed(tokens, at) => {
+                    Resolved::Unresolved("arguments folded in from a list".into())
+                }
                 CallKind::Message => {
                     let end = call_end(tokens, open);
                     let mut arguments = Arguments::exact(with_arg_chain(tokens, end));
@@ -3597,8 +3821,12 @@ fn placeholder_contract_violations(
                     continue;
                 };
                 // `text()` returns the value verbatim: `{{`/`}}` would show
-                // doubled braces, so such a key must be formatted instead.
-                if call.text && (value.contains("{{") || value.contains("}}")) {
+                // doubled braces, so such a key must be formatted instead
+                // unless the doubled braces are the syntax being shown.
+                if call.text
+                    && (value.contains("{{") || value.contains("}}"))
+                    && !literal_braces.contains(key.as_str())
+                {
                     violations.push(format!(
                         "{}: `{key}` is read through text() but its English value has escaped braces ({{{{ or }}}}) that only format() unescapes (en: {value:?})",
                         call.location
@@ -3675,7 +3903,7 @@ fn formatted_keys_match_their_call_site_arguments() {
     for key in &literal_braces {
         if catalog
             .get(*key)
-            .is_none_or(|value| catalog_placeholders(value).is_empty())
+            .is_none_or(|value| catalog_placeholders(value).is_empty() && !value.contains("{{"))
         {
             violations.push(format!(
                 "stale TEXT_LITERAL_BRACES entry `{key}` (unknown or without braces)"

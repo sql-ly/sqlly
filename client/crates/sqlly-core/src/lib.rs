@@ -52,10 +52,10 @@ pub use connection::{
     AuthenticationType, AzureSqlConnectionDefaults, ConnectionEnvironment, ConnectionId,
     ConnectionPreview, ConnectionProfile, ConnectionProvenance, ConnectionStatus,
     ConnectionTestStatus, DatabaseSummary, DisplayTimeZone, DuplicatedProfile, EntraAccountBinding,
-    KubePortForward, KubeTargetKind, MaskRule, MaskingOverrides, ProxyHop, ProxyKind, RuleScope,
-    SecretCopy, SecretProvider, SecretRef, SshAuth, SshHop, SshKeepalive, SshTunnelConfig,
-    SsmPortForward, StoredMessage, TlsMode, TransportChain, TunnelProfile, TunnelProfileId,
-    copy_name, redact_error_summary, unique_copy_name,
+    KubePortForward, KubeTargetKind, MaskRule, MaskingOverrides, PgOAuthFlow, ProxyHop, ProxyKind,
+    RuleScope, SecretCopy, SecretProvider, SecretRef, SshAuth, SshHop, SshKeepalive,
+    SshTunnelConfig, SsmPortForward, StoredMessage, TlsMode, TransportChain, TunnelProfile,
+    TunnelProfileId, copy_name, redact_error_summary, unique_copy_name,
 };
 pub use connection_management::*;
 pub use connection_management_commands::{

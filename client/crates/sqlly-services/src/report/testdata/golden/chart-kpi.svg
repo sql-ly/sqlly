@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360" role="img" aria-labelledby="kpi-title kpi-desc" font-family="&apos;Noto Sans&apos;, -apple-system, &apos;Segoe UI&apos;, &apos;Helvetica Neue&apos;, Arial, sans-serif">
+<title id="kpi-title">West revenue</title>
+<desc id="kpi-desc">kpi · month, revenue · 12</desc>
+<rect width="640" height="360" fill="#ffffff"/>
+<rect x="0.5" y="0.5" width="639" height="359" rx="6" fill="#f4f8ff" stroke="#c6d9ef" stroke-width="1"/>
+<text x="14" y="22.5" font-size="10.5" fill="#3c5a85">West revenue</text>
+<text x="14" y="62.5" font-size="34" fill="#0f2544" font-weight="600">$2,026.00</text>
+<text x="14" y="78.5" font-size="10" fill="#2c6a2f">▲ +4.4% vs 2026-11-01</text>
+<path d="M14.5 349.5 L70.05 335.76 L125.59 322.03 L181.14 308.29 L236.68 294.55 L292.23 280.81 L347.77 267.08 L403.32 253.34 L458.86 95 L514.41 225.87 L569.95 212.13 L625.5 198.39 L625.5 352 L14.5 352 Z" fill="#1a5fb4" fill-opacity="0.15"/>
+<path d="M14.5 349.5 L70.05 335.76 L125.59 322.03 L181.14 308.29 L236.68 294.55 L292.23 280.81 L347.77 267.08 L403.32 253.34 L458.86 95 L514.41 225.87 L569.95 212.13 L625.5 198.39" fill="none" stroke="#1a5fb4" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="625.5" cy="198.39" r="2.2" fill="#1a5fb4"/>
+</svg>

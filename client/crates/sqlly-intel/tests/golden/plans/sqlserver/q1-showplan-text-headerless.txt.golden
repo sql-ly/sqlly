@@ -1,0 +1,50 @@
+format: sqlserver-text (Certain)
+statements: 1
+
+== statement 1
+dialect: "SqlServer"
+source_format: "sqlserver-text"
+statement_text: "SELECT c.country, COUNT(*) AS orders, SUM(o.total) AS revenue FROM dbo.orders o JOIN dbo.customers c ON c.customer_id = o.customer_id WHERE o.status = 'refunded..."
+statement_type: "SELECT"
+warnings: [{TableScan={schema="dbo" table="orders"}}, {TableScan={schema="dbo" table="customers"}}]
+operators: 12
+  #1 Sort [Sort]
+      sort_keys: ["Expr1003 DESC"]
+    #2 Compute Scalar [Compute Scalar]
+        properties: [{name="DEFINE" value="[Expr1002]=CONVERT_IMPLICIT(int,[globalagg1005],0)"}]
+      #3 Stream Aggregate [Stream Aggregate]
+          group_keys: ["c.country"]
+          properties: [{name="DEFINE" value="[globalagg1005]=SUM([partialagg1004]), [Expr1003]=SUM([partialagg1006])"}]
+        #4 Sort [Sort]
+            sort_keys: ["c.country"]
+          #5 Parallelism [Gather Streams]
+            #6 Hash Match [Partial Aggregate]
+                group_keys: ["c.country"]
+                properties: [{name="DEFINE" value="[partialagg1004]=COUNT(*), [partialagg1006]=SUM([Shop].[dbo].[orders].[total] as [o].[total])"}, {name="RESIDUAL" value="[Shop].[dbo].[customers].[country] as [c].[country] = [Shop].[dbo].[customers].[country] as [c].[country]"}]
+              #7 Hash Match [Inner Join]
+                  join_predicate: "o.customer_id = c.customer_id"
+                  join_type: "Inner"
+                #8 Bitmap [Bitmap]
+                    properties: [{name="HASH" value="[o].[customer_id]"}, {name="DEFINE" value="[Bitmap1007]"}]
+                  #9 Parallelism [Repartition Streams]
+                      extra: ["Hash Partitioning"]
+                      properties: [{name="PARTITION COLUMNS" value="[o].[customer_id]"}]
+                    #10 Clustered Index Scan [Clustered Index Scan]
+                        alias: "o"
+                        database: "Shop"
+                        filter: "[Shop].[dbo].[orders].[total] as [o].[total]>(1200.00) AND [Shop].[dbo].[orders].[status] as [o].[status]='refunded'"
+                        index_name: "PK__orders__46596229A6DBB338"
+                        relation: "orders"
+                        schema: "dbo"
+                        warnings: [{TableScan={schema="dbo" table="orders"}}]
+                #11 Parallelism [Repartition Streams]
+                    extra: ["Hash Partitioning"]
+                    properties: [{name="PARTITION COLUMNS" value="[c].[customer_id]"}]
+                  #12 Clustered Index Scan [Clustered Index Scan]
+                      alias: "c"
+                      database: "Shop"
+                      filter: "PROBE([Bitmap1007],[Shop].[dbo].[customers].[customer_id] as [c].[customer_id],N'[IN ROW]')"
+                      index_name: "PK__customer__CD65CB850EC2D984"
+                      relation: "customers"
+                      schema: "dbo"
+                      warnings: [{TableScan={schema="dbo" table="customers"}}]

@@ -9,6 +9,9 @@ description = "SQLLY in the browser: the real gpui app compiled to WebAssembly v
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[features]
+translator-locator = ["sqlly-gpui/translator-locator"]
+
 [dependencies]
 # The real application: every view and service binding the desktop app runs.
 sqlly-gpui = { path = "../gpui" }
@@ -37,7 +40,13 @@ sqlite-wasm-rs = { version = "0.6", features = ["wasm-bindgen"] }
 wasm-bindgen = "0.2"
 # Folding Mac ⌘ into Ctrl on input events (see `mac_command_key` in lib.rs).
 js-sys = "0.3"
-web-sys = { version = "0.3", features = ["Window", "Navigator", "EventTarget"] }
+web-sys = { version = "0.3", features = ["Window", "Navigator", "EventTarget", "Location", "Response"] }
+# Fetching the regional interface font when the language needs one (fonts.rs).
+wasm-bindgen-futures = "0.4"
+sqlly-i18n = { path = "../../crates/sqlly-i18n", version = "1.20.0" }
+# The web platform itself, built directly so browser canvas fallback covers
+# CJK as well as emoji (gpui_platform's constructors keep emoji only).
+gpui_web = { package = "gpui-pre-web", version = "=0.3.11", default-features = false }
 console_error_panic_hook = "0.1"
 console_log = "1"
 log = "0.4"
@@ -48,6 +57,10 @@ tracing-wasm = "0.2"
 # dependency on how/where dist/ is served.
 include_dir = "0.7"
 # Decodes the named arguments boot.js passes to `translation_message`.
+serde_json = { workspace = true }
+
+[dev-dependencies]
+# tests/font_coverage.rs reads the translation catalogs.
 serde_json = { workspace = true }
 
 [lints]

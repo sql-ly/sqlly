@@ -31,6 +31,7 @@
 #![forbid(unsafe_code)]
 
 pub mod catalog;
+pub mod oauth;
 
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
@@ -508,6 +509,7 @@ pub fn config_from_profile(
                 "Auth-token sign-in applies to libSQL / Turso, not PostgreSQL".into(),
             ));
         }
+        AuthenticationType::PostgresOAuth { .. } => oauth::apply_to_config(&mut config, profile)?,
     }
     Ok(config)
 }
@@ -518,6 +520,28 @@ pub fn config_from_profile(
 /// `trust_server_certificate`) the connection errors instead of silently
 /// downgrading to plaintext.
 pub async fn open_client(profile: &ConnectionProfile) -> StudioResult<PgClient> {
+    let client = connect(profile).await.map_err(|error| match error {
+        ConnectError::Studio(error) => error,
+        ConnectError::Driver(error) => with_direct_tls_hint(profile, to_connection_error(error)),
+    })?;
+    apply_startup_sql(&client, profile).await?;
+    Ok(client)
+}
+
+/// Why [`connect`] failed: a local problem (profile, tunnel, TLS setup,
+/// timeout) or the driver's own error, kept whole so callers can inspect it.
+enum ConnectError {
+    Studio(StudioError),
+    Driver(tokio_postgres::Error),
+}
+
+impl From<StudioError> for ConnectError {
+    fn from(error: StudioError) -> Self {
+        Self::Studio(error)
+    }
+}
+
+async fn connect(profile: &ConnectionProfile) -> Result<PgClient, ConnectError> {
     let (host, port) = crate::ssh::TunnelManager::global()
         .endpoint_for(profile)
         .await?;
@@ -525,10 +549,10 @@ pub async fn open_client(profile: &ConnectionProfile) -> StudioResult<PgClient> 
     let mode = tls_mode_for_profile(profile);
     let timeout = profile.timeout();
     let timeout_error = || {
-        StudioError::Connection(format!(
+        ConnectError::Studio(StudioError::Connection(format!(
             "timed out connecting to {} after {:?}",
             profile.server, timeout,
-        ))
+        )))
     };
     let notices = Arc::new(NoticeQueue::default());
     let (client, tls) = match mode {
@@ -537,7 +561,7 @@ pub async fn open_client(profile: &ConnectionProfile) -> StudioResult<PgClient> 
             let (client, connection) = tokio::time::timeout(timeout, config.connect(NoTls))
                 .await
                 .map_err(|_| timeout_error())?
-                .map_err(to_connection_error)?;
+                .map_err(ConnectError::Driver)?;
             spawn_connection(connection, notices.clone());
             (client, None)
         }
@@ -550,18 +574,32 @@ pub async fn open_client(profile: &ConnectionProfile) -> StudioResult<PgClient> 
             let (client, connection) = tokio::time::timeout(timeout, config.connect(tls))
                 .await
                 .map_err(|_| timeout_error())?
-                .map_err(|e| with_direct_tls_hint(profile, to_connection_error(e)))?;
+                .map_err(ConnectError::Driver)?;
             spawn_connection(connection, notices.clone());
             (client, Some(tls_config))
         }
     };
-    let client = PgClient {
+    Ok(PgClient {
         client,
         tls,
         notices,
-    };
-    apply_startup_sql(&client, profile).await?;
-    Ok(client)
+    })
+}
+
+/// Ask a PostgreSQL 18 server which OAuth provider and scope it expects, by
+/// signing in with an empty OAUTHBEARER token (the protocol's discovery
+/// request). Only meaningful for [`AuthenticationType::PostgresOAuth`]
+/// profiles.
+pub async fn discover_oauth(profile: &ConnectionProfile) -> StudioResult<oauth::PgOAuthServerHint> {
+    let mut probe = profile.clone();
+    probe.runtime_cloud_iam_token = Some(String::new());
+    match connect(&probe).await {
+        // A server that lets the empty token in (trust auth) has nothing
+        // to discover.
+        Ok(_) => Err(oauth::discovery_unavailable()),
+        Err(ConnectError::Studio(error)) => Err(error),
+        Err(ConnectError::Driver(error)) => oauth::discovery_from_error(&error),
+    }
 }
 
 async fn apply_startup_sql(client: &PgClient, profile: &ConnectionProfile) -> StudioResult<()> {
@@ -1054,6 +1092,9 @@ fn with_direct_tls_hint(profile: &ConnectionProfile, error: StudioError) -> Stud
 }
 
 fn to_connection_error(error: tokio_postgres::Error) -> StudioError {
+    if let Some(oauth) = oauth::oauth_error(&error) {
+        return oauth::connection_error(oauth);
+    }
     let text = error.to_string();
     if text.contains("password") || text.contains("authentication") {
         StudioError::Authentication(crate::connect_hint::with_local_network_hint(text))

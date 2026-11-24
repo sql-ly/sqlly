@@ -1580,6 +1580,42 @@ mod tests {
         ConnectionProfile::sql_login("test", "host", "sa", secret)
     }
 
+    // https://github.com/dbeaver/dbeaver/issues/42743
+    #[test]
+    fn dangerous_query_checks_stay_linear_on_huge_statements() {
+        let rows = 60_000;
+        let mut insert = String::from("INSERT INTO events (id, name, note) VALUES\n");
+        for i in 0..rows {
+            if i > 0 {
+                insert.push_str(",\n");
+            }
+            insert.push_str(&format!("({i}, 'event {i}', 'update; delete from t')"));
+        }
+        let ids: Vec<String> = (0..rows).map(|i| i.to_string()).collect();
+        let select = format!("SELECT * FROM events WHERE id IN ({})", ids.join(", "));
+        let script = format!("{insert};\n{select};\nDELETE FROM audit_log;");
+        assert!(script.len() > 3_000_000);
+
+        let started = std::time::Instant::now();
+        let analysis =
+            analyze_for(DatabaseType::Postgres, &script).expect("an INSERT and a DELETE");
+        let read_only = !contains_non_select_statement_for(DatabaseType::Postgres, &select);
+        let elapsed = started.elapsed();
+        eprintln!("safety checks: {elapsed:?} for {} bytes", script.len());
+
+        let kinds: Vec<ChangeType> = analysis.statements.iter().map(|s| s.change_type).collect();
+        assert_eq!(kinds, [ChangeType::Insert, ChangeType::Delete]);
+        assert!(analysis.statements[1].is_unbounded_dangerous());
+        assert!(read_only, "a huge SELECT is still read-only");
+        // A loose backstop: one lexical pass takes well under a second even in
+        // a debug build; a per-token re-scan or full parse blows far past it.
+        assert!(
+            elapsed < std::time::Duration::from_secs(5),
+            "safety checks took {elapsed:?} on a {} byte script",
+            script.len()
+        );
+    }
+
     #[test]
     fn analyze_select_returns_none() {
         assert!(analyze("SELECT 1").is_none());

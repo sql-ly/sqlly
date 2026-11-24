@@ -489,6 +489,19 @@ pub enum ExportedAuthentication {
     },
     /// libSQL / Turso bearer token; the token itself never leaves the keyring.
     AuthToken,
+    /// PostgreSQL 18 OAuth; the client secret / bearer token never leaves
+    /// the keyring.
+    PostgresOauth {
+        username: String,
+        #[serde(default, skip_serializing_if = "String::is_empty")]
+        issuer: String,
+        #[serde(default, skip_serializing_if = "String::is_empty")]
+        client_id: String,
+        #[serde(default, skip_serializing_if = "String::is_empty")]
+        scope: String,
+        #[serde(default)]
+        flow: crate::connection::PgOAuthFlow,
+    },
 }
 
 /// Maps a live profile to its secret-free export shape.
@@ -523,6 +536,20 @@ pub fn export_profile(profile: &ConnectionProfile) -> ExportedProfile {
                 }
             }
             AuthenticationType::AuthToken { .. } => ExportedAuthentication::AuthToken,
+            AuthenticationType::PostgresOAuth {
+                username,
+                issuer,
+                client_id,
+                scope,
+                flow,
+                ..
+            } => ExportedAuthentication::PostgresOauth {
+                username: username.clone(),
+                issuer: issuer.clone(),
+                client_id: client_id.clone(),
+                scope: scope.clone(),
+                flow: *flow,
+            },
         },
         encrypt: profile.encrypt,
         trust_server_certificate: profile.trust_server_certificate,
@@ -602,6 +629,20 @@ impl ExportedProfile {
                     provider: SecretProvider::InMemory,
                     key: String::new(),
                 },
+            },
+            ExportedAuthentication::PostgresOauth {
+                username,
+                issuer,
+                client_id,
+                scope,
+                flow,
+            } => AuthenticationType::PostgresOAuth {
+                username: username.clone(),
+                issuer: issuer.clone(),
+                client_id: client_id.clone(),
+                scope: scope.clone(),
+                flow: *flow,
+                secret_ref: SecretRef::empty_in_memory(),
             },
         };
         ConnectionProfile {

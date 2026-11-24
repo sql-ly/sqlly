@@ -566,8 +566,22 @@ fn pg_relations(relkinds: &str, schema: Option<&str>) -> String {
         None => "n.nspname NOT IN ('pg_catalog', 'information_schema') AND n.nspname NOT LIKE 'pg_temp%' AND n.nspname NOT LIKE 'pg_toast%'".to_string(),
     };
     format!(
-        "SELECT n.nspname AS schema_name, c.relname AS name, NULL AS create_date, NULL AS modify_date FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace WHERE c.relkind IN ({relkinds}) AND {filter} ORDER BY schema_name, name"
+        "SELECT n.nspname AS schema_name, c.relname AS name, NULL AS create_date, NULL AS modify_date, {PG_PARTITION_OF} AS partition_of FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace WHERE c.relkind IN ({relkinds}) AND {filter} ORDER BY schema_name, name"
     )
+}
+
+/// PostgreSQL (over `pg_class c`): the parent's `schema.name` when the
+/// relation is a declarative partition, else NULL. Read through
+/// `pg_inherits` rather than `relispartition` (PostgreSQL 10+) so older
+/// servers still answer; a parent of relkind `p` tells a partition from a
+/// classic inheritance child, which stays an ordinary table.
+const PG_PARTITION_OF: &str = "(SELECT pn.nspname || '.' || pc.relname FROM pg_catalog.pg_inherits i JOIN pg_catalog.pg_class pc ON pc.oid = i.inhparent JOIN pg_catalog.pg_namespace pn ON pn.oid = pc.relnamespace WHERE i.inhrelid = c.oid AND pc.relkind = 'p' LIMIT 1)";
+
+/// Column index of `partition_of` (the parent's `schema.name`, NULL for an
+/// ordinary table) in this dialect's [`MetadataQuery::Tables`] listing;
+/// `None` where the listing has no such column.
+pub fn tables_partition_of_column(dialect: MetadataDialect) -> Option<usize> {
+    (dialect == MetadataDialect::Postgres).then_some(4)
 }
 
 // ---------------------------------------------------------------------------
@@ -628,8 +642,12 @@ fn mysql_sql(query: &MetadataQuery) -> String {
                  ) inventory ORDER BY kind, schema_name, name"
             )
         }
+        // Computed columns come from EXTRA: GENERATION_EXPRESSION only exists
+        // from MySQL 5.7.6 / MariaDB 10.2, and MariaDB before 10.2 marks its
+        // virtual columns VIRTUAL / PERSISTENT. MySQL 8's DEFAULT_GENERATED is
+        // an expression default, not a computed column.
         MetadataQuery::Columns { schema, object } => format!(
-            "SELECT c.column_name AS name, c.data_type AS type_name, COALESCE(c.character_maximum_length, -1) AS max_length, COALESCE(c.numeric_precision, 0) AS num_precision, COALESCE(c.numeric_scale, 0) AS num_scale, IF(c.is_nullable = 'YES', 1, 0) AS is_nullable, IF(c.extra LIKE '%auto_increment%', 1, 0) AS is_identity, IF(COALESCE(c.generation_expression, '') <> '', 1, 0) AS is_computed FROM information_schema.columns c WHERE c.table_schema = '{}' AND c.table_name = '{}' ORDER BY c.ordinal_position",
+            "SELECT c.column_name AS name, c.data_type AS type_name, COALESCE(c.character_maximum_length, -1) AS max_length, COALESCE(c.numeric_precision, 0) AS num_precision, COALESCE(c.numeric_scale, 0) AS num_scale, IF(c.is_nullable = 'YES', 1, 0) AS is_nullable, IF(c.extra LIKE '%auto_increment%', 1, 0) AS is_identity, IF(c.extra LIKE '%VIRTUAL%' OR c.extra LIKE '%STORED GENERATED%' OR c.extra LIKE '%PERSISTENT%', 1, 0) AS is_computed FROM information_schema.columns c WHERE c.table_schema = '{}' AND c.table_name = '{}' ORDER BY c.ordinal_position",
             mysql_lit(schema),
             mysql_lit(object)
         ),
@@ -706,7 +724,7 @@ fn mysql_sql(query: &MetadataQuery) -> String {
             d = mysql_lit(database)
         ),
         MetadataQuery::ColumnGeneral { schema, table, column } => format!(
-            "SELECT c.TABLE_SCHEMA AS schema_name, c.TABLE_NAME AS table_name, c.COLUMN_NAME AS name, c.ORDINAL_POSITION AS ordinal, c.COLUMN_TYPE AS data_type, c.CHARACTER_MAXIMUM_LENGTH AS max_length, c.NUMERIC_PRECISION AS `precision`, c.NUMERIC_SCALE AS `scale`, IF(c.IS_NULLABLE = 'YES', 1, 0) AS is_nullable, c.COLUMN_DEFAULT AS default_definition, IF(c.EXTRA LIKE '%auto_increment%', 1, 0) AS is_identity, IF(COALESCE(c.GENERATION_EXPRESSION, '') <> '', 1, 0) AS is_computed, c.COLLATION_NAME AS collation_name FROM information_schema.COLUMNS c WHERE c.TABLE_SCHEMA = '{s}' AND c.TABLE_NAME = '{t}' AND c.COLUMN_NAME = '{c}'",
+            "SELECT c.TABLE_SCHEMA AS schema_name, c.TABLE_NAME AS table_name, c.COLUMN_NAME AS name, c.ORDINAL_POSITION AS ordinal, c.COLUMN_TYPE AS data_type, c.CHARACTER_MAXIMUM_LENGTH AS max_length, c.NUMERIC_PRECISION AS `precision`, c.NUMERIC_SCALE AS `scale`, IF(c.IS_NULLABLE = 'YES', 1, 0) AS is_nullable, c.COLUMN_DEFAULT AS default_definition, IF(c.EXTRA LIKE '%auto_increment%', 1, 0) AS is_identity, IF(c.EXTRA LIKE '%VIRTUAL%' OR c.EXTRA LIKE '%STORED GENERATED%' OR c.EXTRA LIKE '%PERSISTENT%', 1, 0) AS is_computed, c.COLLATION_NAME AS collation_name FROM information_schema.COLUMNS c WHERE c.TABLE_SCHEMA = '{s}' AND c.TABLE_NAME = '{t}' AND c.COLUMN_NAME = '{c}'",
             s = mysql_lit(schema),
             t = mysql_lit(table),
             c = mysql_lit(column)
@@ -1617,6 +1635,30 @@ fn oracle_sql(query: &MetadataQuery) -> String {
 mod tests {
     use super::*;
 
+    /// DBeaver #42745: the PostgreSQL tables listing tells a child partition
+    /// from an ordinary table (its parent, at the advertised column), so
+    /// completion can keep partitions out of the way.
+    #[test]
+    fn postgres_tables_listing_names_each_partitions_parent() {
+        let sql = sql_for_dialect(
+            &MetadataQuery::Tables { schema: None },
+            MetadataDialect::Postgres,
+        )
+        .unwrap();
+        assert!(sql.contains("pg_catalog.pg_inherits"), "{sql}");
+        assert!(sql.contains("pc.relkind = 'p'"), "{sql}");
+        let select_list = &sql[..sql.find(" FROM pg_catalog.pg_class c").unwrap()];
+        let partition_of = select_list.find("AS partition_of").unwrap();
+        // The fifth output column (index 4), after the four the listing had.
+        assert!(select_list[..partition_of].contains("AS modify_date"));
+        assert_eq!(
+            tables_partition_of_column(MetadataDialect::Postgres),
+            Some(4)
+        );
+        assert_eq!(tables_partition_of_column(MetadataDialect::SqlServer), None);
+        assert_eq!(tables_partition_of_column(MetadataDialect::MySql), None);
+    }
+
     #[test]
     fn clickhouse_dialect_scopes_by_database_escapes_literals_and_returns_empty_sets() {
         assert_eq!(
@@ -2416,5 +2458,40 @@ mod tests {
         )
         .unwrap();
         assert!(sql.contains("IF(t.table_type = 'VIEW', NULL, t.table_comment) AS comment"));
+    }
+
+    /// `information_schema.COLUMNS.GENERATION_EXPRESSION` only exists from
+    /// MySQL 5.7.6 / MariaDB 10.2 (Sequel Ace #2395 class of failure: the
+    /// columns list breaks on older servers), so the column queries read a
+    /// generated column from `EXTRA` instead, which every version has.
+    #[test]
+    fn mysql_column_queries_work_on_servers_without_generation_expression() {
+        let queries = [
+            MetadataQuery::Columns {
+                schema: "shop".into(),
+                object: "orders".into(),
+            },
+            MetadataQuery::ColumnGeneral {
+                schema: "shop".into(),
+                table: "orders".into(),
+                column: "total".into(),
+            },
+        ];
+        for query in &queries {
+            let sql = sql_for_dialect(query, MetadataDialect::MySql).unwrap();
+            assert!(
+                !sql.to_ascii_lowercase().contains("generation_expression"),
+                "{sql}"
+            );
+            let lower = sql.to_ascii_lowercase();
+            // MySQL 5.7+ / MariaDB 10.2+: `VIRTUAL GENERATED` / `STORED
+            // GENERATED`; MariaDB 5.2-10.1: `VIRTUAL` / `PERSISTENT`. MySQL 8's
+            // `DEFAULT_GENERATED` (an expression default) is not computed.
+            assert!(lower.contains("like '%virtual%'"), "{sql}");
+            assert!(lower.contains("like '%stored generated%'"), "{sql}");
+            assert!(lower.contains("like '%persistent%'"), "{sql}");
+            assert!(!lower.contains("like '%generated%'"), "{sql}");
+            assert!(lower.contains(" as is_computed"), "{sql}");
+        }
     }
 }

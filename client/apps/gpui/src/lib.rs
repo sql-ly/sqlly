@@ -50,6 +50,7 @@ mod azure_sql_token;
 mod backup_restore_dialog;
 #[cfg(not(target_arch = "wasm32"))]
 mod batch_insert_dialog;
+mod block_comment;
 #[cfg(target_arch = "wasm32")]
 mod browser_download;
 mod browser_open;
@@ -137,6 +138,7 @@ mod default_picks;
 #[cfg(not(target_arch = "wasm32"))]
 mod deploy_cart;
 mod designer;
+mod recent_filters;
 mod redis_key_filters;
 mod redis_memory_analyzer;
 // `pub` while the app migrates its dialogs onto the unified chrome: the full
@@ -156,8 +158,6 @@ mod er_diagram;
 mod er_export;
 mod er_layout;
 mod execution_error;
-mod execution_plan;
-mod execution_plan_diagram;
 mod execution_plan_view;
 mod explain_options_popover;
 mod export_options;
@@ -222,6 +222,10 @@ mod mcp_settings;
 mod msgpack;
 mod notification_center;
 mod param_history;
+#[cfg(not(target_arch = "wasm32"))]
+mod pg_oauth_dialog;
+#[cfg(not(target_arch = "wasm32"))]
+mod pg_oauth_token;
 mod query_builder;
 mod query_builder_model;
 #[cfg(not(target_arch = "wasm32"))]
@@ -276,7 +280,17 @@ mod license;
 mod localization;
 pub use localization::{
     apply_host_language, apply_host_overrides, clear_host_overrides, format as translation_format,
-    text as translation_text,
+    observe_localization, text as translation_text,
+};
+#[cfg(target_arch = "wasm32")]
+pub use theme::set_browser_interface_font_family;
+#[cfg(all(target_arch = "wasm32", feature = "translator-locator"))]
+mod translator_locator;
+#[cfg(all(target_arch = "wasm32", feature = "translator-locator"))]
+pub use translator_locator::{
+    Callbacks as TranslationLocatorCallbacks, clear as clear_translation_highlight,
+    highlight as highlight_translation_key, initialize as initialize_translation_locator,
+    set_picking as set_translation_pick_mode,
 };
 mod log_console;
 mod lsp_debug;
@@ -287,8 +301,30 @@ mod menu_bar;
 mod model_codegen;
 mod multi_target_dialog;
 mod mutation_review;
-mod notebook_model;
-mod notebook_view;
+mod notebook;
+
+/// A test binary keeps everything it writes (preferences, query history,
+/// notebooks, recovery copies) in a home folder of its own, never the real
+/// one: CI runs these tests under a real user account. macOS and Linux find
+/// the data folder from `HOME` / `XDG_DATA_HOME`; the notebook override also
+/// covers platforms that don't.
+#[cfg(all(test, not(target_arch = "wasm32")))]
+#[ctor::ctor(unsafe)]
+fn isolate_test_data() {
+    let home = std::env::temp_dir().join(format!("sqlly-gpui-tests-{}", std::process::id()));
+    let data = home.join(".local").join("share");
+    let _ = std::fs::create_dir_all(&data);
+    // SAFETY: runs before main, before any test thread exists.
+    unsafe {
+        std::env::set_var("HOME", &home);
+        std::env::set_var("XDG_DATA_HOME", &data);
+        std::env::set_var(
+            "SQLLY_NOTEBOOK_DATA_DIR",
+            home.join("sqlly-data").join("SQLLY").join("notebooks"),
+        );
+    }
+}
+use notebook::view as notebook_view;
 mod object_browser;
 mod object_browser_model;
 mod object_dependencies;
@@ -322,6 +358,7 @@ mod clickhouse_live;
 mod data_compare;
 mod detached_results;
 mod directive_completion;
+mod json_edit_format;
 mod paste_rows;
 mod pending_changes;
 mod query_history;
@@ -812,6 +849,7 @@ pub fn init_ui(services: Services, cx: &mut App) {
         })
         .detach();
 
+        crate::notebook::present::register_keybindings(cx);
         cx.bind_keys([
             KeyBinding::new("cmd-n", crate::app::NewQueryTab, None),
             KeyBinding::new(
@@ -954,7 +992,14 @@ pub const DEFAULT_EDITOR_FONT: &str = "JetBrains Mono";
 /// JetBrains Mono is the default; Fira Code (the previous default) stays
 /// bundled so anyone who picks it again still gets it.
 fn register_fonts(cx: &mut App) {
-    let fonts: Vec<Cow<'static, [u8]>> = vec![
+    if let Err(e) = cx.text_system().add_fonts(bundled_fonts()) {
+        tracing::warn!("Failed to register bundled editor fonts: {e}");
+    }
+}
+
+/// The font faces compiled into the binary by [`register_fonts`].
+fn bundled_fonts() -> Vec<Cow<'static, [u8]>> {
+    vec![
         Cow::Borrowed(include_bytes!(
             "../resources/fonts/JetBrainsMono-Regular.ttf"
         )),
@@ -975,8 +1020,91 @@ fn register_fonts(cx: &mut App) {
         Cow::Borrowed(include_bytes!("../resources/fonts/FiraCode-Bold.ttf")),
         Cow::Borrowed(include_bytes!("../resources/fonts/FiraCode-Medium.ttf")),
         Cow::Borrowed(include_bytes!("../resources/fonts/FiraCode-SemiBold.ttf")),
-    ];
-    if let Err(e) = cx.text_system().add_fonts(fonts) {
-        tracing::warn!("Failed to register bundled editor fonts: {e}");
+    ]
+}
+
+#[cfg(all(test, not(target_arch = "wasm32")))]
+mod bundled_asset_tests {
+    use super::*;
+    use gpui::AssetSource as _;
+    use gpui_component::{IconName, IconNamed as _};
+
+    fn contains_name(bytes: &[u8], name: &str) -> bool {
+        let ascii = name.as_bytes();
+        let utf16be: Vec<u8> = name.encode_utf16().flat_map(u16::to_be_bytes).collect();
+        bytes.windows(ascii.len()).any(|w| w == ascii)
+            || bytes
+                .windows(utf16be.len())
+                .any(|w| w == utf16be.as_slice())
+    }
+
+    // https://github.com/pgadmin-org/pgadmin4/issues/10712
+    #[test]
+    fn ui_assets_and_fonts_are_served_from_the_binary_not_from_disk() {
+        // Every icon and font the UI needs to get past its first paint comes
+        // out of the executable itself (a borrowed 'static slice, never bytes
+        // read from a file at run time), so an install cannot lose them.
+        for icon in icon_catalog::ALL {
+            let bytes = AppAssets
+                .load(icon.path())
+                .expect("asset load")
+                .unwrap_or_else(|| panic!("{} is not in the binary", icon.path()));
+            assert!(
+                matches!(bytes, Cow::Borrowed(_)),
+                "{} is read at run time instead of compiled in",
+                icon.path()
+            );
+            assert!(
+                std::str::from_utf8(&bytes).unwrap_or("").contains("<svg"),
+                "{} is not an SVG",
+                icon.path()
+            );
+        }
+        for icon in [
+            IconName::Close,
+            IconName::Star,
+            IconName::Undo,
+            IconName::Maximize,
+            IconName::ChevronDown,
+            IconName::Search,
+        ] {
+            let path = icon.path();
+            let bytes = AppAssets
+                .load(&path)
+                .expect("asset load")
+                .unwrap_or_else(|| panic!("component icon {path} is not in the binary"));
+            assert!(!bytes.is_empty(), "component icon {path} is empty");
+        }
+        assert!(
+            !AppAssets.list("icons").expect("asset list").is_empty(),
+            "the bundled component icon set is listable"
+        );
+
+        let fonts = bundled_fonts();
+        assert_eq!(
+            fonts.len(),
+            10,
+            "six JetBrains Mono and four Fira Code faces"
+        );
+        for (index, face) in fonts.iter().enumerate() {
+            assert!(
+                matches!(face, Cow::Borrowed(_)),
+                "bundled font {index} is read at run time instead of compiled in"
+            );
+            assert!(
+                face.len() > 10_000 && face[..4] == [0x00, 0x01, 0x00, 0x00],
+                "bundled font {index} is not a TrueType face"
+            );
+            let family = if index < 6 {
+                "JetBrains Mono"
+            } else {
+                "Fira Code"
+            };
+            assert!(
+                contains_name(face, family),
+                "bundled font {index} does not name {family}"
+            );
+        }
+        assert!(contains_name(&fonts[0], DEFAULT_EDITOR_FONT));
     }
 }

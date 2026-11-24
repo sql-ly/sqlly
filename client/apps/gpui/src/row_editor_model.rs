@@ -291,6 +291,19 @@ impl FieldState {
             FieldDraft::Bytes(bytes) => CellValue::Bytes(bytes.clone()),
         }
     }
+
+    /// [`Self::draft_cell`] as written to the database: a JSON column's
+    /// text is put in `storage`'s format (invalid JSON stays as typed).
+    pub fn stored_cell(&self, storage: crate::json_edit_format::JsonEditStorage) -> CellValue {
+        match &self.draft {
+            FieldDraft::Text(text)
+                if crate::json_edit_format::is_json_type(&self.column.data_type) =>
+            {
+                coerce_text(&storage.apply(text), self.kind)
+            }
+            _ => self.draft_cell(),
+        }
+    }
 }
 
 /// Why `column` (of input `kind`) cannot be written, for the row editor's
@@ -578,6 +591,8 @@ pub struct CheckViolation {
 pub struct RowEditorModel {
     pub session: RowEditSession,
     pub fields: Vec<FieldState>,
+    /// How edited JSON fields are written back on save.
+    pub json_storage: crate::json_edit_format::JsonEditStorage,
 }
 
 impl RowEditorModel {
@@ -665,7 +680,11 @@ impl RowEditorModel {
                 }
             })
             .collect();
-        Self { session, fields }
+        Self {
+            session,
+            fields,
+            json_storage: Default::default(),
+        }
     }
 
     pub fn set_text(&mut self, index: usize, text: String) {
@@ -855,7 +874,10 @@ impl RowEditorModel {
                     FieldDraft::Expression(expr) => {
                         expressions.push((field.column.name.clone(), *expr));
                     }
-                    _ => changes.push((field.column.name.clone(), field.draft_cell())),
+                    _ => changes.push((
+                        field.column.name.clone(),
+                        field.stored_cell(self.json_storage),
+                    )),
                 }
                 (field.column.name.clone(), field.original.clone())
             })
@@ -886,7 +908,10 @@ impl RowEditorModel {
                 FieldDraft::Expression(expr) => {
                     expressions.push((field.column.name.clone(), *expr));
                 }
-                _ => values.push((field.column.name.clone(), field.draft_cell())),
+                _ => values.push((
+                    field.column.name.clone(),
+                    field.stored_cell(self.json_storage),
+                )),
             }
         }
         Some(InsertRowRequest {
@@ -1081,6 +1106,39 @@ mod tests {
 
         model.set_null(1, true);
         assert!(!model.fields[1].is_dirty());
+    }
+
+    #[test]
+    fn json_fields_save_in_the_chosen_format() {
+        use crate::json_edit_format::JsonEditStorage;
+        let original = CellValue::String(r#"{"a":1}"#.into());
+        let typed = "{ \"a\": 2,\n  \"b\": [1.50] }";
+        let saved = |storage: JsonEditStorage, column: &str, text: &str| {
+            let mut model = model_with(col("Doc", column), original.clone());
+            model.json_storage = storage;
+            model.set_text(1, text.into());
+            model.build_update_request().unwrap().changes[0].1.clone()
+        };
+        assert_eq!(
+            saved(JsonEditStorage::KeepAsTyped, "json", typed),
+            CellValue::String(typed.into())
+        );
+        assert_eq!(
+            saved(JsonEditStorage::Minified, "json", typed),
+            CellValue::String(r#"{"a":2,"b":[1.50]}"#.into())
+        );
+        assert_eq!(
+            saved(JsonEditStorage::PrettyPrinted, "jsonb", typed),
+            CellValue::String("{\n  \"a\": 2,\n  \"b\": [\n    1.50\n  ]\n}".into())
+        );
+        assert_eq!(
+            saved(JsonEditStorage::Minified, "json", "{ broken"),
+            CellValue::String("{ broken".into())
+        );
+        assert_eq!(
+            saved(JsonEditStorage::Minified, "nvarchar", typed),
+            CellValue::String(typed.into())
+        );
     }
 
     #[test]

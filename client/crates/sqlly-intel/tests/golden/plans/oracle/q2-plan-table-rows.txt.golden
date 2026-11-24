@@ -1,0 +1,103 @@
+format: oracle-rows (Likely)
+statements: 1
+
+== statement 1
+dialect: "Oracle"
+estimated_rows: 7
+source_format: "oracle-rows"
+statement_type: "EXPLAIN PLAN"
+total_subtree_cost: 18
+operators: 11
+  #0 SELECT STATEMENT [SELECT STATEMENT]
+      estimated_cost: 18
+      estimated_cpu: 191943
+      estimated_io: 18
+      estimated_row_width: 42
+      estimated_rows: 7
+      properties: [{name="Bytes" value="294"}]
+    #1 HASH JOIN [HASH JOIN]
+        estimated_cost: 18
+        estimated_cpu: 191943
+        estimated_io: 18
+        estimated_row_width: 42
+        estimated_rows: 7
+        join_predicate: "\"O\".\"CUSTOMER_ID\"=\"C\".\"ID\""
+        join_type: "INNER"
+        output_list: ["access: \"O\".\"CUSTOMER_ID\"=\"C\".\"ID\""]
+        properties: [{name="Bytes" value="294"}]
+      #2 NESTED LOOPS [NESTED LOOPS]
+          estimated_cost: 18
+          estimated_cpu: 191943
+          estimated_io: 18
+          estimated_row_width: 42
+          estimated_rows: 7
+          join_type: "INNER"
+          properties: [{name="Bytes" value="294"}]
+        #3 NESTED LOOPS [NESTED LOOPS]
+            estimated_cost: 18
+            estimated_cpu: 191943
+            estimated_io: 18
+            estimated_row_width: 42
+            estimated_rows: 7
+            join_type: "INNER"
+            properties: [{name="Bytes" value="294"}]
+          #4 STATISTICS COLLECTOR [STATISTICS COLLECTOR]
+            #5 TABLE ACCESS BY INDEX ROWID BATCHED SHOP.CUSTOMERS [TABLE ACCESS]
+                estimated_cost: 3
+                estimated_cpu: 24324
+                estimated_io: 3
+                estimated_row_width: 27
+                estimated_rows: 7
+                properties: [{name="Bytes" value="189"}]
+                relation: "CUSTOMERS"
+                schema: "SHOP"
+              #6 INDEX RANGE SCAN SHOP.SYS_C008926 [INDEX]
+                  estimated_cost: 2
+                  estimated_cpu: 15843
+                  estimated_io: 2
+                  estimated_rows: 7
+                  index_cond: "\"C\".\"ID\">=100 AND \"C\".\"ID\"<=105"
+                  index_name: "SYS_C008926"
+                  output_list: ["access: \"C\".\"ID\">=100 AND \"C\".\"ID\"<=105"]
+                  schema: "SHOP"
+          #7 INDEX RANGE SCAN SHOP.IX_ORDERS_CUSTOMER [INDEX]
+              estimated_cost: 2
+              estimated_cpu: 16594
+              estimated_io: 2
+              estimated_rows: 1
+              filter: "\"O\".\"CUSTOMER_ID\"<=105 AND \"O\".\"CUSTOMER_ID\">=100"
+              index_cond: "\"O\".\"CUSTOMER_ID\"=\"C\".\"ID\""
+              index_name: "IX_ORDERS_CUSTOMER"
+              output_list: ["access: \"O\".\"CUSTOMER_ID\"=\"C\".\"ID\"", "filter: \"O\".\"CUSTOMER_ID\"<=105 AND \"O\".\"CUSTOMER_ID\">=100"]
+              schema: "SHOP"
+        #8 TABLE ACCESS BY INDEX ROWID SHOP.ORDERS [TABLE ACCESS]
+            estimated_cost: 3
+            estimated_cpu: 23946
+            estimated_io: 3
+            estimated_row_width: 15
+            estimated_rows: 1
+            filter: "\"O\".\"TOTAL\">50"
+            output_list: ["filter: \"O\".\"TOTAL\">50"]
+            properties: [{name="Bytes" value="15"}]
+            relation: "ORDERS"
+            schema: "SHOP"
+      #9 TABLE ACCESS BY INDEX ROWID BATCHED SHOP.ORDERS [TABLE ACCESS]
+          estimated_cost: 3
+          estimated_cpu: 23946
+          estimated_io: 3
+          estimated_row_width: 15
+          estimated_rows: 1
+          filter: "\"O\".\"TOTAL\">50"
+          output_list: ["filter: \"O\".\"TOTAL\">50"]
+          properties: [{name="Bytes" value="15"}]
+          relation: "ORDERS"
+          schema: "SHOP"
+        #10 INDEX RANGE SCAN SHOP.IX_ORDERS_CUSTOMER [INDEX]
+            estimated_cost: 2
+            estimated_cpu: 16594
+            estimated_io: 2
+            estimated_rows: 1
+            index_cond: "\"O\".\"CUSTOMER_ID\">=100 AND \"O\".\"CUSTOMER_ID\"<=105"
+            index_name: "IX_ORDERS_CUSTOMER"
+            output_list: ["access: \"O\".\"CUSTOMER_ID\">=100 AND \"O\".\"CUSTOMER_ID\"<=105"]
+            schema: "SHOP"

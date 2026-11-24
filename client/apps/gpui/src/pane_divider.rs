@@ -398,4 +398,79 @@ mod tests {
     fn expanded_layout_thickness_is_the_hairline() {
         assert_eq!(PaneDivider::expanded_layout_px(), 1.0);
     }
+
+    /// Editor on top, results below, the results divider between them.
+    struct SplitHost {
+        drags: std::rc::Rc<std::cell::RefCell<Vec<f32>>>,
+        toggles: std::rc::Rc<std::cell::RefCell<Vec<bool>>>,
+    }
+
+    impl Render for SplitHost {
+        fn render(
+            &mut self,
+            _window: &mut Window,
+            _cx: &mut gpui::Context<Self>,
+        ) -> impl IntoElement {
+            let drags = self.drags.clone();
+            let toggles = self.toggles.clone();
+            div()
+                .size_full()
+                .flex()
+                .flex_col()
+                .child(
+                    div()
+                        .id("editor")
+                        .flex_1()
+                        .on_mouse_down(MouseButton::Left, |_, _, _| {}),
+                )
+                .child(
+                    PaneDivider::horizontal("results-divider", CollapseDirection::Down)
+                        .on_drag_start(move |y, _, _| drags.borrow_mut().push(y))
+                        .on_toggle(move |collapsed, _, _| toggles.borrow_mut().push(collapsed)),
+                )
+                .child(
+                    div()
+                        .id("results")
+                        .flex_1()
+                        .on_mouse_down(MouseButton::Left, |_, _, _| {}),
+                )
+        }
+    }
+
+    // https://github.com/HeidiSQL/HeidiSQL/issues/2620
+    #[gpui::test]
+    fn editor_results_splitter_starts_a_drag_from_its_whole_grab_band(
+        cx: &mut gpui::TestAppContext,
+    ) {
+        let drags = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
+        let toggles = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
+        let (host_drags, host_toggles) = (drags.clone(), toggles.clone());
+        let (_host, cx) = cx.add_window_view(move |_, _| SplitHost {
+            drags: host_drags,
+            toggles: host_toggles,
+        });
+        cx.simulate_resize(gpui::size(px(800.0), px(601.0)));
+        cx.run_until_parked();
+        // The 1px hairline sits at y = 300; the grab band is 6px centered on it.
+        let half = Theme::scaled(6.0) / 2.0;
+        let press = |cx: &mut gpui::VisualTestContext, y: f32| {
+            let at = gpui::point(px(400.0), px(y));
+            cx.simulate_mouse_down(at, MouseButton::Left, gpui::Modifiers::none());
+            cx.simulate_mouse_up(at, MouseButton::Left, gpui::Modifiers::none());
+            cx.run_until_parked();
+        };
+        for y in [300.5, 300.5 - half + 1.0, 300.5 + half - 1.0] {
+            press(cx, y);
+        }
+        assert_eq!(
+            *drags.borrow(),
+            vec![300.5, 300.5 - half + 1.0, 300.5 + half - 1.0],
+            "presses on the line and on either side of it start a drag at the pointer"
+        );
+        // Well inside the editor or the results, a press is theirs.
+        press(cx, 100.0);
+        press(cx, 500.0);
+        assert_eq!(drags.borrow().len(), 3);
+        assert!(toggles.borrow().is_empty(), "single presses never collapse");
+    }
 }

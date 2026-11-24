@@ -1,0 +1,112 @@
+format: oracle-xplan (Certain)
+statements: 2
+
+== statement 1
+dialect: "Oracle"
+execution_time_ms: 10
+has_actuals: yes
+notes: ["child number 0"]
+parameters: [{compiled_value="77" data_type="NUMBER" name=":1"}]
+query_hash: "bkmv4mzc3r009"
+query_plan_hash: "368317174"
+source_format: "oracle-xplan"
+statement_text: "SELECT /*+ GATHER_PLAN_STATISTICS */ o.id, o.total FROM orders o WHERE o.customer_id = :cid"
+statement_type: "ACTUAL PLAN"
+total_subtree_cost: 9
+operators: 3
+  #0 SELECT STATEMENT [SELECT STATEMENT]
+      actual_rebinds: 1
+      actual_rows: 6
+      actual_rows_total: 6
+      actual_time_ms: 10
+      buffers: {logical_reads=11}
+      estimated_cost: 9
+      loops: 1
+      output_list: ["actual: 6 rows, 1 starts, 10.000 ms"]
+      properties: [{name="Cost %CPU" value="100"}]
+    #1 TABLE ACCESS BY INDEX ROWID BATCHED ORDERS [TABLE ACCESS]
+        actual_rebinds: 1
+        actual_rows: 6
+        actual_rows_total: 6
+        actual_time_ms: 10
+        alias: "O"
+        buffers: {logical_reads=11}
+        estimated_cost: 9
+        estimated_row_width: 15
+        estimated_rows: 6
+        loops: 1
+        output_columns: ["\"O\".\"ID\"", "\"O\".\"TOTAL\""]
+        output_list: ["actual: 6 rows, 1 starts, 10.000 ms"]
+        properties: [{name="Bytes" value="90"}, {name="Cost %CPU" value="0"}, {name="E-Time" value="00:00:01"}, {name="Query Block" value="SEL$1"}, {name="Object Alias" value="\"O\"@\"SEL$1\""}]
+        relation: "ORDERS"
+      #2 INDEX RANGE SCAN IX_ORDERS_CUSTOMER [INDEX]
+          actual_rebinds: 1
+          actual_rows: 6
+          actual_rows_total: 6
+          actual_self_time_ms: 10
+          actual_time_ms: 10
+          alias: "O"
+          buffers: {logical_reads=4}
+          estimated_cost: 3
+          estimated_rows: 6
+          index_cond: "\"O\".\"CUSTOMER_ID\"=:CID"
+          index_name: "IX_ORDERS_CUSTOMER"
+          loops: 1
+          output_columns: ["\"O\".ROWID"]
+          output_list: ["access: \"O\".\"CUSTOMER_ID\"=:CID", "actual: 6 rows, 1 starts, 10.000 ms"]
+          properties: [{name="Cost %CPU" value="0"}, {name="E-Time" value="00:00:01"}, {name="Query Block" value="SEL$1"}, {name="Object Alias" value="\"O\"@\"SEL$1\""}]
+
+== statement 2
+dialect: "Oracle"
+execution_time_ms: 10
+has_actuals: yes
+notes: ["child number 0"]
+query_hash: "546krzryacdta"
+query_plan_hash: "2436019392"
+source_format: "oracle-xplan"
+statement_text: "SELECT /*+ GATHER_PLAN_STATISTICS */ region, SUM(amount) FROM sales WHERE sold_at >= TO_DATE(:d1, 'YYYY-MM-DD') GROUP BY region"
+statement_type: "ACTUAL PLAN"
+operators: 4
+  #0 SELECT STATEMENT [SELECT STATEMENT]
+      actual_rebinds: 1
+      actual_rows: 4
+      actual_rows_total: 4
+      actual_time_ms: 10
+      buffers: {logical_reads=3425}
+      loops: 1
+      output_list: ["actual: 4 rows, 1 starts, 10.000 ms"]
+    #1 HASH GROUP BY [HASH]
+        actual_rebinds: 1
+        actual_rows: 4
+        actual_rows_total: 4
+        actual_time_ms: 10
+        buffers: {logical_reads=3425}
+        estimated_rows: 4
+        loops: 1
+        output_list: ["actual: 4 rows, 1 starts, 10.000 ms"]
+      #2 PARTITION RANGE ITERATOR [PARTITION RANGE]
+          actual_rebinds: 1
+          actual_rows: 94563
+          actual_rows_total: 94563
+          actual_time_ms: 20
+          buffers: {logical_reads=3425}
+          estimated_rows: 94863
+          loops: 1
+          output_list: ["actual: 94563 rows, 1 starts, 20.000 ms"]
+          partitions: ["KEY", "5"]
+          properties: [{name="Pstart" value="KEY"}, {name="Pstop" value="5"}]
+        #3 TABLE ACCESS FULL SALES [TABLE ACCESS]
+            actual_rebinds: 3
+            actual_rows: 94563
+            actual_rows_total: 94563
+            actual_self_time_ms: 20
+            actual_time_ms: 20
+            buffers: {logical_reads=3425}
+            estimated_rows: 94863
+            filter: "\"SOLD_AT\">=TO_DATE(:D1,'YYYY-MM-DD')"
+            loops: 3
+            output_list: ["filter: \"SOLD_AT\">=TO_DATE(:D1,'YYYY-MM-DD')", "actual: 94563 rows, 3 starts, 20.000 ms"]
+            partitions: ["KEY", "5"]
+            properties: [{name="Pstart" value="KEY"}, {name="Pstop" value="5"}]
+            relation: "SALES"
+            warnings: [{TableScan={table="SALES"}}]

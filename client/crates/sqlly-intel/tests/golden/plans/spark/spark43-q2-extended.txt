@@ -1,0 +1,50 @@
+== Parsed Logical Plan ==
+'Sort ['revenue DESC NULLS LAST], true
++- 'Aggregate ['c.region], ['c.region, 'count(1) AS n#50, 'sum('o.total) AS revenue#51]
+   +- 'Filter 'c.region IN (east,west)
+      +- 'Join Inner, ('o.customer_id = 'c.id)
+         :- 'SubqueryAlias c
+         :  +- 'UnresolvedRelation [customers], [], false
+         +- 'SubqueryAlias o
+            +- 'UnresolvedRelation [orders], [], false
+
+== Analyzed Logical Plan ==
+region: string, n: bigint, revenue: decimal(21,2)
+Sort [revenue#51 DESC NULLS LAST], true
++- Aggregate [region#40], [region#40, count(1) AS n#50L, sum(total#7) AS revenue#51]
+   +- Filter region#40 IN (east,west)
+      +- Join Inner, (customer_id#6L = id#38L)
+         :- SubqueryAlias c
+         :  +- SubqueryAlias spark_catalog.default.customers
+         :     +- Relation spark_catalog.default.customers[id#38L,name#39,region#40] parquet
+         +- SubqueryAlias o
+            +- SubqueryAlias spark_catalog.default.orders
+               +- Relation spark_catalog.default.orders[id#5L,customer_id#6L,total#7,status#8] parquet
+
+== Optimized Logical Plan ==
+Sort [revenue#51 DESC NULLS LAST], true
++- Aggregate [region#40], [region#40, count(1) AS n#50L, sum(total#7) AS revenue#51]
+   +- Project [region#40, total#7]
+      +- Join Inner, (customer_id#6L = id#38L)
+         :- Project [id#38L, region#40]
+         :  +- Filter (region#40 IN (east,west) AND isnotnull(id#38L))
+         :     +- Relation spark_catalog.default.customers[id#38L,name#39,region#40] parquet
+         +- Project [customer_id#6L, total#7]
+            +- Filter isnotnull(customer_id#6L)
+               +- Relation spark_catalog.default.orders[id#5L,customer_id#6L,total#7,status#8] parquet
+
+== Physical Plan ==
+AdaptiveSparkPlan isFinalPlan=false
++- Sort [revenue#51 DESC NULLS LAST], true, 0
+   +- Exchange rangepartitioning(revenue#51 DESC NULLS LAST, 200), ENSURE_REQUIREMENTS, [plan_id=260]
+      +- HashAggregate(keys=[region#40], functions=[count(1), sum(total#7)], output=[region#40, n#50L, revenue#51])
+         +- Exchange hashpartitioning(region#40, 200), ENSURE_REQUIREMENTS, [plan_id=257]
+            +- HashAggregate(keys=[region#40], functions=[partial_count(1), partial_sum(total#7)], output=[region#40, count#61L, sum#62, isEmpty#63])
+               +- Project [region#40, total#7]
+                  +- BroadcastHashJoin [id#38L], [customer_id#6L], Inner, BuildLeft, false, false
+                     :- BroadcastExchange HashedRelationBroadcastMode(List(input[0, bigint, false]),false), [plan_id=252]
+                     :  +- Filter (region#40 IN (east,west) AND isnotnull(id#38L))
+                     :     +- FileScan parquet spark_catalog.default.customers[id#38L,region#40] Batched: true, DataFilters: [region#40 IN (east,west), isnotnull(id#38L)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/tmp/spark-warehouse/customers], PartitionFilters: [], PushedFilters: [In(region, [east,west]), IsNotNull(id)], ReadSchema: struct<id:bigint,region:string>
+                     +- Filter isnotnull(customer_id#6L)
+                        +- FileScan parquet spark_catalog.default.orders[customer_id#6L,total#7] Batched: true, DataFilters: [isnotnull(customer_id#6L)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/tmp/spark-warehouse/orders], PartitionFilters: [], PushedFilters: [IsNotNull(customer_id)], ReadSchema: struct<customer_id:bigint,total:decimal(11,2)>
+

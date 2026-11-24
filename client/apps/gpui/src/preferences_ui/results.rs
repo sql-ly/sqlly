@@ -364,6 +364,73 @@ impl PreferencesWindow {
                     cx,
                 ),
             ),
+            self.labeled_row(
+                &crate::localization::text("settings.results.json_edit_storage.label"),
+                self.enum_select(
+                    "json_edit_storage",
+                    rf.json_edit_storage,
+                    crate::json_edit_format::JsonEditStorage::ALL.to_vec(),
+                    |m| m.label(),
+                    |this, m, cx| this.set_rf_field(cx, move |r| r.json_edit_storage = m),
+                    window,
+                    cx,
+                ),
+            ),
+            self.hint(&crate::localization::text(
+                "settings.results.json_edit_storage.hint",
+            )),
+            self.section_header(&crate::localization::text(
+                "settings.results.section_header.filtering",
+            )),
+            self.checkbox(
+                "remember_recent_filters",
+                &crate::localization::text("settings.results.checkbox.remember_recent_filters"),
+                rf.remember_recent_filters,
+                cx,
+                |this, cx| {
+                    this.set_rf_field(cx, |r| {
+                        r.remember_recent_filters = !r.remember_recent_filters;
+                    })
+                },
+            ),
+            self.hint(&crate::localization::text(
+                "settings.results.hint.remember_recent_filters",
+            )),
+            self.labeled_row(
+                &crate::localization::text("settings.results.labeled_row.recent_filters_to_keep"),
+                self.stepper(
+                    "recent_filters_dec",
+                    "recent_filters_inc",
+                    rf.recent_filters_limit as i32,
+                    cx,
+                    |this, cx| {
+                        this.set_rf_field(cx, |r| {
+                            r.recent_filters_limit = r.recent_filters_limit.saturating_sub(1).max(1)
+                        })
+                    },
+                    |this, cx| {
+                        this.set_rf_field(cx, |r| {
+                            r.recent_filters_limit =
+                                (r.recent_filters_limit + 1).min(crate::recent_filters::MAX_LIMIT)
+                        })
+                    },
+                ),
+            ),
+            div()
+                .flex()
+                .flex_row()
+                .child(self.quiet_button(
+                    "clear_recent_filters",
+                    &crate::localization::text(
+                        "settings.results.quiet_button.clear_recent_filters",
+                    ),
+                    cx,
+                    |_this, _window, cx| {
+                        crate::recent_filters::clear_recent_filters();
+                        cx.notify();
+                    },
+                ))
+                .into_any_element(),
             self.section_header(&crate::localization::text(
                 "map_view.settings.section_header",
             )),

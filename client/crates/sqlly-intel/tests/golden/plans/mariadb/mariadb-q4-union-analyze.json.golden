@@ -1,0 +1,74 @@
+format: mariadb-json (Certain)
+statements: 1
+
+== statement 1
+dialect: "MariaDb"
+estimated_rows: 40131
+has_actuals: yes
+planning_time_ms: 0.074111
+source_format: "mariadb-json"
+statement_type: "ANALYZE"
+operators: 6
+  #1 Query Block [Query Block]
+    #2 Union result [Union result]
+        actual_rows: 691
+        actual_rows_total: 691
+        loops: 1
+        output_list: ["<union1,2>"]
+        properties: [{name="access_type" value="ALL"}, {name="r_loops" value="1"}, {name="r_rows" value="691"}, {name="table_name" value="<union1,2>"}]
+      #3 Query Block [Query Block]
+          actual_self_time_ms: 0.003999
+          actual_time_ms: 0.416754
+          estimated_cost: 0.842013
+          loops: 1
+          output_list: ["Actual time: 0.416753681 ms"]
+          properties: [{name="cost" value="0.8420126"}, {name="r_loops" value="1"}, {name="r_total_time_ms" value="0.416753681"}, {name="select_id" value="1"}]
+          subplan_name: "Select #1"
+        #4 Table: customers [Access: ALL]
+            actual_rebinds: 1
+            actual_rows: 5000
+            actual_rows_total: 5000
+            actual_self_time_ms: 0.412754
+            actual_time_ms: 0.412754
+            buffers: {logical_reads=22}
+            estimated_cost: 0.842013
+            estimated_executions: 1
+            estimated_rows: 4989
+            estimated_rows_read: 4989
+            filter: "customers.country = 'US'"
+            filtered_percent: 100
+            loops: 1
+            output_list: ["customers", "Condition: customers.country = 'US'", "Actual time: 0.253451559 ms", "Actual filtered: 12.5%"]
+            properties: [{name="cost" value="0.8420126"}, {name="loops" value="1"}, {name="r_engine_stats.pages_accessed" value="22"}, {name="r_filtered" value="12.5"}, {name="r_other_time_ms" value="0.159302887"}, {name="r_table_time_ms" value="0.253451559"}, {name="r_total_filtered" value="12.5"}]
+            relation: "customers"
+            rows_read: 5000
+            rows_removed_by_filter: 4375
+            warnings: [{TableScan={table="customers"}}]
+      #5 Query Block [Query Block]
+          actual_self_time_ms: 0.001208
+          actual_time_ms: 2.801673
+          estimated_cost: 6.688976
+          loops: 1
+          output_list: ["Actual time: 2.801672864 ms"]
+          properties: [{name="cost" value="6.6889758"}, {name="operation" value="UNION"}, {name="r_loops" value="1"}, {name="r_total_time_ms" value="2.801672864"}, {name="select_id" value="2"}]
+          subplan_name: "Select #2"
+        #6 Table: orders [Access: ALL]
+            actual_rebinds: 1
+            actual_rows: 40000
+            actual_rows_total: 40000
+            actual_self_time_ms: 2.800465
+            actual_time_ms: 2.800465
+            buffers: {logical_reads=118}
+            estimated_cost: 6.688976
+            estimated_executions: 1
+            estimated_rows: 40131
+            estimated_rows_read: 40131
+            filter: "orders.total < 12"
+            filtered_percent: 100
+            loops: 1
+            output_list: ["orders", "Condition: orders.total < 12", "Actual time: 1.71733844 ms", "Actual filtered: 0.2225%"]
+            properties: [{name="cost" value="6.6889758"}, {name="loops" value="1"}, {name="r_engine_stats.pages_accessed" value="118"}, {name="r_filtered" value="0.2225"}, {name="r_other_time_ms" value="1.083126321"}, {name="r_table_time_ms" value="1.71733844"}, {name="r_total_filtered" value="0.2225"}]
+            relation: "orders"
+            rows_read: 40000
+            rows_removed_by_filter: 39911
+            warnings: [{TableScan={table="orders"}}]

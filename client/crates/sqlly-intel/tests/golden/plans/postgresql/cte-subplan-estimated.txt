@@ -1,0 +1,25 @@
+                                                QUERY PLAN                                                
+----------------------------------------------------------------------------------------------------------
+ Limit  (cost=15813.50..16641.21 rows=50 width=37)
+   CTE recent
+     ->  Index Scan using orders_placed_idx on orders  (cost=0.42..1822.69 rows=50244 width=27)
+           Index Cond: (placed_at > '2023-09-01 00:00:00+00'::timestamp with time zone)
+   InitPlan 2
+     ->  Finalize Aggregate  (cost=6995.39..6995.40 rows=1 width=32)
+           ->  Gather  (cost=6995.18..6995.39 rows=2 width=32)
+                 Workers Planned: 1
+                 ->  Partial Aggregate  (cost=5995.18..5995.19 rows=1 width=32)
+                       ->  Parallel Seq Scan on orders orders_1  (cost=0.00..5406.94 rows=235294 width=5)
+   InitPlan 5
+     ->  Finalize Aggregate  (cost=6995.40..6995.41 rows=1 width=32)
+           ->  Gather  (cost=6995.18..6995.39 rows=2 width=32)
+                 Workers Planned: 1
+                 ->  Partial Aggregate  (cost=5995.18..5995.19 rows=1 width=32)
+                       ->  Parallel Seq Scan on orders orders_2  (cost=0.00..5406.94 rows=235294 width=5)
+   ->  CTE Scan on recent r  (cost=0.00..277247.53 rows=16748 width=37)
+         Filter: (total > (InitPlan 5).col1)
+         SubPlan 4
+           ->  Seq Scan on order_items oi  (cost=0.00..23824.00 rows=240360 width=4)
+                 Filter: (quantity > 4)
+(21 rows)
+

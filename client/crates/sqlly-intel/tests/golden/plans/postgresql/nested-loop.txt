@@ -1,0 +1,20 @@
+                                                                QUERY PLAN                                                                
+------------------------------------------------------------------------------------------------------------------------------------------
+ Nested Loop  (cost=0.71..1507.86 rows=156 width=23) (actual time=0.344..1.152 rows=148.00 loops=1)
+   Buffers: shared hit=454 read=1
+   ->  Index Scan using customers_pkey on customers c  (cost=0.29..9.15 rows=43 width=18) (actual time=0.007..0.013 rows=41.00 loops=1)
+         Index Cond: ((id >= 100) AND (id <= 140))
+         Index Searches: 1
+         Buffers: shared hit=4
+   ->  Index Scan using orders_customer_idx on orders o  (cost=0.42..34.81 rows=4 width=13) (actual time=0.012..0.027 rows=3.61 loops=41)
+         Index Cond: (customer_id = c.id)
+         Filter: (total > '500'::numeric)
+         Rows Removed by Filter: 4
+         Index Searches: 41
+         Buffers: shared hit=450 read=1
+ Planning:
+   Buffers: shared hit=277
+ Planning Time: 0.372 ms
+ Execution Time: 1.168 ms
+(16 rows)
+

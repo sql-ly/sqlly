@@ -1577,6 +1577,42 @@ mod tests {
         }
     }
 
+    // https://github.com/jakob/Postico/issues/910
+    #[test]
+    fn double_colon_casts_are_never_query_parameters() {
+        let sql = "SELECT created_at::date, '{1,2}'::int[], total::numeric(10,2), \
+                   (payload->>'n')::bigint\nFROM orders\nWHERE id = :id AND status = :status::text";
+        let found = find_placeholders(DatabaseType::Postgres, sql);
+        let keys: Vec<&str> = found.iter().map(|p| p.key.as_str()).collect();
+        assert_eq!(
+            keys,
+            [":id", ":status"],
+            "casts read as parameters: {found:?}"
+        );
+        let rows: Vec<String> = strip_specs(DatabaseType::Postgres, sql, true)
+            .into_iter()
+            .map(|spec| spec.name)
+            .collect();
+        assert_eq!(rows, [":id", ":status"]);
+        let run = substitute_placeholders(
+            DatabaseType::Postgres,
+            sql,
+            &found,
+            &[],
+            &[
+                (":id".into(), "7".into()),
+                (":status".into(), "paid".into()),
+            ],
+        )
+        .expect("both parameters have values");
+        assert!(
+            run.contains("created_at::date, '{1,2}'::int[], total::numeric(10,2)")
+                && run.contains("::bigint")
+                && run.ends_with("id = '7' AND status = 'paid'::text"),
+            "casts must reach the server untouched: {run}"
+        );
+    }
+
     #[test]
     fn finds_named_positional_and_numbered_placeholders() {
         let keys = |db, sql| -> Vec<String> {

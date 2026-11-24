@@ -1,0 +1,2067 @@
+{
+  "version": 1,
+  "about": "Links from plan findings and plan operators to pages on sqlly.app. Paths are site-relative. A link with engines applies to those engines only (sqlserver, postgres, mysql, mariadb, oracle, sqlite, duckdb, clickhouse); a link without engines applies to all. type is article, function, setting, snippet or tool. Every key must have links or a none reason. server/Sqlly.Tests/PlanLearnLinksTests.cs checks every path and fragment against the site.",
+  "findings": {
+    "missing_index": {
+      "links": [
+        {
+          "path": "/sql-performance/missing-index",
+          "title": "Missing index suggestions in the plan",
+          "learn": "How to check an index the optimizer asked for before you create it.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-snippets/missing-index-suggestions",
+          "title": "Missing index suggestions from the DMVs",
+          "learn": "A query that turns SQL Server's missing index DMVs into CREATE INDEX statements.",
+          "type": "snippet",
+          "engines": [
+            "sqlserver"
+          ]
+        },
+        {
+          "path": "/sql-dialects/covering-index",
+          "title": "Covering index syntax",
+          "learn": "How to write a covering index on each engine.",
+          "type": "article"
+        }
+      ]
+    },
+    "table_scan": {
+      "links": [
+        {
+          "path": "/sql-performance/full-table-scan",
+          "title": "Full table scans in a query plan",
+          "learn": "How to tell a scan that is fine from one that reads far more rows than it returns, and how to index for it.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-performance/missing-index",
+          "title": "Missing index suggestions in the plan",
+          "learn": "How to check an index the optimizer asked for before you create it.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-snippets/table-scan-detector",
+          "title": "Sequential scan detector",
+          "learn": "A query that lists the PostgreSQL tables read by sequential scans.",
+          "type": "snippet",
+          "engines": [
+            "postgres"
+          ]
+        },
+        {
+          "path": "/sql-snippets/explain-query-plan-workflow",
+          "title": "Read EXPLAIN QUERY PLAN output",
+          "learn": "How to read SCAN, SEARCH and TEMP B-TREE lines in SQLite.",
+          "type": "snippet",
+          "engines": [
+            "sqlite"
+          ]
+        },
+        {
+          "path": "/sql-dialects/create-index",
+          "title": "CREATE INDEX syntax",
+          "learn": "The CREATE INDEX statement on each engine.",
+          "type": "article"
+        }
+      ]
+    },
+    "filter_discards_rows": {
+      "links": [
+        {
+          "path": "/sql-performance/full-table-scan",
+          "title": "Full table scans in a query plan",
+          "learn": "How to tell a scan that is fine from one that reads far more rows than it returns, and how to index for it.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-performance/execution-plan-operators#filter",
+          "title": "Filter operators",
+          "learn": "What a filter step is and why one that discards most of its input is a warning.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-performance/non-sargable-predicates",
+          "title": "Non-sargable predicates",
+          "learn": "How to rewrite a condition so an index can be searched with it.",
+          "type": "article"
+        }
+      ]
+    },
+    "key_lookup": {
+      "links": [
+        {
+          "path": "/sql-performance/key-lookup",
+          "title": "Key lookups and covering indexes",
+          "learn": "Why the engine goes back to the table for every row an index finds, and how a covering index stops it.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-dialects/covering-index",
+          "title": "Covering index syntax",
+          "learn": "How to write a covering index on each engine.",
+          "type": "article"
+        }
+      ]
+    },
+    "heap_fetches": {
+      "links": [
+        {
+          "path": "/sql-performance/index-only-scan-heap-fetches",
+          "title": "Heap fetches in an index-only scan",
+          "learn": "Why an index-only scan still reads the table and how VACUUM fixes it.",
+          "type": "article",
+          "engines": [
+            "postgres"
+          ]
+        },
+        {
+          "path": "/sql-snippets/autovacuum-status",
+          "title": "Autovacuum status",
+          "learn": "A query that shows which PostgreSQL tables are waiting for vacuum.",
+          "type": "snippet",
+          "engines": [
+            "postgres"
+          ]
+        },
+        {
+          "path": "/sql-configuration/postgresql/autovacuum",
+          "title": "autovacuum",
+          "learn": "What autovacuum does and how to check that it is on.",
+          "type": "setting",
+          "engines": [
+            "postgres"
+          ]
+        }
+      ]
+    },
+    "expensive_sort": {
+      "links": [
+        {
+          "path": "/sql-performance/expensive-sort",
+          "title": "Expensive sort operators",
+          "learn": "How to find out what a sort costs and remove it with an index in the right order.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-configuration/postgresql/work-mem",
+          "title": "work_mem",
+          "learn": "What work_mem controls and how to raise it for one query.",
+          "type": "setting",
+          "engines": [
+            "postgres"
+          ]
+        },
+        {
+          "path": "/sql-configuration/mysql/sort-buffer-size",
+          "title": "sort_buffer_size",
+          "learn": "What sort_buffer_size controls and how to raise it for one session.",
+          "type": "setting",
+          "engines": [
+            "mysql",
+            "mariadb"
+          ]
+        },
+        {
+          "path": "/sql-snippets/sort-heavy-queries",
+          "title": "Sort-heavy queries",
+          "learn": "A query that finds the MySQL statements doing the most sorting.",
+          "type": "snippet",
+          "engines": [
+            "mysql"
+          ]
+        },
+        {
+          "path": "/sql-dialects/descending-index",
+          "title": "Descending index syntax",
+          "learn": "How to create an index in descending order on each engine.",
+          "type": "article"
+        }
+      ]
+    },
+    "auto_index": {
+      "links": [
+        {
+          "path": "/sql-performance/index-spool-automatic-index",
+          "title": "Index spools and automatic indexes",
+          "learn": "How to turn the index the engine built at run time into a permanent one.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-configuration/sqlite/automatic-index",
+          "title": "automatic_index",
+          "learn": "The pragma that lets SQLite build an index for one query.",
+          "type": "setting",
+          "engines": [
+            "sqlite"
+          ]
+        }
+      ]
+    },
+    "index_merge": {
+      "links": [
+        {
+          "path": "/sql-performance/index-merge",
+          "title": "Index merge and BitmapAnd plans",
+          "learn": "When combining several single-column indexes is a sign that one composite index is missing.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-dialects/create-index",
+          "title": "CREATE INDEX syntax",
+          "learn": "The CREATE INDEX statement on each engine.",
+          "type": "article"
+        }
+      ]
+    },
+    "lossy_bitmap": {
+      "links": [
+        {
+          "path": "/sql-performance/sort-and-hash-spills#lossy-bitmap-heap-scans",
+          "title": "Lossy bitmap heap scans",
+          "learn": "What lossy heap blocks mean and how much work_mem the bitmap needs.",
+          "type": "article",
+          "engines": [
+            "postgres"
+          ]
+        },
+        {
+          "path": "/sql-configuration/postgresql/work-mem",
+          "title": "work_mem",
+          "learn": "What work_mem controls and how to raise it for one query.",
+          "type": "setting",
+          "engines": [
+            "postgres"
+          ]
+        }
+      ]
+    },
+    "estimate_mismatch": {
+      "links": [
+        {
+          "path": "/sql-performance/row-estimate-mismatch",
+          "title": "Estimated rows far from actual rows",
+          "learn": "Where a wrong row estimate comes from and how to correct it with statistics.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-configuration/postgresql/default-statistics-target",
+          "title": "default_statistics_target",
+          "learn": "How much detail ANALYZE collects and when to raise it.",
+          "type": "setting",
+          "engines": [
+            "postgres"
+          ]
+        },
+        {
+          "path": "/sql-snippets/statistics-staleness",
+          "title": "Stale planner statistics",
+          "learn": "A query that finds PostgreSQL tables whose statistics are out of date.",
+          "type": "snippet",
+          "engines": [
+            "postgres"
+          ]
+        },
+        {
+          "path": "/sql-configuration/sql-server/legacy-cardinality-estimation",
+          "title": "LEGACY_CARDINALITY_ESTIMATION",
+          "learn": "How to switch a database between the old and new row estimators.",
+          "type": "setting",
+          "engines": [
+            "sqlserver"
+          ]
+        },
+        {
+          "path": "/sql-dialects/vacuum-analyze",
+          "title": "Refresh statistics",
+          "learn": "The statement that refreshes optimizer statistics on each engine.",
+          "type": "article"
+        }
+      ]
+    },
+    "stale_statistics": {
+      "links": [
+        {
+          "path": "/sql-performance/row-estimate-mismatch#check-whether-the-statistics-are-stale",
+          "title": "Check whether the statistics are stale",
+          "learn": "How to find out when a table's statistics were last refreshed and how to refresh them.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-snippets/statistics-staleness",
+          "title": "Stale planner statistics",
+          "learn": "A query that finds PostgreSQL tables whose statistics are out of date.",
+          "type": "snippet",
+          "engines": [
+            "postgres"
+          ]
+        },
+        {
+          "path": "/sql-snippets/last-analyze-per-table",
+          "title": "Last ANALYZE per table",
+          "learn": "A query that shows when each PostgreSQL table was last analyzed.",
+          "type": "snippet",
+          "engines": [
+            "postgres"
+          ]
+        },
+        {
+          "path": "/sql-configuration/postgresql/autovacuum-analyze-scale-factor",
+          "title": "autovacuum_analyze_scale_factor",
+          "learn": "How much of a table must change before autovacuum analyzes it again.",
+          "type": "setting",
+          "engines": [
+            "postgres"
+          ]
+        },
+        {
+          "path": "/sql-configuration/sql-server/auto-update-statistics",
+          "title": "AUTO_UPDATE_STATISTICS",
+          "learn": "When SQL Server refreshes statistics by itself.",
+          "type": "setting",
+          "engines": [
+            "sqlserver"
+          ]
+        },
+        {
+          "path": "/sql-configuration/sqlite/analysis-limit",
+          "title": "analysis_limit",
+          "learn": "How much of each index ANALYZE reads in SQLite.",
+          "type": "setting",
+          "engines": [
+            "sqlite"
+          ]
+        },
+        {
+          "path": "/sql-dialects/vacuum-analyze",
+          "title": "Refresh statistics",
+          "learn": "The statement that refreshes optimizer statistics on each engine.",
+          "type": "article"
+        }
+      ]
+    },
+    "cardinality": {
+      "links": [
+        {
+          "path": "/sql-performance/row-estimate-mismatch",
+          "title": "Estimated rows far from actual rows",
+          "learn": "Where a wrong row estimate comes from and how to correct it with statistics.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-configuration/sql-server/auto-update-statistics",
+          "title": "AUTO_UPDATE_STATISTICS",
+          "learn": "When SQL Server refreshes statistics by itself.",
+          "type": "setting",
+          "engines": [
+            "sqlserver"
+          ]
+        }
+      ]
+    },
+    "parameter_sniffing": {
+      "links": [
+        {
+          "path": "/sql-performance/parameter-sniffing",
+          "title": "Parameter sniffing and cached plans",
+          "learn": "How a plan compiled for one parameter value hurts the next one, and the ways to fix it.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-configuration/sql-server/parameter-sniffing",
+          "title": "PARAMETER_SNIFFING",
+          "learn": "The database option that turns parameter sniffing off.",
+          "type": "setting",
+          "engines": [
+            "sqlserver"
+          ]
+        },
+        {
+          "path": "/sql-configuration/sql-server/query-store",
+          "title": "Query Store",
+          "learn": "How Query Store keeps plan history and lets you force a plan.",
+          "type": "setting",
+          "engines": [
+            "sqlserver"
+          ]
+        },
+        {
+          "path": "/sql-snippets/plan-regressions-query-store",
+          "title": "Plan regressions with Query Store",
+          "learn": "A query that finds SQL Server statements whose plan got slower.",
+          "type": "snippet",
+          "engines": [
+            "sqlserver"
+          ]
+        },
+        {
+          "path": "/sql-configuration/oracle/cursor-sharing",
+          "title": "CURSOR_SHARING",
+          "learn": "How Oracle shares plans between statements that differ only in literals.",
+          "type": "setting",
+          "engines": [
+            "oracle"
+          ]
+        }
+      ]
+    },
+    "spill": {
+      "links": [
+        {
+          "path": "/sql-performance/sort-and-hash-spills",
+          "title": "Sorts and hashes that spill to disk",
+          "learn": "How to confirm a sort or hash ran out of memory and the order in which to fix it.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-configuration/postgresql/work-mem",
+          "title": "work_mem",
+          "learn": "What work_mem controls and how to raise it for one query.",
+          "type": "setting",
+          "engines": [
+            "postgres"
+          ]
+        },
+        {
+          "path": "/sql-configuration/postgresql/hash-mem-multiplier",
+          "title": "hash_mem_multiplier",
+          "learn": "How much more memory a hash may use than a sort.",
+          "type": "setting",
+          "engines": [
+            "postgres"
+          ]
+        },
+        {
+          "path": "/sql-snippets/temp-table-spilling",
+          "title": "Queries spilling to temp",
+          "learn": "A query that finds the PostgreSQL statements writing temporary files.",
+          "type": "snippet",
+          "engines": [
+            "postgres"
+          ]
+        },
+        {
+          "path": "/sql-configuration/postgresql/log-temp-files",
+          "title": "log_temp_files",
+          "learn": "How to log every query that writes temporary files.",
+          "type": "setting",
+          "engines": [
+            "postgres"
+          ]
+        },
+        {
+          "path": "/sql-configuration/mysql/sort-buffer-size",
+          "title": "sort_buffer_size",
+          "learn": "What sort_buffer_size controls and how to raise it for one session.",
+          "type": "setting",
+          "engines": [
+            "mysql",
+            "mariadb"
+          ]
+        },
+        {
+          "path": "/sql-configuration/mysql/join-buffer-size",
+          "title": "join_buffer_size",
+          "learn": "What the join buffer is used for and how to size it.",
+          "type": "setting",
+          "engines": [
+            "mysql",
+            "mariadb"
+          ]
+        },
+        {
+          "path": "/sql-configuration/sql-server/min-memory-per-query",
+          "title": "min memory per query",
+          "learn": "The smallest memory grant a query can get.",
+          "type": "setting",
+          "engines": [
+            "sqlserver"
+          ]
+        },
+        {
+          "path": "/sql-configuration/oracle/pga-aggregate-target",
+          "title": "PGA_AGGREGATE_TARGET",
+          "learn": "The memory Oracle shares out to sorts and hash joins.",
+          "type": "setting",
+          "engines": [
+            "oracle"
+          ]
+        }
+      ]
+    },
+    "memory_grant": {
+      "links": [
+        {
+          "path": "/sql-performance/sort-and-hash-spills#sql-server-spill-warnings-and-the-memory-grant",
+          "title": "Spill warnings and the memory grant",
+          "learn": "How to read the memory grant in a SQL Server plan and why it was too small or too large.",
+          "type": "article",
+          "engines": [
+            "sqlserver"
+          ]
+        },
+        {
+          "path": "/sql-snippets/session-memory-grants",
+          "title": "Session memory grants",
+          "learn": "A query that shows which SQL Server sessions hold large memory grants.",
+          "type": "snippet",
+          "engines": [
+            "sqlserver"
+          ]
+        },
+        {
+          "path": "/sql-configuration/sql-server/max-server-memory",
+          "title": "max server memory",
+          "learn": "The memory limit all query grants come out of.",
+          "type": "setting",
+          "engines": [
+            "sqlserver"
+          ]
+        },
+        {
+          "path": "/sql-configuration/sql-server/min-memory-per-query",
+          "title": "min memory per query",
+          "learn": "The smallest memory grant a query can get.",
+          "type": "setting",
+          "engines": [
+            "sqlserver"
+          ]
+        }
+      ]
+    },
+    "no_join": {
+      "links": [
+        {
+          "path": "/sql-performance/join-row-explosion",
+          "title": "Joins that multiply rows",
+          "learn": "How to find the join that multiplies rows and fix it without hiding it behind DISTINCT.",
+          "type": "article"
+        },
+        {
+          "path": "/tools/join-visualizer",
+          "title": "SQL JOIN visualizer",
+          "learn": "See which rows each kind of join keeps, on sample data.",
+          "type": "tool"
+        }
+      ]
+    },
+    "nested_loop_volume": {
+      "links": [
+        {
+          "path": "/sql-performance/join-algorithms#a-nested-loop-that-runs-more-often-than-planned",
+          "title": "A nested loop that runs more often than planned",
+          "learn": "How to spot a nested loop whose inner side runs far more often than estimated, and what to change.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-performance/row-estimate-mismatch",
+          "title": "Estimated rows far from actual rows",
+          "learn": "Where a wrong row estimate comes from and how to correct it with statistics.",
+          "type": "article"
+        }
+      ]
+    },
+    "hash_build_side": {
+      "links": [
+        {
+          "path": "/sql-performance/join-algorithms#the-build-side-of-a-hash-join",
+          "title": "The build side of a hash join",
+          "learn": "Which input a hash join should build on and why a wrong estimate reverses it.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-performance/row-estimate-mismatch",
+          "title": "Estimated rows far from actual rows",
+          "learn": "Where a wrong row estimate comes from and how to correct it with statistics.",
+          "type": "article"
+        }
+      ]
+    },
+    "join_fanout": {
+      "links": [
+        {
+          "path": "/sql-performance/join-row-explosion",
+          "title": "Joins that multiply rows",
+          "learn": "How to find the join that multiplies rows and fix it without hiding it behind DISTINCT.",
+          "type": "article"
+        },
+        {
+          "path": "/tools/join-visualizer",
+          "title": "SQL JOIN visualizer",
+          "learn": "See which rows each kind of join keeps, on sample data.",
+          "type": "tool"
+        }
+      ]
+    },
+    "dependent_subquery": {
+      "links": [
+        {
+          "path": "/sql-performance/correlated-subquery",
+          "title": "Correlated subqueries and NOT IN",
+          "learn": "How to see that a subquery runs once per row and how to rewrite it as a join.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-dialects/anti-join",
+          "title": "Anti-join syntax",
+          "learn": "NOT EXISTS, NOT IN and LEFT JOIN ... IS NULL on each engine.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-functions/exists",
+          "title": "EXISTS",
+          "learn": "How EXISTS tests for a matching row and stops at the first one.",
+          "type": "function"
+        }
+      ]
+    },
+    "join_buffer": {
+      "links": [
+        {
+          "path": "/sql-performance/join-algorithms#mysql-a-reversed-join-or-using-join-buffer",
+          "title": "MySQL: Using join buffer",
+          "learn": "Why MySQL falls back to the join buffer and the index that removes it.",
+          "type": "article",
+          "engines": [
+            "mysql",
+            "mariadb"
+          ]
+        },
+        {
+          "path": "/sql-configuration/mysql/join-buffer-size",
+          "title": "join_buffer_size",
+          "learn": "What the join buffer is used for and how to size it.",
+          "type": "setting",
+          "engines": [
+            "mysql",
+            "mariadb"
+          ]
+        }
+      ]
+    },
+    "temporary_table": {
+      "links": [
+        {
+          "path": "/sql-performance/using-temporary",
+          "title": "Using temporary in MySQL plans",
+          "learn": "Why MySQL builds a temporary table for GROUP BY or DISTINCT and how an index avoids it.",
+          "type": "article",
+          "engines": [
+            "mysql",
+            "mariadb"
+          ]
+        },
+        {
+          "path": "/sql-configuration/mysql/tmp-table-size",
+          "title": "tmp_table_size",
+          "learn": "When an in-memory temporary table is moved to disk.",
+          "type": "setting",
+          "engines": [
+            "mysql",
+            "mariadb"
+          ]
+        },
+        {
+          "path": "/sql-configuration/mysql/max-heap-table-size",
+          "title": "max_heap_table_size",
+          "learn": "The second limit on in-memory temporary tables.",
+          "type": "setting",
+          "engines": [
+            "mysql",
+            "mariadb"
+          ]
+        },
+        {
+          "path": "/sql-configuration/sqlite/temp-store",
+          "title": "temp_store",
+          "learn": "Whether SQLite keeps temporary B-trees in memory or in a file.",
+          "type": "setting",
+          "engines": [
+            "sqlite"
+          ]
+        },
+        {
+          "path": "/sql-performance/expensive-sort",
+          "title": "Expensive sort operators",
+          "learn": "How to find out what a sort costs and remove it with an index in the right order.",
+          "type": "article"
+        }
+      ]
+    },
+    "cte_materialization": {
+      "links": [
+        {
+          "path": "/sql-performance/cte-materialization",
+          "title": "Materialized CTEs",
+          "learn": "When a CTE is computed in full before it is filtered and how to let the filter in.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-dialects/cte-basics",
+          "title": "CTE syntax",
+          "learn": "How common table expressions are written on each engine.",
+          "type": "article"
+        }
+      ]
+    },
+    "partition_pruning": {
+      "links": [
+        {
+          "path": "/sql-performance/partition-pruning",
+          "title": "Partition pruning in the plan",
+          "learn": "How to see which partitions a query read and why none were skipped.",
+          "type": "article"
+        }
+      ]
+    },
+    "implicit_conversion": {
+      "links": [
+        {
+          "path": "/sql-performance/implicit-conversion",
+          "title": "Implicit conversions and type mismatches",
+          "learn": "How a type mismatch in a comparison turns an index seek into a scan, and how to remove it.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-dialects/implicit-cast-comparison",
+          "title": "Implicit casts in comparisons",
+          "learn": "How each engine converts types when two sides of a comparison differ.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-functions/cast",
+          "title": "CAST",
+          "learn": "How to convert a value to another type explicitly.",
+          "type": "function"
+        }
+      ]
+    },
+    "non_sargable": {
+      "links": [
+        {
+          "path": "/sql-performance/non-sargable-predicates",
+          "title": "Non-sargable predicates",
+          "learn": "How to rewrite a condition so an index can be searched with it.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-snippets/non-sargable-detector",
+          "title": "Non-sargable detector",
+          "learn": "A query that finds PostgreSQL statements with functions on indexed columns.",
+          "type": "snippet",
+          "engines": [
+            "postgres"
+          ]
+        },
+        {
+          "path": "/sql-dialects/expression-index",
+          "title": "Expression index syntax",
+          "learn": "How to index an expression on each engine.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-dialects/timestamp-range-filter",
+          "title": "Timestamp range filters",
+          "learn": "How to filter a date range so an index can be used.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-dialects/extract-part-sargable",
+          "title": "Filter on a date part and keep the index",
+          "learn": "How to filter by year or month without wrapping the column in a function.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-dialects/case-insensitive-compare",
+          "title": "Case-insensitive comparison",
+          "learn": "How to compare text without regard to case and still use an index.",
+          "type": "article"
+        }
+      ]
+    },
+    "scalar_udf": {
+      "links": [
+        {
+          "path": "/sql-performance/scalar-udf",
+          "title": "Scalar functions that run once per row",
+          "learn": "How to count the calls a scalar function makes and the three ways to get rid of them.",
+          "type": "article",
+          "engines": [
+            "sqlserver"
+          ]
+        },
+        {
+          "path": "/sql-configuration/sql-server/compatibility-level",
+          "title": "Compatibility level",
+          "learn": "Which optimizer features each compatibility level turns on.",
+          "type": "setting",
+          "engines": [
+            "sqlserver"
+          ]
+        }
+      ]
+    },
+    "table_variable": {
+      "links": [
+        {
+          "path": "/sql-performance/row-estimate-mismatch#table-variables",
+          "title": "Table variables and row estimates",
+          "learn": "Why a table variable is estimated at one row and what to use in its place.",
+          "type": "article",
+          "engines": [
+            "sqlserver"
+          ]
+        },
+        {
+          "path": "/sql-dialects/temp-tables",
+          "title": "Temporary tables",
+          "learn": "How to create and use a temporary table on each engine.",
+          "type": "article"
+        }
+      ]
+    },
+    "spool": {
+      "links": [
+        {
+          "path": "/sql-performance/index-spool-automatic-index",
+          "title": "Index spools and automatic indexes",
+          "learn": "How to turn the index the engine built at run time into a permanent one.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-performance/execution-plan-operators#spool-and-materialize",
+          "title": "Spool and materialize operators",
+          "learn": "What a spool saves and why the plan needed it.",
+          "type": "article"
+        }
+      ]
+    },
+    "row_goal": {
+      "links": [
+        {
+          "path": "/sql-performance/row-estimate-mismatch#row-goals-top-and-limit",
+          "title": "Row goals: TOP and LIMIT",
+          "learn": "How TOP or LIMIT changes the plan beneath it, and what to do when the guess is wrong.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-dialects/top-n",
+          "title": "Top N rows",
+          "learn": "TOP, LIMIT and FETCH FIRST on each engine.",
+          "type": "article"
+        }
+      ]
+    },
+    "parallel_workers": {
+      "links": [
+        {
+          "path": "/sql-performance/parallel-query-plans#postgresql-workers-planned-and-workers-launched",
+          "title": "PostgreSQL: workers planned and workers launched",
+          "learn": "Why fewer workers started than the plan asked for, and the three settings that limit them.",
+          "type": "article",
+          "engines": [
+            "postgres"
+          ]
+        },
+        {
+          "path": "/sql-configuration/postgresql/max-parallel-workers-per-gather",
+          "title": "max_parallel_workers_per_gather",
+          "learn": "The limit on workers for one Gather node.",
+          "type": "setting",
+          "engines": [
+            "postgres"
+          ]
+        },
+        {
+          "path": "/sql-configuration/postgresql/max-parallel-workers",
+          "title": "max_parallel_workers",
+          "learn": "The limit on parallel workers across the whole server.",
+          "type": "setting",
+          "engines": [
+            "postgres"
+          ]
+        },
+        {
+          "path": "/sql-configuration/postgresql/max-worker-processes",
+          "title": "max_worker_processes",
+          "learn": "The pool every background worker is taken from.",
+          "type": "setting",
+          "engines": [
+            "postgres"
+          ]
+        }
+      ]
+    },
+    "parallel_skew": {
+      "links": [
+        {
+          "path": "/sql-performance/parallel-query-plans#sql-server-rows-per-thread",
+          "title": "SQL Server: rows per thread",
+          "learn": "How to read rows per thread and what to do when one thread did most of the work.",
+          "type": "article",
+          "engines": [
+            "sqlserver"
+          ]
+        },
+        {
+          "path": "/sql-configuration/sql-server/max-degree-of-parallelism",
+          "title": "max degree of parallelism",
+          "learn": "How MAXDOP limits the threads of a parallel plan.",
+          "type": "setting",
+          "engines": [
+            "sqlserver"
+          ]
+        }
+      ]
+    },
+    "serial_plan_forced": {
+      "links": [
+        {
+          "path": "/sql-performance/parallel-query-plans#sql-server-was-the-plan-allowed-to-go-parallel",
+          "title": "SQL Server: was the plan allowed to go parallel?",
+          "learn": "How to read NonParallelPlanReason and remove what forces a serial plan.",
+          "type": "article",
+          "engines": [
+            "sqlserver"
+          ]
+        },
+        {
+          "path": "/sql-performance/scalar-udf",
+          "title": "Scalar functions that run once per row",
+          "learn": "How to count the calls a scalar function makes and the three ways to get rid of them.",
+          "type": "article",
+          "engines": [
+            "sqlserver"
+          ]
+        },
+        {
+          "path": "/sql-configuration/sql-server/max-degree-of-parallelism",
+          "title": "max degree of parallelism",
+          "learn": "How MAXDOP limits the threads of a parallel plan.",
+          "type": "setting",
+          "engines": [
+            "sqlserver"
+          ]
+        },
+        {
+          "path": "/sql-configuration/sql-server/maxdop-database-scoped",
+          "title": "MAXDOP (database scoped)",
+          "learn": "How to set MAXDOP for one database.",
+          "type": "setting",
+          "engines": [
+            "sqlserver"
+          ]
+        },
+        {
+          "path": "/sql-configuration/sql-server/cost-threshold-for-parallelism",
+          "title": "cost threshold for parallelism",
+          "learn": "The plan cost above which SQL Server considers a parallel plan.",
+          "type": "setting",
+          "engines": [
+            "sqlserver"
+          ]
+        }
+      ]
+    },
+    "jit_overhead": {
+      "links": [
+        {
+          "path": "/sql-performance/postgresql-jit-and-planning-time#the-jit-block",
+          "title": "PostgreSQL: the JIT block",
+          "learn": "How to tell that JIT compilation cost more than it saved, and how to turn it down.",
+          "type": "article",
+          "engines": [
+            "postgres"
+          ]
+        },
+        {
+          "path": "/sql-configuration/postgresql/jit",
+          "title": "jit",
+          "learn": "What the jit setting does and where to turn it off.",
+          "type": "setting",
+          "engines": [
+            "postgres"
+          ]
+        }
+      ]
+    },
+    "planning_time": {
+      "links": [
+        {
+          "path": "/sql-performance/postgresql-jit-and-planning-time#planning-time",
+          "title": "PostgreSQL: planning time",
+          "learn": "Why planning can take longer than execution and how prepared statements avoid it.",
+          "type": "article",
+          "engines": [
+            "postgres"
+          ]
+        },
+        {
+          "path": "/sql-performance/partition-pruning",
+          "title": "Partition pruning in the plan",
+          "learn": "How to see which partitions a query read and why none were skipped.",
+          "type": "article"
+        }
+      ]
+    },
+    "schema_index_not_used": {
+      "links": [
+        {
+          "path": "/sql-performance/index-not-used",
+          "title": "Why an index is not used",
+          "learn": "The reasons an optimizer ignores an index that looks right, and how to check each one.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-performance/non-sargable-predicates",
+          "title": "Non-sargable predicates",
+          "learn": "How to rewrite a condition so an index can be searched with it.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-performance/implicit-conversion",
+          "title": "Implicit conversions and type mismatches",
+          "learn": "How a type mismatch in a comparison turns an index seek into a scan, and how to remove it.",
+          "type": "article"
+        }
+      ]
+    },
+    "schema_fk_unindexed": {
+      "links": [
+        {
+          "path": "/sql-performance/join-algorithms#a-join-with-no-index-on-the-join-column",
+          "title": "A join with no index on the join column",
+          "learn": "What a join does when the joined column has no index, and the index to add.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-snippets/missing-fk-index-candidates",
+          "title": "Foreign keys without an index",
+          "learn": "A query that finds PostgreSQL foreign keys with no supporting index.",
+          "type": "snippet",
+          "engines": [
+            "postgres"
+          ]
+        },
+        {
+          "path": "/sql-dialects/create-index",
+          "title": "CREATE INDEX syntax",
+          "learn": "The CREATE INDEX statement on each engine.",
+          "type": "article"
+        }
+      ]
+    },
+    "schema_type_mismatch": {
+      "links": [
+        {
+          "path": "/sql-performance/implicit-conversion",
+          "title": "Implicit conversions and type mismatches",
+          "learn": "How a type mismatch in a comparison turns an index seek into a scan, and how to remove it.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-dialects/implicit-cast-comparison",
+          "title": "Implicit casts in comparisons",
+          "learn": "How each engine converts types when two sides of a comparison differ.",
+          "type": "article"
+        }
+      ]
+    },
+    "schema_nullable_not_in": {
+      "links": [
+        {
+          "path": "/sql-performance/correlated-subquery#not-in-over-a-column-that-allows-null",
+          "title": "NOT IN over a column that allows NULL",
+          "learn": "Why NOT IN over a nullable column is slow and can return nothing, and the NOT EXISTS rewrite.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-dialects/anti-join",
+          "title": "Anti-join syntax",
+          "learn": "NOT EXISTS, NOT IN and LEFT JOIN ... IS NULL on each engine.",
+          "type": "article"
+        }
+      ]
+    },
+    "schema_heap_table": {
+      "links": [
+        {
+          "path": "/sql-performance/key-lookup",
+          "title": "Key lookups and covering indexes",
+          "learn": "Why the engine goes back to the table for every row an index finds, and how a covering index stops it.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-performance/full-table-scan",
+          "title": "Full table scans in a query plan",
+          "learn": "How to tell a scan that is fine from one that reads far more rows than it returns, and how to index for it.",
+          "type": "article"
+        }
+      ]
+    },
+    "schema_wide_index": {
+      "links": [
+        {
+          "path": "/sql-performance/key-lookup",
+          "title": "Key lookups and covering indexes",
+          "learn": "Why the engine goes back to the table for every row an index finds, and how a covering index stops it.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-dialects/covering-index",
+          "title": "Covering index syntax",
+          "learn": "How to write a covering index on each engine.",
+          "type": "article"
+        }
+      ]
+    },
+    "schema_stale": {
+      "none": "The finding says the supplied schema does not match the plan. There is nothing to read about; the fix is to supply the current schema."
+    },
+    "other": {
+      "links": [
+        {
+          "path": "/sql-performance/reading-execution-plans",
+          "title": "How to read an execution plan",
+          "learn": "How to capture a plan with run-time numbers on each engine and which numbers to look at first.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-performance/execution-plan-operators",
+          "title": "Execution plan operators",
+          "learn": "What each kind of plan operator does and what each engine calls it.",
+          "type": "article"
+        }
+      ]
+    }
+  },
+  "categories": {
+    "scan": {
+      "links": [
+        {
+          "path": "/sql-performance/execution-plan-operators#scan",
+          "title": "Scan operators",
+          "learn": "What a scan reads and when that is the right choice.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-performance/full-table-scan",
+          "title": "Full table scans in a query plan",
+          "learn": "How to tell a scan that is fine from one that reads far more rows than it returns, and how to index for it.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-snippets/table-scan-detector",
+          "title": "Sequential scan detector",
+          "learn": "A query that lists the PostgreSQL tables read by sequential scans.",
+          "type": "snippet",
+          "engines": [
+            "postgres"
+          ]
+        }
+      ]
+    },
+    "seek": {
+      "links": [
+        {
+          "path": "/sql-performance/execution-plan-operators#seek",
+          "title": "Seek operators",
+          "learn": "How a seek uses an index and how to judge the condition it searched with.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-performance/index-not-used",
+          "title": "Why an index is not used",
+          "learn": "The reasons an optimizer ignores an index that looks right, and how to check each one.",
+          "type": "article"
+        }
+      ]
+    },
+    "lookup": {
+      "links": [
+        {
+          "path": "/sql-performance/execution-plan-operators#lookup",
+          "title": "Lookup operators",
+          "learn": "Why the engine fetches the rest of a row after an index found it.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-performance/key-lookup",
+          "title": "Key lookups and covering indexes",
+          "learn": "Why the engine goes back to the table for every row an index finds, and how a covering index stops it.",
+          "type": "article"
+        }
+      ]
+    },
+    "join_nested_loop": {
+      "links": [
+        {
+          "path": "/sql-performance/execution-plan-operators#nested-loop-join",
+          "title": "Nested loop join",
+          "learn": "How a nested loop join works and when it is the wrong choice.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-performance/join-algorithms",
+          "title": "Nested loop, hash and merge joins",
+          "learn": "How each join method works and how to tell when the optimizer picked the wrong one.",
+          "type": "article"
+        }
+      ]
+    },
+    "join_hash": {
+      "links": [
+        {
+          "path": "/sql-performance/execution-plan-operators#hash-join",
+          "title": "Hash join",
+          "learn": "How a hash join works and what to check on its build side.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-performance/join-algorithms#the-build-side-of-a-hash-join",
+          "title": "The build side of a hash join",
+          "learn": "Which input a hash join should build on and why a wrong estimate reverses it.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-performance/sort-and-hash-spills",
+          "title": "Sorts and hashes that spill to disk",
+          "learn": "How to confirm a sort or hash ran out of memory and the order in which to fix it.",
+          "type": "article"
+        }
+      ]
+    },
+    "join_merge": {
+      "links": [
+        {
+          "path": "/sql-performance/execution-plan-operators#merge-join",
+          "title": "Merge join",
+          "learn": "How a merge join works and where its cost hides.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-performance/join-algorithms",
+          "title": "Nested loop, hash and merge joins",
+          "learn": "How each join method works and how to tell when the optimizer picked the wrong one.",
+          "type": "article"
+        }
+      ]
+    },
+    "join": {
+      "links": [
+        {
+          "path": "/sql-performance/execution-plan-operators#other-joins-and-cross-products",
+          "title": "Other joins and cross products",
+          "learn": "Adaptive joins, and joins with no join condition.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-performance/join-row-explosion",
+          "title": "Joins that multiply rows",
+          "learn": "How to find the join that multiplies rows and fix it without hiding it behind DISTINCT.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-performance/join-algorithms",
+          "title": "Nested loop, hash and merge joins",
+          "learn": "How each join method works and how to tell when the optimizer picked the wrong one.",
+          "type": "article"
+        }
+      ]
+    },
+    "sort": {
+      "links": [
+        {
+          "path": "/sql-performance/execution-plan-operators#sort",
+          "title": "Sort operators",
+          "learn": "What a sort costs and when an index can replace it.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-performance/expensive-sort",
+          "title": "Expensive sort operators",
+          "learn": "How to find out what a sort costs and remove it with an index in the right order.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-performance/sort-and-hash-spills",
+          "title": "Sorts and hashes that spill to disk",
+          "learn": "How to confirm a sort or hash ran out of memory and the order in which to fix it.",
+          "type": "article"
+        }
+      ]
+    },
+    "aggregate": {
+      "links": [
+        {
+          "path": "/sql-performance/execution-plan-operators#aggregate",
+          "title": "Aggregate operators",
+          "learn": "The two ways an engine computes GROUP BY and DISTINCT.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-performance/using-temporary",
+          "title": "Using temporary in MySQL plans",
+          "learn": "Why MySQL builds a temporary table for GROUP BY or DISTINCT and how an index avoids it.",
+          "type": "article",
+          "engines": [
+            "mysql",
+            "mariadb"
+          ]
+        },
+        {
+          "path": "/sql-performance/sort-and-hash-spills",
+          "title": "Sorts and hashes that spill to disk",
+          "learn": "How to confirm a sort or hash ran out of memory and the order in which to fix it.",
+          "type": "article"
+        }
+      ]
+    },
+    "window": {
+      "links": [
+        {
+          "path": "/sql-performance/execution-plan-operators#window",
+          "title": "Window operators",
+          "learn": "How window functions are computed and where their cost is.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-performance/expensive-sort",
+          "title": "Expensive sort operators",
+          "learn": "How to find out what a sort costs and remove it with an index in the right order.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-functions/row-number",
+          "title": "ROW_NUMBER",
+          "learn": "How ROW_NUMBER numbers rows within a partition.",
+          "type": "function"
+        }
+      ]
+    },
+    "spool": {
+      "links": [
+        {
+          "path": "/sql-performance/execution-plan-operators#spool-and-materialize",
+          "title": "Spool and materialize operators",
+          "learn": "What a spool saves and why the plan needed it.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-performance/index-spool-automatic-index",
+          "title": "Index spools and automatic indexes",
+          "learn": "How to turn the index the engine built at run time into a permanent one.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-performance/cte-materialization",
+          "title": "Materialized CTEs",
+          "learn": "When a CTE is computed in full before it is filtered and how to let the filter in.",
+          "type": "article"
+        }
+      ]
+    },
+    "parallelism": {
+      "links": [
+        {
+          "path": "/sql-performance/execution-plan-operators#parallelism",
+          "title": "Parallelism operators",
+          "learn": "How rows move between the threads of a parallel plan.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-performance/parallel-query-plans",
+          "title": "Parallel plans that do not run in parallel",
+          "learn": "Why a query ran on fewer threads than planned and what to change.",
+          "type": "article",
+          "engines": [
+            "postgres",
+            "sqlserver"
+          ]
+        },
+        {
+          "path": "/sql-configuration/sql-server/max-degree-of-parallelism",
+          "title": "max degree of parallelism",
+          "learn": "How MAXDOP limits the threads of a parallel plan.",
+          "type": "setting",
+          "engines": [
+            "sqlserver"
+          ]
+        },
+        {
+          "path": "/sql-configuration/postgresql/max-parallel-workers-per-gather",
+          "title": "max_parallel_workers_per_gather",
+          "learn": "The limit on workers for one Gather node.",
+          "type": "setting",
+          "engines": [
+            "postgres"
+          ]
+        },
+        {
+          "path": "/sql-configuration/oracle/parallel-degree-policy",
+          "title": "PARALLEL_DEGREE_POLICY",
+          "learn": "How Oracle decides the degree of parallelism for a statement.",
+          "type": "setting",
+          "engines": [
+            "oracle"
+          ]
+        }
+      ]
+    },
+    "filter": {
+      "links": [
+        {
+          "path": "/sql-performance/execution-plan-operators#filter",
+          "title": "Filter operators",
+          "learn": "What a filter step is and why one that discards most of its input is a warning.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-performance/full-table-scan",
+          "title": "Full table scans in a query plan",
+          "learn": "How to tell a scan that is fine from one that reads far more rows than it returns, and how to index for it.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-performance/non-sargable-predicates",
+          "title": "Non-sargable predicates",
+          "learn": "How to rewrite a condition so an index can be searched with it.",
+          "type": "article"
+        }
+      ]
+    },
+    "compute": {
+      "links": [
+        {
+          "path": "/sql-performance/execution-plan-operators#compute",
+          "title": "Compute operators",
+          "learn": "Where expressions are evaluated and when that is not free.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-performance/scalar-udf",
+          "title": "Scalar functions that run once per row",
+          "learn": "How to count the calls a scalar function makes and the three ways to get rid of them.",
+          "type": "article",
+          "engines": [
+            "sqlserver"
+          ]
+        }
+      ]
+    },
+    "modify": {
+      "links": [
+        {
+          "path": "/sql-performance/execution-plan-operators#modify",
+          "title": "Modify operators",
+          "learn": "How INSERT, UPDATE and DELETE appear in a plan.",
+          "type": "article"
+        }
+      ]
+    },
+    "remote": {
+      "links": [
+        {
+          "path": "/sql-performance/execution-plan-operators#remote",
+          "title": "Remote operators",
+          "learn": "What a plan shows for work done on another server.",
+          "type": "article"
+        }
+      ]
+    },
+    "set_op": {
+      "links": [
+        {
+          "path": "/sql-performance/execution-plan-operators#set-operations",
+          "title": "Set operations",
+          "learn": "How UNION, INTERSECT, EXCEPT and partition appends appear in a plan.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-performance/partition-pruning",
+          "title": "Partition pruning in the plan",
+          "learn": "How to see which partitions a query read and why none were skipped.",
+          "type": "article"
+        }
+      ]
+    },
+    "limit": {
+      "links": [
+        {
+          "path": "/sql-performance/execution-plan-operators#limit",
+          "title": "Limit operators",
+          "learn": "How TOP and LIMIT change the plan beneath them.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-performance/row-estimate-mismatch#row-goals-top-and-limit",
+          "title": "Row goals: TOP and LIMIT",
+          "learn": "How TOP or LIMIT changes the plan beneath it, and what to do when the guess is wrong.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-dialects/top-n",
+          "title": "Top N rows",
+          "learn": "TOP, LIMIT and FETCH FIRST on each engine.",
+          "type": "article"
+        }
+      ]
+    },
+    "subquery": {
+      "links": [
+        {
+          "path": "/sql-performance/execution-plan-operators#subquery",
+          "title": "Subquery operators",
+          "learn": "How subqueries, CTEs and views appear in a plan, and how often they run.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-performance/correlated-subquery",
+          "title": "Correlated subqueries and NOT IN",
+          "learn": "How to see that a subquery runs once per row and how to rewrite it as a join.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-performance/cte-materialization",
+          "title": "Materialized CTEs",
+          "learn": "When a CTE is computed in full before it is filtered and how to let the filter in.",
+          "type": "article"
+        }
+      ]
+    },
+    "function": {
+      "links": [
+        {
+          "path": "/sql-performance/execution-plan-operators#table-function",
+          "title": "Table function operators",
+          "learn": "Why row estimates for table functions are guesses.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-performance/row-estimate-mismatch",
+          "title": "Estimated rows far from actual rows",
+          "learn": "Where a wrong row estimate comes from and how to correct it with statistics.",
+          "type": "article"
+        }
+      ]
+    },
+    "constant": {
+      "links": [
+        {
+          "path": "/sql-performance/execution-plan-operators#constant",
+          "title": "Constant operators",
+          "learn": "Rows that come from the query text and not from a table.",
+          "type": "article"
+        }
+      ]
+    },
+    "result": {
+      "links": [
+        {
+          "path": "/sql-performance/execution-plan-operators#result",
+          "title": "Result operators",
+          "learn": "What the root step of a plan reports.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-performance/reading-execution-plans",
+          "title": "How to read an execution plan",
+          "learn": "How to capture a plan with run-time numbers on each engine and which numbers to look at first.",
+          "type": "article"
+        }
+      ]
+    },
+    "lock": {
+      "links": [
+        {
+          "path": "/sql-performance/execution-plan-operators#lock",
+          "title": "Lock operators",
+          "learn": "What a row-locking step means when it is slow.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-performance/blocking-deadlocks",
+          "title": "Blocking and deadlocks",
+          "learn": "How to find the session that holds the lock a query is waiting for.",
+          "type": "article"
+        }
+      ]
+    },
+    "other": {
+      "links": [
+        {
+          "path": "/sql-performance/execution-plan-operators#other",
+          "title": "Other operators",
+          "learn": "Steps that fit no other kind.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-performance/reading-execution-plans",
+          "title": "How to read an execution plan",
+          "learn": "How to capture a plan with run-time numbers on each engine and which numbers to look at first.",
+          "type": "article"
+        }
+      ]
+    }
+  },
+  "operators": {
+    "sqlserver.key_lookup": {
+      "links": [
+        {
+          "path": "/sql-performance/key-lookup",
+          "title": "Key lookups and covering indexes",
+          "learn": "Why the engine goes back to the table for every row an index finds, and how a covering index stops it.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-dialects/covering-index",
+          "title": "Covering index syntax",
+          "learn": "How to write a covering index on each engine.",
+          "type": "article"
+        }
+      ]
+    },
+    "sqlserver.rid_lookup": {
+      "links": [
+        {
+          "path": "/sql-performance/key-lookup",
+          "title": "Key lookups and covering indexes",
+          "learn": "Why the engine goes back to the table for every row an index finds, and how a covering index stops it.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-dialects/covering-index",
+          "title": "Covering index syntax",
+          "learn": "How to write a covering index on each engine.",
+          "type": "article"
+        }
+      ]
+    },
+    "oracle.table_access_by_index_rowid": {
+      "links": [
+        {
+          "path": "/sql-performance/key-lookup",
+          "title": "Key lookups and covering indexes",
+          "learn": "Why the engine goes back to the table for every row an index finds, and how a covering index stops it.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-dialects/covering-index",
+          "title": "Covering index syntax",
+          "learn": "How to write a covering index on each engine.",
+          "type": "article"
+        }
+      ]
+    },
+    "oracle.table_access_by_index_rowid_batched": {
+      "links": [
+        {
+          "path": "/sql-performance/key-lookup",
+          "title": "Key lookups and covering indexes",
+          "learn": "Why the engine goes back to the table for every row an index finds, and how a covering index stops it.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-dialects/covering-index",
+          "title": "Covering index syntax",
+          "learn": "How to write a covering index on each engine.",
+          "type": "article"
+        }
+      ]
+    },
+    "postgres.index_only_scan": {
+      "links": [
+        {
+          "path": "/sql-performance/index-only-scan-heap-fetches",
+          "title": "Heap fetches in an index-only scan",
+          "learn": "Why an index-only scan still reads the table and how VACUUM fixes it.",
+          "type": "article",
+          "engines": [
+            "postgres"
+          ]
+        }
+      ]
+    },
+    "postgres.bitmap_heap_scan": {
+      "links": [
+        {
+          "path": "/sql-performance/sort-and-hash-spills#lossy-bitmap-heap-scans",
+          "title": "Lossy bitmap heap scans",
+          "learn": "What lossy heap blocks mean and how much work_mem the bitmap needs.",
+          "type": "article",
+          "engines": [
+            "postgres"
+          ]
+        },
+        {
+          "path": "/sql-performance/index-merge",
+          "title": "Index merge and BitmapAnd plans",
+          "learn": "When combining several single-column indexes is a sign that one composite index is missing.",
+          "type": "article"
+        }
+      ]
+    },
+    "postgres.bitmap_and": {
+      "links": [
+        {
+          "path": "/sql-performance/index-merge",
+          "title": "Index merge and BitmapAnd plans",
+          "learn": "When combining several single-column indexes is a sign that one composite index is missing.",
+          "type": "article"
+        }
+      ]
+    },
+    "postgres.bitmap_or": {
+      "links": [
+        {
+          "path": "/sql-performance/index-merge",
+          "title": "Index merge and BitmapAnd plans",
+          "learn": "When combining several single-column indexes is a sign that one composite index is missing.",
+          "type": "article"
+        }
+      ]
+    },
+    "mysql.index_merge": {
+      "links": [
+        {
+          "path": "/sql-performance/index-merge",
+          "title": "Index merge and BitmapAnd plans",
+          "learn": "When combining several single-column indexes is a sign that one composite index is missing.",
+          "type": "article"
+        }
+      ]
+    },
+    "sqlserver.index_spool": {
+      "links": [
+        {
+          "path": "/sql-performance/index-spool-automatic-index",
+          "title": "Index spools and automatic indexes",
+          "learn": "How to turn the index the engine built at run time into a permanent one.",
+          "type": "article"
+        }
+      ]
+    },
+    "sqlserver.index_spool_eager": {
+      "links": [
+        {
+          "path": "/sql-performance/index-spool-automatic-index",
+          "title": "Index spools and automatic indexes",
+          "learn": "How to turn the index the engine built at run time into a permanent one.",
+          "type": "article"
+        }
+      ]
+    },
+    "sqlserver.index_spool_lazy": {
+      "links": [
+        {
+          "path": "/sql-performance/index-spool-automatic-index",
+          "title": "Index spools and automatic indexes",
+          "learn": "How to turn the index the engine built at run time into a permanent one.",
+          "type": "article"
+        }
+      ]
+    },
+    "sqlite.search_using_automatic_index": {
+      "links": [
+        {
+          "path": "/sql-performance/index-spool-automatic-index",
+          "title": "Index spools and automatic indexes",
+          "learn": "How to turn the index the engine built at run time into a permanent one.",
+          "type": "article"
+        },
+        {
+          "path": "/sql-configuration/sqlite/automatic-index",
+          "title": "automatic_index",
+          "learn": "The pragma that lets SQLite build an index for one query.",
+          "type": "setting",
+          "engines": [
+            "sqlite"
+          ]
+        }
+      ]
+    },
+    "postgres.cte_scan": {
+      "links": [
+        {
+          "path": "/sql-performance/cte-materialization",
+          "title": "Materialized CTEs",
+          "learn": "When a CTE is computed in full before it is filtered and how to let the filter in.",
+          "type": "article"
+        }
+      ]
+    },
+    "mysql.materialize_cte": {
+      "links": [
+        {
+          "path": "/sql-performance/cte-materialization",
+          "title": "Materialized CTEs",
+          "learn": "When a CTE is computed in full before it is filtered and how to let the filter in.",
+          "type": "article"
+        }
+      ]
+    },
+    "mysql.temporary_table": {
+      "links": [
+        {
+          "path": "/sql-performance/using-temporary",
+          "title": "Using temporary in MySQL plans",
+          "learn": "Why MySQL builds a temporary table for GROUP BY or DISTINCT and how an index avoids it.",
+          "type": "article",
+          "engines": [
+            "mysql",
+            "mariadb"
+          ]
+        },
+        {
+          "path": "/sql-configuration/mysql/tmp-table-size",
+          "title": "tmp_table_size",
+          "learn": "When an in-memory temporary table is moved to disk.",
+          "type": "setting",
+          "engines": [
+            "mysql",
+            "mariadb"
+          ]
+        }
+      ]
+    },
+    "mysql.filesort": {
+      "links": [
+        {
+          "path": "/sql-performance/expensive-sort",
+          "title": "Expensive sort operators",
+          "learn": "How to find out what a sort costs and remove it with an index in the right order.",
+          "type": "article"
+        }
+      ]
+    },
+    "sqlite.use_temp_b_tree_for_order_by": {
+      "links": [
+        {
+          "path": "/sql-performance/expensive-sort",
+          "title": "Expensive sort operators",
+          "learn": "How to find out what a sort costs and remove it with an index in the right order.",
+          "type": "article"
+        }
+      ]
+    },
+    "postgres.gather": {
+      "links": [
+        {
+          "path": "/sql-performance/parallel-query-plans#postgresql-workers-planned-and-workers-launched",
+          "title": "PostgreSQL: workers planned and workers launched",
+          "learn": "Why fewer workers started than the plan asked for, and the three settings that limit them.",
+          "type": "article",
+          "engines": [
+            "postgres"
+          ]
+        },
+        {
+          "path": "/sql-configuration/postgresql/max-parallel-workers-per-gather",
+          "title": "max_parallel_workers_per_gather",
+          "learn": "The limit on workers for one Gather node.",
+          "type": "setting",
+          "engines": [
+            "postgres"
+          ]
+        }
+      ]
+    },
+    "postgres.gather_merge": {
+      "links": [
+        {
+          "path": "/sql-performance/parallel-query-plans#postgresql-workers-planned-and-workers-launched",
+          "title": "PostgreSQL: workers planned and workers launched",
+          "learn": "Why fewer workers started than the plan asked for, and the three settings that limit them.",
+          "type": "article",
+          "engines": [
+            "postgres"
+          ]
+        },
+        {
+          "path": "/sql-configuration/postgresql/max-parallel-workers-per-gather",
+          "title": "max_parallel_workers_per_gather",
+          "learn": "The limit on workers for one Gather node.",
+          "type": "setting",
+          "engines": [
+            "postgres"
+          ]
+        }
+      ]
+    },
+    "sqlserver.parallelism": {
+      "links": [
+        {
+          "path": "/sql-performance/parallel-query-plans#sql-server-rows-per-thread",
+          "title": "SQL Server: rows per thread",
+          "learn": "How to read rows per thread and what to do when one thread did most of the work.",
+          "type": "article",
+          "engines": [
+            "sqlserver"
+          ]
+        },
+        {
+          "path": "/sql-performance/parallel-query-plans#sql-server-was-the-plan-allowed-to-go-parallel",
+          "title": "SQL Server: was the plan allowed to go parallel?",
+          "learn": "How to read NonParallelPlanReason and remove what forces a serial plan.",
+          "type": "article",
+          "engines": [
+            "sqlserver"
+          ]
+        },
+        {
+          "path": "/sql-configuration/sql-server/max-degree-of-parallelism",
+          "title": "max degree of parallelism",
+          "learn": "How MAXDOP limits the threads of a parallel plan.",
+          "type": "setting",
+          "engines": [
+            "sqlserver"
+          ]
+        }
+      ]
+    },
+    "sqlserver.parallelism_gather_streams": {
+      "links": [
+        {
+          "path": "/sql-performance/parallel-query-plans#sql-server-rows-per-thread",
+          "title": "SQL Server: rows per thread",
+          "learn": "How to read rows per thread and what to do when one thread did most of the work.",
+          "type": "article",
+          "engines": [
+            "sqlserver"
+          ]
+        },
+        {
+          "path": "/sql-performance/parallel-query-plans#sql-server-was-the-plan-allowed-to-go-parallel",
+          "title": "SQL Server: was the plan allowed to go parallel?",
+          "learn": "How to read NonParallelPlanReason and remove what forces a serial plan.",
+          "type": "article",
+          "engines": [
+            "sqlserver"
+          ]
+        },
+        {
+          "path": "/sql-configuration/sql-server/max-degree-of-parallelism",
+          "title": "max degree of parallelism",
+          "learn": "How MAXDOP limits the threads of a parallel plan.",
+          "type": "setting",
+          "engines": [
+            "sqlserver"
+          ]
+        }
+      ]
+    },
+    "sqlserver.parallelism_distribute_streams": {
+      "links": [
+        {
+          "path": "/sql-performance/parallel-query-plans#sql-server-rows-per-thread",
+          "title": "SQL Server: rows per thread",
+          "learn": "How to read rows per thread and what to do when one thread did most of the work.",
+          "type": "article",
+          "engines": [
+            "sqlserver"
+          ]
+        },
+        {
+          "path": "/sql-performance/parallel-query-plans#sql-server-was-the-plan-allowed-to-go-parallel",
+          "title": "SQL Server: was the plan allowed to go parallel?",
+          "learn": "How to read NonParallelPlanReason and remove what forces a serial plan.",
+          "type": "article",
+          "engines": [
+            "sqlserver"
+          ]
+        },
+        {
+          "path": "/sql-configuration/sql-server/max-degree-of-parallelism",
+          "title": "max degree of parallelism",
+          "learn": "How MAXDOP limits the threads of a parallel plan.",
+          "type": "setting",
+          "engines": [
+            "sqlserver"
+          ]
+        }
+      ]
+    },
+    "sqlserver.parallelism_repartition_streams": {
+      "links": [
+        {
+          "path": "/sql-performance/parallel-query-plans#sql-server-rows-per-thread",
+          "title": "SQL Server: rows per thread",
+          "learn": "How to read rows per thread and what to do when one thread did most of the work.",
+          "type": "article",
+          "engines": [
+            "sqlserver"
+          ]
+        },
+        {
+          "path": "/sql-performance/parallel-query-plans#sql-server-was-the-plan-allowed-to-go-parallel",
+          "title": "SQL Server: was the plan allowed to go parallel?",
+          "learn": "How to read NonParallelPlanReason and remove what forces a serial plan.",
+          "type": "article",
+          "engines": [
+            "sqlserver"
+          ]
+        },
+        {
+          "path": "/sql-configuration/sql-server/max-degree-of-parallelism",
+          "title": "max degree of parallelism",
+          "learn": "How MAXDOP limits the threads of a parallel plan.",
+          "type": "setting",
+          "engines": [
+            "sqlserver"
+          ]
+        }
+      ]
+    },
+    "postgres.append": {
+      "links": [
+        {
+          "path": "/sql-performance/partition-pruning",
+          "title": "Partition pruning in the plan",
+          "learn": "How to see which partitions a query read and why none were skipped.",
+          "type": "article"
+        }
+      ]
+    },
+    "postgres.merge_append": {
+      "links": [
+        {
+          "path": "/sql-performance/partition-pruning",
+          "title": "Partition pruning in the plan",
+          "learn": "How to see which partitions a query read and why none were skipped.",
+          "type": "article"
+        }
+      ]
+    },
+    "oracle.merge_join_cartesian": {
+      "links": [
+        {
+          "path": "/sql-performance/join-row-explosion",
+          "title": "Joins that multiply rows",
+          "learn": "How to find the join that multiplies rows and fix it without hiding it behind DISTINCT.",
+          "type": "article"
+        }
+      ]
+    },
+    "sqlite.correlated_scalar_subquery": {
+      "links": [
+        {
+          "path": "/sql-performance/correlated-subquery",
+          "title": "Correlated subqueries and NOT IN",
+          "learn": "How to see that a subquery runs once per row and how to rewrite it as a join.",
+          "type": "article"
+        }
+      ]
+    },
+    "sqlite.correlated_list_subquery": {
+      "links": [
+        {
+          "path": "/sql-performance/correlated-subquery",
+          "title": "Correlated subqueries and NOT IN",
+          "learn": "How to see that a subquery runs once per row and how to rewrite it as a join.",
+          "type": "article"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,20 @@
+[Unit]
+Description=SQLLY notebook job j_demo (Revenue 100%%)
+
+[Service]
+Type=oneshot
+ExecStart="/opt/sqlly/bin/sqlly" "notebook" "schedule" "run-now" "j_demo" "--scheduled"
+Nice=10
+
+# ---- timer ----
+[Unit]
+Description=Schedule for SQLLY notebook job j_demo
+
+[Timer]
+OnCalendar=*-*-01,15 06:00:00 Europe/London
+OnCalendar=Mon *-*-* 06:00:00 Europe/London
+Persistent=true
+Unit=sqlly-notebook-j_demo.service
+
+[Install]
+WantedBy=timers.target

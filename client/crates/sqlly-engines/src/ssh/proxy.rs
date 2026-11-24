@@ -89,7 +89,10 @@ async fn dial_http_connect(
 }
 
 fn proxy_error(hop: &ProxyHop, err: impl std::fmt::Display) -> StudioError {
-    StudioError::Connection(format!("proxy {}:{}: {err}", hop.host, hop.port))
+    crate::connect_hint::connection_with_local_network_hint(format!(
+        "proxy {}:{}: {err}",
+        hop.host, hop.port
+    ))
 }
 
 #[cfg(test)]
@@ -173,5 +176,29 @@ mod tests {
         stream.read_exact(&mut buf).await.unwrap();
         assert_eq!(&buf, b"pong");
         server.await.unwrap();
+    }
+
+    /// Regression: a proxy hop that fails with "No route to host" (macOS
+    /// Local Network privacy) must carry the same hint as a direct connect.
+    #[test]
+    fn proxy_no_route_to_host_carries_the_local_network_hint() {
+        let hop = ProxyHop {
+            kind: ProxyKind::Socks5,
+            host: "10.0.0.7".to_string(),
+            port: 1080,
+            username: None,
+            password: None,
+        };
+        let text = proxy_error(&hop, "No route to host (os error 65)").to_string();
+        assert!(text.contains("proxy 10.0.0.7:1080"), "{text}");
+        assert!(text.contains("No route to host"), "{text}");
+        #[cfg(target_os = "macos")]
+        assert!(
+            text.contains("Privacy & Security → Local Network"),
+            "{text}"
+        );
+        // Any other proxy failure is reported unchanged.
+        let refused = proxy_error(&hop, "Connection refused").to_string();
+        assert!(!refused.contains("Local Network"), "{refused}");
     }
 }

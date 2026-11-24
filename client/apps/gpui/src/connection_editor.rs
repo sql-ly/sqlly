@@ -98,6 +98,7 @@ fn connection_engine_note(database_type: DatabaseType) -> Option<String> {
     let key = match database_type {
         CockroachDb => "connections.editor.compatibility_cockroachdb",
         YugabyteDb => "connections.editor.compatibility_yugabytedb",
+        WarehousePg => "connections.editor.compatibility_warehousepg",
         TiDb => "connections.editor.compatibility_tidb",
         PlanetScale => "connections.editor.compatibility_planetscale",
         AzurePostgresFlexible | Neon => "connections.editor.compatibility_postgres_tls",
@@ -334,6 +335,14 @@ pub struct ConnectionEditor {
     aws_region: String,
     aws_profile: String,
     aws_region_input: Entity<InputState>,
+    /// PostgreSQL OAuth settings. The role is `username`; the client secret
+    /// (browser sign-in) or the token (bearer token) is the password field.
+    pg_oauth_issuer: String,
+    pg_oauth_client_id: String,
+    pg_oauth_scope: String,
+    pg_oauth_issuer_input: Entity<InputState>,
+    pg_oauth_client_id_input: Entity<InputState>,
+    pg_oauth_scope_input: Entity<InputState>,
     #[cfg(not(target_arch = "wasm32"))]
     aws_profile_select: Entity<SelectState<Vec<String>>>,
     #[cfg(not(target_arch = "wasm32"))]
@@ -700,6 +709,21 @@ impl ConnectionEditor {
         });
         let username_input = cx.new(|cx| InputState::new(window, cx).placeholder("sa"));
         let aws_region_input = cx.new(|cx| InputState::new(window, cx).placeholder("us-west-2"));
+        let pg_oauth_issuer_input = cx.new(|cx| {
+            InputState::new(window, cx).placeholder(crate::localization::input_placeholder(
+                window,
+                cx,
+                "connections.editor.pg_oauth_issuer_placeholder",
+            ))
+        });
+        let pg_oauth_client_id_input = cx.new(|cx| InputState::new(window, cx));
+        let pg_oauth_scope_input = cx.new(|cx| {
+            InputState::new(window, cx).placeholder(crate::localization::input_placeholder(
+                window,
+                cx,
+                "connections.editor.pg_oauth_scope_placeholder",
+            ))
+        });
         #[cfg(not(target_arch = "wasm32"))]
         let aws_profile_select = cx.new(|cx| {
             SelectState::new(
@@ -905,6 +929,36 @@ impl ConnectionEditor {
             |this: &mut Self, input, event: &InputEvent, _window, cx| {
                 if let InputEvent::Change = event {
                     this.aws_region = input.read(cx).value().to_string();
+                    cx.notify();
+                }
+            },
+        ));
+        subscriptions.push(cx.subscribe_in(
+            &pg_oauth_issuer_input,
+            window,
+            |this: &mut Self, input, event: &InputEvent, _window, cx| {
+                if let InputEvent::Change = event {
+                    this.pg_oauth_issuer = input.read(cx).value().to_string();
+                    cx.notify();
+                }
+            },
+        ));
+        subscriptions.push(cx.subscribe_in(
+            &pg_oauth_client_id_input,
+            window,
+            |this: &mut Self, input, event: &InputEvent, _window, cx| {
+                if let InputEvent::Change = event {
+                    this.pg_oauth_client_id = input.read(cx).value().to_string();
+                    cx.notify();
+                }
+            },
+        ));
+        subscriptions.push(cx.subscribe_in(
+            &pg_oauth_scope_input,
+            window,
+            |this: &mut Self, input, event: &InputEvent, _window, cx| {
+                if let InputEvent::Change = event {
+                    this.pg_oauth_scope = input.read(cx).value().to_string();
                     cx.notify();
                 }
             },
@@ -1474,6 +1528,9 @@ impl ConnectionEditor {
             database_input,
             username_input,
             aws_region_input,
+            pg_oauth_issuer_input,
+            pg_oauth_client_id_input,
+            pg_oauth_scope_input,
             #[cfg(not(target_arch = "wasm32"))]
             aws_profile_select,
             #[cfg(not(target_arch = "wasm32"))]
@@ -1509,6 +1566,9 @@ impl ConnectionEditor {
             username: String::new(),
             aws_region: String::new(),
             aws_profile: String::new(),
+            pg_oauth_issuer: String::new(),
+            pg_oauth_client_id: String::new(),
+            pg_oauth_scope: String::new(),
             sql_account: None,
             client: String::new(),
             project: String::new(),
@@ -1717,6 +1777,14 @@ impl ConnectionEditor {
             AuthenticationType::AwsRdsIam { .. } => AuthMode::AwsRdsIam,
             AuthenticationType::GcpCloudSqlIam { .. } => AuthMode::GcpCloudSqlIam,
             AuthenticationType::AuthToken { .. } => AuthMode::AuthToken,
+            AuthenticationType::PostgresOAuth {
+                flow: sqlly_core::PgOAuthFlow::DeviceCode,
+                ..
+            } => AuthMode::PgOAuth,
+            AuthenticationType::PostgresOAuth {
+                flow: sqlly_core::PgOAuthFlow::BearerToken,
+                ..
+            } => AuthMode::PgOAuthToken,
         };
         editor.apply_iam_auth_mode_side_effects(editor.auth_mode, window, cx);
 
@@ -1954,6 +2022,37 @@ impl ConnectionEditor {
         if let AuthenticationType::GcpCloudSqlIam { username } = &profile.authentication {
             editor.username = username.clone();
         }
+        // PostgreSQL OAuth: the client secret or bearer token shares the
+        // password field, kept by keyring id exactly like a libSQL token.
+        if let AuthenticationType::PostgresOAuth {
+            username,
+            issuer,
+            client_id,
+            scope,
+            secret_ref,
+            ..
+        } = &profile.authentication
+        {
+            editor.username = username.clone();
+            editor.pg_oauth_issuer = issuer.clone();
+            editor.pg_oauth_client_id = client_id.clone();
+            editor.pg_oauth_scope = scope.clone();
+            editor.sql_account = if secret_ref.provider == SecretProvider::MacOsKeychain {
+                Uuid::parse_str(&secret_ref.key).ok()
+            } else {
+                None
+            };
+            if secret_ref.provider == SecretProvider::InMemory {
+                let secret = secret_ref.key.clone();
+                editor
+                    .password_input
+                    .update(cx, |f, cx| f.set_value(secret, window, cx));
+            } else if editor.sql_account.is_some() {
+                editor
+                    .password_input
+                    .update(cx, |f, cx| f.set_value(password_mask(), window, cx));
+            }
+        }
         if let Some(user) = &profile.redis_entra_user {
             editor.username = user.clone();
         }
@@ -1968,6 +2067,18 @@ impl ConnectionEditor {
             (editor.database_input.clone(), editor.database.clone()),
             (editor.username_input.clone(), editor.username.clone()),
             (editor.aws_region_input.clone(), editor.aws_region.clone()),
+            (
+                editor.pg_oauth_issuer_input.clone(),
+                editor.pg_oauth_issuer.clone(),
+            ),
+            (
+                editor.pg_oauth_client_id_input.clone(),
+                editor.pg_oauth_client_id.clone(),
+            ),
+            (
+                editor.pg_oauth_scope_input.clone(),
+                editor.pg_oauth_scope.clone(),
+            ),
             (editor.client_input.clone(), editor.client.clone()),
             (editor.project_input.clone(), editor.project.clone()),
             (editor.timeout_input.clone(), editor.timeout.clone()),
@@ -2544,6 +2655,9 @@ impl ConnectionEditor {
             username: self.username.clone(),
             aws_region: self.aws_region.clone(),
             aws_profile: self.aws_profile.clone(),
+            pg_oauth_issuer: self.pg_oauth_issuer.clone(),
+            pg_oauth_client_id: self.pg_oauth_client_id.clone(),
+            pg_oauth_scope: self.pg_oauth_scope.clone(),
             password: self.password_input.read(cx).value().to_string(),
             sql_account,
             auth_mode: self.auth_mode,
@@ -2692,6 +2806,9 @@ impl ConnectionEditor {
             username: self.username.clone(),
             aws_region: self.aws_region.clone(),
             aws_profile: self.aws_profile.clone(),
+            pg_oauth_issuer: self.pg_oauth_issuer.clone(),
+            pg_oauth_client_id: self.pg_oauth_client_id.clone(),
+            pg_oauth_scope: self.pg_oauth_scope.clone(),
             password: self.password_input.read(cx).value().to_string(),
             sql_account: self.sql_account,
             auth_mode: self.auth_mode,
@@ -2919,6 +3036,72 @@ impl ConnectionEditor {
                 }
                 None => profile,
             };
+            // PostgreSQL OAuth (browser sign-in): reuse or refresh the stored
+            // token, or show the device code here while the user approves the
+            // sign-in in the browser.
+            #[cfg(not(target_arch = "wasm32"))]
+            let profile = if profile.authentication.is_pg_oauth_device_flow() {
+                let (challenge_tx, challenge_rx) = tokio::sync::oneshot::channel();
+                let on_challenge: Box<dyn FnOnce(crate::pg_oauth_token::DeviceChallenge) + Send> =
+                    Box::new(move |challenge| {
+                        let _ = crate::browser_open::open_in_browser(&challenge.browser_url);
+                        let _ = challenge_tx.send(challenge);
+                    });
+                let show = weak_self.clone();
+                async_cx
+                    .spawn(async move |cx: &mut gpui::AsyncApp| {
+                        let Ok(challenge) = challenge_rx.await else {
+                            return;
+                        };
+                        let _ = show.update(cx, |this, cx| {
+                            this.test_result = Some(crate::localization::format(
+                                "connections.editor.pg_oauth_enter_code",
+                                &[
+                                    ("code", &challenge.user_code),
+                                    ("url", &challenge.verification_uri),
+                                ],
+                            ));
+                            cx.notify();
+                        });
+                    })
+                    .detach();
+                match crate::pg_oauth_token::ensure_token(
+                    profile.clone(),
+                    Some(on_challenge),
+                    tokio_util::sync::CancellationToken::new(),
+                )
+                .await
+                {
+                    Ok(token) => {
+                        let mut profile = profile;
+                        profile.runtime_cloud_iam_token = Some(token);
+                        profile
+                    }
+                    Err(message) => {
+                        let message = crate::localization::message(message);
+                        ConnectionStore::global().record_failure(
+                            profile_id,
+                            chrono::Utc::now(),
+                            &message,
+                        );
+                        let mut cx = async_cx.clone();
+                        weak_self
+                            .update(&mut cx, |this, cx| {
+                                this.testing = false;
+                                this.test_success = false;
+                                this.test_result = Some(crate::localization::text(
+                                    "connections.editor.test_failed",
+                                ));
+                                this.error = Some(message);
+                                cx.notify();
+                            })
+                            .ok();
+                        return;
+                    }
+                }
+            } else {
+                profile
+            };
             // web_time on wasm: std::time::Instant panics there.
             #[cfg(not(target_arch = "wasm32"))]
             use std::time::Instant;
@@ -3072,6 +3255,12 @@ impl ConnectionEditor {
                 self.auth_mode = AuthMode::default_for(engine);
             }
             self.host_validation = validate_server_text(engine, &self.server);
+        }
+        if self.auth_mode == AuthMode::SqlLogin {
+            let placeholder = crate::engine_form::sql_login_user_placeholder(engine);
+            self.username_input.update(cx, |state, cx| {
+                state.set_placeholder(placeholder, window, cx);
+            });
         }
         if self.engine_auto_detect {
             let mode = crate::engine_form::tls_after_auto_detect(self.tls_mode, old, engine);
@@ -3584,8 +3773,10 @@ impl ConnectionEditor {
                 }
             }
             AuthMode::SqlLogin => {
+                let placeholder =
+                    crate::engine_form::sql_login_user_placeholder(self.database_type);
                 self.username_input.update(cx, |state, cx| {
-                    state.set_placeholder("sa", window, cx);
+                    state.set_placeholder(placeholder, window, cx);
                 });
             }
             // Redis with Entra: the optional Redis user name.
@@ -3603,6 +3794,14 @@ impl ConnectionEditor {
     }
 
     fn set_auth_mode(&mut self, mode: AuthMode, window: &mut Window, cx: &mut Context<Self>) {
+        // The password field means a client secret or a bearer token in the
+        // OAuth modes; never carry a secret across into a different meaning.
+        let oauth = |m: AuthMode| matches!(m, AuthMode::PgOAuth | AuthMode::PgOAuthToken);
+        if mode != self.auth_mode && (oauth(mode) || oauth(self.auth_mode)) {
+            self.sql_account = None;
+            self.password_input
+                .update(cx, |f, cx| f.set_value(String::new(), window, cx));
+        }
         self.auth_mode = mode;
         self.apply_iam_auth_mode_side_effects(mode, window, cx);
         if mode == AuthMode::EntraBrowser {
@@ -5245,6 +5444,7 @@ impl ConnectionEditor {
         div()
             .flex()
             .flex_row()
+            .flex_wrap()
             .gap(px(s(4.0)))
             .children(AuthMode::ALL.iter().enumerate().filter_map(|(i, mode)| {
                 if !mode.supported_for(engine) {
@@ -6084,6 +6284,10 @@ impl Render for ConnectionEditor {
             }
             AuthMode::SqlLogin | AuthMode::AwsRdsIam | AuthMode::GcpCloudSqlIam => String::new(),
             AuthMode::AuthToken => crate::localization::text("connections.editor.auth_token_hint"),
+            AuthMode::PgOAuth => crate::localization::text("connections.editor.pg_oauth_hint"),
+            AuthMode::PgOAuthToken => {
+                crate::localization::text("connections.editor.pg_oauth_token_hint")
+            }
         };
         #[cfg(not(target_arch = "wasm32"))]
         let gcp_adc_status = self.gcp_adc_status.clone();
@@ -6394,6 +6598,73 @@ impl Render for ConnectionEditor {
                                 )),
                         )
                     })
+                    // PostgreSQL 18 OAuth: the role, then the provider
+                    // settings (browser sign-in) or the token itself.
+                    .when(
+                        !file_engine
+                            && matches!(auth_mode, AuthMode::PgOAuth | AuthMode::PgOAuthToken),
+                        |d| {
+                            let role = Input::new(&self.username_input)
+                                .font_family(Theme::editor_font_family());
+                            let secret = Input::new(&self.password_input)
+                                .font_family(Theme::editor_font_family())
+                                .mask_toggle();
+                            let d = d.child(Self::labeled_field(
+                                &crate::localization::text(
+                                    "connections.editor.database_user_label",
+                                ),
+                                role,
+                                cx,
+                            ));
+                            let d = if auth_mode == AuthMode::PgOAuth {
+                                d.child(Self::labeled_field(
+                                    &crate::localization::text(
+                                        "connections.editor.pg_oauth_client_id_label",
+                                    ),
+                                    Input::new(&self.pg_oauth_client_id_input)
+                                        .font_family(Theme::editor_font_family()),
+                                    cx,
+                                ))
+                                .child(Self::labeled_field(
+                                    &crate::localization::text(
+                                        "connections.editor.pg_oauth_issuer_label",
+                                    ),
+                                    Input::new(&self.pg_oauth_issuer_input)
+                                        .font_family(Theme::editor_font_family()),
+                                    cx,
+                                ))
+                                .child(Self::labeled_field(
+                                    &crate::localization::text(
+                                        "connections.editor.pg_oauth_scope_label",
+                                    ),
+                                    Input::new(&self.pg_oauth_scope_input)
+                                        .font_family(Theme::editor_font_family()),
+                                    cx,
+                                ))
+                                .child(Self::labeled_field(
+                                    &crate::localization::text(
+                                        "connections.editor.pg_oauth_client_secret_label",
+                                    ),
+                                    secret,
+                                    cx,
+                                ))
+                            } else {
+                                d.child(Self::labeled_field(
+                                    &crate::localization::text(
+                                        "connections.editor.pg_oauth_token_label",
+                                    ),
+                                    secret,
+                                    cx,
+                                ))
+                            };
+                            d.child(
+                                div()
+                                    .text_size(px(Theme::font_size()))
+                                    .text_color(Theme::text_dim())
+                                    .child(auth_hint.to_string()),
+                            )
+                        },
+                    )
                     .when(!file_engine && auth_mode == AuthMode::GcpCloudSqlIam, |d| {
                         let iam_user = Input::new(&self.username_input)
                             .font_family(Theme::editor_font_family())
@@ -6773,6 +7044,9 @@ struct ProfileInputs {
     username: String,
     aws_region: String,
     aws_profile: String,
+    pg_oauth_issuer: String,
+    pg_oauth_client_id: String,
+    pg_oauth_scope: String,
     password: String,
     sql_account: Option<Uuid>,
     auth_mode: AuthMode,
@@ -7013,10 +7287,12 @@ fn assemble_profile(input: ProfileInputs) -> Result<ConnectionProfile, String> {
     let password = input.password.clone();
 
     // Username/password are only meaningful for SQL Login; the other auth
-    // modes resolve credentials from the system/token cache.
+    // modes resolve credentials from the system/token cache. Servers that
+    // accept a connection without a user (Redis, ClickHouse) may leave it
+    // blank.
     if input.auth_mode == AuthMode::SqlLogin
         && username.is_empty()
-        && !crate::engine_form::is_file_engine(input.database_type)
+        && !crate::engine_form::user_name_optional(input.database_type)
     {
         return Err(crate::localization::text(
             "connections.editor.sql_username_required",
@@ -7201,11 +7477,58 @@ fn assemble_profile(input: ProfileInputs) -> Result<ConnectionProfile, String> {
             },
         },
         AuthMode::GcpCloudSqlIam => AuthenticationType::GcpCloudSqlIam { username },
+        // PostgreSQL OAuth: the optional client secret (browser sign-in) or
+        // the bearer token is stored like a libSQL token.
+        AuthMode::PgOAuth | AuthMode::PgOAuthToken => {
+            let bearer = input.auth_mode == AuthMode::PgOAuthToken;
+            if username.is_empty() {
+                return Err(crate::localization::text(
+                    "connections.editor.pg_oauth_user_required",
+                ));
+            }
+            if !bearer && input.pg_oauth_client_id.trim().is_empty() {
+                return Err(crate::localization::text(
+                    "connections.editor.pg_oauth_client_id_required",
+                ));
+            }
+            let blank = password.trim().is_empty();
+            if bearer && blank {
+                return Err(crate::localization::text(
+                    "connections.editor.pg_oauth_token_required",
+                ));
+            }
+            let account_id = if blank {
+                None
+            } else if input.persistable {
+                Some(input.sql_account.unwrap_or_else(Uuid::new_v4))
+            } else {
+                input.sql_account
+            };
+            AuthenticationType::PostgresOAuth {
+                username,
+                issuer: input.pg_oauth_issuer.trim().to_string(),
+                client_id: input.pg_oauth_client_id.trim().to_string(),
+                scope: input.pg_oauth_scope.trim().to_string(),
+                flow: if bearer {
+                    sqlly_core::PgOAuthFlow::BearerToken
+                } else {
+                    sqlly_core::PgOAuthFlow::DeviceCode
+                },
+                secret_ref: SecretRef {
+                    provider: if account_id.is_some() {
+                        SecretProvider::MacOsKeychain
+                    } else {
+                        SecretProvider::InMemory
+                    },
+                    key: account_id
+                        .map(|id| id.to_string())
+                        .unwrap_or_else(|| password.trim().to_string()),
+                },
+            }
+        }
     };
-    if matches!(
-        profile.authentication,
-        AuthenticationType::AwsRdsIam { .. } | AuthenticationType::GcpCloudSqlIam { .. }
-    ) {
+    // Token sign-ins never travel in plaintext.
+    if profile.authentication.requires_tls() {
         profile.encrypt = true;
     }
     if !crate::engine_form::is_file_engine(input.database_type)
@@ -7913,6 +8236,25 @@ mod tests {
 
     use super::*;
 
+    /// Every wire-compatible engine label explains what it does and does not
+    /// promise; WarehousePG's note says its DDL keeps DISTRIBUTED BY.
+    #[test]
+    fn every_compatible_engine_shows_an_engine_note() {
+        let _guard = crate::localization::test_language(crate::localization::Language::English);
+        for db in DatabaseType::ALL {
+            if db.compatible_with().is_some() {
+                let note = connection_engine_note(db).unwrap_or_default();
+                assert!(
+                    !note.is_empty() && !note.starts_with("connections."),
+                    "{db:?}: {note:?}"
+                );
+            }
+        }
+        let note = connection_engine_note(DatabaseType::WarehousePg).unwrap();
+        assert!(note.contains("DISTRIBUTED BY"), "{note}");
+        assert!(connection_engine_note(DatabaseType::Postgres).is_none());
+    }
+
     #[test]
     fn localized_mode_labels_round_trip_in_spanish() {
         let _guard = crate::localization::test_language(crate::localization::Language::Spanish);
@@ -8106,6 +8448,9 @@ mod tests {
             username: "sa".to_string(),
             aws_region: String::new(),
             aws_profile: String::new(),
+            pg_oauth_issuer: String::new(),
+            pg_oauth_client_id: String::new(),
+            pg_oauth_scope: String::new(),
             password: "pw".to_string(),
             sql_account: None,
             auth_mode: AuthMode::SqlLogin,
@@ -8682,6 +9027,92 @@ mod tests {
         assert!(profile.encrypt);
     }
 
+    fn pg_oauth_inputs(mode: AuthMode) -> ProfileInputs {
+        let mut input = inputs();
+        input.database_type = DatabaseType::Postgres;
+        input.port = "5432".to_string();
+        input.auth_mode = mode;
+        input.username = " alice ".to_string();
+        input.pg_oauth_client_id = " sqlly ".to_string();
+        input.pg_oauth_issuer = "https://idp.example.com".to_string();
+        input.pg_oauth_scope = "openid postgres".to_string();
+        input.password = String::new();
+        input.encrypt = false;
+        input
+    }
+
+    #[test]
+    fn pg_oauth_browser_sign_in_saves_its_settings_and_forces_tls() {
+        let profile = assemble_profile(pg_oauth_inputs(AuthMode::PgOAuth)).unwrap();
+        assert_eq!(
+            profile.authentication,
+            AuthenticationType::PostgresOAuth {
+                username: "alice".into(),
+                issuer: "https://idp.example.com".into(),
+                client_id: "sqlly".into(),
+                scope: "openid postgres".into(),
+                flow: sqlly_core::PgOAuthFlow::DeviceCode,
+                secret_ref: SecretRef::empty_in_memory(),
+            }
+        );
+        assert!(profile.encrypt);
+    }
+
+    #[test]
+    fn pg_oauth_client_secret_and_bearer_token_go_to_the_keyring_on_save() {
+        let mut input = pg_oauth_inputs(AuthMode::PgOAuth);
+        input.password = "client-secret".to_string();
+        input.persistable = true;
+        let profile = assemble_profile(input).unwrap();
+        let secret = profile.authentication.secret_ref().unwrap();
+        assert_eq!(secret.provider, SecretProvider::MacOsKeychain);
+        assert!(Uuid::parse_str(&secret.key).is_ok());
+
+        let mut input = pg_oauth_inputs(AuthMode::PgOAuthToken);
+        input.password = " eyJ.token ".to_string();
+        let profile = assemble_profile(input).unwrap();
+        let AuthenticationType::PostgresOAuth {
+            flow, secret_ref, ..
+        } = profile.authentication
+        else {
+            panic!("expected PostgresOAuth");
+        };
+        assert_eq!(flow, sqlly_core::PgOAuthFlow::BearerToken);
+        assert_eq!(secret_ref.provider, SecretProvider::InMemory);
+        assert_eq!(secret_ref.key, "eyJ.token");
+    }
+
+    #[test]
+    fn pg_oauth_requires_a_user_a_client_id_and_for_bearer_a_token() {
+        let mut no_user = pg_oauth_inputs(AuthMode::PgOAuth);
+        no_user.username = " ".to_string();
+        assert_eq!(
+            assemble_profile(no_user).unwrap_err(),
+            crate::localization::text("connections.editor.pg_oauth_user_required")
+        );
+        let mut no_client = pg_oauth_inputs(AuthMode::PgOAuth);
+        no_client.pg_oauth_client_id = String::new();
+        assert_eq!(
+            assemble_profile(no_client).unwrap_err(),
+            crate::localization::text("connections.editor.pg_oauth_client_id_required")
+        );
+        // The bearer-token flow needs no client id, but does need the token.
+        let mut bearer = pg_oauth_inputs(AuthMode::PgOAuthToken);
+        bearer.pg_oauth_client_id = String::new();
+        assert_eq!(
+            assemble_profile(bearer).unwrap_err(),
+            crate::localization::text("connections.editor.pg_oauth_token_required")
+        );
+    }
+
+    #[test]
+    fn pg_oauth_is_refused_for_other_engines() {
+        let mut input = pg_oauth_inputs(AuthMode::PgOAuth);
+        input.database_type = DatabaseType::MySql;
+        input.port = "3306".to_string();
+        assert!(assemble_profile(input).is_err());
+    }
+
     #[test]
     fn iam_auth_forces_encrypt_even_when_checkbox_was_off() {
         let mut input = inputs();
@@ -9044,6 +9475,59 @@ mod tests {
         input.tls_mode = Some(TlsMode::VerifyFull);
         input.tls_direct = true;
         assert!(!assemble_profile(input).unwrap().tls_direct);
+    }
+
+    /// TablePlus-Windows #826: a server that needs no sign-in (Redis with
+    /// no AUTH/ACL, ClickHouse's `default` user) saves with a blank user.
+    #[test]
+    fn assemble_profile_accepts_a_blank_user_where_the_server_needs_none() {
+        for engine in [
+            DatabaseType::Redis,
+            DatabaseType::Valkey,
+            DatabaseType::KeyDb,
+            DatabaseType::DragonflyDb,
+            DatabaseType::AmazonElastiCache,
+            DatabaseType::AmazonMemoryDb,
+            DatabaseType::ClickHouse,
+        ] {
+            let mut input = inputs();
+            input.database_type = engine;
+            input.port = crate::engine_form::default_port(engine).to_string();
+            input.username = "  ".to_string();
+            input.password = String::new();
+            let profile = assemble_profile(input).unwrap_or_else(|e| panic!("{engine:?}: {e}"));
+            match profile.authentication {
+                AuthenticationType::SqlLogin { username, .. } => {
+                    assert_eq!(username, "", "{engine:?}")
+                }
+                other => panic!("{engine:?}: {other:?}"),
+            }
+        }
+    }
+
+    #[test]
+    fn assemble_profile_still_requires_a_user_where_the_server_does() {
+        for engine in [
+            DatabaseType::SqlServer,
+            DatabaseType::AzureSqlDatabase,
+            DatabaseType::Postgres,
+            DatabaseType::CockroachDb,
+            DatabaseType::MySql,
+            DatabaseType::MariaDb,
+            DatabaseType::Oracle,
+        ] {
+            let mut input = inputs();
+            input.database_type = engine;
+            input.port = crate::engine_form::default_port(engine).to_string();
+            input.username = String::new();
+            assert_eq!(
+                assemble_profile(input).err(),
+                Some(crate::localization::text(
+                    "connections.editor.sql_username_required"
+                )),
+                "{engine:?}"
+            );
+        }
     }
 
     #[test]

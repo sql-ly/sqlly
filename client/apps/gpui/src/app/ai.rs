@@ -778,7 +778,7 @@ impl AppView {
     /// Reuses [`super::execute::run_gate_decision`] so inline SELECTs honour
     /// the same production read-lock as the editor Run path, without editing
     /// execute.rs.
-    fn inline_reads_blocked_message(
+    pub(super) fn inline_reads_blocked_message(
         &self,
         profile: Option<&sqlly_core::ConnectionProfile>,
     ) -> Option<String> {
@@ -879,6 +879,18 @@ impl AppView {
             cx.notify();
             return;
         };
+        // A notebook cell's error is explained in the notebook, by an AI
+        // cell aimed at the failed cell, so its fix can be proposed as an
+        // edit to that cell.
+        if let Some(nb) = self
+            .tab_index_by_id(&failure.tab_id)
+            .and_then(|index| self.tabs.get(index))
+            .and_then(|tab| tab.notebook.clone())
+            && let Some(cell) = nb.read(cx).last_failed_cell()
+        {
+            nb.update(cx, |nb, cx| nb.explain_with_ai(&cell, cx));
+            return;
+        }
         // The SQL comes from the recorded failure, not the active editor: the
         // user may have switched tabs or edited since, and the prompt must not
         // assert that unrelated SQL produced this error. The fix context is

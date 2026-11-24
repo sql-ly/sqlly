@@ -1320,6 +1320,7 @@ impl RowEditor {
             cx.notify();
             return;
         }
+        model.json_storage = crate::json_edit_format::JsonEditStorage::current();
         let Some(request) = model.build_update_request() else {
             cx.notify();
             return;
@@ -1397,6 +1398,7 @@ impl RowEditor {
             cx.notify();
             return;
         }
+        model.json_storage = crate::json_edit_format::JsonEditStorage::current();
         let Some(request) = model.build_insert_request() else {
             cx.notify();
             return;
@@ -1506,6 +1508,7 @@ impl RowEditor {
         let Some(model) = self.model.as_mut() else {
             return;
         };
+        model.json_storage = crate::json_edit_format::JsonEditStorage::current();
         let Some(request) = model.build_update_request() else {
             // validate() recorded per-field errors — surface them.
             cx.notify();

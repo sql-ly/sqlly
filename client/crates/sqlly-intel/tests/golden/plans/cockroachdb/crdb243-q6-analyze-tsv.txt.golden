@@ -1,0 +1,81 @@
+format: cockroachdb-text (Certain)
+statements: 1
+
+== statement 1
+execution_time_ms: 6
+has_actuals: yes
+notes: ["planning time: 408µs", "execution time: 6ms", "distribution: local", "vectorized: true", "plan type: custom", "rows decoded from KV: 20,040 (1.1 MiB, 3 gRPC calls)", "cumulative time spent in KV: 5ms", "maximum memory usage: 1.2 MiB", "network usage: 0 B (0 messages)", "isolation level: serializable", "priority: normal", "quality of service: regular"]
+planning_time_ms: 0.408
+source_format: "cockroachdb-text"
+statement_type: "EXPLAIN ANALYZE"
+operators: 9
+  #1 root [root]
+      actual_time_ms: 5.613
+    #2 update [update]
+        actual_rows: 1
+        actual_rows_total: 1
+        actual_self_time_ms: 0.038
+        actual_time_ms: 0.229
+        extra: ["auto commit"]
+        output_list: ["orders"]
+        properties: [{name="sql nodes" value="n1"}, {name="set" value="status"}]
+        relation: "orders"
+      #3 render [render]
+          actual_time_ms: 0.191
+        #4 filter [filter]
+            actual_self_time_ms: 0.005
+            actual_time_ms: 0.191
+            estimated_rows: 6
+            filter: "total > @S1"
+            output_list: ["Filter: total > @S1"]
+            properties: [{name="sql nodes" value="n1"}]
+          #5 index join [index join]
+              actual_rows: 20
+              actual_rows_total: 20
+              actual_self_time_ms: 0.109
+              actual_time_ms: 0.186
+              estimated_rows: 18
+              index_name: "orders_pkey"
+              output_list: ["orders", "Index: orders_pkey"]
+              peak_memory_kb: 20
+              properties: [{name="sql nodes" value="n1"}, {name="kv nodes" value="n1"}, {name="KV time" value="109µs"}, {name="KV contention time" value="0µs"}, {name="KV rows decoded" value="20"}, {name="KV bytes read" value="729 B"}, {name="KV gRPC calls" value="1"}, {name="estimated max sql temp disk usage" value="0 B"}]
+              relation: "orders"
+              rows_read: 20
+              warnings: [{KeyLookup={index="orders_pkey" table="orders"}}]
+            #6 scan [scan]
+                actual_rows: 20
+                actual_rows_total: 20
+                actual_self_time_ms: 0.077
+                actual_time_ms: 0.077
+                estimated_rows: 18
+                index_cond: "[/7 - /7]"
+                index_name: "orders_customer_idx"
+                output_list: ["orders", "Index: orders_customer_idx", "Index Cond: [/7 - /7]"]
+                peak_memory_kb: 20
+                properties: [{name="sql nodes" value="n1"}, {name="kv nodes" value="n1"}, {name="KV time" value="77µs"}, {name="KV contention time" value="0µs"}, {name="KV rows decoded" value="20"}, {name="KV bytes read" value="598 B"}, {name="KV gRPC calls" value="1"}, {name="estimated row count" value="18 (0.09% of the table; stats collected 7 seconds ago)"}]
+                relation: "orders"
+                rows_read: 20
+    #7 subquery [subquery]
+        actual_time_ms: 5.384
+        properties: [{name="original sql" value="(SELECT avg(total) FROM orders)"}, {name="exec mode" value="one row"}]
+        subplan_name: "@S1"
+      #8 group (scalar) [group (scalar)]
+          actual_rows: 1
+          actual_rows_total: 1
+          actual_self_time_ms: 0.384
+          actual_time_ms: 5.384
+          estimated_rows: 1
+          properties: [{name="sql nodes" value="n1"}]
+        #9 scan [scan]
+            actual_rows: 20000
+            actual_rows_total: 20000
+            actual_self_time_ms: 5
+            actual_time_ms: 5
+            estimated_rows: 20000
+            index_name: "orders_pkey"
+            output_list: ["orders", "Index: orders_pkey"]
+            peak_memory_kb: 1126.4
+            properties: [{name="sql nodes" value="n1"}, {name="kv nodes" value="n1"}, {name="KV time" value="5ms"}, {name="KV contention time" value="0µs"}, {name="KV rows decoded" value="20,000"}, {name="KV bytes read" value="1.1 MiB"}, {name="KV gRPC calls" value="1"}, {name="estimated row count" value="20,000 (100% of the table; stats collected 7 seconds ago)"}, {name="spans" value="FULL SCAN"}]
+            relation: "orders"
+            rows_read: 20000
+            warnings: [{TableScan={table="orders"}}]

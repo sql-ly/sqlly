@@ -12,7 +12,7 @@ use super::*;
 /// MySQL return one JSON document spread across text rows (joined by
 /// newlines); SQLite returns `(id, parent, _, detail)` rows rendered as
 /// `id|parent|detail` lines.
-async fn collect_plan_documents(
+pub(super) async fn collect_plan_documents(
     handle: sqlly_services::QueryHandle,
     dialect: sqlly_services::plans::PlanDialect,
 ) -> (Vec<String>, Option<String>) {
@@ -428,6 +428,13 @@ impl AppView {
         cx.notify();
 
         let services = self.services_for_profile(&profile);
+        // The catalog IntelliSense already holds for this connection lets the
+        // findings check real column types and keys. It is read from memory
+        // only: a capture never runs catalog queries of its own.
+        let catalog = self
+            .datamodel_cache
+            .get(&Self::datamodel_key(&profile))
+            .map(|cached| cached.snapshot.clone());
         // The runtime task returns failures unworded; the UI thread words
         // them (translation state is per thread).
         let (tx, rx) = tokio::sync::oneshot::channel::<Result<Vec<String>, PlanCaptureFailure>>();
@@ -435,7 +442,11 @@ impl AppView {
         cx.background_spawn(async move {
             crate::tokio_handle()
                 .spawn(async move {
-                    let result = match services.queries.execute(&profile, &plan_sql, 64).await {
+                    let result = match services
+                        .queries
+                        .execute_full_values(&profile, None, &plan_sql, 64)
+                        .await
+                    {
                         Ok(handle) => {
                             let (docs, server_error) =
                                 collect_plan_documents(handle, plan_dialect).await;
@@ -504,34 +515,30 @@ impl AppView {
                                 });
                             } else {
                                 let statement_count = plans.len();
+                                let schema = catalog.as_deref().and_then(|snapshot| {
+                                    crate::execution_plan_view::schema::schema_for_plans(
+                                        snapshot,
+                                        plan_dialect,
+                                        &plans,
+                                        Some(sql.as_str()),
+                                    )
+                                });
                                 results.update(cx, |results, cx| {
-                                    results.set_execution_plan_for_context(
+                                    results.set_execution_plan_with_schema(
                                         kind,
                                         sql.clone(),
                                         plans,
+                                        schema,
                                         cx,
                                     );
                                 });
-                                let finding_count = results
-                                    .read(cx)
-                                    .execution_plan_finding_count(cx)
-                                    .unwrap_or(0);
-                                let summary_key = match (statement_count == 1, finding_count == 1) {
-                                    (true, true) => "shell.plans.summary_singular",
-                                    (true, false) => "shell.plans.summary_statement_singular",
-                                    (false, true) => "shell.plans.summary_finding_singular",
-                                    (false, false) => "shell.plans.summary_plural",
-                                };
-                                this.set_status(
-                                    StatusLevel::Success,
-                                    crate::localization::format(
-                                        summary_key,
-                                        &[
-                                            ("plan", &result_label),
-                                            ("statement_count", &statement_count.to_string()),
-                                            ("finding_count", &finding_count.to_string()),
-                                        ],
-                                    ),
+                                this.report_plan_summary(
+                                    &results,
+                                    PlanSummarySource::Capture {
+                                        plan: result_label.clone(),
+                                    },
+                                    statement_count,
+                                    cx,
                                 );
                             }
                         }
@@ -768,15 +775,18 @@ impl AppView {
                     .and_then(|n| n.to_str())
                     .map(str::to_string)
                     .unwrap_or_else(|| crate::localization::text("shell.plans.file_fallback"));
-                let result = std::fs::read_to_string(&path).map_err(|error| {
-                    crate::localization::format(
-                        "shell.plans.file_read_failed",
-                        &[
-                            ("path", &path.display().to_string()),
-                            ("error", &error.to_string()),
-                        ],
-                    )
-                });
+                // Bytes, not text: SSMS saves .sqlplan files as UTF-16.
+                let result = std::fs::read(&path)
+                    .map(|bytes| sqlly_services::plans::decode_plan_bytes(&bytes))
+                    .map_err(|error| {
+                        crate::localization::format(
+                            "shell.plans.file_read_failed",
+                            &[
+                                ("path", &path.display().to_string()),
+                                ("error", &error.to_string()),
+                            ],
+                        )
+                    });
                 let mut cx = async_cx.clone();
                 weak_self
                     .update(&mut cx, |this, cx| match result {
@@ -822,73 +832,203 @@ impl AppView {
         source_label: String,
         cx: &mut Context<Self>,
     ) {
-        // Terminal wrappers (psql's `+` continuations, mysql table borders)
-        // come off first; the same reader backs the online plan viewer.
-        let doc = sqlly_services::plans::clean_plan_text(&doc);
-        let Some(dialect) = sniff_plan_dialect(&doc) else {
-            self.set_status(
-                StatusLevel::Error,
-                crate::localization::text("shell.plans.unrecognised_format"),
-            );
-            cx.notify();
+        use sqlly_services::plans::PlanError;
+        // The shared reader cleans terminal wrappers (psql's `+`
+        // continuations, mysql table borders), works out the format and
+        // parses; the same reader backs the online plan viewer.
+        let imported = sqlly_services::plans::import_plan_document(&doc);
+        if self.tabs.is_empty() {
+            self.new_tab(cx, None);
+        }
+        let Some(tab) = self.tabs.get(self.active_tab) else {
             return;
         };
-        match sqlly_services::plans::parse_plan_document(dialect, &doc) {
-            Ok(plans) => {
-                if self.tabs.is_empty() {
-                    self.new_tab(cx, None);
-                }
-                let Some(tab) = self.tabs.get(self.active_tab) else {
-                    return;
-                };
-                let results = tab.results.clone();
+        let results = tab.results.clone();
+        match imported {
+            Ok(imported) => {
                 self.show_results();
-                let statement_count = plans.len();
+                let statement_count = imported.plans.len();
+                let format = imported.format.label();
+                let kind = imported_plan_kind(&imported.plans);
                 results.update(cx, |results, cx| {
-                    results.set_execution_plan_for_context(
-                        crate::execution_plan_view::PlanKind::Estimated,
+                    results.set_imported_execution_plan(
+                        kind,
                         crate::localization::format(
                             "shell.plans.imported_context",
                             &[("source", &source_label)],
                         ),
-                        plans,
+                        imported.plans,
                         cx,
                     );
                 });
-                let finding_count = results
-                    .read(cx)
-                    .execution_plan_finding_count(cx)
-                    .unwrap_or(0);
-                let summary_key = match (statement_count == 1, finding_count == 1) {
-                    (true, true) => "shell.plans.import_summary_singular",
-                    (true, false) => "shell.plans.import_summary_statement_singular",
-                    (false, true) => "shell.plans.import_summary_finding_singular",
-                    (false, false) => "shell.plans.import_summary_plural",
-                };
-                self.set_status(
-                    StatusLevel::Success,
-                    crate::localization::format(
-                        summary_key,
-                        &[
-                            ("dialect", &format!("{dialect:?}")),
-                            ("statement_count", &statement_count.to_string()),
-                            ("finding_count", &finding_count.to_string()),
-                        ],
-                    ),
+                self.report_plan_summary(
+                    &results,
+                    PlanSummarySource::Import {
+                        dialect: format.to_string(),
+                    },
+                    statement_count,
+                    cx,
                 );
                 cx.notify();
             }
-            Err(e) => {
+            Err(error) => {
                 self.set_status(
                     StatusLevel::Error,
                     crate::localization::format(
                         "shell.plans.import_failed",
-                        &[("error", &e.to_string())],
+                        &[("error", &error.to_string())],
                     ),
                 );
+                // The pane says what the document looks like, where reading
+                // stopped and how to capture a plan that can be read.
+                if let PlanError::Import(import) = error {
+                    self.show_results();
+                    results.update(cx, |results, cx| {
+                        results.fail_execution_plan_import(*import, cx);
+                    });
+                }
                 cx.notify();
             }
         }
+    }
+}
+
+/// Which status-bar sentence a plan summary uses.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum PlanSummarySource {
+    /// A capture; `plan` names the kind ("Estimated plan").
+    Capture { plan: String },
+    /// A pasted or opened document; `dialect` names its format.
+    Import { dialect: String },
+}
+
+/// The status-bar summary of a plan whose background analysis has not
+/// landed yet, and the results view it belongs to.
+#[derive(Debug, Clone)]
+pub(crate) struct PendingPlanSummary {
+    results: gpui::EntityId,
+    source: PlanSummarySource,
+    statement_count: usize,
+}
+
+/// The status-bar line after a plan was installed and analysed.
+pub(crate) fn plan_summary_status(
+    source: &PlanSummarySource,
+    statement_count: usize,
+    finding_count: usize,
+) -> String {
+    let one_statement = statement_count == 1;
+    let one_finding = finding_count == 1;
+    let statements = statement_count.to_string();
+    let findings = finding_count.to_string();
+    match source {
+        PlanSummarySource::Capture { plan } => crate::localization::format(
+            match (one_statement, one_finding) {
+                (true, true) => "shell.plans.summary_singular",
+                (true, false) => "shell.plans.summary_statement_singular",
+                (false, true) => "shell.plans.summary_finding_singular",
+                (false, false) => "shell.plans.summary_plural",
+            },
+            &[
+                ("plan", plan.as_str()),
+                ("statement_count", &statements),
+                ("finding_count", &findings),
+            ],
+        ),
+        PlanSummarySource::Import { dialect } => crate::localization::format(
+            match (one_statement, one_finding) {
+                (true, true) => "shell.plans.import_summary_singular",
+                (true, false) => "shell.plans.import_summary_statement_singular",
+                (false, true) => "shell.plans.import_summary_finding_singular",
+                (false, false) => "shell.plans.import_summary_plural",
+            },
+            &[
+                ("dialect", dialect.as_str()),
+                ("statement_count", &statements),
+                ("finding_count", &findings),
+            ],
+        ),
+    }
+}
+
+impl AppView {
+    /// Say in the status bar what a newly installed plan holds. A large plan
+    /// is still being analysed when this runs, so the line says so and the
+    /// counts are written by [`Self::finish_plan_summary`] when the analysis
+    /// lands.
+    fn report_plan_summary(
+        &mut self,
+        results: &Entity<crate::results::ResultsView>,
+        source: PlanSummarySource,
+        statement_count: usize,
+        cx: &mut Context<Self>,
+    ) {
+        if results.read(cx).is_analysing_execution_plan(cx) {
+            self.set_status(
+                StatusLevel::Busy,
+                crate::localization::text("shell.plans.analysing_status"),
+            );
+            self.pending.plan_summary = Some(PendingPlanSummary {
+                results: results.entity_id(),
+                source,
+                statement_count,
+            });
+            return;
+        }
+        self.pending.plan_summary = None;
+        let finding_count = results
+            .read(cx)
+            .execution_plan_finding_count(cx)
+            .unwrap_or(0);
+        self.set_status(
+            StatusLevel::Success,
+            plan_summary_status(&source, statement_count, finding_count),
+        );
+    }
+
+    /// A results view's plan pane finished analysing: write the summary that
+    /// [`Self::report_plan_summary`] held back, with the real finding count.
+    pub(super) fn finish_plan_summary(
+        &mut self,
+        results: &Entity<crate::results::ResultsView>,
+        failed: bool,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(pending) = self
+            .pending
+            .plan_summary
+            .take_if(|pending| pending.results == results.entity_id())
+        else {
+            return;
+        };
+        if failed {
+            self.set_status(
+                StatusLevel::Error,
+                crate::localization::text("shell.plans.analysis_failed_status"),
+            );
+        } else {
+            let finding_count = results
+                .read(cx)
+                .execution_plan_finding_count(cx)
+                .unwrap_or(0);
+            self.set_status(
+                StatusLevel::Success,
+                plan_summary_status(&pending.source, pending.statement_count, finding_count),
+            );
+        }
+        cx.notify();
+    }
+}
+
+/// An imported document counts as an actual plan when any statement in it
+/// carries runtime figures.
+fn imported_plan_kind(
+    plans: &[sqlly_services::plans::ExecutionPlan],
+) -> crate::execution_plan_view::PlanKind {
+    if plans.iter().any(|plan| plan.has_actuals) {
+        crate::execution_plan_view::PlanKind::Actual
+    } else {
+        crate::execution_plan_view::PlanKind::Estimated
     }
 }
 
@@ -936,16 +1076,6 @@ async fn collect_first_cell(handle: sqlly_services::QueryHandle) -> Option<Strin
     None
 }
 
-/// Sniff a pasted/opened plan document's engine with the shared reader
-/// (`sqlly_services::plans::sniff_plan_document`). Pure; returns None for
-/// anything it does not recognize, including plans in a form no parser reads.
-pub(crate) fn sniff_plan_dialect(doc: &str) -> Option<sqlly_services::plans::PlanDialect> {
-    match sqlly_services::plans::sniff_plan_document(doc) {
-        sqlly_services::plans::PlanSniff::Dialect(dialect) => Some(dialect),
-        _ => None,
-    }
-}
-
 /// Why a plan capture produced no documents, worded on the UI thread by
 /// [`PlanCaptureFailure::text`] because the capture runs on the runtime.
 enum PlanCaptureFailure {
@@ -969,62 +1099,77 @@ impl PlanCaptureFailure {
 }
 
 #[cfg(test)]
-mod sniff_tests {
-    use super::sniff_plan_dialect;
-    use sqlly_services::plans::PlanDialect;
+mod import_tests {
+    use super::imported_plan_kind;
+    use crate::execution_plan_view::PlanKind;
+    use sqlly_services::plans::{PlanEngine, PlanError, import_plan_document};
+
+    fn engine(doc: &str) -> Option<PlanEngine> {
+        import_plan_document(doc)
+            .ok()
+            .map(|plan| plan.format.engine())
+    }
 
     #[test]
-    fn sniff_showplan() {
+    fn imports_name_the_engine_they_came_from() {
         assert_eq!(
-            sniff_plan_dialect(
-                "<ShowPlanXML xmlns=\"http://schemas.microsoft.com/sqlserver/2004/07/showplan\">"
+            engine(
+                "[{\"Plan\": {\"Node Type\": \"Seq Scan\", \"Relation Name\": \"t\", \
+                 \"Total Cost\": 1.0, \"Plan Rows\": 1}}]"
             ),
-            Some(PlanDialect::SqlServer)
+            Some(PlanEngine::Postgres)
         );
-    }
-
-    #[test]
-    fn sniff_pg_json() {
         assert_eq!(
-            sniff_plan_dialect("[{\"Plan\": {\"Node Type\": \"Result\"}}]"),
-            Some(PlanDialect::Postgres)
-        );
-    }
-
-    #[test]
-    fn sniff_clickhouse_json_before_postgres() {
-        assert_eq!(
-            sniff_plan_dialect(
-                "[{\"Plan\": {\"Node Type\": \"Expression\", \"Node Id\": \"Expression_2\"}}]"
+            engine(
+                "-> Nested loop inner join  (cost=1.0 rows=1)\n    -> Table scan on t  (cost=1.0 rows=1)"
             ),
-            Some(PlanDialect::ClickHouse)
+            Some(PlanEngine::MySql)
+        );
+        assert_eq!(engine("2|0|0|SCAN TABLE t"), Some(PlanEngine::Sqlite));
+    }
+
+    #[test]
+    fn unreadable_documents_explain_themselves() {
+        for doc in ["hello world", "{}", "[{}]"] {
+            match import_plan_document(doc) {
+                Err(PlanError::Import(error)) => {
+                    assert!(!error.detail.is_empty(), "{doc}: no detail")
+                }
+                other => panic!("{doc}: expected an import error, got {other:?}"),
+            }
+        }
+    }
+
+    /// The status line is written from the count the pane has once the
+    /// analysis landed; both capture and import word it from one function.
+    #[test]
+    fn plan_summaries_word_the_counts_for_captures_and_imports() {
+        use super::{PlanSummarySource, plan_summary_status};
+        let import = PlanSummarySource::Import {
+            dialect: "PostgreSQL EXPLAIN text".into(),
+        };
+        assert_eq!(
+            plan_summary_status(&import, 1, 0),
+            "Imported plan (PostgreSQL EXPLAIN text): 1 statement, 0 findings"
+        );
+        let capture = PlanSummarySource::Capture {
+            plan: "Actual plan".into(),
+        };
+        assert_eq!(
+            plan_summary_status(&capture, 3, 1),
+            "Actual plan: 3 statements, 1 finding"
         );
     }
 
     #[test]
-    fn sniff_mysql_json_and_tree() {
-        assert_eq!(
-            sniff_plan_dialect("{\"query_block\": {\"select_id\": 1}}"),
-            Some(PlanDialect::MySql)
-        );
-        assert_eq!(
-            sniff_plan_dialect("-> Nested loop\n    -> Table scan"),
-            Some(PlanDialect::MySql)
-        );
-    }
-
-    #[test]
-    fn sniff_sqlite_rows() {
-        assert_eq!(
-            sniff_plan_dialect("2|0|SCAN TABLE t"),
-            Some(PlanDialect::Sqlite)
-        );
-    }
-
-    #[test]
-    fn sniff_garbage_is_none() {
-        assert_eq!(sniff_plan_dialect("hello world"), None);
-        assert_eq!(sniff_plan_dialect("{}"), None);
-        assert_eq!(sniff_plan_dialect("[{}]"), None);
+    fn an_analyzed_plan_imports_as_actual() {
+        let estimated = import_plan_document("Seq Scan on t  (cost=0.00..35.50 rows=2550 width=4)")
+            .expect("estimated plan");
+        assert_eq!(imported_plan_kind(&estimated.plans), PlanKind::Estimated);
+        let actual = import_plan_document(
+            "Seq Scan on t  (cost=0.00..35.50 rows=2550 width=4) (actual time=0.010..0.200 rows=2550 loops=1)\nPlanning Time: 0.050 ms\nExecution Time: 0.300 ms",
+        )
+        .expect("actual plan");
+        assert_eq!(imported_plan_kind(&actual.plans), PlanKind::Actual);
     }
 }

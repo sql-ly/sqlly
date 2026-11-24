@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360" role="img" aria-labelledby="heatmap-title heatmap-desc" font-family="&apos;Noto Sans&apos;, -apple-system, &apos;Segoe UI&apos;, &apos;Helvetica Neue&apos;, Arial, sans-serif">
+<title id="heatmap-title">heatmap chart</title>
+<desc id="heatmap-desc">heatmap · month, orders, region · 36</desc>
+<rect width="640" height="360" fill="#ffffff"/>
+<text x="12" y="26" font-size="14" fill="#0f2544" font-weight="600">heatmap chart</text>
+<text x="75.25" y="79.58" font-size="10" fill="#3c5a85" transform="rotate(-45 75.25 79.58)">2026-01-01</text>
+<text x="123.62" y="79.58" font-size="10" fill="#3c5a85" transform="rotate(-45 123.62 79.58)">2026-02-01</text>
+<text x="171.99" y="79.58" font-size="10" fill="#3c5a85" transform="rotate(-45 171.99 79.58)">2026-03-01</text>
+<text x="220.36" y="79.58" font-size="10" fill="#3c5a85" transform="rotate(-45 220.36 79.58)">2026-04-01</text>
+<text x="268.73" y="79.58" font-size="10" fill="#3c5a85" transform="rotate(-45 268.73 79.58)">2026-05-01</text>
+<text x="317.1" y="79.58" font-size="10" fill="#3c5a85" transform="rotate(-45 317.1 79.58)">2026-06-01</text>
+<text x="365.47" y="79.58" font-size="10" fill="#3c5a85" transform="rotate(-45 365.47 79.58)">2026-07-01</text>
+<text x="413.84" y="79.58" font-size="10" fill="#3c5a85" transform="rotate(-45 413.84 79.58)">2026-08-01</text>
+<text x="462.21" y="79.58" font-size="10" fill="#3c5a85" transform="rotate(-45 462.21 79.58)">2026-09-01</text>
+<text x="510.58" y="79.58" font-size="10" fill="#3c5a85" transform="rotate(-45 510.58 79.58)">2026-10-01</text>
+<text x="558.95" y="79.58" font-size="10" fill="#3c5a85" transform="rotate(-45 558.95 79.58)">2026-11-01</text>
+<text x="607.32" y="79.58" font-size="10" fill="#3c5a85" transform="rotate(-45 607.32 79.58)">2026-12-01</text>
+<text x="41.57" y="107.08" font-size="10" fill="#3c5a85" text-anchor="end">West</text>
+<rect x="48.07" y="84.08" width="47.37" height="39" fill="#d6e2f2"/>
+<text x="71.75" y="107.08" font-size="10" fill="#0f2544" text-anchor="middle">43</text>
+<rect x="96.44" y="84.08" width="47.37" height="39" fill="#bccde3"/>
+<text x="120.12" y="107.08" font-size="10" fill="#0f2544" text-anchor="middle">46</text>
+<rect x="144.81" y="84.08" width="47.37" height="39" fill="#a2b7d4"/>
+<text x="168.49" y="107.08" font-size="10" fill="#0f2544" text-anchor="middle">49</text>
+<rect x="193.18" y="84.08" width="47.37" height="39" fill="#88a2c5"/>
+<text x="216.86" y="107.08" font-size="10" fill="#0f2544" text-anchor="middle">52</text>
+<rect x="241.55" y="84.08" width="47.37" height="39" fill="#6e8db7"/>
+<text x="265.23" y="107.08" font-size="10" fill="#ffffff" text-anchor="middle">55</text>
+<rect x="289.92" y="84.08" width="47.37" height="39" fill="#e7f0fc"/>
+<text x="313.6" y="107.08" font-size="10" fill="#0f2544" text-anchor="middle">41</text>
+<rect x="338.29" y="84.08" width="47.37" height="39" fill="#cddbed"/>
+<text x="361.97" y="107.08" font-size="10" fill="#0f2544" text-anchor="middle">44</text>
+<rect x="386.65" y="84.08" width="47.37" height="39" fill="#b3c6de"/>
+<text x="410.34" y="107.08" font-size="10" fill="#0f2544" text-anchor="middle">47</text>
+<rect x="435.02" y="84.08" width="47.37" height="39" fill="#99b0cf"/>
+<text x="458.71" y="107.08" font-size="10" fill="#0f2544" text-anchor="middle">50</text>
+<rect x="483.39" y="84.08" width="47.37" height="39" fill="#7f9bc0"/>
+<text x="507.08" y="107.08" font-size="10" fill="#ffffff" text-anchor="middle">53</text>
+<rect x="531.76" y="84.08" width="47.37" height="39" fill="#6586b2"/>
+<text x="555.45" y="107.08" font-size="10" fill="#ffffff" text-anchor="middle">56</text>
+<rect x="580.13" y="84.08" width="47.37" height="39" fill="#dee9f7"/>
+<text x="603.82" y="107.08" font-size="10" fill="#0f2544" text-anchor="middle">42</text>
+<text x="41.57" y="147.08" font-size="10" fill="#3c5a85" text-anchor="end">East</text>
+<rect x="48.07" y="124.08" width="47.37" height="39" fill="#abbed9"/>
+<text x="71.75" y="147.08" font-size="10" fill="#0f2544" text-anchor="middle">48</text>
+<rect x="96.44" y="124.08" width="47.37" height="39" fill="#91a9ca"/>
+<text x="120.12" y="147.08" font-size="10" fill="#0f2544" text-anchor="middle">51</text>
+<rect x="144.81" y="124.08" width="47.37" height="39" fill="#7794bc"/>
+<text x="168.49" y="147.08" font-size="10" fill="#ffffff" text-anchor="middle">54</text>
+<rect x="193.18" y="124.08" width="47.37" height="39" fill="#5d7fad"/>
+<text x="216.86" y="147.08" font-size="10" fill="#ffffff" text-anchor="middle">57</text>
+<rect x="241.55" y="124.08" width="47.37" height="39" fill="#43699e"/>
+<text x="265.23" y="147.08" font-size="10" fill="#ffffff" text-anchor="middle">60</text>
+<rect x="289.92" y="124.08" width="47.37" height="39" fill="#bccde3"/>
+<text x="313.6" y="147.08" font-size="10" fill="#0f2544" text-anchor="middle">46</text>
+<rect x="338.29" y="124.08" width="47.37" height="39" fill="#a2b7d4"/>
+<text x="361.97" y="147.08" font-size="10" fill="#0f2544" text-anchor="middle">49</text>
+<rect x="386.65" y="124.08" width="47.37" height="39" fill="#88a2c5"/>
+<text x="410.34" y="147.08" font-size="10" fill="#0f2544" text-anchor="middle">52</text>
+<rect x="435.02" y="124.08" width="47.37" height="39" fill="#6e8db7"/>
+<text x="458.71" y="147.08" font-size="10" fill="#ffffff" text-anchor="middle">55</text>
+<rect x="483.39" y="124.08" width="47.37" height="39" fill="#5478a8"/>
+<text x="507.08" y="147.08" font-size="10" fill="#ffffff" text-anchor="middle">58</text>
+<rect x="531.76" y="124.08" width="47.37" height="39" fill="#3a6299"/>
+<text x="555.45" y="147.08" font-size="10" fill="#ffffff" text-anchor="middle">61</text>
+<rect x="580.13" y="124.08" width="47.37" height="39" fill="#b3c6de"/>
+<text x="603.82" y="147.08" font-size="10" fill="#0f2544" text-anchor="middle">47</text>
+<text x="41.57" y="187.08" font-size="10" fill="#3c5a85" text-anchor="end">North</text>
+<rect x="48.07" y="164.08" width="47.37" height="39" fill="#7f9bc0"/>
+<text x="71.75" y="187.08" font-size="10" fill="#ffffff" text-anchor="middle">53</text>
+<rect x="96.44" y="164.08" width="47.37" height="39" fill="#6586b2"/>
+<text x="120.12" y="187.08" font-size="10" fill="#ffffff" text-anchor="middle">56</text>
+<rect x="144.81" y="164.08" width="47.37" height="39" fill="#4b71a3"/>
+<text x="168.49" y="187.08" font-size="10" fill="#ffffff" text-anchor="middle">59</text>
+<rect x="193.18" y="164.08" width="47.37" height="39" fill="#325b94"/>
+<text x="216.86" y="187.08" font-size="10" fill="#ffffff" text-anchor="middle">62</text>
+<rect x="241.55" y="164.08" width="47.37" height="39" fill="#184685"/>
+<text x="265.23" y="187.08" font-size="10" fill="#ffffff" text-anchor="middle">65</text>
+<rect x="289.92" y="164.08" width="47.37" height="39" fill="#91a9ca"/>
+<text x="313.6" y="187.08" font-size="10" fill="#0f2544" text-anchor="middle">51</text>
+<rect x="338.29" y="164.08" width="47.37" height="39" fill="#7794bc"/>
+<text x="361.97" y="187.08" font-size="10" fill="#ffffff" text-anchor="middle">54</text>
+<rect x="386.65" y="164.08" width="47.37" height="39" fill="#5d7fad"/>
+<text x="410.34" y="187.08" font-size="10" fill="#ffffff" text-anchor="middle">57</text>
+<rect x="435.02" y="164.08" width="47.37" height="39" fill="#43699e"/>
+<text x="458.71" y="187.08" font-size="10" fill="#ffffff" text-anchor="middle">60</text>
+<rect x="483.39" y="164.08" width="47.37" height="39" fill="#29548f"/>
+<text x="507.08" y="187.08" font-size="10" fill="#ffffff" text-anchor="middle">63</text>
+<rect x="531.76" y="164.08" width="47.37" height="39" fill="#0f3f80"/>
+<text x="555.45" y="187.08" font-size="10" fill="#ffffff" text-anchor="middle">66</text>
+<rect x="580.13" y="164.08" width="47.37" height="39" fill="#88a2c5"/>
+<text x="603.82" y="187.08" font-size="10" fill="#0f2544" text-anchor="middle">52</text>
+<text x="12" y="346.5" font-size="10" fill="#3c5a85">41</text>
+<rect x="29.44" y="338" width="18" height="10" fill="#e7f0fc"/>
+<rect x="47.44" y="338" width="18" height="10" fill="#b1c4dd"/>
+<rect x="65.44" y="338" width="18" height="10" fill="#7b98be"/>
+<rect x="83.44" y="338" width="18" height="10" fill="#456b9f"/>
+<rect x="101.44" y="338" width="18" height="10" fill="#0f3f80"/>
+<text x="125.44" y="346.5" font-size="10" fill="#3c5a85">66</text>
+</svg>

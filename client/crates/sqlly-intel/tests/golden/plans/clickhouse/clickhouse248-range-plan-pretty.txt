@@ -1,0 +1,27 @@
+    ┌─explain────────────────────────────────────────────────────────────────────────────────┐
+ 1. │ Expression ((Project names + Projection))                                              │
+ 2. │   Aggregating                                                                          │
+ 3. │     Expression (Before GROUP BY)                                                       │
+ 4. │       Expression                                                                       │
+ 5. │         ReadFromMergeTree (default.orders)                                             │
+ 6. │         Indexes:                                                                       │
+ 7. │           MinMax                                                                       │
+ 8. │             Condition: true                                                            │
+ 9. │             Parts: 10/10                                                               │
+10. │             Granules: 389/389                                                          │
+11. │           Partition                                                                    │
+12. │             Condition: true                                                            │
+13. │             Parts: 10/10                                                               │
+14. │             Granules: 389/389                                                          │
+15. │           PrimaryKey                                                                   │
+16. │             Keys:                                                                      │
+17. │               customer_id                                                              │
+18. │             Condition: and((customer_id in (-Inf, 200]), (customer_id in [100, +Inf))) │
+19. │             Parts: 10/10                                                               │
+20. │             Granules: 10/389                                                           │
+21. │           Skip                                                                         │
+22. │             Name: total_idx                                                            │
+23. │             Description: minmax GRANULARITY 4                                          │
+24. │             Parts: 10/10                                                               │
+25. │             Granules: 10/10                                                            │
+    └────────────────────────────────────────────────────────────────────────────────────────┘

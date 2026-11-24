@@ -1,19 +1,46 @@
 #![forbid(unsafe_code)]
+pub mod analysis;
 pub mod comparison;
+pub mod context;
+pub mod diagram;
 pub mod dialects;
 pub mod error;
 pub mod explain_options;
 pub mod findings;
+pub mod glossary;
 pub mod import;
 pub mod index_ddl;
+pub mod learn;
 pub mod model;
 pub mod parser;
+pub mod phrases;
+pub mod predicate;
+pub mod projections;
+pub mod schema;
+pub mod story;
 pub mod tree;
 pub mod warning;
 
+#[cfg(test)]
+pub(crate) mod plan_fixtures;
+
+pub use analysis::{
+    EstimateDirection, NodeAnalysis, NodeFlags, NodeHeat, NodeMetrics, PlanAnalysis, PlanGroup,
+    PlanGroupKind, PlanMetric, PlanObject, PlanObjectKind, analyze_plan, analyze_plan_as,
+    analyze_plan_for, plan_engine, resolve_dialect,
+};
 pub use comparison::{
-    DEFAULT_MAX_COMPARISON_NODES, OperatorDelta, OperatorDeltaKind, PlanComparison,
-    PlanComparisonError, compare_plans,
+    DEFAULT_MAX_COMPARISON_NODES, OperatorDelta, OperatorDeltaKind, PlanChange, PlanChangeEffect,
+    PlanChangeKind, PlanChangeReport, PlanComparison, PlanComparisonError, StatementChanges,
+    compare_plans, explain_plan_changes, explain_statement_changes,
+};
+pub use context::{
+    AliasSource, PlanContext, ResolvedAlias, analyze_plan_with_context, dialect_prints_aliases,
+    plan_with_context, resolve_batch_aliases, resolve_plan_aliases,
+};
+pub use diagram::{
+    DiagramEdge, DiagramGroup, DiagramNode, DiagramOptions, DiagramOrientation, PlanDiagram,
+    edge_thickness, plan_diagram,
 };
 pub use dialects::{
     PlanDialect, capture_executes_statement, estimated_capture_sql, explain_capture_sql,
@@ -23,19 +50,55 @@ pub use dialects::{
     parse_pg_explain_json, parse_sqlite_query_plan_any, parse_sqlite_query_plan_rows,
     parse_sqlite_query_plan_text,
 };
-pub use error::{PlanError, PlanResult};
+pub use error::{PlanError, PlanImportError, PlanResult};
 pub use explain_options::{
     ExplainOptions, ExplainPreset, MySqlExplainOptions, PgExplainOptions, ServerVersion,
     explain_sql_with_options,
 };
 pub use findings::{
-    FindingSeverity, OperatorRow, PlanFinding, findings_for_plan, human_count, operator_rows,
+    FindingAlternative, FindingCategory, FindingConfidence, FindingImpact, FindingKind,
+    FindingSeverity, ImpactBasis, OperatorRow, PlanFinding, findings_for_plan,
+    findings_for_plan_with_context, findings_for_plan_with_schema, human_count, operator_rows,
 };
-pub use import::{PlanSniff, clean_plan_text, parse_plan_document, sniff_plan_document};
+pub use glossary::{
+    OperatorCategory, OperatorEntry, OperatorInfo, all_operator_glossaries, engine_key,
+    engine_key_for, operator_entry, operator_glossary, operator_glossary_for, operator_info,
+    operator_info_for, operator_lookup, operator_lookup_for,
+};
+pub use import::{
+    ImportedPlan, PlanConfidence, PlanDetection, PlanEngine, PlanFormat, PlanSniff,
+    clean_plan_text, decode_plan_bytes, detect_plan_format, import_plan_document,
+    import_plan_document_as, parse_plan_document, sniff_plan_document,
+};
 pub use index_ddl::{IndexDdl, IndexDdlDialect};
+pub use learn::{
+    LEARN_LINKS_JSON, LEARN_SITE_ORIGIN, LearnEntry, LearnLink, LearnLinkType, LearnSource,
+    LearnTable, engine_links_for_finding, engine_links_for_operator, engine_links_for_operator_in,
+    finding_without_link, learn_engine_key, learn_engine_key_for, learn_table, learn_url,
+    links_for_finding, links_for_operator, links_for_operator_in,
+};
 pub use model::{
-    ClientStatistics, DeadlockGraph, ExecutionPlan, ExecutionPlanVisualLayout, PlanEdge, PlanNode,
-    PlanSearchMatch, PlanVisualEdge, PlanVisualNode,
+    ClientStatistics, DeadlockGraph, ExecutionPlan, ExecutionPlanVisualLayout, PlanBuffers,
+    PlanEdge, PlanMemoryGrant, PlanNode, PlanParameter, PlanProperty, PlanSearchMatch, PlanSpill,
+    PlanStatisticsUsage, PlanTableIo, PlanTrigger, PlanVisualEdge, PlanVisualNode,
+};
+pub use phrases::{
+    NumberStyle, PlanPhrase, all_plan_phrases, human_cost, human_duration_ms, human_factor,
+    human_number, human_share, human_size_kb, number_style, rows_phrase, with_number_style,
+};
+pub use predicate::{ExpressionNames, ReadablePredicate, readable_expression, readable_predicate};
+pub use projections::{
+    BreakdownEntry, FlameCell, FlameLayout, OperatorTableColumn, OperatorTableRow, PlanBreakdown,
+    operator_table_columns, plan_breakdown, plan_flame_layout, plan_operator_table,
+    sort_operator_table,
+};
+pub use schema::{
+    SchemaColumn, SchemaContext, SchemaForeignKey, SchemaIndex, SchemaIndexColumn, SchemaNote,
+    SchemaNoteReason, SchemaTable, TypeFamily,
+};
+pub use story::{
+    BatchStory, PlanStory, StatementStory, StoryBottleneck, StoryNote, StoryNoteKind, StoryStep,
+    batch_story, batch_story_with_context, plan_story,
 };
 pub use tree::{
     DIAGRAM_NODE_H, DIAGRAM_NODE_W, PlanDiagramEdge, PlanDiagramLayout, PlanDiagramNode,

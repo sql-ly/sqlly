@@ -353,6 +353,16 @@ pub fn render_create_tables(
 
     for snapshot in ordered {
         let key = snapshot_key(snapshot);
+        // A partition whose partitioned table is in the script is created by
+        // that table's `PARTITION OF` statements.
+        if snapshot
+            .storage
+            .partition_of
+            .as_ref()
+            .is_some_and(|of| of.ancestors.iter().any(|a| in_set.contains(a)))
+        {
+            continue;
+        }
         for w in &snapshot.load_warnings {
             warnings.push(format!("{key}: {w}"));
         }
@@ -382,6 +392,9 @@ pub fn render_create_tables(
         }
         write_separator(&mut sql, db);
         created.insert(key);
+        for part in &snapshot.storage.partitions {
+            created.insert(table_key(part.schema.as_deref().unwrap_or(""), &part.table));
+        }
     }
 
     if !post.deferred.is_empty() {
@@ -483,6 +496,16 @@ fn render_from_snapshot(
     sql.push_str(&format!("CREATE TABLE {table_q} (\n    "));
     sql.push_str(&lines.join(",\n    "));
     sql.push_str("\n)");
+    if family == Dialect::Postgres
+        && let Some(partition_key) = &snapshot.storage.partition_key
+    {
+        sql.push_str(&format!(" PARTITION BY {partition_key}"));
+    }
+    if family == Dialect::Postgres
+        && let Some(distributed_by) = &snapshot.storage.distributed_by
+    {
+        sql.push_str(&format!(" {distributed_by}"));
+    }
     if family == Dialect::SqlServer {
         sql.push_str(&tds_storage_clauses(db, snapshot));
     }
@@ -558,6 +581,42 @@ fn render_from_snapshot(
                 Err(reason) => warnings.push(format!("{key}: {reason}")),
             }
         }
+        if family == Dialect::Postgres {
+            render_pg_partitions(db, snapshot, &table_q, sql);
+        }
+    }
+}
+
+/// PostgreSQL declarative partitioning around one table's CREATE: a
+/// partition is re-attached to its parent (its own columns, keys and indexes
+/// are already restated, and ATTACH adopts the matching ones), and a
+/// partitioned table gets every partition below it, parents first. Indexes
+/// and keys declared on the partitioned table reach each partition by
+/// themselves.
+fn render_pg_partitions(
+    db: DatabaseType,
+    snapshot: &TableSnapshot,
+    table_q: &str,
+    sql: &mut String,
+) {
+    if let Some(of) = &snapshot.storage.partition_of {
+        sql.push_str(&format!(
+            "ALTER TABLE {} ATTACH PARTITION {table_q} {};\n",
+            qualified_table(db, of.parent_schema.as_deref(), &of.parent),
+            of.bound
+        ));
+    }
+    for part in &snapshot.storage.partitions {
+        sql.push_str(&format!(
+            "CREATE TABLE {} PARTITION OF {} {}",
+            qualified_table(db, part.schema.as_deref(), &part.table),
+            qualified_table(db, part.parent_schema.as_deref(), &part.parent),
+            part.bound
+        ));
+        if let Some(partition_key) = &part.partition_key {
+            sql.push_str(&format!(" PARTITION BY {partition_key}"));
+        }
+        sql.push_str(";\n");
     }
 }
 
@@ -862,7 +921,8 @@ mod tests {
     use std::collections::BTreeMap;
 
     use crate::alter::snapshot::{
-        CheckConstraintDef, ColumnExtras, GeneratedColumn, IndexDef, TableStorage,
+        CheckConstraintDef, ColumnExtras, GeneratedColumn, IndexDef, PartitionDef, PartitionOf,
+        TableStorage,
     };
 
     fn col(name: &str, ty: &str, nullable: bool) -> ColumnDef {
@@ -1197,6 +1257,7 @@ mod tests {
             data_compression: Some("PAGE".into()),
             index_compression: [("IX_archive_code".to_string(), "ROW".to_string())].into(),
             unscripted: vec!["it is memory-optimized; not scripted".into()],
+            ..TableStorage::default()
         };
         let script = render_create_tables(DatabaseType::SqlServer, &[t], &HashSet::new());
         assert!(
@@ -1237,6 +1298,150 @@ mod tests {
         let script = render_create_tables(DatabaseType::Postgres, &[t], &HashSet::new());
         assert!(!script.sql.contains("ARCHIVE"), "{}", script.sql);
         assert!(!script.sql.contains("DATA_COMPRESSION"), "{}", script.sql);
+    }
+
+    fn partition(table: &str, parent: &str, bound: &str, key: Option<&str>) -> PartitionDef {
+        PartitionDef {
+            schema: Some("public".into()),
+            table: table.into(),
+            parent_schema: Some("public".into()),
+            parent: parent.into(),
+            bound: bound.into(),
+            partition_key: key.map(Into::into),
+        }
+    }
+
+    #[test]
+    fn postgres_partitioned_table_keeps_its_key_and_every_partition() {
+        let mut t = table(
+            "public",
+            "events",
+            vec![col("id", "bigint", false), col("created_at", "date", false)],
+            &["id", "created_at"],
+        );
+        t.storage.partition_key = Some("RANGE (created_at)".into());
+        t.storage.partitions = vec![
+            partition(
+                "events_2026",
+                "events",
+                "FOR VALUES FROM ('2026-01-01') TO ('2027-01-01')",
+                Some("LIST (id)"),
+            ),
+            partition("events_other", "events", "DEFAULT", None),
+            partition("events_2026_a", "events_2026", "FOR VALUES IN ('1')", None),
+        ];
+        let script = render_create_tables(DatabaseType::Postgres, &[t], &HashSet::new());
+        let sql = &script.sql;
+        assert!(
+            sql.contains("\n) PARTITION BY RANGE (created_at);\n"),
+            "{sql}"
+        );
+        let at = |needle: &str| {
+            sql.find(needle)
+                .unwrap_or_else(|| panic!("{needle} missing:\n{sql}"))
+        };
+        let parent = at("CREATE TABLE \"public\".\"events\" (");
+        let year = at(
+            "CREATE TABLE \"public\".\"events_2026\" PARTITION OF \"public\".\"events\" FOR VALUES FROM ('2026-01-01') TO ('2027-01-01') PARTITION BY LIST (id);\n",
+        );
+        let default = at(
+            "CREATE TABLE \"public\".\"events_other\" PARTITION OF \"public\".\"events\" DEFAULT;\n",
+        );
+        let sub = at(
+            "CREATE TABLE \"public\".\"events_2026_a\" PARTITION OF \"public\".\"events_2026\" FOR VALUES IN ('1');\n",
+        );
+        assert!(parent < year && year < default && default < sub, "{sql}");
+    }
+
+    #[test]
+    fn warehousepg_table_keeps_its_distribution_after_the_partition_key() {
+        let mut t = table(
+            "public",
+            "sales",
+            vec![col("id", "bigint", false), col("sold_on", "date", false)],
+            &[],
+        );
+        t.storage.partition_key = Some("RANGE (sold_on)".into());
+        t.storage.distributed_by = Some("DISTRIBUTED BY (id)".into());
+        let script = render_create_tables(DatabaseType::WarehousePg, &[t], &HashSet::new());
+        assert!(
+            script
+                .sql
+                .contains("\n) PARTITION BY RANGE (sold_on) DISTRIBUTED BY (id);\n"),
+            "{}",
+            script.sql
+        );
+    }
+
+    #[test]
+    fn postgres_partition_alone_is_reattached_to_its_parent() {
+        let mut t = table(
+            "public",
+            "events_other",
+            vec![col("id", "bigint", false)],
+            &[],
+        );
+        t.storage.partition_of = Some(PartitionOf {
+            parent_schema: Some("public".into()),
+            parent: "events".into(),
+            bound: "DEFAULT".into(),
+            ancestors: vec!["public.events".into()],
+        });
+        let script = render_create_tables(DatabaseType::Postgres, &[t], &HashSet::new());
+        assert!(
+            script
+                .sql
+                .contains("CREATE TABLE \"public\".\"events_other\" ("),
+            "{}",
+            script.sql
+        );
+        assert!(
+            script.sql.contains(
+                "ALTER TABLE \"public\".\"events\" ATTACH PARTITION \"public\".\"events_other\" DEFAULT;\n"
+            ),
+            "{}",
+            script.sql
+        );
+    }
+
+    #[test]
+    fn postgres_partition_is_created_once_when_its_parent_is_in_the_script() {
+        let mut parent = table("public", "events", vec![col("id", "bigint", false)], &[]);
+        parent.storage.partition_key = Some("LIST (id)".into());
+        parent.storage.partitions = vec![partition(
+            "events_one",
+            "events",
+            "FOR VALUES IN ('1')",
+            None,
+        )];
+        let mut child = table(
+            "public",
+            "events_one",
+            vec![col("id", "bigint", false)],
+            &[],
+        );
+        child.storage.partition_of = Some(PartitionOf {
+            parent_schema: Some("public".into()),
+            parent: "events".into(),
+            bound: "FOR VALUES IN ('1')".into(),
+            ancestors: vec!["public.events".into()],
+        });
+        // The partition sorts first; it must still come out only once, after
+        // its parent.
+        let script =
+            render_create_tables(DatabaseType::Postgres, &[child, parent], &HashSet::new());
+        assert_eq!(
+            script.sql.matches("\"events_one\"").count(),
+            1,
+            "{}",
+            script.sql
+        );
+        assert!(!script.sql.contains("ATTACH PARTITION"), "{}", script.sql);
+        assert!(
+            script.sql.find("\"events\" (").unwrap() < script.sql.find("\"events_one\"").unwrap(),
+            "{}",
+            script.sql
+        );
     }
 
     #[test]

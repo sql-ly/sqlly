@@ -1,0 +1,102 @@
+                                                                                     QUERY PLAN                                                                                      
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=26383.80..26383.82 rows=8 width=43) (actual time=98.675..102.001 rows=2.00 loops=1)
+   Output: c.country, (count(*)), (sum(((oi.quantity)::numeric * oi.unit_price)))
+   Sort Key: (sum(((oi.quantity)::numeric * oi.unit_price))) DESC
+   Sort Method: quicksort  Memory: 25kB
+   Buffers: shared hit=13415
+   ->  Finalize GroupAggregate  (cost=26381.18..26383.68 rows=8 width=43) (actual time=98.664..101.991 rows=2.00 loops=1)
+         Output: c.country, count(*), sum(((oi.quantity)::numeric * oi.unit_price))
+         Group Key: c.country
+         Buffers: shared hit=13412
+         ->  Gather Merge  (cost=26381.18..26383.39 rows=19 width=43) (actual time=98.656..101.983 rows=6.00 loops=1)
+               Output: c.country, (PARTIAL count(*)), (PARTIAL sum(((oi.quantity)::numeric * oi.unit_price)))
+               Workers Planned: 2
+               Workers Launched: 2
+               Buffers: shared hit=13412
+               ->  Sort  (cost=25381.16..25381.18 rows=8 width=43) (actual time=97.493..97.495 rows=2.00 loops=3)
+                     Output: c.country, (PARTIAL count(*)), (PARTIAL sum(((oi.quantity)::numeric * oi.unit_price)))
+                     Sort Key: c.country
+                     Sort Method: quicksort  Memory: 25kB
+                     Buffers: shared hit=13412
+                     Worker 0:  actual time=96.987..96.989 rows=2.00 loops=1
+                       Sort Method: quicksort  Memory: 25kB
+                       Buffers: shared hit=4392
+                     Worker 1:  actual time=97.105..97.107 rows=2.00 loops=1
+                       Sort Method: quicksort  Memory: 25kB
+                       Buffers: shared hit=4464
+                     ->  Partial HashAggregate  (cost=25380.94..25381.04 rows=8 width=43) (actual time=97.477..97.480 rows=2.00 loops=3)
+                           Output: c.country, PARTIAL count(*), PARTIAL sum(((oi.quantity)::numeric * oi.unit_price))
+                           Group Key: c.country
+                           Batches: 1  Memory Usage: 32kB
+                           Buffers: shared hit=13396
+                           Worker 0:  actual time=96.969..96.972 rows=2.00 loops=1
+                             Batches: 1  Memory Usage: 32kB
+                             Buffers: shared hit=4384
+                           Worker 1:  actual time=97.091..97.094 rows=2.00 loops=1
+                             Batches: 1  Memory Usage: 32kB
+                             Buffers: shared hit=4456
+                           ->  Hash Join  (cost=8359.31..23823.01 rows=124634 width=13) (actual time=14.287..84.258 rows=100000.00 loops=3)
+                                 Output: c.country, oi.quantity, oi.unit_price
+                                 Inner Unique: true
+                                 Hash Cond: (o.customer_id = c.id)
+                                 Buffers: shared hit=13396
+                                 Worker 0:  actual time=13.777..83.232 rows=99162.00 loops=1
+                                   Buffers: shared hit=4384
+                                 Worker 1:  actual time=13.881..84.929 rows=99586.00 loops=1
+                                   Buffers: shared hit=4456
+                                 ->  Parallel Hash Join  (cost=6728.31..21864.83 rows=124634 width=14) (actual time=8.876..62.141 rows=100000.00 loops=3)
+                                       Output: oi.quantity, oi.unit_price, o.customer_id
+                                       Inner Unique: true
+                                       Hash Cond: (oi.order_id = o.id)
+                                       Buffers: shared hit=11878
+                                       Worker 0:  actual time=8.303..60.983 rows=99162.00 loops=1
+                                         Buffers: shared hit=3878
+                                       Worker 1:  actual time=8.598..62.889 rows=99586.00 loops=1
+                                         Buffers: shared hit=3950
+                                       ->  Parallel Seq Scan on public.order_items oi  (cost=0.00..13824.00 rows=500000 width=14) (actual time=0.006..12.548 rows=400000.00 loops=3)
+                                             Output: oi.id, oi.order_id, oi.product_id, oi.quantity, oi.unit_price
+                                             Buffers: shared hit=8824
+                                             Worker 0:  actual time=0.009..12.583 rows=396648.00 loops=1
+                                               Buffers: shared hit=2917
+                                             Worker 1:  actual time=0.005..12.627 rows=398344.00 loops=1
+                                               Buffers: shared hit=2929
+                                       ->  Parallel Hash  (cost=5995.18..5995.18 rows=58651 width=8) (actual time=8.624..8.624 rows=33333.33 loops=3)
+                                             Output: o.id, o.customer_id
+                                             Buckets: 131072  Batches: 1  Memory Usage: 4960kB
+                                             Buffers: shared hit=3054
+                                             Worker 0:  actual time=8.275..8.276 rows=31471.00 loops=1
+                                               Buffers: shared hit=961
+                                             Worker 1:  actual time=8.546..8.546 rows=33434.00 loops=1
+                                               Buffers: shared hit=1021
+                                             ->  Parallel Seq Scan on public.orders o  (cost=0.00..5995.18 rows=58651 width=8) (actual time=0.007..5.421 rows=33333.33 loops=3)
+                                                   Output: o.id, o.customer_id
+                                                   Filter: (o.status = 'paid'::text)
+                                                   Rows Removed by Filter: 100000
+                                                   Buffers: shared hit=3054
+                                                   Worker 0:  actual time=0.008..5.144 rows=31471.00 loops=1
+                                                     Buffers: shared hit=961
+                                                   Worker 1:  actual time=0.007..5.409 rows=33434.00 loops=1
+                                                     Buffers: shared hit=1021
+                                 ->  Hash  (cost=1006.00..1006.00 rows=50000 width=7) (actual time=5.313..5.313 rows=50000.00 loops=3)
+                                       Output: c.country, c.id
+                                       Buckets: 65536  Batches: 1  Memory Usage: 2466kB
+                                       Buffers: shared hit=1518
+                                       Worker 0:  actual time=5.375..5.375 rows=50000.00 loops=1
+                                         Buffers: shared hit=506
+                                       Worker 1:  actual time=5.188..5.189 rows=50000.00 loops=1
+                                         Buffers: shared hit=506
+                                       ->  Seq Scan on public.customers c  (cost=0.00..1006.00 rows=50000 width=7) (actual time=0.005..2.179 rows=50000.00 loops=3)
+                                             Output: c.country, c.id
+                                             Buffers: shared hit=1518
+                                             Worker 0:  actual time=0.005..2.136 rows=50000.00 loops=1
+                                               Buffers: shared hit=506
+                                             Worker 1:  actual time=0.005..2.084 rows=50000.00 loops=1
+                                               Buffers: shared hit=506
+ Settings: jit = 'off', work_mem = '8MB'
+ Planning:
+   Buffers: shared hit=371
+ Planning Time: 0.465 ms
+ Execution Time: 102.102 ms
+(98 rows)
+

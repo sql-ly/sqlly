@@ -1,0 +1,130 @@
+format: sqlserver-xml (Certain)
+statements: 1
+
+== statement 1
+cardinality_estimator_version: 160
+cpu_time_ms: 89
+dialect: "SqlServer"
+estimated_rows: 1
+execution_time_ms: 229
+has_actuals: yes
+memory_grant: {desired_kb=57664 grant_wait_seconds=0 granted_kb=5120 max_query_memory_kb=353280 max_used_kb=4976 requested_kb=4096 required_kb=4096 serial_desired_kb=57664 serial_required_kb=4096}
+non_parallel_reason: "MaxDOPSetToOne"
+notes: ["Plan retrieved from the plan cache", "Batch mode on rowstore used", "Compile CPU: 21 ms", "Compile memory: 304 kB", "Cached plan size: 56 kB", "Memory grant feedback adjusted: No: First Execution", "Wait RESERVED_MEMORY_ALLOCATION_EXT: 1 ms in 1105 waits"]
+optimization_level: "FULL"
+planning_time_ms: 42
+query_hash: "0x2895BB007AA2228B"
+query_plan_hash: "0x0475BE4AF121D52E"
+settings: [{name="QUOTED_IDENTIFIER" value="false"}, {name="ARITHABORT" value="false"}, {name="CONCAT_NULL_YIELDS_NULL" value="true"}, {name="ANSI_NULLS" value="true"}, {name="ANSI_PADDING" value="true"}, {name="ANSI_WARNINGS" value="true"}, {name="NUMERIC_ROUNDABORT" value="false"}]
+source_format: "sqlserver-xml"
+statement_text: "SELECT COUNT(*) FROM (SELECT DISTINCT o.padding, o.total, o.order_id, oi.item_id FROM dbo.orders o JOIN dbo.order_items oi ON oi.order_id = o.order_id) x OPTION..."
+statement_type: "SELECT"
+statistics_used: [{last_update="2026-11-23T23:04:29.59" modification_count=0 sampling_percent=24.672 schema="dbo" statistics="PK__orders__46596229A6DBB338" table="orders"}, {last_update="2026-11-23T23:03:32.03" modification_count=0 sampling_percent=100 schema="dbo" statistics="IX_items_order" table="order_items"}]
+total_subtree_cost: 5.26764
+warnings: ["SpillToTempDb"]
+operators: 5
+  #0 Compute Scalar [Compute Scalar]
+      actual_rows: 1
+      actual_rows_total: 1
+      actual_time_ms: 226
+      buffers: {logical_reads=0 physical_reads=0 read_aheads=0}
+      estimated_cost: 5.26764
+      estimated_executions: 1
+      estimated_row_width: 11
+      estimated_rows: 1
+      execution_mode: "Batch"
+      loops: 1
+      output_columns: ["Expr1002"]
+      output_list: ["Expr1002"]
+      properties: [{name="Defined Values" value="Expr1002 = CONVERT_IMPLICIT(int,[Expr1005],0)"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}, {name="Actual Batches" value="1"}]
+      row_count: 1
+    #1 Hash Match [Aggregate]
+        actual_rows: 1
+        actual_rows_total: 1
+        actual_time_ms: 226
+        buffers: {logical_reads=0 physical_reads=0 read_aheads=0}
+        estimated_cost: 5.26764
+        estimated_cpu: 0.038875
+        estimated_executions: 1
+        estimated_row_width: 11
+        estimated_rows: 1
+        execution_mode: "Batch"
+        loops: 1
+        output_columns: ["Expr1005"]
+        output_list: ["Expr1005"]
+        properties: [{name="Defined Values" value="Expr1005 = COUNT(*)"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}, {name="Memory Fraction Input" value="1"}, {name="Memory Fraction Output" value="1"}, {name="Actual Batches" value="1"}]
+        row_count: 1
+      #2 Hash Match [Inner Join]
+          actual_cpu_ms: 61
+          actual_rows: 600000
+          actual_rows_total: 600000
+          actual_self_time_ms: 202
+          actual_time_ms: 226
+          buffers: {logical_reads=0 physical_reads=0 read_aheads=792}
+          estimated_cost: 5.22876
+          estimated_cpu: 3.07368
+          estimated_executions: 1
+          estimated_row_width: 9
+          estimated_rows: 600000
+          execution_mode: "Batch"
+          join_predicate: "o.order_id = oi.order_id"
+          join_type: "Inner"
+          loops: 1
+          properties: [{name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}, {name="Memory Fraction Input" value="0.999403"}, {name="Memory Fraction Output" value="0.999403"}, {name="Actual Scans" value="22"}, {name="Actual Batches" value="1129"}, {name="Spill Granted Memory kB" value="4096"}, {name="Spill Used Memory kB" value="3488"}, {name="Spill Writes To TempDb" value="596"}, {name="Spill Reads From TempDb" value="596"}]
+          row_count: 600000
+          spill: {kind="hash" level=1 threads=1 written_kb=4768}
+          warnings: ["SpillToTempDb"]
+        #3 Index Scan [Index Scan]
+            actual_cpu_ms: 8
+            actual_rows: 300000
+            actual_rows_total: 300000
+            actual_self_time_ms: 8
+            actual_time_ms: 8
+            alias: "o"
+            buffers: {logical_reads=528 physical_reads=0 read_aheads=0}
+            database: "Shop"
+            estimated_cost: 0.720689
+            estimated_cpu: 0.330157
+            estimated_executions: 1
+            estimated_io: 0.390532
+            estimated_row_width: 11
+            estimated_rows: 300000
+            estimated_rows_read: 300000
+            execution_mode: "Batch"
+            index_name: "IX_orders_customer"
+            loops: 1
+            output_columns: ["o.order_id"]
+            output_list: ["o.order_id"]
+            properties: [{name="Ordered" value="0"}, {name="ForcedIndex" value="0"}, {name="ForceSeek" value="0"}, {name="ForceScan" value="0"}, {name="NoExpandHint" value="0"}, {name="Storage" value="RowStore"}, {name="TableCardinality" value="300000"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}, {name="IndexKind" value="NonClustered"}, {name="Storage" value="RowStore"}, {name="Actual Scans" value="1"}, {name="Actual Batches" value="334"}]
+            relation: "orders"
+            row_count: 300000
+            rows_read: 300000
+            schema: "dbo"
+            table_cardinality: 300000
+        #4 Index Scan [Index Scan]
+            actual_cpu_ms: 16
+            actual_rows: 600000
+            actual_rows_total: 600000
+            actual_self_time_ms: 16
+            actual_time_ms: 16
+            alias: "oi"
+            buffers: {logical_reads=1049 physical_reads=0 read_aheads=21}
+            database: "Shop"
+            estimated_cost: 1.43439
+            estimated_cpu: 0.660157
+            estimated_executions: 1
+            estimated_io: 0.774236
+            estimated_row_width: 11
+            estimated_rows: 600000
+            estimated_rows_read: 600000
+            execution_mode: "Batch"
+            index_name: "IX_items_order"
+            loops: 1
+            output_columns: ["oi.order_id"]
+            output_list: ["oi.order_id"]
+            properties: [{name="Ordered" value="0"}, {name="ForcedIndex" value="0"}, {name="ForceSeek" value="0"}, {name="ForceScan" value="0"}, {name="NoExpandHint" value="0"}, {name="Storage" value="RowStore"}, {name="TableCardinality" value="600000"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}, {name="IndexKind" value="NonClustered"}, {name="Storage" value="RowStore"}, {name="Actual Scans" value="1"}, {name="Actual Batches" value="667"}]
+            relation: "order_items"
+            row_count: 600000
+            rows_read: 600000
+            schema: "dbo"
+            table_cardinality: 600000

@@ -19,6 +19,23 @@ use std::path::{Path, PathBuf};
 /// missing. On failure the temp file is removed and
 /// `path` is left untouched.
 pub fn write_atomic(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+    write_atomic_with(path, bytes, Mode::OwnerOnly)
+}
+
+/// [`write_atomic`] for a document the user owns (a notebook file): an
+/// existing file keeps its permissions, and a new one gets the usual ones
+/// rather than the app stores' owner-only mode.
+pub fn write_document_atomic(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+    write_atomic_with(path, bytes, Mode::Document)
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Mode {
+    OwnerOnly,
+    Document,
+}
+
+fn write_atomic_with(path: &Path, bytes: &[u8], mode: Mode) -> std::io::Result<()> {
     if let Some(parent) = path.parent().filter(|p| !p.as_os_str().is_empty()) {
         std::fs::create_dir_all(parent)?;
     }
@@ -27,11 +44,12 @@ pub fn write_atomic(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
         .and_then(|name| name.to_str())
         .unwrap_or("store");
     let tmp = path.with_file_name(format!(".{file_name}.{}.tmp", uuid::Uuid::new_v4()));
+    let existing = std::fs::metadata(path).ok().map(|m| m.permissions());
     let result = (|| {
         let mut options = std::fs::OpenOptions::new();
         options.write(true).create_new(true);
         #[cfg(unix)]
-        {
+        if mode == Mode::OwnerOnly {
             use std::os::unix::fs::OpenOptionsExt;
             // App stores can hold connection details and query text: owner-only.
             options.mode(0o600);
@@ -39,13 +57,32 @@ pub fn write_atomic(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
         let mut file = options.open(&tmp)?;
         file.write_all(bytes)?;
         file.sync_all()?;
+        if mode == Mode::Document
+            && let Some(permissions) = existing
+        {
+            file.set_permissions(permissions)?;
+        }
         std::fs::rename(&tmp, path)?;
+        sync_parent(path);
         Ok(())
     })();
     if result.is_err() {
         let _ = std::fs::remove_file(&tmp);
     }
     result
+}
+
+/// Make the rename itself durable: a crash right after it must not bring
+/// the old file back. Best effort; Windows has no directory handles to sync.
+fn sync_parent(path: &Path) {
+    #[cfg(unix)]
+    if let Some(parent) = path.parent().filter(|p| !p.as_os_str().is_empty())
+        && let Ok(dir) = std::fs::File::open(parent)
+    {
+        let _ = dir.sync_all();
+    }
+    #[cfg(not(unix))]
+    let _ = path;
 }
 
 /// The outcome of loading a JSON store from disk.
@@ -123,6 +160,31 @@ pub fn private_temp_dir(purpose: &str) -> std::io::Result<PathBuf> {
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
+
+    #[cfg(unix)]
+    #[test]
+    fn documents_keep_their_permissions_and_stores_stay_owner_only() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let doc = dir.path().join("shared.sqllynb");
+        std::fs::write(&doc, "old").unwrap();
+        std::fs::set_permissions(&doc, std::fs::Permissions::from_mode(0o644)).unwrap();
+        write_document_atomic(&doc, b"new").unwrap();
+        assert_eq!(std::fs::read_to_string(&doc).unwrap(), "new");
+        assert_eq!(
+            std::fs::metadata(&doc).unwrap().permissions().mode() & 0o777,
+            0o644,
+            "saving a notebook keeps the mode the user gave it"
+        );
+        let store = dir.path().join("store.json");
+        std::fs::write(&store, "old").unwrap();
+        std::fs::set_permissions(&store, std::fs::Permissions::from_mode(0o644)).unwrap();
+        write_atomic(&store, b"new").unwrap();
+        assert_eq!(
+            std::fs::metadata(&store).unwrap().permissions().mode() & 0o777,
+            0o600
+        );
+    }
 
     #[test]
     fn write_atomic_creates_parent_and_replaces_contents() {

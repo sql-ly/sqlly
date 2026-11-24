@@ -167,6 +167,12 @@
         <p id="fact" class="fact"></p>
       </div>
     </div>
+    <!-- Copy/Cut fallback for pages served over plain HTTP, where browsers
+         hide navigator.clipboard. Classic script so it runs before boot.js. -->
+    <script src="./clipboard-fallback.js"></script>
+    <!-- Notebook files: reads the browser's notebooks folder while the app
+         downloads. Classic script so it starts before boot.js waits on it. -->
+    <script src="./notebook-files.js"></script>
     <!-- External module (not inline) so the page loads under the marketing
          site's strict CSP without a per-path exemption — see boot.js. -->
     <script type="module" src="./boot.js"></script>

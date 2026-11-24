@@ -1,0 +1,24 @@
+(Expression)
+ExpressionTransform × 7
+Header: status LowCardinality(String): status LowCardinality(String) ColumnLowCardinality(size = 0, UInt8(size = 0), ColumnUnique(size = 1, String(size = 1)))
+        count() UInt64: count() UInt64 UInt64(size = 0)
+  (Aggregating)
+  Resize 7 → 7
+  Header × 7 : __table1.status LowCardinality(String): __table1.status LowCardinality(String) ColumnLowCardinality(size = 0, UInt8(size = 0), ColumnUnique(size = 1, String(size = 1)))
+                count() UInt64: count() UInt64 UInt64(size = 0)
+    AggregatingTransform × 7
+    Header: __table1.status LowCardinality(String): __table1.status LowCardinality(String) ColumnLowCardinality(size = 0, UInt8(size = 0), ColumnUnique(size = 1, String(size = 1)))
+            count() UInt64: count() UInt64 UInt64(size = 0)
+      StrictResize 7 → 7
+      Header × 7 : __table1.status LowCardinality(String): __table1.status LowCardinality(String) ColumnLowCardinality(size = 0, UInt8(size = 0), ColumnUnique(size = 1, String(size = 1)))
+        (Expression)
+        ExpressionTransform × 7
+        Header: __table1.status LowCardinality(String): __table1.status LowCardinality(String) ColumnLowCardinality(size = 0, UInt8(size = 0), ColumnUnique(size = 1, String(size = 1)))
+          (Expression)
+          ExpressionTransform × 7
+          Header: __table1.status LowCardinality(String): __table1.status LowCardinality(String) ColumnLowCardinality(size = 0, UInt8(size = 0), ColumnUnique(size = 1, String(size = 1)))
+            (ReadFromMergeTree)
+            MergeTreeSelect(pool: ReadPool, algorithm: Thread) × 7 0 → 1
+            Header: customer_id UInt32: customer_id UInt32 UInt32(size = 0)
+                    total Decimal(12, 2): total Decimal(12, 2) Decimal64(size = 0)
+                    status LowCardinality(String): status LowCardinality(String) ColumnLowCardinality(size = 0, UInt8(size = 0), ColumnUnique(size = 1, String(size = 1)))

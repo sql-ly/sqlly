@@ -425,11 +425,16 @@ pub async fn build_model_snapshot(
                 bulk_pks.remove(&(schema.to_ascii_lowercase(), node.name.to_ascii_lowercase()))
             })
             .unwrap_or_default();
+        let mut body = table_body(&columns, foreign_keys, primary_key, dialect);
+        if let Some(parent) = &node.partition_of {
+            body.options
+                .insert(TableBody::PARTITION_OF_OPTION.to_string(), parent.clone());
+        }
         fragments.push(ObjectFragment {
             reference: ref_for(node, dialect),
             kind: ModelObjectKind::Table,
             dialect,
-            body: ObjectBody::Table(table_body(&columns, foreign_keys, primary_key, dialect)),
+            body: ObjectBody::Table(body),
             provenance: Provenance::Database {
                 profile: profile_id.clone(),
             },
@@ -756,6 +761,9 @@ mod tests {
         /// Customers.CustomerId; when false it keeps the trait default
         /// (`NotImplemented`) so the best-effort fallback is exercised.
         foreign_keys: bool,
+        /// When true, `list_tables` also reports `Orders_2024`, a partition
+        /// of `dbo.Orders`.
+        partitions: bool,
     }
 
     #[async_trait]
@@ -817,10 +825,16 @@ mod tests {
             _db: &str,
             _s: Option<&str>,
         ) -> StudioResult<Vec<MetadataNode>> {
-            Ok(vec![
+            let mut tables = vec![
                 node("Orders", Some("dbo"), CoreObjectKind::Table),
                 node("Customers", Some("dbo"), CoreObjectKind::Table),
-            ])
+            ];
+            if self.partitions {
+                let mut partition = node("Orders_2024", Some("dbo"), CoreObjectKind::Table);
+                partition.partition_of = Some("dbo.Orders".into());
+                tables.push(partition);
+            }
+            Ok(tables)
         }
         async fn list_views(
             &self,
@@ -958,6 +972,28 @@ mod tests {
             .find(|o| o.name == "Customers")
             .expect("Customers should be in snapshot");
         assert_eq!(customers.columns, vec!["CustomerId", "CustomerName"]);
+    }
+
+    /// DBeaver #42745: a partition keeps its parent in the model, so
+    /// completion can tell it from an ordinary table.
+    #[tokio::test]
+    async fn build_model_snapshot_marks_partitions_with_their_parent() {
+        let meta = FakeMeta {
+            partitions: true,
+            ..FakeMeta::default()
+        };
+        let snap = build_model_snapshot(&meta, &test_profile(), "appdb", false)
+            .await
+            .expect("build snapshot");
+        let partition_of = |name: &str| {
+            snap.objects()
+                .find(|e| e.reference.name.spelling() == name)
+                .and_then(|e| e.table())
+                .map(|t| t.partition_of().map(str::to_string))
+                .unwrap_or_else(|| panic!("{name} should be a table in the snapshot"))
+        };
+        assert_eq!(partition_of("Orders_2024").as_deref(), Some("dbo.Orders"));
+        assert_eq!(partition_of("Orders"), None);
     }
 
     #[tokio::test]

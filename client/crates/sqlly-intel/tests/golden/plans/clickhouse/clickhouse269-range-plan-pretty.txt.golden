@@ -1,0 +1,23 @@
+format: clickhouse-text (Certain)
+statements: 1
+
+== statement 1
+dialect: "ClickHouse"
+estimated_rows: 81920
+source_format: "clickhouse-text"
+statement_type: "EXPLAIN"
+operators: 2
+  #1 Aggregating [Aggregating]
+      group_keys: ["status"]
+      output_columns: ["status", "count()"]
+      properties: [{name="Aggregates" value="count()"}, {name="Skip merging" value="0"}]
+    #2 ReadFromMergeTree default.orders [ReadFromMergeTree]
+        estimated_rows: 81920
+        filter: "customer_id <= 200 AND customer_id >= 100 AND total > 800"
+        index_cond: "and((customer_id in (-Inf, 200]), (customer_id in [100, +Inf)))"
+        index_name: "total_idx"
+        output_columns: ["status"]
+        output_list: ["Min-Max: true parts 10/10 granules 392/392", "Partition: true parts 10/10 granules 392/392", "PrimaryKey: and((customer_id in (-Inf, 200]), (customer_id in [100, +Inf))) parts 10/10 granules 10/392", "Skip: (total in ('800', +Inf)) parts 10/10 granules 10/10"]
+        properties: [{name="Read type" value="Default"}, {name="Parts" value="10"}, {name="Granules" value="10"}, {name="Ranges" value="10"}, {name="Min-Max index condition" value="true"}, {name="Min-Max index parts" value="10/10"}, {name="Min-Max index granules" value="392/392"}, {name="Partition index condition" value="true"}, {name="Partition index parts" value="10/10"}, {name="Partition index granules" value="392/392"}, {name="PrimaryKey index keys" value="customer_id"}, {name="PrimaryKey index condition" value="and((customer_id in (-Inf, 200]), (customer_id in [100, +Inf)))"}, {name="PrimaryKey index parts" value="10/10"}, {name="PrimaryKey index granules" value="10/392"}, {name="PrimaryKey index search" value="binary search"}, {name="Skip index total_idx condition" value="(total in ('800', +Inf))"}, {name="Skip index total_idx definition" value="minmax GRANULARITY 4"}, {name="Skip index total_idx parts" value="10/10"}, {name="Skip index total_idx granules" value="10/10"}]
+        relation: "orders"
+        schema: "default"

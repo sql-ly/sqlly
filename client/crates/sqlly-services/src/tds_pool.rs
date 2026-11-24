@@ -363,6 +363,32 @@ mod tests {
         );
     }
 
+    // https://github.com/microsoft/azuredatastudio/issues/26169
+    #[test]
+    fn switching_database_never_reuses_or_disturbs_the_previous_session() {
+        let pool: WarmPool<&'static str> = WarmPool::new();
+        let mut profile = sql_profile("prod-sql", Some("Sales"), "sa");
+        // The query tab ran against Sales; its session went back to the pool.
+        let sales_key = WarmPool::<&str>::pool_key(Some("tab-1"), &profile);
+        pool.checkin(sales_key.clone(), "sales-session");
+
+        // The query-bar picker only retargets the profile.
+        profile.database = Some("Archive".to_string());
+        let archive_key = WarmPool::<&str>::pool_key(Some("tab-1"), &profile);
+        assert_ne!(
+            archive_key, sales_key,
+            "the database is part of the session identity"
+        );
+
+        // The next query looks for an Archive session: there is none, so it
+        // opens a fresh one instead of reusing (or re-USE-ing) Sales.
+        assert_eq!(pool.checkout(&archive_key), None);
+        // Archive is unreachable: that open fails and nothing is checked in.
+        // The Sales session is still warm and untouched.
+        assert_eq!(pool.idle_len(), 1);
+        assert_eq!(pool.checkout(&sales_key), Some("sales-session"));
+    }
+
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn reaper_drops_idle_clients_and_stops_when_pool_drops() {
         let pool: WarmPool<u32> = WarmPool::new();

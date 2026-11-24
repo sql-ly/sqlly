@@ -1,0 +1,36 @@
+info
+distribution: local
+vectorized: true
+
+• sort
+│ columns: (region string, n int, revenue decimal)
+│ estimated row count: 2
+│ order: -sum
+│
+└── • group (hash)
+"    │ columns: (region string, count_rows int, sum decimal)"
+"    │ estimated row count: 2"
+"    │ aggregate 0: count_rows()"
+"    │ aggregate 1: sum(total)"
+"    │ group by: region"
+"    │"
+"    └── • project"
+"        │ columns: (region string, total decimal)"
+"        │"
+"        └── • hash join (inner)"
+"            │ columns: (customer_id int, total decimal, id int, region string)"
+"            │ estimated row count: 10,000"
+"            │ equality: (customer_id) = (id)"
+"            │ right cols are key"
+"            │"
+"            ├── • scan"
+"            │     columns: (customer_id int, total decimal)"
+"            │     estimated row count: 20,000 (100% of the table; stats collected 3 seconds ago)"
+"            │     table: orders@orders_pkey"
+"            │     spans: FULL SCAN"
+"            │"
+"            └── • scan"
+"                  columns: (id int, region string)"
+"                  estimated row count: 500 (50% of the table; stats collected 3 seconds ago)"
+"                  table: customers@customers_region_idx"
+"                  spans: /""east""-/""east""/PrefixEnd /""west""-/""west""/PrefixEnd"

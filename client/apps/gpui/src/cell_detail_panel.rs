@@ -45,6 +45,10 @@ struct CellEdit {
     focus: FocusedCell,
     /// The value when editing began; applying unchanged text stages nothing.
     original: CellValue,
+    /// The editor's starting text (a JSON value may open pretty-printed).
+    seed: String,
+    /// How an edited JSON value is written back, fixed when editing began.
+    json_storage: crate::json_edit_format::JsonEditStorage,
     /// Cmd/Ctrl+Enter applies and Escape reverts while the editor has focus.
     _keys: Subscription,
 }
@@ -214,7 +218,10 @@ impl CellDetailPanel {
         let (Some(detail), Some(focus)) = (self.detail.as_ref(), self.focus) else {
             return;
         };
-        let Some(seed) = crate::cell_detail_model::edit_seed_text(&detail.value) else {
+        let json_storage = crate::json_edit_format::JsonEditStorage::current();
+        let Some(seed) =
+            crate::cell_detail_model::edit_seed_for(&detail.value, &detail.data_type, json_storage)
+        else {
             return;
         };
         let original = detail.value.clone();
@@ -226,7 +233,7 @@ impl CellDetailPanel {
                     cx,
                     "results.cell_details.empty_string_placeholder",
                 ))
-                .default_value(seed)
+                .default_value(seed.clone())
         });
         editor.update(cx, |state, cx| state.focus(window, cx));
         // The editor's own Enter bindings insert a newline for
@@ -269,6 +276,8 @@ impl CellDetailPanel {
             slot: self.slot,
             focus,
             original,
+            seed,
+            json_storage,
             _keys: keys,
         });
         self.edit_notice = None;
@@ -284,8 +293,14 @@ impl CellDetailPanel {
             return;
         };
         let draft = edit.editor.read(cx).value().to_string();
-        let Some(panel_edit) = crate::cell_detail_model::edit_for_apply(&edit.original, &draft)
-        else {
+        let data_type = self.detail.as_ref().map_or("", |d| d.data_type.as_str());
+        let Some(panel_edit) = crate::cell_detail_model::edit_for_apply_as(
+            &edit.original,
+            &edit.seed,
+            &draft,
+            data_type,
+            edit.json_storage,
+        ) else {
             self.cancel_edit(cx);
             return;
         };

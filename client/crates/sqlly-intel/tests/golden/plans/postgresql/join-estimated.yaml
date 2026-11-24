@@ -1,0 +1,148 @@
+                              QUERY PLAN                               
+-----------------------------------------------------------------------
+ - Plan:                                                              +
+     Node Type: "Sort"                                                +
+     Parallel Aware: false                                            +
+     Async Capable: false                                             +
+     Startup Cost: 26383.80                                           +
+     Total Cost: 26383.82                                             +
+     Plan Rows: 8                                                     +
+     Plan Width: 43                                                   +
+     Disabled: false                                                  +
+     Sort Key:                                                        +
+       - "(sum(((oi.quantity)::numeric * oi.unit_price))) DESC"       +
+     Plans:                                                           +
+       - Node Type: "Aggregate"                                       +
+         Strategy: "Sorted"                                           +
+         Partial Mode: "Finalize"                                     +
+         Parent Relationship: "Outer"                                 +
+         Parallel Aware: false                                        +
+         Async Capable: false                                         +
+         Startup Cost: 26381.18                                       +
+         Total Cost: 26383.68                                         +
+         Plan Rows: 8                                                 +
+         Plan Width: 43                                               +
+         Disabled: false                                              +
+         Group Key:                                                   +
+           - "c.country"                                              +
+         Plans:                                                       +
+           - Node Type: "Gather Merge"                                +
+             Parent Relationship: "Outer"                             +
+             Parallel Aware: false                                    +
+             Async Capable: false                                     +
+             Startup Cost: 26381.18                                   +
+             Total Cost: 26383.39                                     +
+             Plan Rows: 19                                            +
+             Plan Width: 43                                           +
+             Disabled: false                                          +
+             Workers Planned: 2                                       +
+             Plans:                                                   +
+               - Node Type: "Sort"                                    +
+                 Parent Relationship: "Outer"                         +
+                 Parallel Aware: false                                +
+                 Async Capable: false                                 +
+                 Startup Cost: 25381.16                               +
+                 Total Cost: 25381.18                                 +
+                 Plan Rows: 8                                         +
+                 Plan Width: 43                                       +
+                 Disabled: false                                      +
+                 Sort Key:                                            +
+                   - "c.country"                                      +
+                 Plans:                                               +
+                   - Node Type: "Aggregate"                           +
+                     Strategy: "Hashed"                               +
+                     Partial Mode: "Partial"                          +
+                     Parent Relationship: "Outer"                     +
+                     Parallel Aware: false                            +
+                     Async Capable: false                             +
+                     Startup Cost: 25380.94                           +
+                     Total Cost: 25381.04                             +
+                     Plan Rows: 8                                     +
+                     Plan Width: 43                                   +
+                     Disabled: false                                  +
+                     Group Key:                                       +
+                       - "c.country"                                  +
+                     Planned Partitions: 0                            +
+                     Plans:                                           +
+                       - Node Type: "Hash Join"                       +
+                         Parent Relationship: "Outer"                 +
+                         Parallel Aware: false                        +
+                         Async Capable: false                         +
+                         Join Type: "Inner"                           +
+                         Startup Cost: 8359.31                        +
+                         Total Cost: 23823.01                         +
+                         Plan Rows: 124634                            +
+                         Plan Width: 13                               +
+                         Disabled: false                              +
+                         Inner Unique: true                           +
+                         Hash Cond: "(o.customer_id = c.id)"          +
+                         Plans:                                       +
+                           - Node Type: "Hash Join"                   +
+                             Parent Relationship: "Outer"             +
+                             Parallel Aware: true                     +
+                             Async Capable: false                     +
+                             Join Type: "Inner"                       +
+                             Startup Cost: 6728.31                    +
+                             Total Cost: 21864.83                     +
+                             Plan Rows: 124634                        +
+                             Plan Width: 14                           +
+                             Disabled: false                          +
+                             Inner Unique: true                       +
+                             Hash Cond: "(oi.order_id = o.id)"        +
+                             Plans:                                   +
+                               - Node Type: "Seq Scan"                +
+                                 Parent Relationship: "Outer"         +
+                                 Parallel Aware: true                 +
+                                 Async Capable: false                 +
+                                 Relation Name: "order_items"         +
+                                 Alias: "oi"                          +
+                                 Startup Cost: 0.00                   +
+                                 Total Cost: 13824.00                 +
+                                 Plan Rows: 500000                    +
+                                 Plan Width: 14                       +
+                                 Disabled: false                      +
+                               - Node Type: "Hash"                    +
+                                 Parent Relationship: "Inner"         +
+                                 Parallel Aware: true                 +
+                                 Async Capable: false                 +
+                                 Startup Cost: 5995.18                +
+                                 Total Cost: 5995.18                  +
+                                 Plan Rows: 58651                     +
+                                 Plan Width: 8                        +
+                                 Disabled: false                      +
+                                 Plans:                               +
+                                   - Node Type: "Seq Scan"            +
+                                     Parent Relationship: "Outer"     +
+                                     Parallel Aware: true             +
+                                     Async Capable: false             +
+                                     Relation Name: "orders"          +
+                                     Alias: "o"                       +
+                                     Startup Cost: 0.00               +
+                                     Total Cost: 5995.18              +
+                                     Plan Rows: 58651                 +
+                                     Plan Width: 8                    +
+                                     Disabled: false                  +
+                                     Filter: "(status = 'paid'::text)"+
+                           - Node Type: "Hash"                        +
+                             Parent Relationship: "Inner"             +
+                             Parallel Aware: false                    +
+                             Async Capable: false                     +
+                             Startup Cost: 1006.00                    +
+                             Total Cost: 1006.00                      +
+                             Plan Rows: 50000                         +
+                             Plan Width: 7                            +
+                             Disabled: false                          +
+                             Plans:                                   +
+                               - Node Type: "Seq Scan"                +
+                                 Parent Relationship: "Outer"         +
+                                 Parallel Aware: false                +
+                                 Async Capable: false                 +
+                                 Relation Name: "customers"           +
+                                 Alias: "c"                           +
+                                 Startup Cost: 0.00                   +
+                                 Total Cost: 1006.00                  +
+                                 Plan Rows: 50000                     +
+                                 Plan Width: 7                        +
+                                 Disabled: false
+(1 row)
+

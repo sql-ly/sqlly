@@ -892,6 +892,10 @@ impl AppView {
         // relay/bridge free it and a later reconnect re-establishes a fresh
         // session instead of reusing a stale cached one.
         self.clear_remote_services(&sqlly_core::ConnectionId(profile_id));
+        let profile_text = profile_id.to_string();
+        for notebook in self.tabs.iter().filter_map(|t| t.notebook.clone()) {
+            notebook.update(cx, |nb, cx| nb.connection_disconnected(&profile_text, cx));
+        }
         if is_active {
             self.active_profile = None;
             self.sidebar.update(cx, |s, cx| {

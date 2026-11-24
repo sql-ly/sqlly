@@ -40,7 +40,7 @@ pub enum ReasoningLevel {
     High,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProviderProfile {
     pub id: String,
@@ -61,9 +61,16 @@ pub struct ProviderProfile {
     pub send_reasoning_effort: bool,
     #[serde(default)]
     pub proxy: Option<String>,
+    /// What the provider charges per 1,000 tokens sent, in US dollars, as
+    /// the user typed it (never looked up); lets notebook AI cost caps work.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub price_per_1k_input_usd: Option<f64>,
+    /// The same per 1,000 tokens received.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub price_per_1k_output_usd: Option<f64>,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AiProfilesConfig {
     #[serde(default)]
@@ -175,7 +182,34 @@ impl ProviderKind {
     }
 }
 
+/// A price typed in the provider settings: dollars per 1,000 tokens, `None`
+/// when empty or not a non-negative number.
+pub fn parse_price(text: &str) -> Option<f64> {
+    let text = text.trim().trim_start_matches('$').trim();
+    text.parse::<f64>()
+        .ok()
+        .filter(|price| price.is_finite() && *price >= 0.0)
+}
+
+/// The price notebook AI runs are charged at: the app's active cloud
+/// profile's, when the user set one.
+pub fn active_pricing(config: &AiProfilesConfig) -> sqlly_services::notebook_agent::Pricing {
+    config
+        .active_profile_id
+        .as_deref()
+        .and_then(|id| config.profiles.iter().find(|p| p.id == id))
+        .map(ProviderProfile::pricing)
+        .unwrap_or_default()
+}
+
 impl ProviderProfile {
+    pub fn pricing(&self) -> sqlly_services::notebook_agent::Pricing {
+        sqlly_services::notebook_agent::Pricing {
+            usd_per_1k_input: self.price_per_1k_input_usd,
+            usd_per_1k_output: self.price_per_1k_output_usd,
+        }
+    }
+
     pub fn new(kind: ProviderKind) -> Self {
         let id = uuid::Uuid::new_v4().to_string();
         Self {
@@ -195,6 +229,8 @@ impl ProviderProfile {
             thinking_budget: None,
             send_reasoning_effort: false,
             proxy: None,
+            price_per_1k_input_usd: None,
+            price_per_1k_output_usd: None,
         }
     }
 }
@@ -614,6 +650,8 @@ pub async fn fetch_models(
         thinking_budget: None,
         send_reasoning_effort: false,
         proxy: None,
+        price_per_1k_input_usd: None,
+        price_per_1k_output_usd: None,
     };
     fetch_models_for(&profile, api_key).await
 }
@@ -741,6 +779,11 @@ fn key_entry_ref(account: &str) -> Result<keyring::Entry, String> {
 }
 
 pub fn load_api_key_ref(account: &str) -> Result<Option<String>, String> {
+    // A profile saved without a key (an OpenAI-compatible local endpoint)
+    // names no keychain entry at all.
+    if account.trim().is_empty() {
+        return Ok(None);
+    }
     #[cfg(not(target_arch = "wasm32"))]
     {
         match key_entry_ref(account)?.get_password() {
@@ -822,6 +865,8 @@ pub fn migrate_legacy(config: &CloudAIConfig) -> AiProfilesConfig {
             thinking_budget: None,
             send_reasoning_effort: false,
             proxy: None,
+            price_per_1k_input_usd: None,
+            price_per_1k_output_usd: None,
         })
         .collect();
     let active_profile_id = config.app_ai_provider.map(|provider| match provider {
@@ -1394,6 +1439,41 @@ mod tests {
     #[test]
     fn parse_invalid_is_error() {
         assert!(parse_model_ids_for(&ProviderKind::OpenAi, b"nope").is_err());
+    }
+
+    #[test]
+    fn prices_are_typed_per_profile_and_persist() {
+        assert_eq!(parse_price(" $0.25 "), Some(0.25));
+        assert_eq!(parse_price("3"), Some(3.0));
+        assert_eq!(parse_price(""), None);
+        assert_eq!(parse_price("-1"), None);
+        assert_eq!(parse_price("cheap"), None);
+        let mut profile = ProviderProfile::new(ProviderKind::Anthropic);
+        profile.price_per_1k_input_usd = Some(0.003);
+        profile.price_per_1k_output_usd = Some(0.015);
+        let config = AiProfilesConfig {
+            version: 1,
+            active_profile_id: Some(profile.id.clone()),
+            profiles: vec![profile.clone(), ProviderProfile::new(ProviderKind::OpenAi)],
+        };
+        let text = serde_json::to_string(&config).unwrap();
+        assert!(text.contains("pricePer1kInputUsd"), "{text}");
+        let back: AiProfilesConfig = serde_json::from_str(&text).unwrap();
+        assert_eq!(back, config);
+        let pricing = active_pricing(&back);
+        assert_eq!(pricing.usd_per_1k_input, Some(0.003));
+        assert_eq!(pricing.usd_per_1k_output, Some(0.015));
+        let unpriced = AiProfilesConfig {
+            active_profile_id: Some(back.profiles[1].id.clone()),
+            ..back.clone()
+        };
+        assert!(!active_pricing(&unpriced).is_priced());
+        // Files written before prices existed still load.
+        let old = serde_json::json!({"id": "x", "name": "n", "kind": "openAi", "baseUrl": "b",
+            "model": "m", "apiKeyRef": "k"});
+        if let Ok(old) = serde_json::from_value::<ProviderProfile>(old) {
+            assert_eq!(old.price_per_1k_input_usd, None);
+        }
     }
 
     #[test]

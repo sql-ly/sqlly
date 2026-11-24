@@ -66,6 +66,16 @@ pub enum HoverInfo {
     /// A Redis command (or container subcommand) on a command-engine
     /// connection: documented syntax, summary, and safety badges.
     Command(Box<crate::redis_complete::CommandDoc>),
+    /// A relation the host defines outside the database (a notebook cell
+    /// referenced as `{{name}}`), described by the host: a kind label, the
+    /// name, detail lines and its columns.
+    Relation {
+        kind_label: String,
+        name: String,
+        details: Vec<String>,
+        columns: Vec<HoverColumn>,
+        more_columns: usize,
+    },
 }
 
 /// Procedure signatures the host already holds (mirrors

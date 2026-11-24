@@ -1,0 +1,113 @@
+format: mysql-tree (Certain)
+statements: 1
+
+== statement 1
+dialect: "MySql"
+execution_time_ms: 36.1
+has_actuals: yes
+source_format: "mysql-tree"
+statement_type: "EXPLAIN ANALYZE"
+operators: 9
+  #1 Sort: revenue DESC [Sort: revenue DESC]
+      actual_rebinds: 1
+      actual_rows: 2
+      actual_rows_total: 2
+      actual_startup_ms: 36.1
+      actual_time_ms: 36.1
+      loops: 1
+      output_list: ["Actual time: 36.1 ms"]
+      sort_keys: ["revenue DESC"]
+    #2 Table scan on <temporary> [Table scan on <temporary>]
+        actual_rebinds: 1
+        actual_rows: 2
+        actual_rows_total: 2
+        actual_startup_ms: 36.1
+        actual_time_ms: 36.1
+        loops: 1
+        output_list: ["Actual time: 36.1 ms", "<temporary>"]
+      #3 Aggregate using temporary table [Aggregate using temporary table]
+          actual_rebinds: 1
+          actual_rows: 2
+          actual_rows_total: 2
+          actual_self_time_ms: 5.4
+          actual_startup_ms: 36.1
+          actual_time_ms: 36.1
+          loops: 1
+          output_list: ["Actual time: 36.1 ms"]
+        #4 Nested loop inner join [Nested loop inner join]
+            actual_rebinds: 1
+            actual_rows: 25000
+            actual_rows_total: 25000
+            actual_self_time_ms: 1.5
+            actual_startup_ms: 0.349
+            actual_time_ms: 30.7
+            estimated_cost: 8959
+            estimated_rows: 10004
+            join_type: "Inner"
+            loops: 1
+            output_list: ["Actual time: 30.7 ms"]
+          #5 Nested loop inner join [Nested loop inner join]
+              actual_rebinds: 1
+              actual_rows: 10000
+              actual_rows_total: 10000
+              actual_self_time_ms: 0.93
+              actual_startup_ms: 0.333
+              actual_time_ms: 11.3
+              estimated_cost: 5458
+              estimated_rows: 4013
+              join_type: "Inner"
+              loops: 1
+              output_list: ["Actual time: 11.3 ms"]
+            #6 Filter: (o.`status` = 'paid') [Filter: (o.`status` = 'paid')]
+                actual_rebinds: 1
+                actual_rows: 10000
+                actual_rows_total: 10000
+                actual_self_time_ms: 1.73
+                actual_startup_ms: 0.317
+                actual_time_ms: 5.23
+                estimated_cost: 4053
+                estimated_rows: 4013
+                filter: "o.`status` = 'paid'"
+                loops: 1
+                output_list: ["Actual time: 5.23 ms"]
+              #7 Table scan on o [Table scan on o]
+                  actual_rebinds: 1
+                  actual_rows: 40000
+                  actual_rows_total: 40000
+                  actual_self_time_ms: 3.5
+                  actual_startup_ms: 0.314
+                  actual_time_ms: 3.5
+                  estimated_cost: 4053
+                  estimated_rows: 40131
+                  loops: 1
+                  output_list: ["Actual time: 3.5 ms", "o"]
+                  relation: "o"
+                  warnings: [{TableScan={table="o"}}]
+            #8 Single-row index lookup on c using PRIMARY (id=o.customer_id) [Single-row index lookup on c using PRIMARY (id=o.customer_id)]
+                actual_rebinds: 10000
+                actual_rows: 10000
+                actual_rows_total: 10000
+                actual_self_time_ms: 5.14
+                actual_startup_ms: 0.000495
+                actual_time_ms: 5.14
+                estimated_cost: 0.25
+                estimated_rows: 1
+                index_cond: "id=o.customer_id"
+                index_name: "PRIMARY"
+                loops: 10000
+                output_list: ["Actual time: 0.000514 ms", "c", "Key: PRIMARY"]
+                relation: "c"
+          #9 Index lookup on oi using order_items_order_idx (order_id=o.id) [Index lookup on oi using order_items_order_idx (order_id=o.id)]
+              actual_rebinds: 10000
+              actual_rows: 25000
+              actual_rows_total: 25000
+              actual_self_time_ms: 17.9
+              actual_startup_ms: 0.00162
+              actual_time_ms: 17.9
+              estimated_cost: 0.623
+              estimated_rows: 2.49
+              index_cond: "order_id=o.id"
+              index_name: "order_items_order_idx"
+              loops: 10000
+              output_list: ["Actual time: 0.00179 ms", "oi", "Key: order_items_order_idx"]
+              relation: "oi"

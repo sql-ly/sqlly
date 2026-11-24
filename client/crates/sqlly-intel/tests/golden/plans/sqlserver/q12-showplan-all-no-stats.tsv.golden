@@ -1,0 +1,83 @@
+format: sqlserver-text (Certain)
+statements: 1
+
+== statement 1
+dialect: "SqlServer"
+estimated_rows: 1
+source_format: "sqlserver-text"
+statement_text: "SELECT COUNT(*) AS n FROM dbo.nostats2 n JOIN dbo.customers c ON c.customer_id = n.grp WHERE n.amt > 100 OPTION (RECOMPILE);"
+statement_type: "SELECT"
+total_subtree_cost: 0.352491
+warnings: [{TableScan={schema="dbo" table="nostats2"}}, "CardinalityEstimation"]
+operators: 6
+  #1 Compute Scalar [Compute Scalar]
+      estimated_cost: 0.352491
+      estimated_cpu: 0
+      estimated_executions: 1
+      estimated_row_width: 11
+      estimated_rows: 1
+      output_columns: ["Expr1003"]
+      output_list: ["Expr1003"]
+      properties: [{name="DEFINE" value="[Expr1003]=CONVERT_IMPLICIT(int,[globalagg1005],0)"}, {name="Defined Values" value="[Expr1003]=CONVERT_IMPLICIT(int,[globalagg1005],0)"}, {name="NodeId" value="3"}, {name="EstimateRows" value="1.0"}]
+    #2 Stream Aggregate [Aggregate]
+        estimated_cost: 0.352491
+        estimated_cpu: 0.000047
+        estimated_executions: 1
+        estimated_row_width: 15
+        estimated_rows: 1
+        output_columns: ["globalagg1005"]
+        output_list: ["globalagg1005"]
+        properties: [{name="DEFINE" value="[globalagg1005]=SUM([partialagg1004])"}, {name="Defined Values" value="[globalagg1005]=SUM([partialagg1004])"}, {name="NodeId" value="4"}, {name="EstimateRows" value="1.0"}]
+      #3 Nested Loops [Inner Join]
+          estimated_cost: 0.352444
+          estimated_cpu: 0.000324
+          estimated_executions: 1
+          estimated_row_width: 15
+          estimated_rows: 77.459671
+          extra: ["WITH UNORDERED PREFETCH"]
+          join_type: "Inner"
+          output_columns: ["partialagg1004"]
+          output_list: ["partialagg1004"]
+          properties: [{name="OUTER REFERENCES" value="[n].[grp], [Expr1006]"}, {name="NodeId" value="5"}, {name="EstimateRows" value="77.459671"}]
+        #4 Hash Match [Aggregate]
+            estimated_cost: 0.128904
+            estimated_cpu: 0.046615
+            estimated_executions: 1
+            estimated_row_width: 19
+            estimated_rows: 77.459671
+            group_keys: ["n.grp"]
+            output_columns: ["n.grp", "partialagg1004"]
+            output_list: ["n.grp", "partialagg1004"]
+            properties: [{name="Defined Values" value="[partialagg1004]=COUNT(*)"}, {name="NodeId" value="7"}, {name="EstimateRows" value="77.459671"}]
+          #5 Table Scan [Table Scan]
+              alias: "n"
+              columns_without_statistics: ["nostats2.grp"]
+              database: "Shop"
+              estimated_cost: 0.072689
+              estimated_cpu: 0.022157
+              estimated_executions: 1
+              estimated_io: 0.050532
+              estimated_row_width: 20
+              estimated_rows: 6000
+              filter: "[Shop].[dbo].[nostats2].[amt] as [n].[amt]>(100.00)"
+              output_columns: ["n.grp"]
+              output_list: ["n.grp"]
+              properties: [{name="Defined Values" value="[n].[grp]"}, {name="NodeId" value="8"}, {name="EstimateRows" value="6000.0"}, {name="Warnings" value="NO STATS:([nostats2].[grp])"}]
+              relation: "nostats2"
+              schema: "dbo"
+              warnings: [{TableScan={schema="dbo" table="nostats2"}}, "CardinalityEstimation"]
+        #6 Clustered Index Seek [Clustered Index Seek]
+            alias: "c"
+            database: "Shop"
+            estimated_cost: 0.223216
+            estimated_cpu: 0.000158
+            estimated_executions: 77.459671
+            estimated_io: 0.003125
+            estimated_row_width: 9
+            estimated_rows: 1
+            extra: ["ORDERED FORWARD"]
+            index_cond: "[c].[customer_id]=[Shop].[dbo].[nostats2].[grp] as [n].[grp]"
+            index_name: "PK__customer__CD65CB850EC2D984"
+            properties: [{name="NodeId" value="9"}, {name="EstimateRows" value="1.0"}]
+            relation: "customers"
+            schema: "dbo"

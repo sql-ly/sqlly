@@ -36,30 +36,65 @@
 //! existing findings engine reports them across every dialect.
 
 mod clickhouse;
+mod clickhouse_text;
+mod cockroach;
+#[allow(dead_code)]
+pub(crate) mod common;
 mod duckdb;
+mod duckdb_text;
 mod mysql;
+mod mysql_table;
+mod mysql_v2;
 mod oracle;
 mod pg;
+mod pg_structured;
+mod pg_text;
+mod spark;
 mod sqlite;
+mod sqlserver_text;
+mod trino;
 
 pub use clickhouse::parse_clickhouse_explain_json;
+pub use clickhouse_text::{
+    looks_like_clickhouse_explain_pipeline, looks_like_clickhouse_explain_text,
+    parse_clickhouse_explain_pipeline, parse_clickhouse_explain_text,
+};
+pub use cockroach::{looks_like_cockroach_explain_text, parse_cockroach_explain_text};
 pub use duckdb::parse_duckdb_explain_json;
+pub use duckdb_text::{looks_like_duckdb_explain_text, parse_duckdb_explain_text};
 pub use mysql::{parse_mysql_explain_analyze_tree, parse_mysql_explain_json};
+pub use mysql_table::{looks_like_mysql_explain_table, parse_mysql_explain_table};
+pub use mysql_v2::parse_mysql_explain_json_v2;
 pub use oracle::{
     actual_capture_sql as oracle_actual_capture_sql, capture_sql as oracle_capture_sql,
-    parse_oracle_plan_lines, parse_oracle_xplan_text, plan_rows_sql as oracle_plan_rows_sql,
+    looks_like_oracle_xplan, parse_oracle_plan_lines, parse_oracle_xplan_plans,
+    parse_oracle_xplan_text, plan_rows_sql as oracle_plan_rows_sql,
 };
-pub use pg::parse_pg_explain_json;
+pub use pg::{parse_pg_explain_json, parse_pg_explain_json_multi};
+pub use pg_structured::{
+    looks_like_pg_explain_xml, looks_like_pg_explain_yaml, parse_pg_explain_xml,
+    parse_pg_explain_yaml,
+};
+pub use pg_text::{
+    looks_like_pg_explain_text, looks_like_pg_explain_text_without_costs, parse_pg_explain_text,
+};
+pub use spark::{looks_like_spark_explain_text, parse_spark_explain_text};
 pub use sqlite::{
-    parse_sqlite_query_plan_any, parse_sqlite_query_plan_rows, parse_sqlite_query_plan_text,
+    looks_like_sqlite_bytecode, looks_like_sqlite_query_plan, parse_sqlite_query_plan_any,
+    parse_sqlite_query_plan_rows, parse_sqlite_query_plan_text,
 };
+pub use sqlserver_text::{
+    SqlServerMessageStats, extract_sqlserver_message_stats, looks_like_sqlserver_showplan_text,
+    parse_sqlserver_showplan_text,
+};
+pub use trino::{looks_like_trino_explain_text, parse_trino_explain_text};
 
 use crate::plans::error::PlanResult;
 use crate::plans::model::ExecutionPlan;
 
 /// The plan-capture family of a connection. Mirrors the engine families with
 /// native drivers; the caller derives it from its connection kind.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum PlanDialect {
     SqlServer,
     Postgres,
@@ -123,9 +158,23 @@ pub fn capture_executes_statement(dialect: PlanDialect) -> bool {
 /// the right parser runs. MariaDB uses the JSON parser for both; actual
 /// captures simply carry extra `r_*` runtime fields.
 pub fn parse_captured_plan(dialect: PlanDialect, doc: &str) -> PlanResult<Vec<ExecutionPlan>> {
+    let mut plans = parse_captured_document(dialect, doc)?;
+    for plan in &mut plans {
+        plan.dialect = Some(dialect);
+        if !plan.has_actuals {
+            plan.has_actuals = plan
+                .nodes
+                .iter()
+                .any(|node| node.actual_rows.is_some() || node.actual_time_ms.is_some());
+        }
+    }
+    Ok(plans)
+}
+
+fn parse_captured_document(dialect: PlanDialect, doc: &str) -> PlanResult<Vec<ExecutionPlan>> {
     match dialect {
         PlanDialect::SqlServer => crate::plans::parse_showplan_xml_multi(doc),
-        PlanDialect::Postgres => parse_pg_explain_json(doc).map(|p| vec![p]),
+        PlanDialect::Postgres => parse_pg_explain_json_multi(doc),
         PlanDialect::MySql => {
             if doc.trim_start().starts_with(['{', '[']) {
                 parse_mysql_explain_json(doc).map(|p| vec![p])

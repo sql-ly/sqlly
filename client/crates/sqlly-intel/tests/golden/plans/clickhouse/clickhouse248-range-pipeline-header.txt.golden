@@ -1,0 +1,32 @@
+format: clickhouse-pipeline (Certain)
+statements: 1
+
+== statement 1
+dialect: "ClickHouse"
+source_format: "clickhouse-pipeline"
+statement_type: "EXPLAIN PIPELINE"
+operators: 7
+  #1 ExpressionTransform [ExpressionTransform]
+      parallel: yes
+      properties: [{name="Step" value="Expression"}, {name="Streams" value="7"}, {name="Header" value="status LowCardinality(String): status LowCardinality(String) ColumnLowCardinality(size = 0, UInt8(size = 0), ColumnUnique(size = 1, String(size = 1))) count() U..."}]
+      workers_planned: 7
+    #2 Resize [Resize]
+        properties: [{name="Step" value="Aggregating"}, {name="Input ports" value="7"}, {name="Output ports" value="7"}, {name="Header" value="__table1.status LowCardinality(String): __table1.status LowCardinality(String) ColumnLowCardinality(size = 0, UInt8(size = 0), ColumnUnique(size = 1, String(siz..."}]
+      #3 AggregatingTransform [AggregatingTransform]
+          parallel: yes
+          properties: [{name="Step" value="Aggregating"}, {name="Streams" value="7"}, {name="Header" value="__table1.status LowCardinality(String): __table1.status LowCardinality(String) ColumnLowCardinality(size = 0, UInt8(size = 0), ColumnUnique(size = 1, String(siz..."}]
+          workers_planned: 7
+        #4 StrictResize [StrictResize]
+            properties: [{name="Step" value="Aggregating"}, {name="Input ports" value="7"}, {name="Output ports" value="7"}, {name="Header" value="__table1.status LowCardinality(String): __table1.status LowCardinality(String) ColumnLowCardinality(size = 0, UInt8(size = 0), ColumnUnique(size = 1, String(siz..."}]
+          #5 ExpressionTransform [ExpressionTransform]
+              parallel: yes
+              properties: [{name="Step" value="Expression"}, {name="Streams" value="7"}, {name="Header" value="__table1.status LowCardinality(String): __table1.status LowCardinality(String) ColumnLowCardinality(size = 0, UInt8(size = 0), ColumnUnique(size = 1, String(siz..."}]
+              workers_planned: 7
+            #6 ExpressionTransform [ExpressionTransform]
+                parallel: yes
+                properties: [{name="Step" value="Expression"}, {name="Streams" value="7"}, {name="Header" value="__table1.status LowCardinality(String): __table1.status LowCardinality(String) ColumnLowCardinality(size = 0, UInt8(size = 0), ColumnUnique(size = 1, String(siz..."}]
+                workers_planned: 7
+              #7 MergeTreeSelect(pool: ReadPool, algorithm: Thread) [MergeTreeSelect]
+                  parallel: yes
+                  properties: [{name="Step" value="ReadFromMergeTree"}, {name="Streams" value="7"}, {name="Input ports" value="0"}, {name="Output ports" value="1"}, {name="Header" value="customer_id UInt32: customer_id UInt32 UInt32(size = 0) total Decimal(12, 2): total Decimal(12, 2) Decimal64(size = 0) status LowCardinality(String): status Low..."}]
+                  workers_planned: 7

@@ -1,0 +1,151 @@
+format: mysql-tree (Certain)
+statements: 1
+
+== statement 1
+dialect: "MySql"
+estimated_rows: 20
+execution_time_ms: 11.5
+has_actuals: yes
+source_format: "mysql-tree"
+statement_type: "EXPLAIN ANALYZE"
+total_subtree_cost: 6650000
+operators: 12
+  #1 Limit: 20 row(s) [Limit: 20 row(s)]
+      actual_rebinds: 1
+      actual_rows: 20
+      actual_rows_total: 20
+      actual_startup_ms: 11.4
+      actual_time_ms: 11.5
+      estimated_cost: 6650000
+      estimated_rows: 20
+      loops: 1
+      output_list: ["Actual time: 11.5 ms"]
+      properties: [{name="limit" value="20 row(s)"}]
+    #2 Nested loop inner join [Nested loop inner join]
+        actual_rebinds: 1
+        actual_rows: 20
+        actual_rows_total: 20
+        actual_self_time_ms: 0.0715
+        actual_startup_ms: 11.4
+        actual_time_ms: 11.5
+        estimated_cost: 6650000
+        estimated_rows: 66500000
+        join_type: "Inner"
+        loops: 1
+        output_list: ["Actual time: 11.5 ms"]
+      #3 Sort: c.`name` [Sort: c.`name`]
+          actual_rebinds: 1
+          actual_rows: 295
+          actual_rows_total: 295
+          actual_self_time_ms: 1.79
+          actual_startup_ms: 4.25
+          actual_time_ms: 4.26
+          estimated_cost: 503
+          estimated_rows: 4973
+          loops: 1
+          output_list: ["Actual time: 4.26 ms"]
+          sort_keys: ["c.`name`"]
+        #4 Filter: (c.id is not null) [Filter: (c.id is not null)]
+            actual_rebinds: 1
+            actual_rows: 5000
+            actual_rows_total: 5000
+            actual_self_time_ms: 1.584
+            actual_startup_ms: 0.0364
+            actual_time_ms: 2.47
+            estimated_cost: 503
+            estimated_rows: 4973
+            filter: "c.id is not null"
+            loops: 1
+            output_list: ["Actual time: 2.47 ms"]
+          #5 Table scan on c [Table scan on c]
+              actual_rebinds: 1
+              actual_rows: 5000
+              actual_rows_total: 5000
+              actual_self_time_ms: 0.886
+              actual_startup_ms: 0.0358
+              actual_time_ms: 0.886
+              estimated_cost: 503
+              estimated_rows: 4973
+              loops: 1
+              output_list: ["Actual time: 0.886 ms", "c"]
+              relation: "c"
+              warnings: [{TableScan={table="c"}}]
+      #6 Single-row index lookup on <subquery3> using <auto_distinct_key> (customer_id=c.id) [Single-row index lookup on <subquery3> using <auto_distinct_key> (customer_id=c.id)]
+          actual_rebinds: 295
+          actual_rows: 20.001
+          actual_rows_total: 20.001
+          actual_self_time_ms: 0.0485
+          actual_startup_ms: 0.0243
+          actual_time_ms: 7.1685
+          estimated_cost: 5391
+          estimated_rows: 1
+          estimated_startup_cost: 5391
+          index_cond: "customer_id=c.id"
+          index_name: "<auto_distinct_key>"
+          loops: 295
+          output_list: ["Actual time: 0.0243 ms", "<subquery3>", "Key: <auto_distinct_key>"]
+        #7 Materialize with deduplication [Materialize with deduplication]
+            actual_rebinds: 1
+            actual_rows: 396
+            actual_rows_total: 396
+            actual_self_time_ms: 0.18
+            actual_startup_ms: 7.12
+            actual_time_ms: 7.12
+            estimated_cost: 5391
+            estimated_rows: 13376
+            estimated_startup_cost: 5391
+            loops: 1
+            output_list: ["Actual time: 7.12 ms"]
+          #8 Filter: (orders.total > 900.00) [Filter: (orders.total > 900.00)]
+              actual_rebinds: 1
+              actual_rows: 396
+              actual_rows_total: 396
+              actual_self_time_ms: 2.69
+              actual_startup_ms: 0.692
+              actual_time_ms: 6.94
+              estimated_cost: 4053
+              estimated_rows: 13376
+              filter: "orders.total > 900.00"
+              loops: 1
+              output_list: ["Actual time: 6.94 ms"]
+            #9 Table scan on orders [Table scan on orders]
+                actual_rebinds: 1
+                actual_rows: 40000
+                actual_rows_total: 40000
+                actual_self_time_ms: 4.25
+                actual_startup_ms: 0.506
+                actual_time_ms: 4.25
+                estimated_cost: 4053
+                estimated_rows: 40131
+                loops: 1
+                output_list: ["Actual time: 4.25 ms", "orders"]
+                relation: "orders"
+                warnings: [{TableScan={table="orders"}}]
+    #10 Select #2 (subquery in projection; dependent) [Select #2 (subquery in projection; dependent)]
+        subplan_name: "Select #2 (subquery in projection; dependent)"
+    #11 Aggregate: max(o.total) [Aggregate: max(o.total)]
+        actual_rebinds: 20
+        actual_rows: 20
+        actual_rows_total: 20
+        actual_self_time_ms: 0.0134
+        actual_startup_ms: 0.00928
+        actual_time_ms: 0.186
+        estimated_cost: 3.62
+        estimated_rows: 1
+        loops: 20
+        output_list: ["Actual time: 0.0093 ms"]
+        properties: [{name="functions" value="max(o.total)"}]
+      #12 Index lookup on o using orders_customer_idx (customer_id=c.id) [Index lookup on o using orders_customer_idx (customer_id=c.id)]
+          actual_rebinds: 20
+          actual_rows: 160
+          actual_rows_total: 160
+          actual_self_time_ms: 0.1726
+          actual_startup_ms: 0.00828
+          actual_time_ms: 0.1726
+          estimated_cost: 2.82
+          estimated_rows: 8.06
+          index_cond: "customer_id=c.id"
+          index_name: "orders_customer_idx"
+          loops: 20
+          output_list: ["Actual time: 0.00863 ms", "o", "Key: orders_customer_idx"]
+          relation: "o"

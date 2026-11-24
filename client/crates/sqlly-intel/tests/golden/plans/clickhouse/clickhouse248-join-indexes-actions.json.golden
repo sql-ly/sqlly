@@ -1,0 +1,41 @@
+format: clickhouse-json (Certain)
+statements: 1
+
+== statement 1
+dialect: "ClickHouse"
+estimated_rows: 49152
+source_format: "clickhouse-json"
+statement_type: "EXPLAIN"
+operators: 11
+  #1 Expression Project names [Expression]
+    #2 Limit preliminary LIMIT (without OFFSET) [Limit]
+        properties: [{name="Limit" value="5"}, {name="Offset" value="0"}, {name="Reads All Data" value="false"}, {name="With Ties" value="false"}]
+      #3 Sorting Sorting for ORDER BY [Sorting]
+          properties: [{name="Limit" value="5"}]
+          sort_keys: ["sum(__table2.total) DESC"]
+        #4 Expression (Before ORDER BY + Projection) [Expression]
+          #5 Aggregating [Aggregating]
+              group_keys: ["__table1.country"]
+              properties: [{name="Aggregates" value="count(), sum(__table2.total)"}, {name="Skip merging" value="false"}]
+            #6 Expression (Before GROUP BY + ) [Expression]
+              #7 Join JOIN FillRightFirst [Join]
+                  join_predicate: "[(__table1.id) = (__table2.customer_id)]"
+                  join_type: "INNER"
+                  properties: [{name="Algorithm" value="HashJoin"}, {name="Strictness" value="ALL"}]
+                #8 Expression (JOIN actions + Change column names to column identifiers) [Expression]
+                  #9 ReadFromMergeTree default.customers [ReadFromMergeTree]
+                      estimated_rows: 49152
+                      output_list: ["PrimaryKey: true parts 1/1 granules 6/6"]
+                      properties: [{name="Granules" value="6"}, {name="Parts" value="1"}, {name="Read Type" value="Default"}, {name="PrimaryKey index condition" value="true"}, {name="PrimaryKey index parts" value="1/1"}, {name="PrimaryKey index granules" value="6/6"}]
+                      relation: "customers"
+                      schema: "default"
+                      warnings: [{TableScan={schema="default" table="customers"}}]
+                #10 Expression [Expression]
+                  #11 ReadFromMergeTree default.orders [ReadFromMergeTree]
+                      estimated_rows: 1589248
+                      filter: "and(greaterOrEquals(__table2.placed_at, '2023-06-01 00:00:00'_String), equals(__table2.status, 'paid'_String))"
+                      index_cond: "(placed_at in [1685577600, +Inf))"
+                      output_list: ["MinMax: (placed_at in [1685577600, +Inf)) parts 5/10 granules 194/389", "Partition: (toYYYYMM(placed_at) in [202306, +Inf)) parts 5/5 granules 194/194", "PrimaryKey: (placed_at in [1685577600, +Inf)) parts 5/5 granules 194/194"]
+                      properties: [{name="Granules" value="194"}, {name="Parts" value="5"}, {name="Read Type" value="Default"}, {name="MinMax index keys" value="placed_at"}, {name="MinMax index condition" value="(placed_at in [1685577600, +Inf))"}, {name="MinMax index parts" value="5/10"}, {name="MinMax index granules" value="194/389"}, {name="Partition index keys" value="toYYYYMM(placed_at)"}, {name="Partition index condition" value="(toYYYYMM(placed_at) in [202306, +Inf))"}, {name="Partition index parts" value="5/5"}, {name="Partition index granules" value="194/194"}, {name="PrimaryKey index keys" value="placed_at"}, {name="PrimaryKey index condition" value="(placed_at in [1685577600, +Inf))"}, {name="PrimaryKey index parts" value="5/5"}, {name="PrimaryKey index granules" value="194/194"}]
+                      relation: "orders"
+                      schema: "default"

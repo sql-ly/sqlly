@@ -1043,6 +1043,19 @@ fn depth_merged_tokens_at(tokens: &[scan::ScanToken<'_>], depth: usize) -> Vec<M
             i = close + 1;
             continue;
         }
+        // MySQL partition selection (`FROM t PARTITION (p0) a`): drop the
+        // keyword along with its list, so the alias after it reads as the
+        // source's alias rather than `PARTITION` (DbGate #1500).
+        if t.paren_depth == depth
+            && t.kind == scan::ScanTokenKind::Word
+            && t.text.as_str().eq_ignore_ascii_case("PARTITION")
+            && tokens
+                .get(i + 1)
+                .is_some_and(|next| next.kind == scan::ScanTokenKind::LeftParen)
+        {
+            i += 1;
+            continue;
+        }
         if t.paren_depth == depth
             && matches!(
                 t.kind,

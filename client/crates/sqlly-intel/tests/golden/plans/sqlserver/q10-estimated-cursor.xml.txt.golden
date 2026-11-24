@@ -1,0 +1,138 @@
+format: sqlserver-xml (Certain)
+statements: 6
+
+== statement 1
+dialect: "SqlServer"
+estimated_rows: 15
+memory_grant: {granted_kb=0 max_used_kb=0 serial_desired_kb=0 serial_required_kb=0}
+non_parallel_reason: "NoParallelFastForwardCursor"
+notes: ["Cursor operation: PopulateQuery", "Plan retrieved from the plan cache", "Compile CPU: 4 ms", "Compile memory: 208 kB", "Cached plan size: 64 kB"]
+planning_time_ms: 4
+source_format: "sqlserver-xml"
+statement_text: "DECLARE c CURSOR FAST_FORWARD FOR SELECT TOP (3) order_id FROM dbo.orders WHERE status = 'pending' ORDER BY order_id"
+statement_type: "DECLARE CURSOR"
+statistics_used: [{last_update="2026-11-23T23:03:31.64" modification_count=342 sampling_percent=100 schema="dbo" statistics="IX_orders_customer" table="orders"}, {last_update="2026-11-23T23:04:12.52" modification_count=0 sampling_percent=23.6987 schema="dbo" statistics="_WA_Sys_00000004_37A5467C" table="orders"}, {last_update="2026-11-23T23:03:31.77" modification_count=0 sampling_percent=100 schema="dbo" statistics="IX_orders_date" table="orders"}]
+total_subtree_cost: 0.013497
+warnings: [{TableScan={schema="dbo" table="orders"}}, "RowGoal"]
+operators: 5
+  #0 Clustered Index Insert [Insert]
+      database: "tempdb"
+      estimated_cost: 0.013497
+      estimated_cpu: 0.000003
+      estimated_executions: 1
+      estimated_io: 0.01
+      estimated_row_width: 11
+      estimated_rows: 3
+      execution_mode: "Row"
+      index_name: "CWT_PrimaryKey"
+      output_columns: ["orders.order_id"]
+      output_list: ["orders.order_id"]
+      properties: [{name="Set Predicate" value="[STREAM].[COLUMN0] = [Shop].[dbo].[orders].[order_id],[STREAM].[ROWID] = [I4Rank1002]"}, {name="DMLRequestSort" value="0"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}, {name="Storage" value="RowStore"}]
+    #1 Sequence Project [Compute Scalar]
+        estimated_cost: 0.003494
+        estimated_cpu: 0
+        estimated_executions: 1
+        estimated_row_width: 15
+        estimated_rows: 3
+        execution_mode: "Row"
+        output_columns: ["orders.order_id", "I4Rank1002"]
+        output_list: ["orders.order_id", "I4Rank1002"]
+        properties: [{name="Defined Values" value="I4Rank1002 = i4_row_number"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}]
+      #2 Segment [Segment]
+          estimated_cost: 0.003494
+          estimated_cpu: 0
+          estimated_executions: 1
+          estimated_row_width: 15
+          estimated_rows: 3
+          execution_mode: "Row"
+          output_columns: ["orders.order_id", "Segment1007"]
+          output_list: ["orders.order_id", "Segment1007"]
+          properties: [{name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}]
+        #3 Top [Top]
+            estimated_cost: 0.003494
+            estimated_cpu: 0
+            estimated_executions: 1
+            estimated_row_width: 11
+            estimated_rows: 3
+            execution_mode: "Row"
+            output_columns: ["orders.order_id"]
+            output_list: ["orders.order_id"]
+            properties: [{name="Top Expression" value="(3)"}, {name="RowCount" value="0"}, {name="IsPercent" value="0"}, {name="WithTies" value="0"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}]
+          #4 Clustered Index Scan [Clustered Index Scan]
+              database: "Shop"
+              estimated_cost: 0.003487
+              estimated_cpu: 0.330157
+              estimated_executions: 1
+              estimated_io: 4.04312
+              estimated_row_width: 22
+              estimated_rows: 3
+              estimated_rows_read: 300000
+              execution_mode: "Row"
+              filter: "[Shop].[dbo].[orders].[status]='pending'"
+              index_name: "PK__orders__46596229A6DBB338"
+              output_columns: ["orders.order_id"]
+              output_list: ["orders.order_id"]
+              properties: [{name="Ordered" value="1"}, {name="ScanDirection" value="FORWARD"}, {name="ForcedIndex" value="0"}, {name="ForceSeek" value="0"}, {name="ForceScan" value="0"}, {name="NoExpandHint" value="0"}, {name="Storage" value="RowStore"}, {name="TableCardinality" value="300000"}, {name="EstimateRowsWithoutRowGoal" value="60117.3"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}, {name="IndexKind" value="Clustered"}, {name="Storage" value="RowStore"}]
+              relation: "orders"
+              schema: "dbo"
+              table_cardinality: 300000
+              warnings: [{TableScan={schema="dbo" table="orders"}}, "RowGoal"]
+
+== statement 2
+dialect: "SqlServer"
+estimated_rows: 1
+memory_grant: {granted_kb=0 max_used_kb=0 serial_desired_kb=0 serial_required_kb=0}
+non_parallel_reason: "NonParallelizableIntrinsicFunction"
+notes: ["Cursor operation: FetchQuery", "Plan retrieved from the plan cache", "Compile CPU: 0 ms", "Compile memory: 144 kB", "Cached plan size: 64 kB"]
+source_format: "sqlserver-xml"
+statement_text: "DECLARE c CURSOR FAST_FORWARD FOR SELECT TOP (3) order_id FROM dbo.orders WHERE status = 'pending' ORDER BY order_id"
+statement_type: "DECLARE CURSOR"
+total_subtree_cost: 0.003283
+operators: 1
+  #0 Clustered Index Seek [Clustered Index Seek]
+      database: "tempdb"
+      estimated_cost: 0.003283
+      estimated_cpu: 0.000158
+      estimated_executions: 1
+      estimated_io: 0.003125
+      estimated_row_width: 15
+      estimated_rows: 1
+      estimated_rows_read: 1
+      execution_mode: "Row"
+      index_cond: "CWT.ROWID = FETCH_RANGE((0))"
+      index_name: "CWT_PrimaryKey"
+      output_columns: ["CWT.COLUMN0", "CWT.ROWID"]
+      output_list: ["CWT.COLUMN0", "CWT.ROWID"]
+      properties: [{name="Ordered" value="1"}, {name="ScanDirection" value="FORWARD"}, {name="ForcedIndex" value="0"}, {name="ForceSeek" value="0"}, {name="ForceScan" value="0"}, {name="NoExpandHint" value="0"}, {name="Storage" value="RowStore"}, {name="TableCardinality" value="0"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}, {name="Storage" value="RowStore"}]
+
+== statement 3
+dialect: "SqlServer"
+notes: ["Plan retrieved from the plan cache", "CursorName: c"]
+source_format: "sqlserver-xml"
+statement_text: "; OPEN c;"
+statement_type: "OPEN CURSOR"
+operators: 0
+
+== statement 4
+dialect: "SqlServer"
+notes: ["Plan retrieved from the plan cache", "CursorName: c"]
+source_format: "sqlserver-xml"
+statement_text: "FETCH NEXT FROM c;"
+statement_type: "FETCH CURSOR"
+operators: 0
+
+== statement 5
+dialect: "SqlServer"
+notes: ["Plan retrieved from the plan cache", "CursorName: c"]
+source_format: "sqlserver-xml"
+statement_text: "CLOSE c;"
+statement_type: "CLOSE CURSOR"
+operators: 0
+
+== statement 6
+dialect: "SqlServer"
+notes: ["Plan retrieved from the plan cache", "CursorName: c"]
+source_format: "sqlserver-xml"
+statement_text: "DEALLOCATE c;"
+statement_type: "DEALLOCATE CURSOR"
+operators: 0

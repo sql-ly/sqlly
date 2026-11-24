@@ -1,0 +1,189 @@
+format: sqlserver-xml (Certain)
+statements: 1
+
+== statement 1
+cardinality_estimator_version: 160
+cpu_time_ms: 256
+degree_of_parallelism: 7
+dialect: "SqlServer"
+estimated_rows: 1000
+execution_time_ms: 46
+has_actuals: yes
+memory_grant: {desired_kb=133064 grant_wait_seconds=0 granted_kb=133064 max_query_memory_kb=353280 max_used_kb=10112 requested_kb=133064 required_kb=29856 serial_desired_kb=107432 serial_required_kb=4248}
+notes: ["Plan retrieved from the plan cache", "Batch mode on rowstore used", "Compile CPU: 13 ms", "Compile memory: 536 kB", "Cached plan size: 72 kB", "Memory grant feedback adjusted: No: First Execution", "Threads used: 7 of 8 reserved", "Wait CXSYNC_PORT: 45 ms in 8 waits", "Wait BPSORT: 19 ms in 180 waits", "Wait BMPBUILD: 17 ms in 12 waits", "Wait RESERVED_MEMORY_ALLOCATION_EXT: 8 ms in 467 waits", "Wait HTREPARTITION: 7 ms in 12 waits", "Wait EXECSYNC: 4 ms in 25 waits", "Wait HTDELETE: 4 ms in 24 waits", "Wait LATCH_EX: 4 ms in 13 waits", "Wait HTBUILD: 3 ms in 24 waits", "Wait MEMORY_ALLOCATION_EXT: 2 ms in 558 waits"]
+optimization_level: "FULL"
+planning_time_ms: 71
+query_hash: "0xB71865A2D346D69A"
+query_plan_hash: "0x4D0FDB095DD319B8"
+settings: [{name="QUOTED_IDENTIFIER" value="false"}, {name="ARITHABORT" value="false"}, {name="CONCAT_NULL_YIELDS_NULL" value="true"}, {name="ANSI_NULLS" value="true"}, {name="ANSI_PADDING" value="true"}, {name="ANSI_WARNINGS" value="true"}, {name="NUMERIC_ROUNDABORT" value="false"}]
+source_format: "sqlserver-xml"
+statement_text: "SELECT oi.product_id, SUM(oi.quantity * oi.price) AS revenue FROM dbo.order_items oi JOIN dbo.orders o ON o.order_id = oi.order_id WHERE o.status = 'shipped' GR..."
+statement_type: "SELECT"
+statistics_used: [{last_update="2026-11-23T23:04:29.59" modification_count=0 sampling_percent=24.672 schema="dbo" statistics="PK__orders__46596229A6DBB338" table="orders"}, {last_update="2026-11-23T23:03:31.64" modification_count=0 sampling_percent=100 schema="dbo" statistics="IX_orders_customer" table="orders"}, {last_update="2026-11-23T23:03:32.03" modification_count=0 sampling_percent=100 schema="dbo" statistics="IX_items_order" table="order_items"}, {last_update="2026-11-23T23:04:12.52" modification_count=0 sampling_percent=23.6987 schema="dbo" statistics="_WA_Sys_00000004_37A5467C" table="orders"}, {last_update="2026-11-23T23:04:31.36" modification_count=0 sampling_percent=44.8237 schema="dbo" statistics="_WA_Sys_00000003_3A81B327" table="order_items"}, {last_update="2026-11-23T23:03:31.77" modification_count=0 sampling_percent=100 schema="dbo" statistics="IX_orders_date" table="orders"}]
+total_subtree_cost: 3.33882
+warnings: [{TableScan={schema="dbo" table="orders"}}, {MissingIndex={database="[Shop]" equality_columns=["status"] impact=23.5694 schema="[dbo]" table="[orders]"}}, {TableScan={schema="dbo" table="order_items"}}]
+operators: 7
+  #0 Parallelism [Gather Streams]
+      actual_rows: 600
+      actual_rows_total: 600
+      actual_self_time_ms: 4
+      actual_time_ms: 45
+      estimated_cost: 3.33882
+      estimated_cpu: 0.03496
+      estimated_executions: 1
+      estimated_row_width: 28
+      estimated_rows: 1000
+      execution_mode: "Row"
+      loops: 1
+      output_columns: ["oi.product_id", "Expr1002"]
+      output_list: ["oi.product_id", "Expr1002"]
+      parallel: yes
+      properties: [{name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}]
+      row_count: 600
+    #1 Sort [Sort]
+        actual_cpu_ms: 21
+        actual_rows: 600
+        actual_rows_total: 600
+        actual_self_time_ms: 6
+        actual_time_ms: 41
+        buffers: {logical_reads=0 physical_reads=0 read_aheads=0}
+        estimated_cost: 3.30386
+        estimated_cpu: 0.000552
+        estimated_executions: 1
+        estimated_io: 0.001251
+        estimated_row_width: 28
+        estimated_rows: 1000
+        execution_mode: "Batch"
+        loops: 7
+        output_columns: ["oi.product_id", "Expr1002"]
+        output_list: ["oi.product_id", "Expr1002"]
+        parallel: yes
+        properties: [{name="Distinct" value="0"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}, {name="Memory Fraction Input" value="1"}, {name="Memory Fraction Output" value="1"}, {name="Actual Batches" value="1"}]
+        row_count: 600
+        sort_keys: ["Expr1002 DESC"]
+        thread_rows: [600, 0, 0, 0, 0, 0, 0]
+      #2 Hash Match [Aggregate]
+          actual_cpu_ms: 20
+          actual_rows: 600
+          actual_rows_total: 600
+          actual_self_time_ms: 4
+          actual_time_ms: 35
+          buffers: {logical_reads=0 physical_reads=0 read_aheads=0}
+          estimated_cost: 3.30206
+          estimated_cpu: 0.060835
+          estimated_executions: 1
+          estimated_row_width: 28
+          estimated_rows: 1000
+          execution_mode: "Batch"
+          group_keys: ["oi.product_id"]
+          loops: 7
+          output_columns: ["oi.product_id", "Expr1002"]
+          output_list: ["oi.product_id", "Expr1002"]
+          parallel: yes
+          properties: [{name="Defined Values" value="Expr1002 = SUM([Expr1003])"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}, {name="Memory Fraction Input" value="0.354861"}, {name="Memory Fraction Output" value="0.354861"}, {name="Actual Batches" value="2"}]
+          row_count: 600
+          thread_rows: [0, 0, 0, 187, 413, 0, 0]
+        #3 Hash Match [Inner Join]
+            actual_cpu_ms: 39
+            actual_rows: 360000
+            actual_rows_total: 360000
+            actual_self_time_ms: 12
+            actual_time_ms: 31
+            buffers: {logical_reads=0 physical_reads=0 read_aheads=0}
+            estimated_cost: 3.24122
+            estimated_cpu: 0.179307
+            estimated_executions: 1
+            estimated_row_width: 24
+            estimated_rows: 359818
+            execution_mode: "Batch"
+            join_predicate: "o.order_id = oi.order_id"
+            join_type: "Inner"
+            loops: 7
+            output_columns: ["oi.product_id", "Expr1003"]
+            output_list: ["oi.product_id", "Expr1003"]
+            parallel: yes
+            properties: [{name="BitmapCreator" value="1"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}, {name="Memory Fraction Input" value="0.353543"}, {name="Memory Fraction Output" value="0.353543"}, {name="Actual Batches" value="401"}]
+            row_count: 360000
+            thread_rows: [45693, 45695, 54846, 54827, 54842, 54829, 49268]
+          #4 Index Scan [Index Scan]
+              actual_cpu_ms: 19
+              actual_rows: 180000
+              actual_rows_total: 180000
+              actual_self_time_ms: 4
+              actual_time_ms: 4
+              alias: "o"
+              buffers: {logical_reads=1145 physical_reads=0 read_aheads=0}
+              database: "Shop"
+              estimated_cost: 0.921325
+              estimated_cpu: 0.110052
+              estimated_executions: 1
+              estimated_io: 0.811273
+              estimated_row_width: 22
+              estimated_rows: 179909
+              estimated_rows_read: 300000
+              execution_mode: "Batch"
+              filter: "[Shop].[dbo].[orders].[status] as [o].[status]='shipped'"
+              index_name: "IX_orders_date"
+              loops: 7
+              output_columns: ["o.order_id"]
+              output_list: ["o.order_id"]
+              parallel: yes
+              properties: [{name="Ordered" value="0"}, {name="ForcedIndex" value="0"}, {name="ForceSeek" value="0"}, {name="ForceScan" value="0"}, {name="NoExpandHint" value="0"}, {name="Storage" value="RowStore"}, {name="TableCardinality" value="300000"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}, {name="IndexKind" value="NonClustered"}, {name="Storage" value="RowStore"}, {name="Actual Scans" value="7"}, {name="Actual Batches" value="203"}]
+              relation: "orders"
+              row_count: 180000
+              rows_read: 300000
+              schema: "dbo"
+              table_cardinality: 300000
+              thread_rows: [21199, 31794, 24910, 21196, 30921, 40349, 9631]
+              warnings: [{TableScan={schema="dbo" table="orders"}}, {MissingIndex={database="[Shop]" equality_columns=["status"] impact=23.5694 schema="[dbo]" table="[orders]"}}]
+          #5 Compute Scalar [Compute Scalar]
+              actual_cpu_ms: 14
+              actual_rows: 360000
+              actual_rows_total: 360000
+              actual_self_time_ms: 2
+              actual_time_ms: 15
+              buffers: {logical_reads=0 physical_reads=0 read_aheads=0}
+              estimated_cost: 2.09258
+              estimated_cpu: 0.002
+              estimated_executions: 1
+              estimated_row_width: 28
+              estimated_rows: 600000
+              execution_mode: "Batch"
+              loops: 7
+              output_columns: ["oi.order_id", "oi.product_id", "Expr1003"]
+              output_list: ["oi.order_id", "oi.product_id", "Expr1003"]
+              parallel: yes
+              properties: [{name="Defined Values" value="Expr1003 = CONVERT_IMPLICIT(decimal(10,0),[Shop].[dbo].[order_items].[quantity] as [oi].[quantity],0)*[Shop].[dbo].[order_items].[price] as [oi].[price]"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}, {name="Actual Batches" value="401"}]
+              row_count: 360000
+              thread_rows: [45693, 45695, 54846, 54827, 54842, 54829, 49268]
+            #7 Clustered Index Scan [Clustered Index Scan]
+                actual_cpu_ms: 86
+                actual_rows: 360000
+                actual_rows_total: 360000
+                actual_self_time_ms: 13
+                actual_time_ms: 13
+                alias: "oi"
+                buffers: {logical_reads=2641 physical_reads=0 read_aheads=0}
+                database: "Shop"
+                estimated_cost: 2.09058
+                estimated_cpu: 0.220052
+                estimated_executions: 1
+                estimated_io: 1.87053
+                estimated_row_width: 28
+                estimated_rows: 600000
+                estimated_rows_read: 600000
+                execution_mode: "Batch"
+                filter: "PROBE([Opt_Bitmap1005],[Shop].[dbo].[order_items].[order_id] as [oi].[order_id])"
+                index_name: "PK__order_it__52020FDD2726D56F"
+                loops: 7
+                output_columns: ["oi.order_id", "oi.product_id", "oi.quantity", "oi.price"]
+                output_list: ["oi.order_id", "oi.product_id", "oi.quantity", "oi.price"]
+                parallel: yes
+                properties: [{name="Ordered" value="0"}, {name="ForcedIndex" value="0"}, {name="ForceSeek" value="0"}, {name="ForceScan" value="0"}, {name="NoExpandHint" value="0"}, {name="Storage" value="RowStore"}, {name="TableCardinality" value="600000"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}, {name="IndexKind" value="Clustered"}, {name="Storage" value="RowStore"}, {name="Actual Scans" value="7"}, {name="Actual Batches" value="401"}]
+                relation: "order_items"
+                row_count: 360000
+                rows_read: 600000
+                schema: "dbo"
+                table_cardinality: 600000
+                thread_rows: [45693, 45695, 54846, 54827, 54842, 54829, 49268]
+                warnings: [{TableScan={schema="dbo" table="order_items"}}]

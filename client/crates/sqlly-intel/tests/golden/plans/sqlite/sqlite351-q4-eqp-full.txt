@@ -1,0 +1,80 @@
+QUERY PLAN
+`--COMPOUND QUERY
+   |--LEFT-MOST SUBQUERY
+   |  `--MULTI-INDEX OR
+   |     |--INDEX 1
+   |     |  `--SEARCH o USING INDEX orders_customer_idx (customer_id=?)
+   |     `--INDEX 2
+   |        `--SEARCH o USING INTEGER PRIMARY KEY (rowid=?)
+   `--UNION USING TEMP B-TREE
+      |--SEARCH orders USING INDEX orders_customer_idx (customer_id=?)
+      `--LIST SUBQUERY 2
+         |--SCAN customers
+         `--CREATE BLOOM FILTER
+addr  opcode         p1    p2    p3    p4             p5  comment      
+----  -------------  ----  ----  ----  -------------  --  -------------
+0     Init           0     87    0                    0   Start at 87
+1     Explain        1     0     0     COMPOUND QUERY 0   
+2     Explain        2     1     0     LEFT-MOST SUBQUERY 0   
+3     OpenEphemeral  3     5     0     k(5,B,B,B,B,B) 0   nColumn=5
+4     OpenRead       2     3     0     5              0   root=3 iDb=0; orders
+5     Null           0     2     0                    0   r[2]=NULL
+6     Integer        26    1     0                    0   r[1]=26
+7     Explain        7     2     0     MULTI-INDEX OR 0   
+8     Explain        8     7     0     INDEX 1        0   
+9     ReopenIdx      4     1065  0     k(2,,)         2   root=1065 iDb=0; orders_customer_idx
+10    Integer        5     4     0                    0   r[4]=5
+11    SeekGE         4     19    4     1              0   key=r[4]
+12      IdxGT          4     19    4     1              0   key=r[4]
+13      DeferredSeek   4     0     2     [0,1,0,0,0]    0   Move 2 to 4.rowid if needed
+14      Explain        14    8     58    SEARCH o USING INDEX orders_customer_idx (customer_id=?) 0   
+15      IdxRowid       4     3     0                    0   r[3]=rowid; orders.rowid
+16      RowSetTest     2     18    3     0              0   if r[3] in rowset(2) goto 18
+17      Gosub          1     27    0                    0   
+18    Next           4     12    1                    0   
+19    Explain        19    7     0     INDEX 2        0   
+20    Integer        7     5     0                    0   r[5]=7
+21    SeekRowid      2     26    5                    0   intkey=r[5]
+22    Explain        22    19    42    SEARCH o USING INTEGER PRIMARY KEY (rowid=?) 0   
+23    Rowid          2     3     0                    0   r[3]=orders.rowid
+24    RowSetTest     2     26    3     -1             0   if r[3] in rowset(2) goto 26
+25    Gosub          1     27    0                    0   
+26    Goto           0     36    0                    0   
+27      Rowid          2     6     0                    0   r[6]=orders.rowid
+28      Column         2     1     7                    0   r[7]= cursor 2 column 1
+29      Column         2     2     8                    0   r[8]= cursor 2 column 2
+30      Column         2     3     9                    0   r[9]= cursor 2 column 3
+31      Column         2     4     10                   0   r[10]= cursor 2 column 4
+32      RealAffinity   10    0     0                    0   
+33      MakeRecord     6     5     11                   0   r[11]=mkrec(r[6..10])
+34      IdxInsert      3     11    6     5              0   key=r[11]
+35    Return         1     27    0                    0   
+36    Explain        36    1     0     UNION USING TEMP B-TREE 0   
+37    OpenRead       0     3     0     5              0   root=3 iDb=0; orders
+38    OpenRead       5     1065  0     k(2,,)         2   root=1065 iDb=0; orders_customer_idx
+39    Explain        39    36    104   SEARCH orders USING INDEX orders_customer_idx (customer_id=?) 0   
+40    BeginSubrtn    0     13    0     subrtnsig:2,C  0   r[13]=NULL
+41      Once           0     57    14                   0   
+42      OpenEphemeral  6     1     0     k(1,B)         0   nColumn=1; Result of SELECT 2
+43      Explain        43    36    0     LIST SUBQUERY 2 0   
+44      Blob           10000 14    0                    0   r[14]= (len=10000); Bloom filter
+45      OpenRead       1     2     0     4              0   root=2 iDb=0; customers
+46      Explain        46    43    138   SCAN customers 0   
+47      Rewind         1     56    0                    0   
+48        Column         1     3     11                   0   r[11]= cursor 1 column 3
+49        Ne             15    55    11    BINARY-8       82  if r[11]!=r[15] goto 55
+50        Rowid          1     16    0                    0   r[16]=customers.rowid
+51        MakeRecord     16    1     11    C              0   r[11]=mkrec(r[16])
+52        IdxInsert      6     11    16    1              0   key=r[11]
+53        FilterAdd      14    0     16    1              0   filter(14) += key(16)
+54        Explain        54    43    0     CREATE BLOOM FILTER 0   
+55      Next           1     48    0                    1   
+56      NullRow        6     0     0                    0   
+57    Return         13    41    1                    0   
+58    Rewind         6     77    0                    0   
+59      Column         6     0     12                   0   r[12]= cursor 6 column 0
+60      IsNull         12    76    0                    0   if r[12]==NULL goto 76
+61      SeekGE         5     76    12    1              0   key=r[12]
+62        IdxGT          5     76    12    1              0   key=r[12]
+63        DeferredSeek   5     0     0                    0   Move 0 to 5.rowid if needed
+64        Column         0     4     17                   0   r[17]= cursor 0 column 4

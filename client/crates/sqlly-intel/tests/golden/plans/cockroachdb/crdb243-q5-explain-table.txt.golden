@@ -1,0 +1,16 @@
+format: cockroachdb-text (Certain)
+statements: 1
+
+== statement 1
+estimated_rows: 1
+notes: ["distribution: local", "vectorized: true"]
+source_format: "cockroachdb-text"
+statement_type: "EXPLAIN"
+operators: 1
+  #1 scan [scan]
+      estimated_rows: 1
+      index_cond: "[/77 - /77]"
+      index_name: "orders_pkey"
+      output_list: ["orders", "Index: orders_pkey", "Index Cond: [/77 - /77]"]
+      properties: [{name="estimated row count" value="1 (<0.01% of the table; stats collected 6 seconds ago)"}]
+      relation: "orders"

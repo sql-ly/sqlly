@@ -122,7 +122,8 @@ pub fn tool_dialects(db: DatabaseType) -> ToolDialects {
         | AzurePostgresFlexible
         | CloudSqlPostgres
         | Neon
-        | Supabase => ToolDialects {
+        | Supabase
+        | WarehousePg => ToolDialects {
             plan: Some(PlanDialect::Postgres),
             index: Some(IndexDialect::Postgres),
             disk: Some(DiskDialect::Postgres),
@@ -366,6 +367,10 @@ mod tests {
         assert!(maintenance_dialect(DatabaseType::TiDb).is_none());
         assert!(maintenance_dialect(DatabaseType::CockroachDb).is_none());
         assert!(maintenance_dialect(DatabaseType::YugabyteDb).is_none());
+        assert_eq!(
+            maintenance_dialect(DatabaseType::WarehousePg),
+            Some(Postgres)
+        );
         assert_eq!(maintenance_dialect(DatabaseType::Oracle), Some(Oracle));
         assert!(maintenance_dialect(DatabaseType::Db2).is_none());
     }
@@ -453,5 +458,6 @@ mod tests {
         assert!(security_dialect(DatabaseType::TiDb).is_none());
         assert!(security_dialect(DatabaseType::CockroachDb).is_none());
         assert!(security_dialect(DatabaseType::YugabyteDb).is_none());
+        assert_eq!(security_dialect(DatabaseType::WarehousePg), Some(Postgres));
     }
 }

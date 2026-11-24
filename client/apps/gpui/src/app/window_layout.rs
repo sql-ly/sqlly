@@ -318,7 +318,12 @@ impl AppView {
         _window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        self.appearance_prefs.apply_high_contrast_shortcut();
+        // A checked View ▸ Theme ▸ High Contrast item turns it back off.
+        if crate::menu_bar::ThemeMenuState::current().high_contrast {
+            self.appearance_prefs.clear_high_contrast();
+        } else {
+            self.appearance_prefs.apply_high_contrast_shortcut();
+        }
         self.persist_and_apply_appearance(cx);
     }
 

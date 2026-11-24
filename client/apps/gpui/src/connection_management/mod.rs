@@ -153,16 +153,23 @@ pub enum AuthMode {
     GcpCloudSqlIam,
     /// libSQL / Turso bearer token (blank for an anonymous local server).
     AuthToken,
+    /// PostgreSQL 18 OAuth: browser (device-code) sign-in with an OpenID
+    /// Connect provider.
+    PgOAuth,
+    /// PostgreSQL 18 OAuth with a bearer token the user pastes.
+    PgOAuthToken,
 }
 
 impl AuthMode {
-    pub const ALL: [AuthMode; 6] = [
+    pub const ALL: [AuthMode; 8] = [
         AuthMode::SqlLogin,
         AuthMode::Integrated,
         AuthMode::EntraBrowser,
         AuthMode::AwsRdsIam,
         AuthMode::GcpCloudSqlIam,
         AuthMode::AuthToken,
+        AuthMode::PgOAuth,
+        AuthMode::PgOAuthToken,
     ];
 
     pub fn label(self) -> String {
@@ -173,6 +180,8 @@ impl AuthMode {
             AuthMode::AwsRdsIam => "connections.auth.aws_iam",
             AuthMode::GcpCloudSqlIam => "connections.auth.google_iam",
             AuthMode::AuthToken => "connections.auth.token",
+            AuthMode::PgOAuth => "connections.auth.pg_oauth",
+            AuthMode::PgOAuthToken => "connections.auth.pg_oauth_token",
         })
     }
 
@@ -192,6 +201,11 @@ impl AuthMode {
                     && !crate::engine_form::uses_auth_token(engine)
             }
             AuthMode::AuthToken => crate::engine_form::uses_auth_token(engine),
+            // Self-managed PostgreSQL 18+ with an OAuth validator installed;
+            // the browser build has no PostgreSQL OAuth sign-in.
+            AuthMode::PgOAuth | AuthMode::PgOAuthToken => {
+                cfg!(not(target_arch = "wasm32")) && engine == DatabaseType::Postgres
+            }
             AuthMode::Integrated => engine == DatabaseType::SqlServer,
             // Redis: Azure Cache for Redis / Azure Managed Redis.
             AuthMode::EntraBrowser => matches!(
@@ -348,6 +362,11 @@ pub struct ConnectionManagement {
     username: String,
     aws_region: String,
     aws_profile: String,
+    /// PostgreSQL OAuth settings; the role is `username`, the client secret
+    /// or bearer token is the password field.
+    pg_oauth_issuer: String,
+    pg_oauth_client_id: String,
+    pg_oauth_scope: String,
     #[cfg(not(target_arch = "wasm32"))]
     gcp_adc_status: String,
     password: Entity<InputState>,
@@ -366,6 +385,9 @@ pub struct ConnectionManagement {
     database_input: Entity<InputState>,
     username_input: Entity<InputState>,
     aws_region_input: Entity<InputState>,
+    pg_oauth_issuer_input: Entity<InputState>,
+    pg_oauth_client_id_input: Entity<InputState>,
+    pg_oauth_scope_input: Entity<InputState>,
     #[cfg(not(target_arch = "wasm32"))]
     aws_profile_select: Entity<SelectState<Vec<String>>>,
     #[cfg(not(target_arch = "wasm32"))]
@@ -677,6 +699,22 @@ mod tests {
     }
 
     #[test]
+    fn pg_oauth_modes_are_offered_for_self_managed_postgres_only() {
+        for mode in [AuthMode::PgOAuth, AuthMode::PgOAuthToken] {
+            assert!(mode.supported_for(DatabaseType::Postgres), "{mode:?}");
+            for engine in [
+                DatabaseType::MySql,
+                DatabaseType::SqlServer,
+                DatabaseType::CockroachDb,
+                DatabaseType::Neon,
+                DatabaseType::Redis,
+            ] {
+                assert!(!mode.supported_for(engine), "{mode:?} {engine:?}");
+            }
+        }
+    }
+
+    #[test]
     fn new_connection_auth_modes_exclude_entra_device_code() {
         assert_eq!(
             AuthMode::ALL.map(AuthMode::label),
@@ -686,7 +724,9 @@ mod tests {
                 "Microsoft Entra",
                 "AWS IAM",
                 "Google IAM",
-                "Auth token"
+                "Auth token",
+                "OAuth (PostgreSQL 18+)",
+                "OAuth token"
             ]
         );
     }

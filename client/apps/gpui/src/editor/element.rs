@@ -56,6 +56,18 @@ pub(super) fn visible_line_range(
     first..last
 }
 
+/// `text` as one popup line: its first non-blank line, with `…` when more
+/// follows. Shaping a string with a line break as one line panics.
+pub(crate) fn one_line(text: &str) -> String {
+    let mut lines = text.lines().filter(|l| !l.trim().is_empty());
+    let first = lines.next().unwrap_or_default().trim_end();
+    if lines.next().is_some() {
+        format!("{first} …")
+    } else {
+        first.to_string()
+    }
+}
+
 fn paint_info_popup_frame(window: &mut Window, bounds: Bounds<Pixels>) {
     window.paint_quad(gpui::fill(bounds, Theme::popup_bg()));
     window.paint_quad(gpui::quad(
@@ -277,6 +289,147 @@ impl EditorElement {
     }
 }
 
+/// The hover card drawn above everything else, placed against the window
+/// rather than the editor that asked for it.
+/// It paints after the editor, so it reads the line layout the editor's
+/// prepaint just stored.
+pub(super) struct HoverCardLayer {
+    pub(super) editor: Entity<SqlEditor>,
+}
+
+impl IntoElement for HoverCardLayer {
+    type Element = Self;
+    fn into_element(self) -> Self::Element {
+        self
+    }
+}
+
+impl Element for HoverCardLayer {
+    type RequestLayoutState = ();
+    type PrepaintState = ();
+
+    fn id(&self) -> Option<ElementId> {
+        None
+    }
+
+    fn source_location(&self) -> Option<&'static std::panic::Location<'static>> {
+        None
+    }
+
+    fn request_layout(
+        &mut self,
+        _id: Option<&GlobalElementId>,
+        _inspector_id: Option<&InspectorElementId>,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> (LayoutId, Self::RequestLayoutState) {
+        (window.request_layout(gpui::Style::default(), [], cx), ())
+    }
+
+    fn prepaint(
+        &mut self,
+        _id: Option<&GlobalElementId>,
+        _inspector_id: Option<&InspectorElementId>,
+        _bounds: Bounds<Pixels>,
+        _request_layout: &mut Self::RequestLayoutState,
+        _window: &mut Window,
+        _cx: &mut App,
+    ) -> Self::PrepaintState {
+    }
+
+    fn paint(
+        &mut self,
+        _id: Option<&GlobalElementId>,
+        _inspector_id: Option<&InspectorElementId>,
+        _bounds: Bounds<Pixels>,
+        _request_layout: &mut Self::RequestLayoutState,
+        _prepaint: &mut Self::PrepaintState,
+        window: &mut Window,
+        cx: &mut App,
+    ) {
+        let editor = self.editor.read(cx);
+        let Some((info, (start, _))) = editor.hover_info.clone() else {
+            return;
+        };
+        let Some(bounds) = editor.last_bounds.filter(|_| editor.hover_card_wanted()) else {
+            return;
+        };
+        let start = start.min(editor.content.len());
+        let (hover_line, hover_col) = editor.line_index().line_col_for_offset(start);
+        let display_line = editor.fold_map_snapshot().buffer_to_display(hover_line);
+        let rel = display_line.saturating_sub(editor.last_layout_first_line);
+        let Some(shaped_line) = editor.last_layout.get(rel) else {
+            return;
+        };
+        let col = editor
+            .last_tab_maps
+            .get(rel)
+            .map_or(hover_col, |m| m.to_display(hover_col));
+        let line_height = editor.line_height;
+        let anchor_x = bounds.origin.x + editor.line_number_width + shaped_line.x_for_index(col);
+        let anchor_y = bounds.origin.y + line_height * (display_line + 1) as f32;
+        let font = &editor.font.clone();
+        let font_size = editor.font_size;
+        let viewport = Bounds {
+            origin: Point::default(),
+            size: window.viewport_size(),
+        };
+        let card_font = font_size * 0.92;
+        let mut bold_font = font.clone();
+        bold_font.weight = gpui::FontWeight::BOLD;
+        let pad = px(8.0);
+        let char_w = card_char_width(window, font, card_font);
+        let columns =
+            super::info_cards::wrap_columns(f32::from(viewport.size.width - pad * 2.0), char_w);
+        // Below the word when the card fits there, else on whichever side
+        // has more room, trimmed to what fits.
+        let room_below = viewport.origin.y + viewport.size.height - anchor_y;
+        let room_above = anchor_y - line_height - viewport.origin.y;
+        let room = room_below.max(room_above);
+        let max_lines = (f32::from(room - px(8.0)) / f32::from(line_height)).floor() as usize;
+        let lines = super::info_cards::hover_card(&info, columns);
+        let fits_below = line_height * lines.len() as f32 + px(8.0) <= room_below;
+        let lines = super::info_cards::fit_lines(lines, max_lines);
+        let shaped: Vec<ShapedLine> = lines
+            .iter()
+            .map(|line| shape_card_line(window, line, font, &bold_font, card_font))
+            .collect();
+        let mut popup_w = px(0.0);
+        for line in &shaped {
+            popup_w = popup_w.max(line.width);
+        }
+        popup_w += pad * 2.0;
+        let popup_h = line_height * shaped.len() as f32 + px(8.0);
+        let popup_x = anchor_x
+            .min(viewport.origin.x + viewport.size.width - popup_w)
+            .max(viewport.origin.x);
+        let popup_y = if fits_below || room_below >= room_above {
+            anchor_y
+        } else {
+            (anchor_y - line_height - popup_h).max(viewport.origin.y)
+        };
+        let popup_bounds = Bounds {
+            origin: Point::new(popup_x, popup_y),
+            size: gpui::size(popup_w, popup_h),
+        };
+        paint_info_popup_frame(window, popup_bounds);
+        for (i, line) in shaped.iter().enumerate() {
+            let _ = line.paint(
+                Point::new(popup_x + pad, popup_y + line_height * i as f32 + px(3.0)),
+                line_height,
+                gpui::TextAlign::Left,
+                None,
+                window,
+                cx,
+            );
+        }
+        self.editor
+            .read(cx)
+            .hover_card_bounds
+            .set(Some(popup_bounds));
+    }
+}
+
 impl IntoElement for EditorElement {
     type Element = Self;
     fn into_element(self) -> Self::Element {
@@ -429,8 +582,10 @@ impl Element for EditorElement {
         let comment_states = self.editor.read(cx).comment_states();
         let syntax_bold = self.editor.read(cx).editor_prefs.syntax_bold;
         let semantic_names = self.editor.read(cx).semantic_names();
+        let markdown = self.editor.read(cx).is_markdown();
         let probe = ShapeProbe::current(&font, font_size, tab_width, dialect)
-            .with_bold(syntax_bold, &semantic_names);
+            .with_bold(syntax_bold, &semantic_names)
+            .with_markdown(markdown);
         self.editor
             .read(cx)
             .shape_cache
@@ -504,14 +659,18 @@ impl Element for EditorElement {
                 hit
             } else {
                 let map = crate::tab_map::TabMap::with_inlays(line_text, tab_width, &inlays);
-                let mut runs = SqlEditor::syntax_runs(
-                    line_text,
-                    &font,
-                    dialect,
-                    comment_entry,
-                    &syntax_bold,
-                    &semantic_names,
-                );
+                let mut runs = if markdown {
+                    super::markdown_syntax::runs(line_text, &font, comment_entry.is_inside())
+                } else {
+                    SqlEditor::syntax_runs(
+                        line_text,
+                        &font,
+                        dialect,
+                        comment_entry,
+                        &syntax_bold,
+                        &semantic_names,
+                    )
+                };
                 if let Some((link_start, link_end)) = link_hover_range
                     && link_start < line_end
                     && link_end > line_start
@@ -621,7 +780,6 @@ impl Element for EditorElement {
             diag_spans,
             hovered_diagnostic,
             hovered_sqlly_directive,
-            hover_info,
             fold_preview,
             signature_help,
             fim_suggestion,
@@ -655,7 +813,6 @@ impl Element for EditorElement {
                 editor.diag_spans.clone(),
                 editor.hovered_diagnostic,
                 editor.hovered_sqlly_directive,
-                editor.hover_info.clone(),
                 editor.fold_preview,
                 editor.signature_help.clone(),
                 editor
@@ -1584,7 +1741,7 @@ impl Element for EditorElement {
                 .take(max_visible)
                 .enumerate()
                 .map(|(i, item)| {
-                    let label = SharedString::from(item.label.clone());
+                    let label = SharedString::from(one_line(&item.label));
                     let label_len = label.len();
                     // Keywords are plain text: the highlighter fill is for
                     // names (tables, columns, functions), where it shows which
@@ -1592,7 +1749,7 @@ impl Element for EditorElement {
                     let match_ranges = if item.kind == CompletionKind::Keyword {
                         Vec::new()
                     } else {
-                        completion_match_ranges(filter_text, &item.label)
+                        completion_match_ranges(filter_text, &label)
                     };
 
                     let is_selected = completion_selected == Some(i + completion_scroll_offset);
@@ -1681,11 +1838,11 @@ impl Element for EditorElement {
                         } else {
                             item.detail.as_str()
                         };
-                        crate::snippets::strip_tab_stops(raw)
+                        one_line(&crate::snippets::strip_tab_stops(raw))
                     } else if item.detail.is_empty() {
                         String::new()
                     } else {
-                        item.detail.clone()
+                        one_line(&item.detail)
                     };
                     if detail_text.is_empty() {
                         None
@@ -2244,82 +2401,12 @@ impl Element for EditorElement {
             .directive_hint_bounds
             .set(directive_popup_bounds);
 
-        let mut hover_card_bounds = None;
-        // A hover card (the pointer resting on a word) wins over signature
-        // help (the caret inside a call): it is the more deliberate ask, and
-        // the two would otherwise stack over each other.
-        let paint_hover = hover_info.is_some()
-            && fold_preview.is_none()
-            && !completion_visible
-            && hovered_diagnostic.is_none()
-            && hovered_sqlly_directive.is_none();
-        if paint_hover && let Some((info, (start, _end))) = hover_info.as_ref() {
-            let start = (*start).min(content.len());
-            let (hover_line, hover_col) = line_index.line_col_for_offset(start);
-            let rel = dline(hover_line).saturating_sub(first_line);
-            if let Some(pl) = layouts.lines.get(rel) {
-                let x_start = pl.shaped.x_for_index(dcol(rel, hover_col));
-                let anchor_x = bounds.origin.x + line_number_width + x_start;
-                let anchor_y = bounds.origin.y + line_height * (dline(hover_line) + 1) as f32;
-                let card_font = font_size * 0.92;
-                let mut bold_font = font.clone();
-                bold_font.weight = gpui::FontWeight::BOLD;
-                let pad = px(8.0);
-                let char_w = card_char_width(window, &font, card_font);
-                let columns = super::info_cards::wrap_columns(
-                    f32::from(viewport.size.width - pad * 2.0),
-                    char_w,
-                );
-                // Below the word when the card fits there, else on whichever
-                // side has more room, trimmed to what fits.
-                let room_below = viewport.origin.y + viewport.size.height - anchor_y;
-                let room_above = anchor_y - line_height - viewport.origin.y;
-                let room = room_below.max(room_above);
-                let max_lines =
-                    (f32::from(room - px(8.0)) / f32::from(line_height)).floor() as usize;
-                let lines = super::info_cards::hover_card(info, columns);
-                let fits_below = line_height * lines.len() as f32 + px(8.0) <= room_below;
-                let lines = super::info_cards::fit_lines(lines, max_lines);
-                let shaped: Vec<ShapedLine> = lines
-                    .iter()
-                    .map(|line| shape_card_line(window, line, &font, &bold_font, card_font))
-                    .collect();
-                let mut popup_w = px(0.0);
-                for line in &shaped {
-                    popup_w = popup_w.max(line.width);
-                }
-                popup_w += pad * 2.0;
-                let popup_h = line_height * shaped.len() as f32 + px(8.0);
-                let popup_x = anchor_x
-                    .min(viewport.origin.x + viewport.size.width - popup_w)
-                    .max(viewport.origin.x);
-                let popup_y = if fits_below || room_below >= room_above {
-                    anchor_y
-                } else {
-                    (anchor_y - line_height - popup_h).max(viewport.origin.y)
-                };
-                let popup_bounds = Bounds {
-                    origin: Point::new(popup_x, popup_y),
-                    size: gpui::size(popup_w, popup_h),
-                };
-                paint_info_popup_frame(window, popup_bounds);
-                for (i, line) in shaped.iter().enumerate() {
-                    let _ = line.paint(
-                        Point::new(popup_x + pad, popup_y + line_height * i as f32 + px(3.0)),
-                        line_height,
-                        gpui::TextAlign::Left,
-                        None,
-                        window,
-                        cx,
-                    );
-                }
-                hover_card_bounds = Some(popup_bounds);
-            }
+        // The hover card paints in its own deferred layer (`HoverCardLayer`),
+        // which stamps its bounds when it draws.
+        let hover_card_shown = self.editor.read(cx).hover_card_wanted();
+        if !hover_card_shown {
+            self.editor.read(cx).hover_card_bounds.set(None);
         }
-        self.editor
-            .read(cx)
-            .hover_card_bounds
-            .set(hover_card_bounds);
 
         if let Some(line) = fold_preview
             && fold_headers.get(&line) == Some(&true)
@@ -2410,7 +2497,7 @@ impl Element for EditorElement {
         }
 
         // A hover card (the more deliberate ask) replaces signature help.
-        if let Some((shaped, popup_bounds, _)) = sig_card.filter(|_| hover_card_bounds.is_none()) {
+        if let Some((shaped, popup_bounds, _)) = sig_card.filter(|_| !hover_card_shown) {
             paint_info_popup_frame(window, popup_bounds);
             for (i, line) in shaped.iter().enumerate() {
                 let _ = line.paint(

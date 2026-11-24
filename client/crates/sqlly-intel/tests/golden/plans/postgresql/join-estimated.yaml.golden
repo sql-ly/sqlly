@@ -1,0 +1,110 @@
+format: postgresql-yaml (Certain)
+statements: 1
+
+== statement 1
+dialect: "Postgres"
+estimated_rows: 8
+source_format: "postgresql-yaml"
+statement_type: "EXPLAIN"
+total_subtree_cost: 26383.82
+operators: 12
+  #1 Sort [Sort]
+      estimated_cost: 26383.82
+      estimated_row_width: 43
+      estimated_rows: 8
+      estimated_startup_cost: 26383.8
+      sort_keys: ["(sum(((oi.quantity)::numeric * oi.unit_price))) DESC"]
+    #2 Aggregate [Finalize GroupAggregate]
+        estimated_cost: 26383.68
+        estimated_row_width: 43
+        estimated_rows: 8
+        estimated_startup_cost: 26381.18
+        group_keys: ["c.country"]
+        parent_relationship: "Outer"
+        properties: [{name="Strategy" value="Sorted"}, {name="Partial Mode" value="Finalize"}]
+      #3 Gather Merge [Gather Merge]
+          estimated_cost: 26383.39
+          estimated_row_width: 43
+          estimated_rows: 19
+          estimated_startup_cost: 26381.18
+          parent_relationship: "Outer"
+          workers_planned: 2
+        #4 Sort [Sort]
+            estimated_cost: 25381.18
+            estimated_row_width: 43
+            estimated_rows: 8
+            estimated_startup_cost: 25381.16
+            parent_relationship: "Outer"
+            sort_keys: ["c.country"]
+          #5 Aggregate [Partial HashAggregate]
+              estimated_cost: 25381.04
+              estimated_row_width: 43
+              estimated_rows: 8
+              estimated_startup_cost: 25380.94
+              group_keys: ["c.country"]
+              parent_relationship: "Outer"
+              properties: [{name="Strategy" value="Hashed"}, {name="Partial Mode" value="Partial"}, {name="Planned Partitions" value="0.0"}]
+            #6 Hash Join [Hash Join]
+                estimated_cost: 23823.01
+                estimated_row_width: 13
+                estimated_rows: 124634
+                estimated_startup_cost: 8359.31
+                join_predicate: "(o.customer_id = c.id)"
+                join_type: "Inner"
+                output_list: ["Hash Cond: (o.customer_id = c.id)"]
+                parent_relationship: "Outer"
+                properties: [{name="Inner Unique" value="true"}]
+              #7 Hash Join [Parallel Hash Join]
+                  estimated_cost: 21864.83
+                  estimated_row_width: 14
+                  estimated_rows: 124634
+                  estimated_startup_cost: 6728.31
+                  join_predicate: "(oi.order_id = o.id)"
+                  join_type: "Inner"
+                  output_list: ["Hash Cond: (oi.order_id = o.id)"]
+                  parallel: yes
+                  parent_relationship: "Outer"
+                  properties: [{name="Inner Unique" value="true"}]
+                #8 Seq Scan [Parallel Seq Scan]
+                    alias: "oi"
+                    estimated_cost: 13824
+                    estimated_row_width: 14
+                    estimated_rows: 500000
+                    output_list: ["order_items"]
+                    parallel: yes
+                    parent_relationship: "Outer"
+                    relation: "order_items"
+                    warnings: [{TableScan={table="order_items"}}]
+                #9 Hash [Parallel Hash]
+                    estimated_cost: 5995.18
+                    estimated_row_width: 8
+                    estimated_rows: 58651
+                    estimated_startup_cost: 5995.18
+                    parallel: yes
+                    parent_relationship: "Inner"
+                  #10 Seq Scan [Parallel Seq Scan]
+                      alias: "o"
+                      estimated_cost: 5995.18
+                      estimated_row_width: 8
+                      estimated_rows: 58651
+                      filter: "(status = 'paid'::text)"
+                      output_list: ["orders", "Filter: (status = 'paid'::text)"]
+                      parallel: yes
+                      parent_relationship: "Outer"
+                      relation: "orders"
+                      warnings: [{TableScan={table="orders"}}]
+              #11 Hash [Hash]
+                  estimated_cost: 1006
+                  estimated_row_width: 7
+                  estimated_rows: 50000
+                  estimated_startup_cost: 1006
+                  parent_relationship: "Inner"
+                #12 Seq Scan [Seq Scan]
+                    alias: "c"
+                    estimated_cost: 1006
+                    estimated_row_width: 7
+                    estimated_rows: 50000
+                    output_list: ["customers"]
+                    parent_relationship: "Outer"
+                    relation: "customers"
+                    warnings: [{TableScan={table="customers"}}]

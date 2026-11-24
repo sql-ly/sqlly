@@ -1,0 +1,76 @@
+{
+  "query_optimization": {
+    "r_total_time_ms": 0.074110836
+  },
+  "query_block": {
+    "union_result": {
+      "table_name": "<union1,2>",
+      "access_type": "ALL",
+      "r_loops": 1,
+      "r_rows": 691,
+      "query_specifications": [
+        {
+          "query_block": {
+            "select_id": 1,
+            "cost": 0.8420126,
+            "r_loops": 1,
+            "r_total_time_ms": 0.416753681,
+            "nested_loop": [
+              {
+                "table": {
+                  "table_name": "customers",
+                  "access_type": "ALL",
+                  "loops": 1,
+                  "r_loops": 1,
+                  "rows": 4989,
+                  "r_rows": 5000,
+                  "cost": 0.8420126,
+                  "r_table_time_ms": 0.253451559,
+                  "r_other_time_ms": 0.159302887,
+                  "r_engine_stats": {
+                    "pages_accessed": 22
+                  },
+                  "filtered": 100,
+                  "r_total_filtered": 12.5,
+                  "attached_condition": "customers.country = 'US'",
+                  "r_filtered": 12.5
+                }
+              }
+            ]
+          }
+        },
+        {
+          "query_block": {
+            "select_id": 2,
+            "operation": "UNION",
+            "cost": 6.6889758,
+            "r_loops": 1,
+            "r_total_time_ms": 2.801672864,
+            "nested_loop": [
+              {
+                "table": {
+                  "table_name": "orders",
+                  "access_type": "ALL",
+                  "loops": 1,
+                  "r_loops": 1,
+                  "rows": 40131,
+                  "r_rows": 40000,
+                  "cost": 6.6889758,
+                  "r_table_time_ms": 1.71733844,
+                  "r_other_time_ms": 1.083126321,
+                  "r_engine_stats": {
+                    "pages_accessed": 118
+                  },
+                  "filtered": 100,
+                  "r_total_filtered": 0.2225,
+                  "attached_condition": "orders.total < 12",
+                  "r_filtered": 0.2225
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

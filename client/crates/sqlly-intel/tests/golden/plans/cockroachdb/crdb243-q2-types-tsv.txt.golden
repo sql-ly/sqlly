@@ -1,0 +1,43 @@
+format: cockroachdb-text (Certain)
+statements: 1
+
+== statement 1
+estimated_rows: 2
+notes: ["distribution: local", "vectorized: true"]
+source_format: "cockroachdb-text"
+statement_type: "EXPLAIN"
+operators: 6
+  #1 sort [sort]
+      estimated_rows: 2
+      output_columns: ["region string", "n int", "revenue decimal"]
+      sort_keys: ["-sum"]
+    #2 group (hash) [group (hash)]
+        estimated_rows: 2
+        group_keys: ["region"]
+        output_columns: ["region string", "count_rows int", "sum decimal"]
+        properties: [{name="aggregate 0" value="count_rows()"}, {name="aggregate 1" value="sum(total)"}]
+      #3 project [project]
+          output_columns: ["region string", "total decimal"]
+        #4 hash join (inner) [hash join (inner)]
+            estimated_rows: 10000
+            extra: ["right cols are key"]
+            join_predicate: "(customer_id) = (id)"
+            join_type: "Inner"
+            output_columns: ["customer_id int", "total decimal", "id int", "region string"]
+            output_list: ["Condition: (customer_id) = (id)"]
+          #5 scan [scan]
+              estimated_rows: 20000
+              index_name: "orders_pkey"
+              output_columns: ["customer_id int", "total decimal"]
+              output_list: ["orders", "Index: orders_pkey"]
+              properties: [{name="estimated row count" value="20,000 (100% of the table; stats collected 3 seconds ago)"}, {name="spans" value="FULL SCAN"}]
+              relation: "orders"
+              warnings: [{TableScan={table="orders"}}]
+          #6 scan [scan]
+              estimated_rows: 500
+              index_cond: "/\"east\"-/\"east\"/PrefixEnd /\"west\"-/\"west\"/PrefixEnd"
+              index_name: "customers_region_idx"
+              output_columns: ["id int", "region string"]
+              output_list: ["customers", "Index: customers_region_idx", "Index Cond: /\"east\"-/\"east\"/PrefixEnd /\"west\"-/\"west\"/PrefixEnd"]
+              properties: [{name="estimated row count" value="500 (50% of the table; stats collected 3 seconds ago)"}]
+              relation: "customers"

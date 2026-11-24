@@ -36,7 +36,10 @@ mod writer;
 
 use crate::sqlformat::prefs::{IndentStyle, SqlDialect, SqlFormattingPreferences};
 use crate::sqllex::{IdentQuote, LexErrorKind, ParamStyle, StrictLexer, Token, TokenKind};
-use crate::sqlmodel::Dialect;
+use crate::sqlmodel::{
+    Dialect, is_builtin_function, is_builtin_function_in_any_dialect, is_builtin_type,
+    is_builtin_type_in_any_dialect,
+};
 use emit::Formatter;
 use tree::collect_items;
 use verify::tokens_equivalent;
@@ -171,6 +174,43 @@ impl<'p> Options<'p> {
             indent_width,
             surrounding_upper,
         }
+    }
+
+    /// Settings whose engine has no catalog of its own (BigQuery,
+    /// Snowflake, Redshift), or whose dialect is only a guess, check every
+    /// dialect's built-in names.
+    fn checks_every_catalog(&self) -> bool {
+        matches!(
+            self.p.dialect,
+            SqlDialect::AutoDetect
+                | SqlDialect::Bigquery
+                | SqlDialect::Snowflake
+                | SqlDialect::Redshift
+        )
+    }
+
+    /// Whether a call target spelled `name` is a built-in (system)
+    /// function. Only those take the function casing; a user's function
+    /// keeps the spelling it was written with.
+    fn is_system_function(&self, name: &str) -> bool {
+        if casing::word_in(casing::GRAMMAR_CALL_WORDS, name) {
+            true
+        } else if self.checks_every_catalog() {
+            is_builtin_function_in_any_dialect(name)
+        } else {
+            is_builtin_function(self.dialect, name)
+        }
+    }
+
+    /// Whether `name` in a type position is a built-in data type. A
+    /// user-defined type (`OrderIdList`, `dbo.Money2`) keeps its spelling.
+    fn is_system_type(&self, name: &str) -> bool {
+        casing::word_in(casing::TYPE_WORDS, name)
+            || if self.checks_every_catalog() {
+                is_builtin_type_in_any_dialect(name)
+            } else {
+                is_builtin_type(self.dialect, name)
+            }
     }
 
     fn indent_unit(&self) -> String {

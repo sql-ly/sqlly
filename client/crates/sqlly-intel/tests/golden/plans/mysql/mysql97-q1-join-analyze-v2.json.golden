@@ -1,0 +1,129 @@
+format: mysql-json-v2 (Certain)
+statements: 1
+
+== statement 1
+dialect: "MySql"
+execution_time_ms: 42.800751
+has_actuals: yes
+settings: [{name="query_type" value="select"}, {name="json_schema_version" value="2.0"}]
+source_format: "mysql-json-v2"
+statement_text: "/* select#1 */ select `c`.`country` AS `country`,count(0) AS `orders`,sum((`oi`.`quantity` * `oi`.`unit_price`)) AS `revenue` from `shop`.`order_items` `oi` joi..."
+statement_type: "EXPLAIN ANALYZE"
+operators: 9
+  #1 Sort: revenue DESC [Sort: revenue DESC]
+      actual_rows: 2
+      actual_rows_total: 2
+      actual_self_time_ms: 0.014793
+      actual_startup_ms: 42.800626
+      actual_time_ms: 42.800751
+      loops: 1
+      output_list: ["Actual time: 42.800751 ms"]
+      properties: [{name="access_type" value="sort"}]
+      sort_keys: ["revenue DESC"]
+    #2 Table scan on <temporary> [Table scan on <temporary>]
+        actual_rows: 2
+        actual_rows_total: 2
+        actual_self_time_ms: 0.001249
+        actual_startup_ms: 42.785792
+        actual_time_ms: 42.785958
+        loops: 1
+        output_list: ["Actual time: 42.785958 ms", "<temporary>"]
+        properties: [{name="access_type" value="table"}]
+      #3 Aggregate using temporary table [Aggregate using temporary table]
+          actual_rows: 2
+          actual_rows_total: 2
+          actual_self_time_ms: 5.545077
+          actual_startup_ms: 42.784709
+          actual_time_ms: 42.784709
+          loops: 1
+          output_list: ["Actual time: 42.784709 ms"]
+          properties: [{name="access_type" value="temp_table_aggregate"}]
+        #4 Nested loop inner join [Nested loop inner join]
+            actual_rows: 25000
+            actual_rows_total: 25000
+            actual_self_time_ms: 1.619283
+            actual_startup_ms: 0.134709
+            actual_time_ms: 37.239632
+            estimated_cost: 8804.895216
+            estimated_rows: 9562.743414
+            join_type: "Inner"
+            loops: 1
+            output_list: ["Actual time: 37.239632 ms"]
+            properties: [{name="access_type" value="join"}, {name="join_algorithm" value="nested_loop"}]
+          #5 Nested loop inner join [Nested loop inner join]
+              actual_rows: 10000
+              actual_rows_total: 10000
+              actual_self_time_ms: 0.936782
+              actual_startup_ms: 0.122833
+              actual_time_ms: 13.528021
+              estimated_cost: 5457.935021
+              estimated_rows: 4013.10006
+              join_type: "Inner"
+              loops: 1
+              output_list: ["Actual time: 13.528021 ms"]
+              properties: [{name="access_type" value="join"}, {name="join_algorithm" value="nested_loop"}]
+            #6 Filter: (o.`status` = 'paid') [Filter: (o.`status` = 'paid')]
+                actual_rows: 10000
+                actual_rows_total: 10000
+                actual_self_time_ms: 1.847086
+                actual_startup_ms: 0.114834
+                actual_time_ms: 6.070176
+                estimated_cost: 4053.35
+                estimated_rows: 4013.10006
+                filter: "o.`status` = 'paid'"
+                loops: 1
+                output_list: ["Actual time: 6.070176 ms", "Condition: (o.`status` = 'paid')"]
+                properties: [{name="access_type" value="filter"}, {name="filter_columns" value="o.`status`"}]
+              #7 Table scan on o [Table scan on o]
+                  actual_rows: 40000
+                  actual_rows_total: 40000
+                  actual_self_time_ms: 4.22309
+                  actual_startup_ms: 0.113416
+                  actual_time_ms: 4.22309
+                  alias: "o"
+                  estimated_cost: 4053.35
+                  estimated_rows: 40131
+                  loops: 1
+                  output_columns: ["id", "customer_id", "status"]
+                  output_list: ["Actual time: 4.22309 ms", "orders"]
+                  properties: [{name="access_type" value="table"}]
+                  relation: "orders"
+                  relation_resolved: yes
+                  schema: "shop"
+                  warnings: [{TableScan={schema="shop" table="o"}}]
+            #8 Single-row index lookup on c using PRIMARY (id = o.customer_id) [Single-row index lookup on c using PRIMARY (id = o.customer_id)]
+                actual_rows: 1
+                actual_rows_total: 10000
+                actual_self_time_ms: 6.521063
+                actual_startup_ms: 0.000616
+                actual_time_ms: 6.521063
+                alias: "c"
+                estimated_cost: 0.250025
+                estimated_rows: 1
+                index_cond: "id = o.customer_id"
+                index_name: "PRIMARY"
+                loops: 10000
+                output_columns: ["id", "country"]
+                output_list: ["Actual time: 0.0006521063 ms", "customers", "Key: PRIMARY"]
+                properties: [{name="access_type" value="index"}, {name="covering" value="false"}, {name="index_access_type" value="index_lookup"}, {name="key_columns" value="id"}, {name="lookup_references" value="shop.o.customer_id"}]
+                relation: "customers"
+                relation_resolved: yes
+                schema: "shop"
+          #9 Index lookup on oi using order_items_order_idx (order_id = o.id) [Index lookup on oi using order_items_order_idx (order_id = o.id)]
+              actual_rows: 2.5
+              actual_rows_total: 25000
+              actual_self_time_ms: 22.092328
+              actual_startup_ms: 0.00202
+              actual_time_ms: 22.092328
+              alias: "oi"
+              estimated_cost: 0.59578
+              estimated_rows: 2.382882
+              index_cond: "order_id = o.id"
+              index_name: "order_items_order_idx"
+              loops: 10000
+              output_columns: ["id", "order_id", "quantity", "unit_price"]
+              output_list: ["Actual time: 0.0022092328 ms", "order_items", "Key: order_items_order_idx"]
+              properties: [{name="access_type" value="index"}, {name="covering" value="false"}, {name="index_access_type" value="index_lookup"}, {name="key_columns" value="order_id"}, {name="lookup_references" value="shop.o.id"}]
+              relation: "order_items"
+              relation_resolved: yes
+              schema: "shop"

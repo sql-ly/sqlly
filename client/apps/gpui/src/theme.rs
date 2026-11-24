@@ -1081,16 +1081,39 @@ impl Theme {
     }
 }
 
+/// The interface face the browser shell has registered for the current
+/// language; the embedded Simplified Chinese subset until it says otherwise.
+#[cfg(target_arch = "wasm32")]
+static BROWSER_INTERFACE_FONT: std::sync::Mutex<&'static str> =
+    std::sync::Mutex::new("Noto Sans SC");
+
+/// Switch the browser interface face; `false` when it was already current.
+/// The next frame's [`sync_component_theme`] sees the new family and
+/// re-syncs every widget; the caller refreshes the windows.
+#[cfg(target_arch = "wasm32")]
+pub fn set_browser_interface_font_family(family: &'static str) -> bool {
+    let mut current = BROWSER_INTERFACE_FONT
+        .lock()
+        .unwrap_or_else(|e| e.into_inner());
+    let changed = *current != family;
+    *current = family;
+    changed
+}
+
 /// Resolve the persisted interface font preference to a concrete family name.
 fn resolved_interface_font_family() -> String {
     let stored = font_registry().interface_font.clone();
     // The browser has no system fonts at all: every family must be one of the
-    // faces the wasm shell embeds and registers (see apps/browser). Resolve
-    // both "System" and any other stored preference to the embedded UI face.
+    // faces the wasm shell registers (see apps/browser), which picks the face
+    // for the interface language. "System" and any other stored preference
+    // resolve to it.
     #[cfg(target_arch = "wasm32")]
     {
         let _ = stored;
-        return "Noto Sans SC".to_string();
+        return BROWSER_INTERFACE_FONT
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .to_string();
     }
     #[cfg(not(target_arch = "wasm32"))]
     {

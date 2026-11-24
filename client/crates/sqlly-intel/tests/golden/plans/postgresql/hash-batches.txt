@@ -1,0 +1,22 @@
+                                                               QUERY PLAN                                                               
+----------------------------------------------------------------------------------------------------------------------------------------
+ HashAggregate  (cost=55312.03..55312.07 rows=4 width=14) (actual time=338.030..338.043 rows=4.00 loops=1)
+   Group Key: o.status
+   Batches: 1  Memory Usage: 32kB
+   Buffers: shared hit=11878, temp read=4948 written=4948
+   ->  Hash Join  (cost=14008.00..49312.03 rows=1200000 width=6) (actual time=45.953..255.693 rows=1200000.00 loops=1)
+         Hash Cond: (oi.order_id = o.id)
+         Buffers: shared hit=11878, temp read=4948 written=4948
+         ->  Seq Scan on order_items oi  (cost=0.00..20824.00 rows=1200000 width=4) (actual time=0.008..45.114 rows=1200000.00 loops=1)
+               Buffers: shared hit=8824
+         ->  Hash  (cost=7054.00..7054.00 rows=400000 width=10) (actual time=45.683..45.683 rows=400000.00 loops=1)
+               Buckets: 32768  Batches: 32  Memory Usage: 796kB
+               Buffers: shared hit=3054, temp written=1498
+               ->  Seq Scan on orders o  (cost=0.00..7054.00 rows=400000 width=10) (actual time=0.005..17.542 rows=400000.00 loops=1)
+                     Buffers: shared hit=3054
+ Planning:
+   Buffers: shared hit=278
+ Planning Time: 0.407 ms
+ Execution Time: 338.092 ms
+(18 rows)
+

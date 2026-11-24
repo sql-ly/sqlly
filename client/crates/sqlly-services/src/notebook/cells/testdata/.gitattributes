@@ -1,0 +1,2 @@
+# Transform SQL goldens compared through GoldenTest; keep LF on every platform.
+* text eol=lf

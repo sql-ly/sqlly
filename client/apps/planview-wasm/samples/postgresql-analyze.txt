@@ -1,0 +1,51 @@
+                                                                                  QUERY PLAN                                                                                  
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=26383.80..26383.82 rows=8 width=43) (actual time=98.644..102.114 rows=2.00 loops=1)
+   Sort Key: (sum(((oi.quantity)::numeric * oi.unit_price))) DESC
+   Sort Method: quicksort  Memory: 25kB
+   Buffers: shared hit=13415
+   ->  Finalize GroupAggregate  (cost=26381.18..26383.68 rows=8 width=43) (actual time=98.634..102.104 rows=2.00 loops=1)
+         Group Key: c.country
+         Buffers: shared hit=13412
+         ->  Gather Merge  (cost=26381.18..26383.39 rows=19 width=43) (actual time=98.629..102.099 rows=6.00 loops=1)
+               Workers Planned: 2
+               Workers Launched: 2
+               Buffers: shared hit=13412
+               ->  Sort  (cost=25381.16..25381.18 rows=8 width=43) (actual time=97.524..97.526 rows=2.00 loops=3)
+                     Sort Key: c.country
+                     Sort Method: quicksort  Memory: 25kB
+                     Buffers: shared hit=13412
+                     Worker 0:  Sort Method: quicksort  Memory: 25kB
+                     Worker 1:  Sort Method: quicksort  Memory: 25kB
+                     ->  Partial HashAggregate  (cost=25380.94..25381.04 rows=8 width=43) (actual time=97.510..97.512 rows=2.00 loops=3)
+                           Group Key: c.country
+                           Batches: 1  Memory Usage: 32kB
+                           Buffers: shared hit=13396
+                           Worker 0:  Batches: 1  Memory Usage: 32kB
+                           Worker 1:  Batches: 1  Memory Usage: 32kB
+                           ->  Hash Join  (cost=8359.31..23823.01 rows=124634 width=13) (actual time=15.349..84.618 rows=100000.00 loops=3)
+                                 Hash Cond: (o.customer_id = c.id)
+                                 Buffers: shared hit=13396
+                                 ->  Parallel Hash Join  (cost=6728.31..21864.83 rows=124634 width=14) (actual time=10.055..63.132 rows=100000.00 loops=3)
+                                       Hash Cond: (oi.order_id = o.id)
+                                       Buffers: shared hit=11878
+                                       ->  Parallel Seq Scan on order_items oi  (cost=0.00..13824.00 rows=500000 width=14) (actual time=0.007..12.685 rows=400000.00 loops=3)
+                                             Buffers: shared hit=8824
+                                       ->  Parallel Hash  (cost=5995.18..5995.18 rows=58651 width=8) (actual time=9.826..9.827 rows=33333.33 loops=3)
+                                             Buckets: 131072  Batches: 1  Memory Usage: 4992kB
+                                             Buffers: shared hit=3054
+                                             ->  Parallel Seq Scan on orders o  (cost=0.00..5995.18 rows=58651 width=8) (actual time=0.007..5.604 rows=33333.33 loops=3)
+                                                   Filter: (status = 'paid'::text)
+                                                   Rows Removed by Filter: 100000
+                                                   Buffers: shared hit=3054
+                                 ->  Hash  (cost=1006.00..1006.00 rows=50000 width=7) (actual time=5.189..5.189 rows=50000.00 loops=3)
+                                       Buckets: 65536  Batches: 1  Memory Usage: 2466kB
+                                       Buffers: shared hit=1518
+                                       ->  Seq Scan on customers c  (cost=0.00..1006.00 rows=50000 width=7) (actual time=0.005..2.146 rows=50000.00 loops=3)
+                                             Buffers: shared hit=1518
+ Planning:
+   Buffers: shared hit=371
+ Planning Time: 0.471 ms
+ Execution Time: 102.208 ms
+(47 rows)
+

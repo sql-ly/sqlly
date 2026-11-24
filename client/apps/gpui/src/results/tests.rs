@@ -1753,7 +1753,7 @@ fn start_query_clears_historical_banner(cx: &mut gpui::TestAppContext) {
     });
 }
 
-const PLAN_SCAN_XML: &str = r#"<ShowPlanXML><StmtSimple StatementText="SELECT *" StatementType="SELECT" StatementSubTreeCost="2"><RelOp NodeId="1" LogicalOp="Scan" PhysicalOp="Table Scan" EstimateRows="4" EstimatedTotalSubtreeCost="2"><Object Database="[db]" Schema="[dbo]" Table="[Orders]" /></RelOp></StmtSimple></ShowPlanXML>"#;
+const PLAN_SCAN_XML: &str = r#"<ShowPlanXML><StmtSimple StatementText="SELECT *" StatementType="SELECT" StatementSubTreeCost="2000"><RelOp NodeId="1" LogicalOp="Table Scan" PhysicalOp="Table Scan" EstimateRows="4000" EstimatedRowsRead="4000000" EstimatedTotalSubtreeCost="2000"><TableScan><Object Database="[db]" Schema="[dbo]" Table="[Orders]" /><Predicate><ScalarOperator ScalarString="[db].[dbo].[Orders].[Status]=(3)" /></Predicate></TableScan></RelOp></StmtSimple></ShowPlanXML>"#;
 
 fn sample_execution_plan() -> sqlly_services::plans::ExecutionPlan {
     sqlly_services::plans::parser::PlanParser::new()
@@ -1778,10 +1778,11 @@ fn execution_plan_capture_lifecycle(cx: &mut gpui::TestAppContext) {
     });
 
     view.update(cx, |view, cx| {
-        view.set_execution_plan_for_context(
+        view.set_execution_plan_with_schema(
             crate::execution_plan_view::PlanKind::Estimated,
             String::new(),
             vec![sample_execution_plan()],
+            None,
             cx,
         );
     });
@@ -1861,10 +1862,11 @@ fn start_query_hides_the_plan_pane(cx: &mut gpui::TestAppContext) {
     ensure_components_initialized(cx);
     let (view, cx) = cx.add_window_view(|_window, cx| ResultsView::new(cx));
     view.update(cx, |view, cx| {
-        view.set_execution_plan_for_context(
+        view.set_execution_plan_with_schema(
             crate::execution_plan_view::PlanKind::Estimated,
             String::new(),
             vec![sample_execution_plan()],
+            None,
             cx,
         );
         view.start_query(cx);
@@ -11252,4 +11254,92 @@ fn superseded_drill_leaves_no_file(cx: &mut gpui::TestAppContext) {
     view.update(cx, |v, cx| v.clear_spill_drill(0, cx));
     assert_eq!(drills_on_disk(), 0, "Clear removes it too");
     remove_test_spill(&spill_file);
+}
+
+/// A PostgreSQL plan larger than the pane analyses in place.
+fn wide_execution_plans() -> Vec<sqlly_services::plans::ExecutionPlan> {
+    let mut text = String::from(
+        "Append  (cost=0.00..6400.00 rows=640 width=4) (actual time=0.010..64.000 rows=640 loops=1)\n",
+    );
+    for table in 0..640 {
+        text.push_str(&format!(
+            "  ->  Seq Scan on t{table}  (cost=0.00..10.00 rows=1 width=4) (actual time=0.001..0.100 rows=1 loops=1)\n"
+        ));
+    }
+    text.push_str("Execution Time: 64.000 ms\n");
+    sqlly_services::plans::import_plan_document(&text)
+        .expect("the wide plan imports")
+        .plans
+}
+
+/// The Plan tab's finding count and the app's status line read the count
+/// again when a background analysis lands; before, they kept the previous
+/// plan's count.
+#[gpui::test]
+fn the_plan_finding_count_follows_a_background_analysis(cx: &mut gpui::TestAppContext) {
+    ensure_components_initialized(cx);
+    let (view, cx) = cx.add_window_view(|_window, cx| ResultsView::new(cx));
+    let analysed = std::rc::Rc::new(std::cell::Cell::new(0usize));
+    let seen = analysed.clone();
+    cx.update(|_window, cx| {
+        cx.subscribe(&view, move |_, event: &ResultsViewEvent, _| {
+            if matches!(
+                event,
+                ResultsViewEvent::ExecutionPlanAnalysed { failed: false }
+            ) {
+                seen.set(seen.get() + 1);
+            }
+        })
+        .detach();
+    });
+    view.update(cx, |view, cx| {
+        view.set_execution_plan_with_schema(
+            crate::execution_plan_view::PlanKind::Estimated,
+            String::new(),
+            vec![sample_execution_plan()],
+            None,
+            cx,
+        );
+    });
+    cx.run_until_parked();
+    assert_eq!(
+        analysed.get(),
+        1,
+        "a plan analysed in place announces itself too"
+    );
+    view.read_with(cx, |view, cx| {
+        assert_eq!(view.execution_plan_finding_count(cx), Some(1));
+    });
+    view.update(cx, |view, cx| {
+        view.set_imported_execution_plan(
+            crate::execution_plan_view::PlanKind::Actual,
+            "wide.txt".into(),
+            wide_execution_plans(),
+            cx,
+        );
+    });
+    view.read_with(cx, |view, cx| {
+        assert!(view.is_analysing_execution_plan(cx));
+        assert_eq!(
+            view.execution_plan_finding_count(cx),
+            Some(0),
+            "the previous plan's finding is not counted for the new one"
+        );
+    });
+    cx.run_until_parked();
+    assert_eq!(analysed.get(), 2);
+    view.read_with(cx, |view, cx| {
+        assert!(!view.is_analysing_execution_plan(cx));
+        let expected =
+            crate::execution_plan_view::BatchPlans::build(wide_execution_plans(), None, None)
+                .statements
+                .iter()
+                .map(|statement| statement.findings.len())
+                .sum::<usize>();
+        assert_eq!(view.execution_plan_finding_count(cx), Some(expected));
+        assert_eq!(
+            view.plan_chrome_caption(cx),
+            chrome_tab_caption(OutputPanelTab::Plan.label(), expected)
+        );
+    });
 }

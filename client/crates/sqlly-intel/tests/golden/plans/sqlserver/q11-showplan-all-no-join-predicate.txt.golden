@@ -1,0 +1,137 @@
+format: sqlserver-text (Certain)
+statements: 2
+
+== statement 1
+dialect: "SqlServer"
+estimated_rows: 18606.9
+source_format: "sqlserver-text"
+statement_text: "SELECT n.grp, COUNT(*) AS n FROM dbo.nostats2 n JOIN dbo.customers c ON c.customer_id = n.grp WHERE n.amt > 100 GROUP BY n.grp OPTION (RECOMPILE);"
+statement_type: "SELECT"
+total_subtree_cost: 1.044634
+warnings: [{TableScan={schema="dbo" table="nostats2"}}]
+operators: 5
+  #1 Compute Scalar [Compute Scalar]
+      estimated_cost: 1.044634
+      estimated_executions: 1
+      estimated_row_width: 15
+      estimated_rows: 18606.9
+      output_columns: ["n.grp", "Expr1003"]
+      output_list: ["n.grp", "Expr1003"]
+      properties: [{name="DEFINE" value="[Expr1003]=CONVERT_IMPLICIT(int,[Expr1006],0)"}, {name="Defined Values" value="[Expr1003]=CONVERT_IMPLICIT(int,[Expr1006],0)"}, {name="NodeId" value="2"}, {name="EstimateRows" value="18606.9"}]
+    #2 Hash Match [Aggregate]
+        estimated_cost: 1.044634
+        estimated_cpu: 0.300407
+        estimated_executions: 1
+        estimated_row_width: 15
+        estimated_rows: 18606.9
+        group_keys: ["n.grp"]
+        output_columns: ["n.grp", "Expr1006"]
+        output_list: ["n.grp", "Expr1006"]
+        properties: [{name="Defined Values" value="[Expr1006]=COUNT(*)"}, {name="NodeId" value="3"}, {name="EstimateRows" value="18606.9"}]
+      #3 Hash Match [Inner Join]
+          estimated_cost: 0.744226
+          estimated_cpu: 0.44217
+          estimated_executions: 1
+          estimated_row_width: 11
+          estimated_rows: 18606.9
+          join_predicate: "n.grp = c.customer_id"
+          join_type: "Inner"
+          output_columns: ["n.grp"]
+          output_list: ["n.grp"]
+          properties: [{name="NodeId" value="4"}, {name="EstimateRows" value="18606.9"}]
+        #4 Table Scan [Table Scan]
+            alias: "n"
+            database: "Shop"
+            estimated_cost: 0.072689
+            estimated_cpu: 0.022157
+            estimated_executions: 1
+            estimated_io: 0.050532
+            estimated_row_width: 20
+            estimated_rows: 18606.9
+            filter: "[Shop].[dbo].[nostats2].[amt] as [n].[amt]>(100.00)"
+            output_columns: ["n.grp"]
+            output_list: ["n.grp"]
+            properties: [{name="Defined Values" value="[n].[grp]"}, {name="NodeId" value="5"}, {name="EstimateRows" value="18606.9"}]
+            relation: "nostats2"
+            schema: "dbo"
+            warnings: [{TableScan={schema="dbo" table="nostats2"}}]
+        #5 Index Scan [Index Scan]
+            alias: "c"
+            database: "Shop"
+            estimated_cost: 0.219763
+            estimated_cpu: 0.055157
+            estimated_executions: 1
+            estimated_io: 0.164606
+            estimated_row_width: 11
+            estimated_rows: 50000
+            index_name: "IX_customers_email"
+            output_columns: ["c.customer_id"]
+            output_list: ["c.customer_id"]
+            properties: [{name="Defined Values" value="[c].[customer_id]"}, {name="NodeId" value="6"}, {name="EstimateRows" value="50000.0"}]
+            relation: "customers"
+            schema: "dbo"
+
+== statement 2
+dialect: "SqlServer"
+estimated_rows: 3
+source_format: "sqlserver-text"
+statement_text: "SELECT TOP (3) c.customer_id, d.customer_id FROM dbo.customers c, dbo.customers d WHERE c.customer_id < 3 AND d.customer_id < 3;"
+statement_type: "SELECT"
+total_subtree_cost: 0.006687
+warnings: ["NoJoinPredicate"]
+operators: 4
+  #1 Top [Top]
+      estimated_cost: 0.006687
+      estimated_cpu: 0
+      estimated_executions: 1
+      estimated_row_width: 15
+      estimated_rows: 3
+      output_columns: ["c.customer_id", "d.customer_id"]
+      output_list: ["c.customer_id", "d.customer_id"]
+      properties: [{name="TOP EXPRESSION" value="(3)"}, {name="NodeId" value="8"}, {name="EstimateRows" value="3.0"}]
+    #2 Nested Loops [Inner Join]
+        estimated_cost: 0.006686
+        estimated_cpu: 0.000017
+        estimated_executions: 1
+        estimated_row_width: 15
+        estimated_rows: 3
+        extra: ["Inner Join"]
+        join_type: "Inner"
+        output_columns: ["c.customer_id", "d.customer_id"]
+        output_list: ["c.customer_id", "d.customer_id"]
+        properties: [{name="NodeId" value="9"}, {name="EstimateRows" value="3.0"}, {name="Warnings" value="NO JOIN PREDICATE"}]
+        warnings: ["NoJoinPredicate"]
+      #3 Clustered Index Seek [Clustered Index Seek]
+          alias: "d"
+          database: "Shop"
+          estimated_cost: 0.003284
+          estimated_cpu: 0.000159
+          estimated_executions: 1
+          estimated_io: 0.003125
+          estimated_row_width: 11
+          estimated_rows: 1.5
+          extra: ["ORDERED FORWARD"]
+          index_cond: "[d].[customer_id] < (3)"
+          index_name: "PK__customer__CD65CB850EC2D984"
+          output_columns: ["d.customer_id"]
+          output_list: ["d.customer_id"]
+          properties: [{name="Defined Values" value="[d].[customer_id]"}, {name="NodeId" value="10"}, {name="EstimateRows" value="1.5"}]
+          relation: "customers"
+          schema: "dbo"
+      #4 Clustered Index Seek [Clustered Index Seek]
+          alias: "c"
+          database: "Shop"
+          estimated_cost: 0.003404
+          estimated_cpu: 0.000159
+          estimated_executions: 1.75
+          estimated_io: 0.003125
+          estimated_row_width: 11
+          estimated_rows: 2
+          extra: ["ORDERED FORWARD"]
+          index_cond: "[c].[customer_id] < (3)"
+          index_name: "PK__customer__CD65CB850EC2D984"
+          output_columns: ["c.customer_id"]
+          output_list: ["c.customer_id"]
+          properties: [{name="Defined Values" value="[c].[customer_id]"}, {name="NodeId" value="11"}, {name="EstimateRows" value="2.0"}]
+          relation: "customers"
+          schema: "dbo"

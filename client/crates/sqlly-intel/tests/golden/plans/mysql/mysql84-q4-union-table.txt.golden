@@ -1,0 +1,35 @@
+format: mysql-table (Certain)
+statements: 1
+
+== statement 1
+dialect: "MySql"
+estimated_rows: 40131
+source_format: "mysql-table"
+statement_type: "EXPLAIN"
+operators: 5
+  #1 Union result [Access: ALL]
+      extra: ["Using temporary"]
+      output_list: ["<union1,2>"]
+      properties: [{name="select_id" value="3"}, {name="select_type" value="UNION RESULT"}]
+    #2 Query Block [Query Block]
+        properties: [{name="select_id" value="1"}, {name="select_type" value="PRIMARY"}]
+        subplan_name: "Select #1"
+      #3 Table: customers [Access: ALL]
+          estimated_rows: 4973
+          estimated_rows_read: 4973
+          extra: ["Using where"]
+          filtered_percent: 10
+          output_list: ["customers"]
+          relation: "customers"
+          warnings: [{TableScan={table="customers"}}]
+    #4 Query Block [Query Block]
+        properties: [{name="select_id" value="2"}, {name="select_type" value="UNION"}]
+        subplan_name: "Select #2"
+      #5 Table: orders [Access: ALL]
+          estimated_rows: 40131
+          estimated_rows_read: 40131
+          extra: ["Using where"]
+          filtered_percent: 33.33
+          output_list: ["orders"]
+          relation: "orders"
+          warnings: [{TableScan={table="orders"}}]

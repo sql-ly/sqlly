@@ -386,6 +386,21 @@ pub enum CredentialAuth {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         token: Option<String>,
     },
+    /// PostgreSQL 18 OAuth sign-in. `secret` is the client secret for the
+    /// device-code flow, or the token itself for `flow: bearer_token`.
+    PostgresOauth {
+        username: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        issuer: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        client_id: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        scope: Option<String>,
+        #[serde(default)]
+        flow: crate::connection::PgOAuthFlow,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        secret: Option<String>,
+    },
     /// No sign-in (SQLite / DuckDB files).
     None,
 }
@@ -1021,6 +1036,7 @@ fn authentication_supported(engine: DatabaseType, auth: &AuthenticationType) -> 
             engine.connection_kind(),
             ConnectionKind::PostgresWire | ConnectionKind::MySqlWire
         ),
+        AuthenticationType::PostgresOAuth { .. } => engine == DatabaseType::Postgres,
     }
 }
 
@@ -1148,6 +1164,30 @@ fn plan_connection(
         Some(CredentialAuth::AuthToken { token }) => Some(AuthenticationType::AuthToken {
             secret_ref: in_memory(token.as_deref().map(str::trim).unwrap_or("")),
         }),
+        Some(CredentialAuth::PostgresOauth {
+            username,
+            issuer,
+            client_id,
+            scope,
+            flow,
+            secret,
+        }) => {
+            if username.trim().is_empty() {
+                problems.push(format!("{at}: postgres-oauth needs a username"));
+            }
+            let client_id = non_empty(client_id).unwrap_or_default();
+            if *flow == crate::connection::PgOAuthFlow::DeviceCode && client_id.is_empty() {
+                problems.push(format!("{at}: postgres-oauth needs a client_id"));
+            }
+            Some(AuthenticationType::PostgresOAuth {
+                username: username.trim().to_string(),
+                issuer: non_empty(issuer).unwrap_or_default(),
+                client_id,
+                scope: non_empty(scope).unwrap_or_default(),
+                flow: *flow,
+                secret_ref: in_memory(secret.as_deref().map(str::trim).unwrap_or("")),
+            })
+        }
     };
     if let Some(auth) = auth {
         if !authentication_supported(engine, &auth) {
@@ -1156,10 +1196,7 @@ fn plan_connection(
                 engine.display_name()
             ));
         }
-        if matches!(
-            auth,
-            AuthenticationType::AwsRdsIam { .. } | AuthenticationType::GcpCloudSqlIam { .. }
-        ) {
+        if auth.requires_tls() {
             profile.encrypt = true;
         }
         profile.authentication = auth;
@@ -1524,6 +1561,28 @@ pub fn export_connection(
         AuthenticationType::AuthToken { secret_ref } => CredentialAuth::AuthToken {
             token: export_secret(secret_ref, lookup),
         },
+        AuthenticationType::PostgresOAuth {
+            username,
+            issuer,
+            client_id,
+            scope,
+            flow,
+            secret_ref,
+        } => {
+            let present = |value: &String| (!value.is_empty()).then(|| value.clone());
+            CredentialAuth::PostgresOauth {
+                username: username.clone(),
+                issuer: present(issuer),
+                client_id: present(client_id),
+                scope: present(scope),
+                flow: *flow,
+                secret: if secret_ref.is_empty_in_memory() {
+                    None
+                } else {
+                    export_secret(secret_ref, lookup)
+                },
+            }
+        }
     };
     let tls = if profile.tls_mode == TlsMode::Legacy {
         CredentialTls {

@@ -1,0 +1,72 @@
+{
+  "query_optimization": {
+    "r_total_time_ms": 0.086233519
+  },
+  "query_block": {
+    "select_id": 1,
+    "cost": 18.54899888,
+    "r_loops": 1,
+    "r_total_time_ms": 3.419846382,
+    "nested_loop": [
+      {
+        "table": {
+          "table_name": "c",
+          "access_type": "ALL",
+          "loops": 1,
+          "r_loops": 1,
+          "rows": 4989,
+          "r_rows": 5000,
+          "cost": 0.8420126,
+          "r_table_time_ms": 0.232913818,
+          "r_other_time_ms": 0.178715843,
+          "r_engine_stats": {
+            "pages_accessed": 22
+          },
+          "filtered": 100,
+          "r_total_filtered": 25,
+          "attached_condition": "c.country in ('US','DE')",
+          "r_filtered": 25
+        }
+      },
+      {
+        "table": {
+          "table_name": "o",
+          "access_type": "ref",
+          "possible_keys": ["orders_customer_idx", "orders_placed_idx"],
+          "key": "orders_customer_idx",
+          "key_length": "4",
+          "used_key_parts": ["customer_id"],
+          "ref": ["shop.c.id"],
+          "rowid_filter": {
+            "range": {
+              "key": "orders_placed_idx",
+              "used_key_parts": ["placed_at"]
+            },
+            "rows": 5440,
+            "selectivity_pct": 13.55560539,
+            "r_rows": 5440,
+            "r_lookups": 10000,
+            "r_selectivity_pct": 13.6,
+            "r_buffer_size": 2720,
+            "r_filling_time_ms": 0.652333656
+          },
+          "loops": 4989,
+          "r_loops": 1250,
+          "rows": 8,
+          "r_index_rows": 8,
+          "r_rows": 1.088,
+          "cost": 17.70698628,
+          "r_table_time_ms": 2.836916128,
+          "r_other_time_ms": 0.068153641,
+          "r_engine_stats": {
+            "pages_accessed": 5263
+          },
+          "filtered": 13.55560493,
+          "r_total_filtered": 13.6,
+          "attached_condition": "trigcond(o.placed_at > '2023-01-25')",
+          "r_filtered": 100
+        }
+      }
+    ]
+  }
+}

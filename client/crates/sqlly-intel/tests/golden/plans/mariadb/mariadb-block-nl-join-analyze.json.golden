@@ -1,0 +1,64 @@
+format: mariadb-json (Certain)
+statements: 1
+
+== statement 1
+dialect: "MariaDb"
+estimated_rows: 4989
+execution_time_ms: 197.456803
+has_actuals: yes
+planning_time_ms: 0.054365
+source_format: "mariadb-json"
+statement_type: "ANALYZE"
+total_subtree_cost: 927.924386
+operators: 4
+  #1 Query Block [Query Block]
+      actual_self_time_ms: 197.27892
+      actual_time_ms: 197.456803
+      estimated_cost: 927.924386
+      loops: 1
+      output_list: ["Actual time: 197.4568027 ms"]
+      properties: [{name="cost" value="927.9243858"}, {name="r_loops" value="1"}, {name="r_total_time_ms" value="197.4568027"}, {name="select_id" value="1"}]
+      subplan_name: "Select #1"
+    #2 Table: p [Access: ALL]
+        actual_rebinds: 1
+        actual_rows: 2000
+        actual_rows_total: 2000
+        actual_self_time_ms: 0.177883
+        actual_time_ms: 0.177883
+        buffers: {logical_reads=9}
+        estimated_cost: 0.343693
+        estimated_executions: 1
+        estimated_rows: 2000
+        estimated_rows_read: 2000
+        filter: "p.price > 100"
+        filtered_percent: 100
+        loops: 1
+        output_list: ["p", "Condition: p.price > 100", "Actual time: 0.107562775 ms", "Actual filtered: 80%"]
+        properties: [{name="cost" value="0.3436932"}, {name="loops" value="1"}, {name="r_engine_stats.pages_accessed" value="9"}, {name="r_filtered" value="80"}, {name="r_other_time_ms" value="0.070319893"}, {name="r_table_time_ms" value="0.107562775"}, {name="r_total_filtered" value="80"}]
+        relation: "p"
+        rows_read: 2000
+        rows_removed_by_filter: 400
+        warnings: [{TableScan={table="p"}}]
+    #3 Block nested loop join [Block nested loop join]
+        join_predicate: "c.`name` = p.`name`"
+        loops: 1600
+        output_list: ["Condition: c.`name` = p.`name`"]
+        properties: [{name="attached_condition" value="c.`name` = p.`name`"}, {name="buffer_size" value="256KiB"}, {name="buffer_type" value="flat"}, {name="join_type" value="BNL"}, {name="r_effective_rows" value="5000"}, {name="r_filtered" value="0"}, {name="r_loops" value="1600"}, {name="r_other_time_ms" value="123.7942565"}, {name="r_unpack_time_ms" value="73.0368325"}]
+      #4 Table: c [Access: ALL]
+          actual_rebinds: 1
+          actual_rows: 5000
+          actual_rows_total: 5000
+          actual_self_time_ms: 0.444415
+          actual_time_ms: 0.444415
+          buffers: {logical_reads=22}
+          estimated_cost: 927.580693
+          estimated_executions: 2000
+          estimated_rows: 4989
+          estimated_rows_read: 4989
+          filtered_percent: 100
+          loops: 1
+          output_list: ["c", "Actual time: 0.394466274 ms", "Actual filtered: 100%"]
+          properties: [{name="cost" value="927.5806926"}, {name="loops" value="2000"}, {name="r_engine_stats.pages_accessed" value="22"}, {name="r_filtered" value="100"}, {name="r_other_time_ms" value="0.049948787"}, {name="r_table_time_ms" value="0.394466274"}, {name="r_total_filtered" value="100"}]
+          relation: "c"
+          rows_read: 5000
+          warnings: [{TableScan={table="c"}}]

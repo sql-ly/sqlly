@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360" role="img" aria-labelledby="funnel-title funnel-desc" font-family="&apos;Noto Sans&apos;, -apple-system, &apos;Segoe UI&apos;, &apos;Helvetica Neue&apos;, Arial, sans-serif">
+<title id="funnel-title">funnel chart</title>
+<desc id="funnel-desc">funnel · stage, count · 4</desc>
+<rect width="640" height="360" fill="#ffffff"/>
+<text x="12" y="26" font-size="14" fill="#0f2544" font-weight="600">funnel chart</text>
+<rect x="209.12" y="38" width="418.88" height="44" rx="3" fill="#1a5fb4"/>
+<text x="12" y="63.68" font-size="10.5" fill="#0f2544">Visited</text>
+<text x="418.56" y="63.5" font-size="10" fill="#ffffff" text-anchor="middle">12K · 100.0%</text>
+<rect x="345.26" y="86" width="146.61" height="44" rx="3" fill="#3572bd"/>
+<text x="12" y="111.68" font-size="10.5" fill="#0f2544">Signed up</text>
+<text x="418.56" y="111.5" font-size="10" fill="#ffffff" text-anchor="middle">4.2K · 35.0%</text>
+<rect x="378.42" y="134" width="80.29" height="44" rx="3" fill="#5185c6"/>
+<text x="12" y="159.68" font-size="10.5" fill="#0f2544">Activated</text>
+<text x="418.56" y="159.5" font-size="10" fill="#ffffff" text-anchor="middle">2.3K · 19.2%</text>
+<rect x="407.39" y="182" width="22.34" height="44" rx="3" fill="#6c99cf"/>
+<text x="12" y="207.68" font-size="10.5" fill="#0f2544">Paid</text>
+<text x="433.73" y="207.5" font-size="10" fill="#3c5a85">640 · 5.3%</text>
+</svg>

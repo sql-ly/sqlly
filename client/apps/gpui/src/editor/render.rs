@@ -86,28 +86,31 @@ impl Render for SqlEditor {
             .on_action(cx.listener(Self::handle_dismiss))
             .on_action(cx.listener(Self::handle_open_context_menu))
             .on_action(cx.listener(Self::handle_trigger_completions))
-            .on_action(cx.listener(Self::handle_trigger_value_lookup))
-            .on_action(cx.listener(Self::handle_refresh_dates))
-            .on_action(cx.listener(Self::handle_trigger_ai_completion))
+            .on_action(cx.listener(Self::sql_only(Self::handle_trigger_value_lookup)))
+            .on_action(cx.listener(Self::sql_only(Self::handle_refresh_dates)))
+            .on_action(cx.listener(Self::sql_only(Self::handle_trigger_ai_completion)))
             .on_action(cx.listener(Self::handle_fold))
             .on_action(cx.listener(Self::handle_unfold))
             .on_action(cx.listener(Self::handle_fold_all))
             .on_action(cx.listener(Self::handle_unfold_all))
-            .on_action(cx.listener(Self::handle_capture_intellisense_feedback))
-            .on_action(cx.listener(Self::handle_insert_distinct_values_as_in_list))
-            .on_action(cx.listener(Self::handle_paste_as_in_list))
-            .on_action(cx.listener(Self::handle_convert_delimited_list))
-            .on_action(cx.listener(Self::handle_validate))
-            .on_action(cx.listener(Self::handle_format_sql))
-            .on_action(cx.listener(Self::handle_format_document))
-            .on_action(cx.listener(Self::handle_minify_sql))
+            .on_action(cx.listener(Self::sql_only(Self::handle_capture_intellisense_feedback)))
+            .on_action(cx.listener(Self::sql_only(
+                Self::handle_insert_distinct_values_as_in_list,
+            )))
+            .on_action(cx.listener(Self::sql_only(Self::handle_paste_as_in_list)))
+            .on_action(cx.listener(Self::sql_only(Self::handle_convert_delimited_list)))
+            .on_action(cx.listener(Self::sql_only(Self::handle_validate)))
+            .on_action(cx.listener(Self::sql_only(Self::handle_format_sql)))
+            .on_action(cx.listener(Self::sql_only(Self::handle_format_document)))
+            .on_action(cx.listener(Self::sql_only(Self::handle_minify_sql)))
             .on_action(cx.listener(Self::handle_page_down))
             .on_action(cx.listener(Self::handle_page_up))
             .on_action(cx.listener(Self::handle_select_page_down))
             .on_action(cx.listener(Self::handle_select_page_up))
-            .on_action(cx.listener(Self::handle_toggle_line_comment))
-            .on_action(cx.listener(Self::handle_add_line_comment))
-            .on_action(cx.listener(Self::handle_remove_line_comment))
+            .on_action(cx.listener(Self::sql_only(Self::handle_toggle_line_comment)))
+            .on_action(cx.listener(Self::sql_only(Self::handle_add_line_comment)))
+            .on_action(cx.listener(Self::sql_only(Self::handle_remove_line_comment)))
+            .on_action(cx.listener(Self::sql_only(Self::handle_toggle_block_comment)))
             .on_action(cx.listener(Self::handle_move_word_left))
             .on_action(cx.listener(Self::handle_select_word_left))
             .on_action(cx.listener(Self::handle_move_word_right))
@@ -141,7 +144,7 @@ impl Render for SqlEditor {
             .on_action(cx.listener(Self::handle_column_select_down))
             .on_action(cx.listener(Self::handle_go_to_line))
             .on_action(cx.listener(Self::handle_go_to_next_error))
-            .on_action(cx.listener(Self::handle_qualify_identifier))
+            .on_action(cx.listener(Self::sql_only(Self::handle_qualify_identifier)))
             .on_action(cx.listener(Self::handle_move_line_up))
             .on_action(cx.listener(Self::handle_move_line_down))
             .on_action(cx.listener(Self::handle_duplicate_line))
@@ -771,6 +774,16 @@ impl Render for SqlEditor {
             })
             .when_some(context_overlay, |container, overlay| {
                 container.child(overlay)
+            })
+            // Over the window, not clipped to the editor: a short editor (a
+            // notebook cell) would cut the card down to its first line.
+            .when(self.hover_info.is_some(), |container| {
+                container.child(
+                    deferred(super::element::HoverCardLayer {
+                        editor: cx.entity(),
+                    })
+                    .with_priority(1),
+                )
             })
             .when_some(format_overlay, |container, overlay| {
                 container.child(overlay)

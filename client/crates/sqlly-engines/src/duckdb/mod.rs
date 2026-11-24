@@ -55,6 +55,8 @@ use tokio::sync::{mpsc, oneshot};
 
 pub use crate::driver::{ConnectionService, SqlTransport};
 
+pub mod local_store;
+
 /// Items streamed from the connection thread while a statement batch runs.
 #[derive(Debug)]
 enum Item {
@@ -778,8 +780,7 @@ fn run_statement(
     text: &str,
     items: &mpsc::Sender<Item>,
 ) -> Result<(), ()> {
-    let mut stmt = conn.prepare(text).map_err(|e| report(items, e))?;
-    let changed = stmt.execute([]).map_err(|e| report(items, e))?;
+    let (stmt, changed) = prepare_and_execute(conn, text).map_err(|e| report(items, e))?;
     let schema = stmt.schema();
     if !is_result_set(&schema, text) {
         let affected = affected_from_report(&stmt).unwrap_or(changed as u64);
@@ -807,6 +808,72 @@ fn run_statement(
             }
         }
     }
+}
+
+/// Prepare and execute one statement without parameters. The DuckDB crate
+/// refuses to decode `VARIANT` results (DuckDB 2.0 returns them from
+/// `duckdb_settings()` and `::VARIANT` casts), so a query whose result has
+/// one is run again with those columns cast to text, under their own names.
+pub(crate) fn prepare_and_execute<'c>(
+    conn: &'c ::duckdb::Connection,
+    text: &str,
+) -> ::duckdb::Result<(::duckdb::Statement<'c>, usize)> {
+    let mut stmt = conn.prepare(text)?;
+    match stmt.execute([]) {
+        Ok(changed) => Ok((stmt, changed)),
+        Err(error) if is_variant_refusal(&error) && starts_with_query_keyword(text) => {
+            let Some(rewritten) = variant_as_text(conn, text) else {
+                return Err(error);
+            };
+            let mut stmt = conn.prepare(&rewritten)?;
+            let changed = stmt.execute([])?;
+            Ok((stmt, changed))
+        }
+        Err(error) => Err(error),
+    }
+}
+
+fn is_variant_refusal(error: &::duckdb::Error) -> bool {
+    matches!(
+        error,
+        ::duckdb::Error::FromSqlConversionFailure(_, ::duckdb::types::Type::Variant, _)
+    )
+}
+
+/// `text` wrapped so every column whose type involves `VARIANT` comes back
+/// as `VARCHAR`: the inner columns are renamed by position (names may
+/// repeat) and selected back under their original names.
+fn variant_as_text(conn: &::duckdb::Connection, text: &str) -> Option<String> {
+    let inner = text.trim().trim_end_matches(';').trim_end();
+    let mut describe = conn.prepare(&format!("DESCRIBE {inner}\n")).ok()?;
+    let columns: Vec<(String, String)> = describe
+        .query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })
+        .ok()?
+        .collect::<Result<_, _>>()
+        .ok()?;
+    if columns.is_empty() {
+        return None;
+    }
+    let quote = |name: &str| format!("\"{}\"", name.replace('"', "\"\""));
+    let aliases: Vec<String> = (1..=columns.len()).map(|i| format!("c{i}")).collect();
+    let select: Vec<String> = columns
+        .iter()
+        .zip(&aliases)
+        .map(|((name, ty), alias)| {
+            if ty.to_ascii_uppercase().contains("VARIANT") {
+                format!("CAST({alias} AS VARCHAR) AS {}", quote(name))
+            } else {
+                format!("{alias} AS {}", quote(name))
+            }
+        })
+        .collect();
+    Some(format!(
+        "SELECT {} FROM ({inner}\n) AS _sqlly_variant({})",
+        select.join(", "),
+        aliases.join(", ")
+    ))
 }
 
 fn report(items: &mpsc::Sender<Item>, error: ::duckdb::Error) {
@@ -991,10 +1058,15 @@ fn run_query_rows(
     sql: &str,
     params: &[SqlParam],
 ) -> Result<Vec<MaterializedResultSet>, String> {
-    let mut stmt = conn.prepare(sql).map_err(|e| e.to_string())?;
-    let values = params.iter().map(param_to_value).collect::<Vec<_>>();
-    stmt.execute(::duckdb::params_from_iter(values))
-        .map_err(|e| e.to_string())?;
+    let stmt = if params.is_empty() {
+        prepare_and_execute(conn, sql).map_err(|e| e.to_string())?.0
+    } else {
+        let mut stmt = conn.prepare(sql).map_err(|e| e.to_string())?;
+        let values = params.iter().map(param_to_value).collect::<Vec<_>>();
+        stmt.execute(::duckdb::params_from_iter(values))
+            .map_err(|e| e.to_string())?;
+        stmt
+    };
     let (columns, hints) = describe_columns(&stmt);
     let options = format_options();
     let mut rows = Vec::new();
@@ -1717,6 +1789,37 @@ mod tests {
             !REGISTRY.lock().files.contains_key(&registry_key(&path)),
             "a closed instance removes its own registry entry"
         );
+    }
+
+    #[tokio::test]
+    async fn variant_columns_convert_to_values() {
+        let (columns, row) = scalar_row(
+            "SELECT 42::VARIANT AS n, 'hi'::VARIANT AS s, NULL::VARIANT AS z, \
+             [1, 2]::VARIANT AS l, {'a': 1}::VARIANT AS o",
+        )
+        .await;
+        let names: Vec<&str> = columns.iter().map(|c| c.name.as_str()).collect();
+        assert_eq!(names, ["n", "s", "z", "l", "o"]);
+        assert_eq!(row[0], CellValue::String("42".into()));
+        assert_eq!(row[1], CellValue::String("hi".into()));
+        assert_eq!(row[2], CellValue::Null);
+        assert!(matches!(&row[3], CellValue::String(s) if s.contains('1') && s.contains('2')));
+        assert!(matches!(&row[4], CellValue::String(s) if s.contains('a')));
+    }
+
+    #[tokio::test]
+    async fn duckdb_settings_can_be_selected() {
+        let client = open_client(&memory_profile()).await.unwrap();
+        let sets = query_rows_on_client(
+            &client,
+            "SELECT * FROM duckdb_settings() WHERE name = 'threads';",
+            &[],
+        )
+        .await
+        .unwrap();
+        assert_eq!(sets[0].rows.len(), 1);
+        assert_eq!(sets[0].rows[0][0], CellValue::String("threads".into()));
+        assert!(!matches!(sets[0].rows[0][1], CellValue::Null));
     }
 
     #[tokio::test]

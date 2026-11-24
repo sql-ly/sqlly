@@ -1,0 +1,115 @@
+format: trino-text (Certain)
+statements: 1
+
+== statement 1
+estimated_rows: 25
+notes: ["Trino version: 484"]
+source_format: "trino-text"
+statement_type: "EXPLAIN"
+operators: 19
+  #1 Output [Output]
+      estimated_rows: 25
+      output_columns: ["name_5:varchar(25)", "count:bigint", "sum:double"]
+      properties: [{name="columnNames" value="[name, n, revenue]"}, {name="Fragment" value="0 [SINGLE]"}, {name="Fragment Output layout" value="[name_5, count, sum]"}, {name="Fragment Output partitioning" value="SINGLE []"}, {name="Estimates" value="{rows: 25 (752B), cpu: 0, memory: 0B, network: 0B}"}, {name="name" value="name_5"}, {name="n" value="count"}, {name="revenue" value="sum"}]
+    #2 RemoteMerge [RemoteMerge]
+        output_columns: ["name_5:varchar(25)", "count:bigint", "sum:double"]
+        properties: [{name="sourceFragmentIds" value="[1]"}]
+      #3 LocalMerge [LocalMerge]
+          estimated_rows: 25
+          output_columns: ["name_5:varchar(25)", "count:bigint", "sum:double"]
+          properties: [{name="Fragment" value="1 [ROUND_ROBIN]"}, {name="Fragment Output layout" value="[name_5, count, sum]"}, {name="Fragment Output partitioning" value="SINGLE []"}, {name="Estimates" value="{rows: 25 (752B), cpu: 0, memory: 0B, network: 0B}"}]
+          sort_keys: ["sum DESC NULLS LAST"]
+        #4 PartialSort [PartialSort]
+            estimated_rows: 25
+            output_columns: ["name_5:varchar(25)", "count:bigint", "sum:double"]
+            properties: [{name="Estimates" value="{rows: 25 (752B), cpu: ?, memory: ?, network: ?}"}]
+            sort_keys: ["sum DESC NULLS LAST"]
+          #5 RemoteSource [RemoteSource]
+              output_columns: ["name_5:varchar(25)", "count:bigint", "sum:double"]
+              properties: [{name="sourceFragmentIds" value="[2]"}]
+            #6 Aggregate [Aggregate]
+                estimated_cpu: 132190
+                estimated_rows: 25
+                group_keys: ["name_5"]
+                output_columns: ["name_5:varchar(25)", "count:bigint", "sum:double"]
+                properties: [{name="type" value="FINAL"}, {name="Fragment" value="2 [HASH]"}, {name="Fragment Output layout" value="[name_5, count, sum]"}, {name="Fragment Output partitioning" value="ROUND_ROBIN []"}, {name="Estimates" value="{rows: 25 (752B), cpu: 132.19k, memory: 752B, network: 0B}"}, {name="count" value="count(count_7)"}, {name="sum" value="sum(sum_8)"}]
+              #7 LocalExchange [LocalExchange]
+                  estimated_cpu: 132190
+                  estimated_rows: 4500
+                  output_columns: ["name_5:varchar(25)", "count_7:bigint", "sum_8:double"]
+                  properties: [{name="partitioning" value="HASH"}, {name="arguments" value="[name_5::varchar(25)]"}, {name="Estimates" value="{rows: 4500 (132.19kB), cpu: 132.19k, memory: 0B, network: 0B}"}]
+                #8 RemoteSource [RemoteSource]
+                    output_columns: ["name_5:varchar(25)", "count_7:bigint", "sum_8:double"]
+                    properties: [{name="sourceFragmentIds" value="[3]"}]
+                  #9 Aggregate [Aggregate]
+                      estimated_rows: 4500
+                      group_keys: ["name_5"]
+                      output_columns: ["name_5:varchar(25)", "count_7:bigint", "sum_8:double"]
+                      properties: [{name="type" value="INTERMEDIATE"}, {name="Fragment" value="3 [tpch:orders:15000]"}, {name="Fragment Output layout" value="[name_5, count_7, sum_8]"}, {name="Fragment Output partitioning" value="HASH [name_5]"}, {name="Estimates" value="{rows: 4500 (132.19kB), cpu: ?, memory: ?, network: ?}"}, {name="count_7" value="count(count_7)"}, {name="sum_8" value="sum(sum_8)"}]
+                    #10 InnerJoin [InnerJoin]
+                        estimated_cpu: 533870
+                        estimated_rows: 4500
+                        join_predicate: "custkey_1 = custkey"
+                        join_type: "Inner"
+                        output_columns: ["count_7:bigint", "sum_8:double", "name_5:varchar(25)"]
+                        output_list: ["Condition: custkey_1 = custkey"]
+                        properties: [{name="distribution" value="REPLICATED"}, {name="Estimates" value="{rows: 4500 (132.19kB), cpu: 533.87k, memory: 6.18kB, network: 0B}"}, {name="Distribution" value="REPLICATED"}, {name="dynamicFilterAssignments" value="{custkey -> #df_546}"}]
+                      #11 Aggregate [Aggregate]
+                          estimated_rows: 15000
+                          group_keys: ["custkey_1"]
+                          output_columns: ["custkey_1:bigint", "count_7:bigint", "sum_8:double"]
+                          properties: [{name="type" value="PARTIAL"}, {name="Estimates" value="{rows: 15000 (395.51kB), cpu: ?, memory: ?, network: ?}"}, {name="count_7" value="count(*)"}, {name="sum_8" value="sum(totalprice)"}]
+                        #12 ScanFilter [ScanFilter]
+                            database: "tpch"
+                            estimated_cpu: 263670
+                            estimated_rows: 15000
+                            estimated_rows_read: 15000
+                            output_columns: ["custkey_1:bigint", "totalprice:double"]
+                            output_list: ["orders"]
+                            properties: [{name="table" value="tpch:tiny:orders"}, {name="dynamicFilters" value="{custkey_1 = #df_546}"}, {name="Estimates" value="{rows: 15000 (263.67kB), cpu: 263.67k, memory: 0B, network: 0B}/{rows: 15000 (263.67kB), cpu: 263.67k, memory: 0B, network: 0B}"}, {name="totalprice" value="tpch:totalprice"}, {name="custkey_1" value="tpch:custkey"}, {name="tpch:orderstatus" value=":: [[F], [O], [P]]"}]
+                            relation: "orders"
+                            schema: "tiny"
+                      #13 LocalExchange [LocalExchange]
+                          estimated_cpu: 6180
+                          estimated_rows: 300
+                          output_columns: ["custkey:bigint", "name_5:varchar(25)"]
+                          properties: [{name="partitioning" value="HASH"}, {name="arguments" value="[custkey::bigint]"}, {name="Estimates" value="{rows: 300 (6.18kB), cpu: 6.18k, memory: 0B, network: 0B}"}]
+                        #14 RemoteSource [RemoteSource]
+                            output_columns: ["custkey:bigint", "name_5:varchar(25)"]
+                            properties: [{name="sourceFragmentIds" value="[4]"}]
+                          #15 InnerJoin [InnerJoin]
+                              estimated_cpu: 11960
+                              estimated_rows: 300
+                              join_predicate: "nationkey = nationkey_4"
+                              join_type: "Inner"
+                              output_columns: ["custkey:bigint", "name_5:varchar(25)"]
+                              output_list: ["Condition: nationkey = nationkey_4"]
+                              properties: [{name="distribution" value="REPLICATED"}, {name="Fragment" value="4 [SOURCE]"}, {name="Fragment Output layout" value="[custkey, name_5]"}, {name="Fragment Output partitioning" value="BROADCAST []"}, {name="Estimates" value="{rows: 300 (6.18kB), cpu: 11.96k, memory: 527B, network: 0B}"}, {name="Distribution" value="REPLICATED"}, {name="dynamicFilterAssignments" value="{nationkey_4 -> #df_548}"}]
+                            #16 ScanFilterProject [ScanFilterProject]
+                                database: "tpch"
+                                estimated_cpu: 5270
+                                estimated_rows: 300
+                                estimated_rows_read: 1500
+                                filter: "mktsegment = varchar(10) 'BUILDING'"
+                                output_columns: ["custkey:bigint", "nationkey:bigint"]
+                                output_list: ["customer", "Filter: mktsegment = varchar(10) 'BUILDING'"]
+                                properties: [{name="table" value="tpch:tiny:customer"}, {name="dynamicFilters" value="{nationkey = #df_548}"}, {name="Estimates" value="{rows: 1500 (26.37kB), cpu: 33.74k, memory: 0B, network: 0B}/{rows: 300 (5.27kB), cpu: 33.74k, memory: 0B, network: 0B}/{rows: 300 (5.27kB), cpu: 5.27k, memory:..."}, {name="mktsegment" value="tpch:mktsegment"}, {name="nationkey" value="tpch:nationkey"}, {name="custkey" value="tpch:custkey"}]
+                                relation: "customer"
+                                schema: "tiny"
+                            #17 LocalExchange [LocalExchange]
+                                estimated_rows: 25
+                                output_columns: ["nationkey_4:bigint", "name_5:varchar(25)"]
+                                properties: [{name="partitioning" value="SINGLE"}, {name="Estimates" value="{rows: 25 (527B), cpu: 0, memory: 0B, network: 0B}"}]
+                              #18 RemoteSource [RemoteSource]
+                                  output_columns: ["nationkey_4:bigint", "name_5:varchar(25)"]
+                                  properties: [{name="sourceFragmentIds" value="[5]"}]
+                                #19 TableScan [TableScan]
+                                    database: "tpch"
+                                    estimated_cpu: 527
+                                    estimated_rows: 25
+                                    output_columns: ["nationkey_4:bigint", "name_5:varchar(25)"]
+                                    output_list: ["nation"]
+                                    properties: [{name="table" value="tpch:tiny:nation"}, {name="Fragment" value="5 [SOURCE]"}, {name="Fragment Output layout" value="[nationkey_4, name_5]"}, {name="Fragment Output partitioning" value="BROADCAST []"}, {name="Estimates" value="{rows: 25 (527B), cpu: 527, memory: 0B, network: 0B}"}, {name="nationkey_4" value="tpch:nationkey"}, {name="name_5" value="tpch:name"}]
+                                    relation: "nation"
+                                    schema: "tiny"
+                                    warnings: [{TableScan={schema="tiny" table="nation"}}]

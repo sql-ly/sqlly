@@ -277,6 +277,15 @@ pub fn refresh(cx: &mut gpui::App) {
 pub(crate) struct LocalizationChanged;
 impl gpui::Global for LocalizationChanged {}
 
+/// Run `callback` after every language or override change, from Settings or
+/// a host command. The browser shell uses it to load the language's font.
+pub fn observe_localization(
+    cx: &mut gpui::App,
+    mut callback: impl FnMut(&mut gpui::App) + 'static,
+) -> gpui::Subscription {
+    cx.observe_global::<LocalizationChanged>(move |cx| callback(cx))
+}
+
 pub(crate) trait LocalizedPlaceholder: Sized + 'static {
     fn update_placeholder(
         &mut self,
@@ -531,10 +540,29 @@ fn format_known<'a>(
 
 pub fn message(descriptor: impl std::borrow::Borrow<sqlly_core::DisplayMessage>) -> String {
     let descriptor = descriptor.borrow();
-    descriptor
-        .key()
-        .and_then(|key| format_known(key, descriptor.arguments()))
-        .unwrap_or_else(|| descriptor.fallback().to_owned())
+    let Some(key) = descriptor.key() else {
+        return descriptor.fallback().to_owned();
+    };
+    let known = if descriptor.nested_arguments().next().is_none() {
+        format_known(key, descriptor.arguments())
+    } else {
+        let arguments: Vec<(&str, String)> = descriptor
+            .arguments()
+            .map(|(name, value)| {
+                let nested = descriptor
+                    .nested_arguments()
+                    .find_map(|(nested, inner)| (nested == name).then(|| message(inner)));
+                (name, nested.unwrap_or_else(|| value.to_owned()))
+            })
+            .collect();
+        format_known(
+            key,
+            arguments
+                .iter()
+                .map(|(name, value)| (*name, value.as_str())),
+        )
+    };
+    known.unwrap_or_else(|| descriptor.fallback().to_owned())
 }
 
 /// Render a persisted catalog message (key + arguments saved with a record)
@@ -833,6 +861,57 @@ mod tests {
             message(sqlly_core::DisplayMessage::raw("Server supplied {text}")),
             "Server supplied {text}"
         );
+        activate(Language::English, None).unwrap();
+    }
+
+    #[test]
+    fn display_messages_translate_message_arguments_inside_the_sentence() {
+        let _guard = language_guard();
+        activate(Language::Spanish, None).unwrap();
+        let inner = sqlly_core::DisplayMessage::new(
+            "notebook.core.param.required",
+            "This parameter cannot be empty",
+        );
+        let descriptor = sqlly_core::DisplayMessage::new(
+            "notebook.core.bind.param",
+            "region: This parameter cannot be empty",
+        )
+        .with_arg("name", "region")
+        .with_message_arg("error", inner);
+        assert_eq!(
+            message(&descriptor),
+            "region: Este parámetro no puede estar vacío"
+        );
+        activate(Language::English, None).unwrap();
+    }
+
+    #[test]
+    fn parameter_errors_from_binding_and_planning_read_wholly_translated() {
+        use sqlly_services::notebook::params::{BindError, ParamError};
+        use sqlly_services::notebook::plan::BlockReason;
+        let _guard = language_guard();
+        activate(Language::Spanish, None).unwrap();
+        let bind = BindError::Param {
+            name: "region".into(),
+            error: ParamError::Required,
+        }
+        .message();
+        let plan = BlockReason::Parameter {
+            name: "region".into(),
+            error: ParamError::Required,
+        }
+        .message();
+        assert_eq!(
+            message(&bind),
+            "region: Este parámetro no puede estar vacío"
+        );
+        assert_eq!(
+            message(&plan),
+            "Parámetro region: Este parámetro no puede estar vacío"
+        );
+        for text in [message(&bind), message(&plan)] {
+            assert!(!text.contains("cannot be empty"), "{text}");
+        }
         activate(Language::English, None).unwrap();
     }
 
@@ -1172,18 +1251,18 @@ mod tests {
     fn message_formats_known_keys_with_many_arguments_without_spilling_wrong() {
         let _guard = language_guard();
         let descriptor =
-            sqlly_core::DisplayMessage::new("query.execution_plan.node_properties", "fallback")
-                .with_arg("node_id", "7")
-                .with_arg("physical_operation", "Hash Match")
-                .with_arg("logical_operation", "Inner Join")
-                .with_arg("estimated_cost", "0.42")
-                .with_arg("cost_percent", "18")
-                .with_arg("estimated_rows", "1200")
-                .with_arg("actual_rows", "1180")
-                .with_arg("warnings", "none");
+            sqlly_core::DisplayMessage::new("services.spatial.summary_many_rings", "fallback")
+                .with_arg("geometry_type", "MultiPolygon")
+                .with_arg("srid", "4326")
+                .with_arg("point_count", "1200")
+                .with_arg("ring_count", "7")
+                .with_arg("min_x", "-1.5")
+                .with_arg("min_y", "50.25")
+                .with_arg("max_x", "0.75")
+                .with_arg("max_y", "52");
         let rendered = message(&descriptor);
         assert_ne!(rendered, "fallback");
-        assert!(rendered.contains("Hash Match"), "{rendered}");
+        assert!(rendered.contains("MultiPolygon"), "{rendered}");
         let spilled = descriptor.clone().with_arg("extra", "9");
         assert_eq!(message(&spilled), "fallback");
     }

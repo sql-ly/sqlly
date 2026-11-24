@@ -13,7 +13,8 @@
 # and the wasm browser build.
 [graph]
 targets = [
-    "aarch64-apple-darwin",       # macOS (arm64-only per AGENTS.md)
+    "aarch64-apple-darwin",       # macOS arm64
+    "x86_64-apple-darwin",        # macOS amd64 (Intel)
     "x86_64-unknown-linux-gnu",   # Linux amd64
     "aarch64-unknown-linux-gnu",  # Linux arm64
     "x86_64-pc-windows-msvc",     # Windows amd64
@@ -101,6 +102,14 @@ ignore = [
     # timing sidechannel to leak; grants are signed server-side in .NET. Drop
     # this once jsonwebtoken moves to elliptic-curve 0.14. Re-evaluate by 2026-11-29.
     { id = "RUSTSEC-2026-0387", reason = "crypto-bigint 0.5 only via jsonwebtoken 11's p256/p384 0.13 (no upgrade upstream); SQLLY only verifies ES384 grants there, which handles no secrets. Re-evaluate by 2026-11-29." },
+    # RUSTSEC-2026-0543 / RUSTSEC-2026-0555 (issued 2026-11-17): chrono and
+    # chrono-tz are soft-deprecated by their maintainer
+    # (chronotope/chrono#1768). Status notices only, no vulnerability, and no
+    # patched version exists. chrono is deep in the graph (tiberius, sqlx,
+    # duckdb, calamine, ...), so dropping it means a jiff/time migration of our
+    # own code plus waiting on those crates. Re-evaluate by 2027-02-28.
+    { id = "RUSTSEC-2026-0543", reason = "chrono unmaintained (status notice, no vulnerability); no replacement upstream across our deps yet. Re-evaluate by 2027-02-28." },
+    { id = "RUSTSEC-2026-0555", reason = "chrono-tz unmaintained (status notice, no vulnerability); tz data goes stale over time, revisit with the chrono migration. Re-evaluate by 2027-02-28." },
 ]
 
 [sources]

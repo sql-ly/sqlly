@@ -1,0 +1,58 @@
+format: postgresql-text (Certain)
+statements: 1
+
+== statement 1
+dialect: "Postgres"
+estimated_rows: 1
+execution_time_ms: 1.05
+has_actuals: yes
+notes: ["Planning buffers: shared hit=103"]
+planning_time_ms: 0.227
+source_format: "postgresql-text"
+statement_type: "EXPLAIN ANALYZE"
+total_subtree_cost: 409.01
+operators: 3
+  #1 Aggregate [Aggregate]
+      actual_rows: 1
+      actual_rows_total: 1
+      actual_self_time_ms: 0.255
+      actual_startup_ms: 1.028
+      actual_time_ms: 1.031
+      buffers: {logical_reads=54 physical_reads=0 shared_hit=54}
+      estimated_cost: 409.01
+      estimated_row_width: 8
+      estimated_rows: 1
+      estimated_startup_cost: 409
+      loops: 1
+    #2 Append [Append]
+        actual_rows: 8235
+        actual_rows_total: 8235
+        actual_self_time_ms: 0.332
+        actual_startup_ms: 0.006
+        actual_time_ms: 0.776
+        buffers: {logical_reads=54 physical_reads=0 shared_hit=54}
+        estimated_cost: 392.33
+        estimated_rows: 6667
+        loops: 1
+        parent_relationship: "Outer"
+        partitions_scanned: 1
+        partitions_total: 2
+        properties: [{name="Subplans Removed" value="1"}]
+      #3 Seq Scan [Seq Scan]
+          actual_rows: 8235
+          actual_rows_total: 8235
+          actual_self_time_ms: 0.444
+          actual_startup_ms: 0.005
+          actual_time_ms: 0.444
+          alias: "events_1"
+          buffers: {logical_reads=54 physical_reads=0 shared_hit=54}
+          estimated_cost: 176.85
+          estimated_rows: 3276
+          filter: "(happened_at >= $1)"
+          loops: 1
+          output_list: ["events_2025", "Filter: (happened_at >= $1)"]
+          parent_relationship: "Member"
+          relation: "events_2025"
+          rows_read: 9828
+          rows_removed_by_filter: 1593
+          warnings: [{TableScan={table="events_2025"}}]

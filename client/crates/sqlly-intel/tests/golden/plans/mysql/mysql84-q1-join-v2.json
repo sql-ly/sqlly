@@ -1,0 +1,103 @@
+{
+  "query": "/* select#1 */ select `c`.`country` AS `country`,count(0) AS `orders`,sum((`oi`.`quantity` * `oi`.`unit_price`)) AS `revenue` from `shop`.`order_items` `oi` join `shop`.`orders` `o` join `shop`.`customers` `c` where ((`oi`.`order_id` = `o`.`id`) and (`c`.`id` = `o`.`customer_id`) and (`o`.`status` = 'paid')) group by `c`.`country` order by `revenue` desc",
+  "inputs": [
+    {
+      "inputs": [
+        {
+          "inputs": [
+            {
+              "inputs": [
+                {
+                  "inputs": [
+                    {
+                      "inputs": [
+                        {
+                          "alias": "o",
+                          "operation": "Table scan on o",
+                          "table_name": "orders",
+                          "access_type": "table",
+                          "schema_name": "shop",
+                          "used_columns": [
+                            "id",
+                            "customer_id",
+                            "status"
+                          ],
+                          "estimated_rows": 40131.0,
+                          "estimated_total_cost": 4053.35
+                        }
+                      ],
+                      "condition": "(o.`status` = 'paid')",
+                      "operation": "Filter: (o.`status` = 'paid')",
+                      "access_type": "filter",
+                      "estimated_rows": 4013.10005979985,
+                      "estimated_total_cost": 4053.35
+                    },
+                    {
+                      "alias": "c",
+                      "covering": false,
+                      "operation": "Single-row index lookup on c using PRIMARY (id=o.customer_id)",
+                      "index_name": "PRIMARY",
+                      "table_name": "customers",
+                      "access_type": "index",
+                      "schema_name": "shop",
+                      "used_columns": [
+                        "id",
+                        "country"
+                      ],
+                      "estimated_rows": 1.0,
+                      "lookup_condition": "id=o.customer_id",
+                      "index_access_type": "index_lookup",
+                      "estimated_total_cost": 0.250024918391894
+                    }
+                  ],
+                  "join_type": "inner join",
+                  "operation": "Nested loop inner join",
+                  "access_type": "join",
+                  "estimated_rows": 4013.10005979985,
+                  "join_algorithm": "nested_loop",
+                  "estimated_total_cost": 5457.935020929948
+                },
+                {
+                  "alias": "oi",
+                  "covering": false,
+                  "operation": "Index lookup on oi using order_items_order_idx (order_id=o.id)",
+                  "index_name": "order_items_order_idx",
+                  "table_name": "order_items",
+                  "access_type": "index",
+                  "schema_name": "shop",
+                  "used_columns": [
+                    "id",
+                    "order_id",
+                    "quantity",
+                    "unit_price"
+                  ],
+                  "estimated_rows": 2.4929192066192627,
+                  "lookup_condition": "order_id=o.id",
+                  "index_access_type": "index_lookup",
+                  "estimated_total_cost": 0.6232919211925664
+                }
+              ],
+              "join_type": "inner join",
+              "operation": "Nested loop inner join",
+              "access_type": "join",
+              "estimated_rows": 10004.334217159958,
+              "join_algorithm": "nested_loop",
+              "estimated_total_cost": 8959.451996935933
+            }
+          ],
+          "operation": "Aggregate using temporary table",
+          "access_type": "temp_table_aggregate"
+        }
+      ],
+      "operation": "Table scan on <temporary>",
+      "table_name": "<temporary>",
+      "access_type": "table"
+    }
+  ],
+  "operation": "Sort: revenue DESC",
+  "query_type": "select",
+  "access_type": "sort",
+  "sort_fields": [
+    "revenue DESC"
+  ]
+}

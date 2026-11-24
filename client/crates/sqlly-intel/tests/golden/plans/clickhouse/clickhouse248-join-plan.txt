@@ -1,0 +1,11 @@
+Expression (Project names)
+  Limit (preliminary LIMIT (without OFFSET))
+    Sorting (Sorting for ORDER BY)
+      Expression ((Before ORDER BY + Projection))
+        Aggregating
+          Expression ((Before GROUP BY + ))
+            Join (JOIN FillRightFirst)
+              Expression ((JOIN actions + Change column names to column identifiers))
+                ReadFromMergeTree (default.customers)
+              Expression
+                ReadFromMergeTree (default.orders)

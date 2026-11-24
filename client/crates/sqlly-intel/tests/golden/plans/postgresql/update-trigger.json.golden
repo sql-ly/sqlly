@@ -1,0 +1,43 @@
+format: postgresql-json (Certain)
+statements: 1
+
+== statement 1
+dialect: "Postgres"
+execution_time_ms: 1.975
+has_actuals: yes
+notes: ["Planning buffers: shared hit=99"]
+planning_time_ms: 0.194
+source_format: "postgresql-json"
+statement_type: "EXPLAIN ANALYZE"
+total_subtree_cost: 12.98
+triggers: [{calls=199 name="orders_audit" relation="orders" time_ms=0.961}]
+operators: 2
+  #1 ModifyTable [Update]
+      actual_self_time_ms: 0.923
+      actual_startup_ms: 0.968
+      actual_time_ms: 0.972
+      buffers: {local_dirtied=0 local_hit=0 local_read=0 local_written=0 logical_reads=3337 physical_reads=0 shared_dirtied=2 shared_hit=3337 shared_read=0 shared_written=2 temp_read=0 temp_written=0 writes=2}
+      estimated_cost: 12.98
+      estimated_startup_cost: 0.42
+      loops: 1
+      output_list: ["orders"]
+      properties: [{name="Operation" value="Update"}, {name="WAL Buffers Full" value="0"}, {name="WAL Bytes" value="70726"}, {name="WAL FPI" value="0"}, {name="WAL Records" value="997"}]
+      relation: "orders"
+    #2 Index Scan [Index Scan]
+        actual_rows: 199
+        actual_rows_total: 199
+        actual_self_time_ms: 0.049
+        actual_startup_ms: 0.006
+        actual_time_ms: 0.049
+        buffers: {local_dirtied=0 local_hit=0 local_read=0 local_written=0 logical_reads=404 physical_reads=0 shared_dirtied=0 shared_hit=404 shared_read=0 shared_written=0 temp_read=0 temp_written=0 writes=0}
+        estimated_cost: 12.98
+        estimated_row_width: 38
+        estimated_rows: 203
+        estimated_startup_cost: 0.42
+        index_cond: "(id < 200)"
+        index_name: "orders_pkey"
+        loops: 1
+        output_list: ["orders", "Index Cond: (id < 200)", "Index: orders_pkey"]
+        parent_relationship: "Outer"
+        properties: [{name="Index Searches" value="1"}, {name="WAL Buffers Full" value="0"}, {name="WAL Bytes" value="0"}, {name="WAL FPI" value="0"}, {name="WAL Records" value="0"}]
+        relation: "orders"

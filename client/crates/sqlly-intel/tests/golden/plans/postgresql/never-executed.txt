@@ -1,0 +1,19 @@
+                                                                QUERY PLAN                                                                 
+-------------------------------------------------------------------------------------------------------------------------------------------
+ Nested Loop  (cost=4.90..43.87 rows=8 width=19) (actual time=0.877..0.881 rows=0.00 loops=1)
+   Buffers: shared read=3
+   ->  Index Scan using customers_email_idx on customers c  (cost=0.41..8.43 rows=1 width=18) (actual time=0.876..0.877 rows=0.00 loops=1)
+         Index Cond: (email = 'nobody@example.com'::text)
+         Index Searches: 1
+         Buffers: shared read=3
+   ->  Bitmap Heap Scan on orders o  (cost=4.48..35.36 rows=8 width=9) (never executed)
+         Recheck Cond: (c.id = customer_id)
+         ->  Bitmap Index Scan on orders_customer_idx  (cost=0.00..4.48 rows=8 width=0) (never executed)
+               Index Cond: (customer_id = c.id)
+               Index Searches: 0
+ Planning:
+   Buffers: shared hit=275
+ Planning Time: 0.354 ms
+ Execution Time: 0.906 ms
+(15 rows)
+

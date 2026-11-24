@@ -1,0 +1,66 @@
+format: cockroachdb-text (Certain)
+statements: 1
+
+== statement 1
+estimated_rows: 1043
+notes: ["distribution: local", "vectorized: true", "index recommendation 1: type: index creation; SQL command: CREATE INDEX ON shop.public.order_items (qty);", "index recommendation 2: type: index creation; SQL command: CREATE INDEX ON shop.public.order_items (price) STORING (sku);", "index recommendation 3: type: index creation; SQL command: CREATE INDEX ON shop.public.orders (total) STORING (customer_id);"]
+source_format: "cockroachdb-text"
+statement_type: "EXPLAIN"
+warnings: [{MissingIndex={database="shop" equality_columns=["qty"] impact=0 schema="public" table="order_items"}}, {MissingIndex={database="shop" equality_columns=["price"] impact=0 included_columns=["sku"] schema="public" table="order_items"}}, {MissingIndex={database="shop" equality_columns=["total"] impact=0 included_columns=["customer_id"] schema="public" table="orders"}}]
+operators: 10
+  #1 union all [union all]
+      estimated_rows: 1043
+      output_columns: ["name"]
+    #2 project [project]
+        output_columns: ["name"]
+      #3 lookup join (anti) [lookup join (anti)]
+          index_name: "order_items_pkey"
+          join_predicate: "(id) = (order_id)"
+          join_type: "Anti"
+          output_columns: ["id", "name"]
+          output_list: ["order_items", "Index: order_items_pkey", "Condition: (id) = (order_id)"]
+          properties: [{name="pred" value="qty = 5"}]
+          relation: "order_items"
+        #4 hash join (semi) [hash join (semi)]
+            estimated_rows: 80
+            extra: ["left cols are key"]
+            join_predicate: "(id) = (customer_id)"
+            join_type: "Semi"
+            output_columns: ["id", "name"]
+            output_list: ["Condition: (id) = (customer_id)"]
+          #5 scan [scan]
+              estimated_rows: 1000
+              index_name: "customers_pkey"
+              output_columns: ["id", "name"]
+              output_list: ["customers", "Index: customers_pkey"]
+              properties: [{name="estimated row count" value="1,000 (100% of the table; stats collected 5 seconds ago)"}, {name="spans" value="FULL SCAN"}]
+              relation: "customers"
+              warnings: [{TableScan={table="customers"}}]
+          #6 filter [filter]
+              estimated_rows: 84
+              filter: "total > 499"
+              output_columns: ["customer_id", "total"]
+              output_list: ["Filter: total > 499"]
+            #7 scan [scan]
+                estimated_rows: 20000
+                index_name: "orders_pkey"
+                output_columns: ["customer_id", "total"]
+                output_list: ["orders", "Index: orders_pkey"]
+                properties: [{name="estimated row count" value="20,000 (100% of the table; stats collected 5 seconds ago)"}, {name="spans" value="FULL SCAN"}]
+                relation: "orders"
+                warnings: [{TableScan={table="orders"}}]
+    #8 project [project]
+        output_columns: ["sku"]
+      #9 filter [filter]
+          estimated_rows: 1043
+          filter: "price < 1"
+          output_columns: ["sku", "price"]
+          output_list: ["Filter: price < 1"]
+        #10 scan [scan]
+            estimated_rows: 60000
+            index_name: "order_items_pkey"
+            output_columns: ["sku", "price"]
+            output_list: ["order_items", "Index: order_items_pkey"]
+            properties: [{name="estimated row count" value="60,000 (100% of the table; stats collected 4 seconds ago)"}, {name="spans" value="FULL SCAN"}]
+            relation: "order_items"
+            warnings: [{TableScan={table="order_items"}}]

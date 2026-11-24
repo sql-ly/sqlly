@@ -1,0 +1,4 @@
+-> Limit: 5 row(s)  (cost=78.8 rows=5) (actual time=0.061..0.062 rows=5 loops=1)
+    -> Filter: (orders.customer_id < 50)  (cost=78.8 rows=392) (actual time=0.0603..0.0611 rows=5 loops=1)
+        -> Covering index range scan on orders using orders_customer_idx over (customer_id < 50) (reverse)  (cost=78.8 rows=392) (actual time=0.0446..0.0452 rows=5 loops=1)
+

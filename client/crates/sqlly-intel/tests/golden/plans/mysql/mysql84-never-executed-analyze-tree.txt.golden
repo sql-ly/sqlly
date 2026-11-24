@@ -1,0 +1,42 @@
+format: mysql-tree (Certain)
+statements: 1
+
+== statement 1
+dialect: "MySql"
+estimated_rows: 8.06
+execution_time_ms: 0.00896
+has_actuals: yes
+source_format: "mysql-tree"
+statement_type: "EXPLAIN ANALYZE"
+total_subtree_cost: 3.17
+operators: 3
+  #1 Nested loop inner join [Nested loop inner join]
+      actual_rebinds: 1
+      actual_self_time_ms: 0.00271
+      actual_startup_ms: 0.00896
+      actual_time_ms: 0.00896
+      estimated_cost: 3.17
+      estimated_rows: 8.06
+      join_type: "Inner"
+      loops: 1
+      output_list: ["Actual time: 0.00896 ms"]
+    #2 Index lookup on c using customers_email_idx (email='nobody@example.com') [Index lookup on c using customers_email_idx (email='nobody@example.com')]
+        actual_rebinds: 1
+        actual_self_time_ms: 0.00625
+        actual_startup_ms: 0.00625
+        actual_time_ms: 0.00625
+        estimated_cost: 0.35
+        estimated_rows: 1
+        index_cond: "email='nobody@example.com'"
+        index_name: "customers_email_idx"
+        loops: 1
+        output_list: ["Actual time: 0.00625 ms", "c", "Key: customers_email_idx"]
+        relation: "c"
+    #3 Index lookup on o using orders_customer_idx (customer_id=c.id) [Index lookup on o using orders_customer_idx (customer_id=c.id)]
+        estimated_cost: 2.82
+        estimated_rows: 8.06
+        index_cond: "customer_id=c.id"
+        index_name: "orders_customer_idx"
+        never_executed: yes
+        output_list: ["o", "Key: orders_customer_idx"]
+        relation: "o"

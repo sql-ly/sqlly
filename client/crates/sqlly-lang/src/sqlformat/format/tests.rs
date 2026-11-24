@@ -1,4 +1,4 @@
-use super::casing::{pascal_case_identifier, safe_to_unquote, title_case};
+use super::casing::{safe_to_unquote, title_case};
 use super::segment::control_comment_state;
 use super::*;
 use crate::sqlformat::prefs::*;
@@ -104,7 +104,6 @@ fn corpus_survives_aggressive_option_combinations() {
     }
     variants.push(SqlFormattingPreferences {
         keyword_case: KeywordCase::TitleCase,
-        identifier_case: IdentifierCase::PascalCase,
         identifier_quoting: IdentifierQuoting::AlwaysQuote,
         comma_style: CommaStyle::Leading,
         boolean_operator_placement: BooleanOperatorPlacement::LineTrailing,
@@ -201,16 +200,199 @@ fn keyword_group_casing_overrides() {
     assert!(out.contains("and b"), "{out}");
 }
 
+/// Every casing option at its most aggressive, so a user name that gets
+/// re-cased anywhere shows up.
+fn shouting_prefs(dialect: SqlDialect) -> SqlFormattingPreferences {
+    SqlFormattingPreferences {
+        dialect,
+        keyword_case: KeywordCase::Uppercase,
+        function_case: FunctionCase::Uppercase,
+        ..prefs()
+    }
+}
+
 #[test]
-fn identifier_casing() {
-    let mut p = prefs();
-    p.identifier_case = IdentifierCase::Uppercase;
-    assert!(fmt("select my_col from t", &p).contains("MY_COL"));
-    p.identifier_case = IdentifierCase::PascalCase;
-    assert!(fmt("select my_col from t", &p).contains("My_Col"));
-    // Quoted identifiers never change case.
-    p.identifier_case = IdentifierCase::Uppercase;
-    assert!(fmt("select \"my_col\" from t", &p).contains("\"my_col\""));
+fn user_defined_names_keep_their_case() {
+    let p = shouting_prefs(SqlDialect::Tsql);
+    let out = fmt(
+        "select o.OrderId, c.customerName, dbo.fnOrderTotal(o.OrderId) as orderTotal \
+         from Sales.orderHeader o join dbo.Customers c on c.Id = o.customerId",
+        &p,
+    );
+    for name in [
+        "o.OrderId",
+        "c.customerName",
+        "dbo.fnOrderTotal(",
+        "orderTotal",
+        "Sales.orderHeader",
+        "dbo.Customers",
+        "c.Id",
+        "o.customerId",
+    ] {
+        assert!(out.contains(name), "{name} re-cased in:\n{out}");
+    }
+    assert!(out.contains("SELECT") && out.contains("JOIN"), "{out}");
+
+    // Procedures, user-defined types and table-valued functions.
+    let out = fmt(
+        "exec dbo.uspRebuildTotals @Year = 2024; \
+         declare @t dbo.OrderIdList; \
+         select * from dbo.tvfOpenOrders(@t)",
+        &p,
+    );
+    for name in [
+        "dbo.uspRebuildTotals",
+        "dbo.OrderIdList",
+        "dbo.tvfOpenOrders(",
+    ] {
+        assert!(out.contains(name), "{name} re-cased in:\n{out}");
+    }
+}
+
+#[test]
+fn unqualified_user_functions_keep_their_case() {
+    for (dialect, sql, keep, system) in [
+        (
+            SqlDialect::Postgresql,
+            "select calcTax(amount), now(), date_trunc('day', ts) from t",
+            "calcTax(",
+            ["NOW(", "DATE_TRUNC("],
+        ),
+        (
+            SqlDialect::Mysql,
+            "select order_total(id), concat(a, b), ifnull(x, 0) from t",
+            "order_total(",
+            ["CONCAT(", "IFNULL("],
+        ),
+        (
+            SqlDialect::Tsql,
+            "select fnAge(BirthDate), getdate(), isnull(x, 0) from t",
+            "fnAge(",
+            ["GETDATE(", "ISNULL("],
+        ),
+    ] {
+        let out = fmt(sql, &shouting_prefs(dialect));
+        assert!(out.contains(keep), "{keep} re-cased in:\n{out}");
+        for f in system {
+            assert!(out.contains(f), "{f} not cased in:\n{out}");
+        }
+    }
+}
+
+#[test]
+fn user_names_keep_case_under_lowercase_and_quoting_options() {
+    let p = SqlFormattingPreferences {
+        keyword_case: KeywordCase::Lowercase,
+        function_case: FunctionCase::Lowercase,
+        identifier_quoting: IdentifierQuoting::RemoveUnnecessaryQuotes,
+        dialect: SqlDialect::Tsql,
+        ..prefs()
+    };
+    let out = fmt("SELECT [OrderId], COUNT(*), dbo.FnX(1) FROM Orders", &p);
+    assert!(out.contains("OrderId"), "{out}");
+    assert!(out.contains("count(*)"), "{out}");
+    assert!(out.contains("dbo.FnX("), "{out}");
+    assert!(out.contains("from Orders"), "{out}");
+}
+
+#[test]
+fn keyword_spelled_columns_keep_their_case() {
+    // `Type` is a T-SQL lexer keyword, `Key` / `Index` / `View` are
+    // PostgreSQL ones; none is reserved, so as operands they are names.
+    let out = fmt(
+        "select Type, Name, Status from Events where Type = 1 order by Type",
+        &shouting_prefs(SqlDialect::Tsql),
+    );
+    assert_eq!(out.matches("Type").count(), 3, "{out}");
+    let out = fmt(
+        "update t set Type = 2, View = 'x' where Key = 1",
+        &shouting_prefs(SqlDialect::Postgresql),
+    );
+    for name in ["Type = 2", "View = 'x'", "Key = 1"] {
+        assert!(out.contains(name), "{name} re-cased in:\n{out}");
+    }
+    let out = fmt(
+        "select Index, First from t",
+        &shouting_prefs(SqlDialect::Postgresql),
+    );
+    assert!(out.contains("Index,") && out.contains("First\n"), "{out}");
+    // Structural uses keep keyword casing.
+    let out = fmt(
+        "begin; insert into t (a) values (1); commit;",
+        &shouting_prefs(SqlDialect::Postgresql),
+    );
+    assert!(out.contains("BEGIN") && out.contains("COMMIT"), "{out}");
+    let out = fmt(
+        "select sum(x) over (rows between unbounded preceding and current row) from t",
+        &shouting_prefs(SqlDialect::Postgresql),
+    );
+    assert!(out.contains("ROWS BETWEEN"), "{out}");
+}
+
+#[test]
+fn ddl_column_names_and_user_types_keep_their_case() {
+    let out = fmt(
+        "create table Events (Id int, Text nvarchar(10), Date date, \
+         Status MyStatusType, Amount dbo.Money2)",
+        &shouting_prefs(SqlDialect::Tsql),
+    );
+    for part in [
+        "Id INT",
+        "Text NVARCHAR(10)",
+        "Date DATE",
+        "Status MyStatusType",
+        "Amount dbo.Money2",
+    ] {
+        assert!(out.contains(part), "{part} missing from:\n{out}");
+    }
+    let out = fmt(
+        "create table t (a int, b int, total as (a + b))",
+        &shouting_prefs(SqlDialect::Tsql),
+    );
+    assert!(out.contains("total AS"), "{out}");
+    let out = fmt(
+        "create table t (id serial, tags citext[], ip inet, period tstzrange)",
+        &shouting_prefs(SqlDialect::Postgresql),
+    );
+    assert!(out.contains("id SERIAL"), "{out}");
+    assert!(
+        out.contains("tags citext[]"),
+        "citext is an extension type:\n{out}"
+    );
+    assert!(out.contains("ip INET"), "{out}");
+}
+
+#[test]
+fn cast_target_types_take_data_type_casing() {
+    let out = fmt(
+        "select cast(Amount as decimal(10, 2)), try_cast(x as MyType), cast(y as dbo.Money2) from t",
+        &shouting_prefs(SqlDialect::Tsql),
+    );
+    assert!(out.contains("CAST(Amount AS DECIMAL(10, 2))"), "{out}");
+    assert!(out.contains("TRY_CAST(x AS MyType)"), "{out}");
+    assert!(out.contains("CAST(y AS dbo.Money2)"), "{out}");
+    // Sized types outside a column list are types, not calls.
+    let out = fmt(
+        "declare @n nvarchar(50) = convert(varchar(10), getdate(), 120)",
+        &shouting_prefs(SqlDialect::Tsql),
+    );
+    assert!(
+        out.contains("NVARCHAR(50)") && out.contains("CONVERT(VARCHAR(10), GETDATE(), 120)"),
+        "{out}"
+    );
+    // An alias in a plain parenthesized select is not a cast target.
+    let out = fmt(
+        "select (select 1 as date) from t",
+        &shouting_prefs(SqlDialect::Tsql),
+    );
+    assert!(out.contains("AS date"), "{out}");
+}
+
+#[test]
+fn old_identifier_case_setting_is_ignored() {
+    let p: SqlFormattingPreferences =
+        serde_json::from_str(r#"{"identifierCase": "uppercase"}"#).unwrap();
+    assert!(fmt("select my_col from t", &p).contains("my_col"));
 }
 
 #[test]
@@ -706,12 +888,6 @@ fn preserve_existing_preset_keeps_user_breaks() {
 fn helper_title_case() {
     assert_eq!(title_case("select"), "Select");
     assert_eq!(title_case("SELECT"), "Select");
-}
-
-#[test]
-fn helper_pascal_case_identifier() {
-    assert_eq!(pascal_case_identifier("user_id"), "User_Id");
-    assert_eq!(pascal_case_identifier("name"), "Name");
 }
 
 #[test]
@@ -1361,10 +1537,10 @@ fn qualified_keyword_named_columns_are_identifiers() {
         fmt("SELECT o.TYPE FROM sys.objects o", &lower),
         "select\n    o.TYPE\nfrom sys.objects o"
     );
-    // Unchanged: star, numeric literal, schema-qualified call.
+    // Unchanged: star, numeric literal, schema-qualified (user) call.
     assert_eq!(
         fmt("select t.*, 1.5, dbo.fn(x) from t", &p),
-        "SELECT\n    t.*,\n    1.5,\n    dbo.FN(x)\nFROM t"
+        "SELECT\n    t.*,\n    1.5,\n    dbo.fn(x)\nFROM t"
     );
     let out = fmt(QUALIFIED_KEYWORD_COLUMNS, &p);
     assert_eq!(fmt(&out, &p), out, "not idempotent:\n{out}");
@@ -1384,8 +1560,8 @@ fn qualified_keyword_named_columns_quote_under_always_quote() {
     assert!(out.contains("\"s\".\"index\""), "{out}");
     assert!(out.contains("\"t\".*"), "{out}");
     assert!(out.contains("1.5"), "{out}");
-    // The schema-qualified call keeps function casing, as before.
-    assert!(out.contains("\"dbo\".FN("), "{out}");
+    // The schema-qualified call is a user function: never quoted or re-cased.
+    assert!(out.contains("\"dbo\".fn("), "{out}");
     assert_eq!(fmt(&out, &p), out, "not idempotent:\n{out}");
 }
 
@@ -1676,7 +1852,6 @@ fn dialect_corpus_is_idempotent_and_safe_under_every_preset() {
     variants.push(SqlFormattingPreferences {
         spaces_around_operators: false,
         identifier_quoting: IdentifierQuoting::AlwaysQuote,
-        identifier_case: IdentifierCase::Uppercase,
         space_before_function_parentheses: true,
         function_arg_style: FunctionArgStyle::Stacked,
         max_line_length_raw: 40,
@@ -1755,7 +1930,7 @@ fn glued_syntax_is_never_re_spaced() {
         (
             SqlDialect::Tsql,
             "select * from t cross apply f(t.id) x",
-            &["CROSS APPLY F(t.id) x"],
+            &["CROSS APPLY f(t.id) x"],
         ),
     ];
     for spaces in [true, false] {
@@ -1863,6 +2038,24 @@ fn context_keywords_take_keyword_casing() {
     let out = fmt("select qualify, partition, over from t", &p);
     assert!(
         out.contains("qualify") && out.contains("partition") && out.contains("over"),
+        "{out}"
+    );
+}
+
+#[test]
+fn grammar_words_written_like_calls_take_function_casing() {
+    let p = shouting_prefs(SqlDialect::Sqlite);
+    let out = fmt(
+        "insert into notes (a) values (?1) on conflict (id) do update set a = excluded.a",
+        &p,
+    );
+    assert!(out.contains("ON CONFLICT (id)"), "{out}");
+    let out = fmt(
+        "select a, b, count(*) from t group by rollup(a, b) option (recompile)",
+        &shouting_prefs(SqlDialect::Tsql),
+    );
+    assert!(
+        out.contains("ROLLUP(a, b)") && out.contains("OPTION("),
         "{out}"
     );
 }

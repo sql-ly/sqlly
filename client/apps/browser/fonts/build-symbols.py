@@ -79,6 +79,8 @@ DONORS = [
     f"{NOTO_BASE}/NotoSansSymbols2/hinted/ttf/NotoSansSymbols2-Regular.ttf",
     f"{NOTO_BASE}/NotoSansSymbols/hinted/ttf/NotoSansSymbols-Regular.ttf",
     f"{NOTO_BASE}/NotoSansMath/hinted/ttf/NotoSansMath-Regular.ttf",
+    # Box drawing beyond U+2500 (the status bar's U+2502 separator).
+    f"{NOTO_BASE}/NotoSansMono/hinted/ttf/NotoSansMono-Regular.ttf",
 ]
 
 # Local donor files given on the command line (`--donor path`), tried first.

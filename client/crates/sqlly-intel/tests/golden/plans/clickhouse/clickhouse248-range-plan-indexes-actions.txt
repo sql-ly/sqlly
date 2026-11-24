@@ -1,0 +1,59 @@
+Expression ((Project names + Projection))
+Actions: INPUT :: 0 -> count() UInt64 : 0
+         INPUT : 1 -> __table1.status LowCardinality(String) : 1
+         ALIAS __table1.status :: 1 -> status LowCardinality(String) : 2
+Positions: 2 0
+  Aggregating
+  Keys: __table1.status
+  Aggregates:
+      count()
+        Function: count() → UInt64
+        Arguments: none
+  Skip merging: 0
+    Expression (Before GROUP BY)
+    Actions: INPUT :: 0 -> __table1.status LowCardinality(String) : 0
+    Positions: 0
+      Expression
+      Actions: INPUT : 0 -> status LowCardinality(String) : 0
+               INPUT :: 1 -> customer_id UInt32 : 1
+               INPUT :: 2 -> total Decimal(12, 2) : 2
+               ALIAS status :: 0 -> __table1.status LowCardinality(String) : 3
+      Positions: 3
+        ReadFromMergeTree (default.orders)
+        ReadType: Default
+        Parts: 10
+        Granules: 10
+        Prewhere info
+        Need filter: 1
+          Prewhere filter
+          Prewhere filter column: and(greaterOrEquals(__table1.customer_id, 100_UInt8), lessOrEquals(__table1.customer_id, 200_UInt8), greater(__table1.total, 800_UInt16)) (removed)
+          Actions: INPUT : 0 -> customer_id UInt32 : 0
+                   INPUT : 1 -> total Decimal(12, 2) : 1
+                   COLUMN Const(UInt8) -> 100_UInt8 UInt8 : 2
+                   COLUMN Const(UInt8) -> 200_UInt8 UInt8 : 3
+                   COLUMN Const(UInt16) -> 800_UInt16 UInt16 : 4
+                   FUNCTION greaterOrEquals(customer_id : 0, 100_UInt8 :: 2) -> greaterOrEquals(__table1.customer_id, 100_UInt8) UInt8 : 5
+                   FUNCTION lessOrEquals(customer_id : 0, 200_UInt8 :: 3) -> lessOrEquals(__table1.customer_id, 200_UInt8) UInt8 : 2
+                   FUNCTION greater(total : 1, 800_UInt16 :: 4) -> greater(__table1.total, 800_UInt16) UInt8 : 3
+                   FUNCTION and(greaterOrEquals(__table1.customer_id, 100_UInt8) :: 5, lessOrEquals(__table1.customer_id, 200_UInt8) :: 2, greater(__table1.total, 800_UInt16) :: 3) -> and(greaterOrEquals(__table1.customer_id, 100_UInt8), lessOrEquals(__table1.customer_id, 200_UInt8), greater(__table1.total, 800_UInt16)) UInt8 : 4
+          Positions: 0 1 4
+        Indexes:
+          MinMax
+            Condition: true
+            Parts: 10/10
+            Granules: 389/389
+          Partition
+            Condition: true
+            Parts: 10/10
+            Granules: 389/389
+          PrimaryKey
+            Keys: 
+              customer_id
+            Condition: and((customer_id in (-Inf, 200]), (customer_id in [100, +Inf)))
+            Parts: 10/10
+            Granules: 10/389
+          Skip
+            Name: total_idx
+            Description: minmax GRANULARITY 4
+            Parts: 10/10
+            Granules: 10/10

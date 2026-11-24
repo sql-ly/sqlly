@@ -1,0 +1,21 @@
+format: clickhouse-json (Certain)
+statements: 1
+
+== statement 1
+dialect: "ClickHouse"
+source_format: "clickhouse-json"
+statement_type: "EXPLAIN"
+operators: 5
+  #1 Expression (Project names + Projection) [Expression]
+      properties: [{name="Node Id" value="Expression_8"}]
+    #2 Aggregating [Aggregating]
+        properties: [{name="Node Id" value="Aggregating_4"}]
+      #3 Expression Before GROUP BY [Expression]
+          properties: [{name="Node Id" value="Expression_3"}]
+        #4 Expression (WHERE + Change column names to column identifiers) [Expression]
+            properties: [{name="Node Id" value="Expression_9"}]
+          #5 ReadFromMergeTree default.orders [ReadFromMergeTree]
+              properties: [{name="Node Id" value="ReadFromMergeTree_0"}]
+              relation: "orders"
+              schema: "default"
+              warnings: [{TableScan={schema="default" table="orders"}}]

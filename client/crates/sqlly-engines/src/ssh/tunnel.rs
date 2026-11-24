@@ -346,7 +346,9 @@ fn map_connect_error(host: &str, port: u16, err: RusshError) -> StudioError {
         RusshError::UnknownKey => {
             StudioError::Connection(format!("SSH host key for {host}:{port} is not trusted"))
         }
-        other => StudioError::Connection(other.to_string()),
+        // A LAN SSH host blocked by macOS Local Network privacy fails with
+        // the same bare "No route to host" as a direct connection does.
+        other => crate::connect_hint::connection_with_local_network_hint(other.to_string()),
     }
 }
 
@@ -958,6 +960,18 @@ mod tests {
                 key: "pw".to_string(),
             },
         )
+    }
+
+    #[test]
+    fn ssh_no_route_to_host_carries_the_local_network_hint() {
+        let io = std::io::Error::other("No route to host (os error 65)");
+        let text = map_connect_error("10.0.0.5", 22, RusshError::IO(io)).to_string();
+        assert!(text.contains("No route to host"), "{text}");
+        #[cfg(target_os = "macos")]
+        assert!(
+            text.contains("Privacy & Security → Local Network"),
+            "{text}"
+        );
     }
 
     #[tokio::test]

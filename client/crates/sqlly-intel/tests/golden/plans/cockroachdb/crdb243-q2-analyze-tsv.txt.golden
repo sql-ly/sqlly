@@ -1,0 +1,74 @@
+format: cockroachdb-text (Certain)
+statements: 1
+
+== statement 1
+cpu_time_ms: 3
+estimated_rows: 2
+execution_time_ms: 7
+has_actuals: yes
+notes: ["planning time: 514µs", "execution time: 7ms", "distribution: full", "vectorized: true", "plan type: custom", "rows decoded from KV: 20,500 (1.1 MiB, 2 gRPC calls)", "cumulative time spent in KV: 6ms", "maximum memory usage: 2.2 MiB", "network usage: 0 B (0 messages)", "sql cpu time: 3ms", "isolation level: serializable", "priority: normal", "quality of service: regular"]
+planning_time_ms: 0.514
+source_format: "cockroachdb-text"
+statement_type: "EXPLAIN ANALYZE"
+operators: 5
+  #1 sort [sort]
+      actual_cpu_ms: 0.007
+      actual_rows: 2
+      actual_rows_total: 2
+      actual_self_time_ms: 0.007
+      actual_time_ms: 6.16
+      estimated_rows: 2
+      peak_memory_kb: 10
+      properties: [{name="sql nodes" value="n1"}, {name="estimated max sql temp disk usage" value="0 B"}]
+      sort_keys: ["-sum"]
+    #2 group (hash) [group (hash)]
+        actual_cpu_ms: 0.497
+        actual_rows: 2
+        actual_rows_total: 2
+        actual_self_time_ms: 0.497
+        actual_time_ms: 6.153
+        estimated_rows: 2
+        group_keys: ["region"]
+        peak_memory_kb: 1024
+        properties: [{name="sql nodes" value="n1"}, {name="estimated max sql temp disk usage" value="0 B"}]
+      #3 hash join [hash join]
+          actual_cpu_ms: 0.349
+          actual_rows: 10000
+          actual_rows_total: 10000
+          actual_self_time_ms: 0.349
+          actual_time_ms: 5.656
+          estimated_rows: 10000
+          extra: ["right cols are key"]
+          join_predicate: "(customer_id) = (id)"
+          join_type: "Inner"
+          output_list: ["Condition: (customer_id) = (id)"]
+          peak_memory_kb: 100
+          properties: [{name="sql nodes" value="n1"}, {name="estimated max sql temp disk usage" value="0 B"}]
+        #4 scan [scan]
+            actual_cpu_ms: 2
+            actual_rows: 20000
+            actual_rows_total: 20000
+            actual_self_time_ms: 5
+            actual_time_ms: 5
+            estimated_rows: 20000
+            index_name: "orders_pkey"
+            output_list: ["orders", "Index: orders_pkey"]
+            peak_memory_kb: 1126.4
+            properties: [{name="sql nodes" value="n1"}, {name="kv nodes" value="n1"}, {name="KV time" value="5ms"}, {name="KV contention time" value="0µs"}, {name="KV rows decoded" value="20,000"}, {name="KV bytes read" value="1.1 MiB"}, {name="KV gRPC calls" value="1"}, {name="estimated row count" value="20,000 (100% of the table; stats collected 2 seconds ago)"}, {name="spans" value="FULL SCAN"}]
+            relation: "orders"
+            rows_read: 20000
+            warnings: [{TableScan={table="orders"}}]
+        #5 scan [scan]
+            actual_cpu_ms: 0.063
+            actual_rows: 500
+            actual_rows_total: 500
+            actual_self_time_ms: 0.307
+            actual_time_ms: 0.307
+            estimated_rows: 500
+            index_cond: "[/'east' - /'east'] [/'west' - /'west']"
+            index_name: "customers_region_idx"
+            output_list: ["customers", "Index: customers_region_idx", "Index Cond: [/'east' - /'east'] [/'west' - /'west']"]
+            peak_memory_kb: 50
+            properties: [{name="sql nodes" value="n1"}, {name="kv nodes" value="n1"}, {name="KV time" value="307µs"}, {name="KV contention time" value="0µs"}, {name="KV rows decoded" value="500"}, {name="KV bytes read" value="17 KiB"}, {name="KV gRPC calls" value="1"}, {name="estimated row count" value="500 (50% of the table; stats collected 2 seconds ago)"}]
+            relation: "customers"
+            rows_read: 500

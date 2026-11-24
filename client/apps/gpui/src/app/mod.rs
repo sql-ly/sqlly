@@ -77,6 +77,15 @@ mod files;
 mod fk_follow;
 mod generate_model;
 mod maintenance;
+mod notebook_ai;
+mod notebook_analysis_host;
+#[cfg(target_arch = "wasm32")]
+mod notebook_browser;
+mod notebook_host;
+#[cfg(test)]
+mod notebook_markdown_tests;
+#[cfg(not(target_arch = "wasm32"))]
+mod pg_oauth;
 mod procedure_run;
 #[cfg(not(target_arch = "wasm32"))]
 mod ssh_host_key;
@@ -96,6 +105,8 @@ mod unlock;
 pub(crate) use unlock::open_upgrade_surface_from;
 // pub(crate) so panes outside `app` can reach `direct_route_refusal`.
 mod chrome_region;
+#[cfg(test)]
+mod session_restore_tests;
 pub(crate) mod tools;
 mod validation;
 mod window_layout;
@@ -172,6 +183,9 @@ actions!(
         SaveNotebook,
         RunNotebookCell,
         RunAllNotebookCells,
+        StopNotebookRun,
+        OpenAsNotebook,
+        ConvertNotebookToScript,
         CloseTab,
         ToggleSidebar,
         ShowSqlLibrary,
@@ -587,6 +601,9 @@ pub struct AppView {
     /// different engines re-grays the in-window Tools entries.
     menus_reflect_engine: Option<sqlly_lang::sqlmodel::DatabaseType>,
     menus_reflect_localization_revision: u64,
+    /// The theme View ▸ Theme last checked; `None` until the first frame
+    /// installs menus built after the saved appearance was applied.
+    menus_reflect_theme: Option<crate::menu_bar::ThemeMenuState>,
     /// IntelliSense / LSP debug panel. Re-runs the same `Services` calls the
     /// `sqlly-lsp` server makes and renders the LSP wire results. Toggled by the
     /// existing `ToggleIntelliSenseDebug` action; hidden by default.
@@ -755,6 +772,11 @@ pub struct AppView {
     cell_detail_visible: bool,
     cell_detail_width: f32,
     cell_detail_height: f32,
+    /// Rail and panel sizes every notebook tab shares.
+    notebook_layout: crate::notebook::layout::NotebookLayout,
+    /// Notebook cell SQL (as run) → what history keeps instead, for runs
+    /// that bind a sensitive parameter.
+    notebook_history_redactions: std::collections::HashMap<String, String>,
     is_resizing_cell_detail: bool,
     drag_start_cell_detail_size: f32,
     log_height: f32,
@@ -1064,7 +1086,7 @@ impl AppView {
         let show_detailed_query_timing =
             crate::preferences::PerformancePreferences::load().show_detailed_query_timing;
         let editor_prefs = crate::preferences::EditorPreferences::load();
-        editor_prefs.apply_match_options();
+        editor_prefs.apply_completion_options();
         let snippet_prefs = crate::snippets::SnippetPreferences::load();
         let appearance_prefs = crate::preferences::AppearancePreferences::load();
         appearance_prefs.apply_theme();
@@ -1321,6 +1343,7 @@ impl AppView {
             menus_reflect_connected: false,
             menus_reflect_engine: None,
             menus_reflect_localization_revision: crate::localization::chrome_revision(),
+            menus_reflect_theme: None,
             lsp_debug,
             lsp_debug_debounce_task: None,
             pending: PendingDialogs {
@@ -1399,6 +1422,13 @@ impl AppView {
             cell_detail_visible: session.layout.cell_detail_visible,
             cell_detail_width: session.layout.cell_detail_width,
             cell_detail_height: session.layout.cell_detail_height,
+            notebook_layout: session
+                .layout
+                .notebook_layout
+                .clone()
+                .unwrap_or_default()
+                .sanitized(),
+            notebook_history_redactions: std::collections::HashMap::new(),
             is_resizing_cell_detail: false,
             drag_start_cell_detail_size: 0.0,
             log_height: {
@@ -1519,8 +1549,12 @@ impl AppView {
         } else {
             for tab_state in &restore_tabs {
                 if let Some(path) = tab_state.notebook_path.as_ref() {
-                    if std::path::Path::new(path).exists() {
+                    if app.notebook_tab_for_path(path).is_some() {
+                        continue;
+                    }
+                    if crate::notebook::files::exists(path) {
                         app.open_notebook_from_path(path, cx);
+                        app.offer_notebook_recovery(tab_state, cx);
                         if let Some(tab) = app.tabs.last_mut() {
                             tab.name = tab_state.title.clone();
                             tab.pinned = tab_state.pinned;
@@ -1542,8 +1576,12 @@ impl AppView {
                             }
                         }
                     } else {
-                        tracing::debug!(path, "notebook file missing; skipping restore");
+                        app.restore_missing_notebook_file(path, tab_state, cx);
                     }
+                    continue;
+                }
+                if let Some(id) = tab_state.notebook_id.as_deref() {
+                    app.restore_recovered_notebook(id, tab_state, cx);
                     continue;
                 }
                 // For file-backed tabs, read content from disk. For unsaved
@@ -2143,6 +2181,7 @@ impl AppView {
                     view.menus_reflect_engine = engine;
                     view.menus_reflect_localization_revision =
                         crate::localization::chrome_revision();
+                    view.menus_reflect_theme = Some(crate::menu_bar::ThemeMenuState::current());
                     // The in-window menu bar is per window: each gets its own.
                     view.window_menu_bar.update(cx, |bar, cx| {
                         bar.set_menus(crate::menu_bar::build_menus(connected));
@@ -2209,6 +2248,9 @@ impl AppView {
         g!(SaveNotebook, handle_save_notebook);
         g!(RunNotebookCell, handle_run_notebook_cell);
         g!(RunAllNotebookCells, handle_run_all_notebook_cells);
+        g!(StopNotebookRun, handle_stop_notebook_run);
+        g!(OpenAsNotebook, handle_open_as_notebook);
+        g!(ConvertNotebookToScript, handle_convert_notebook_to_script);
         g!(CloseTab, handle_close_tab_action);
         g!(ToggleSidebar, handle_toggle_sidebar);
         g!(ShowSqlLibrary, handle_show_sql_library);
@@ -2662,6 +2704,7 @@ impl AppView {
             crate::editor::SqlEditorEvent::Validate => {
                 self.validate_sql(tab_idx, cx);
             }
+            crate::editor::SqlEditorEvent::NotebookCompletionAccepted { .. } => {}
             crate::editor::SqlEditorEvent::ValueLookup { word, sql } => {
                 self.run_value_lookup(tab_idx, word.clone(), sql.clone(), cx);
             }
@@ -2818,7 +2861,7 @@ impl AppView {
                     .iter()
                     .position(|t| t.notebook.as_ref() == Some(&notebook))
                 {
-                    self.run_notebook_cell(tab_idx, cell_id.clone(), cx);
+                    self.dispatch_notebook_cell(tab_idx, cell_id.clone(), cx);
                 }
             }
             crate::notebook_view::NotebookEvent::Dirty => {
@@ -2879,6 +2922,7 @@ impl AppView {
                 );
                 cx.notify();
             }
+            other => self.handle_notebook_shell_event(notebook, other, cx),
         }
     }
 
@@ -3111,6 +3155,9 @@ impl AppView {
             }
             crate::results::ResultsViewEvent::ExecutionPlanOpenSqlInNewTab(sql) => {
                 self.new_tab(cx, Some(sql.clone()));
+            }
+            crate::results::ResultsViewEvent::ExecutionPlanAnalysed { failed } => {
+                self.finish_plan_summary(&results, *failed, cx);
             }
             crate::results::ResultsViewEvent::LayoutModeChanged(mode) => {
                 self.toolbar.result_layout_stacked = matches!(mode, LayoutMode::Stacked);
@@ -6658,6 +6705,36 @@ impl AppView {
             cx,
             std::rc::Rc::new(move |this, _window, cx| this.begin_tab_rename(tab_idx, cx)),
         ));
+        if self.tabs.get(tab_idx).is_some_and(|t| t.is_notebook()) {
+            rows.push(row(
+                "tab-menu-convert-script",
+                crate::localization::text("notebook.shell.promote.convert_menu"),
+                true,
+                cx,
+                std::rc::Rc::new(move |this, _window, cx| {
+                    this.convert_notebook_to_script(tab_idx, cx)
+                }),
+            ));
+        } else if self.tabs.get(tab_idx).is_some_and(|t| t.ddl_view.is_none()) {
+            rows.push(row(
+                "tab-menu-open-notebook",
+                crate::localization::text("notebook.shell.promote.open_menu"),
+                true,
+                cx,
+                std::rc::Rc::new(move |this, _window, cx| {
+                    this.promote_tab_to_notebook(tab_idx, false, cx)
+                }),
+            ));
+            rows.push(row(
+                "tab-menu-open-notebook-split",
+                crate::localization::text("notebook.shell.promote.open_split_menu"),
+                true,
+                cx,
+                std::rc::Rc::new(move |this, _window, cx| {
+                    this.promote_tab_to_notebook(tab_idx, true, cx)
+                }),
+            ));
+        }
         // Move the tab (text, caret, connection, results snapshot) to
         // another workbench window. Native-only: the browser has one window.
         #[cfg(not(target_arch = "wasm32"))]
@@ -7156,6 +7233,7 @@ impl AppView {
         }
 
         if let Some(notebook) = notebook {
+            self.sync_notebook_view(tab_idx, cx);
             return div()
                 .flex()
                 .flex_col()
@@ -7167,7 +7245,7 @@ impl AppView {
                         .id("notebook-scroll")
                         .flex_1()
                         .min_h_0()
-                        .overflow_scroll()
+                        .overflow_hidden()
                         .child(notebook),
                 )
                 .into_any_element();
@@ -7736,6 +7814,8 @@ impl Render for AppView {
         #[cfg(not(target_arch = "wasm32"))]
         let host_key_dialog = self.overlays.host_key_dialog.clone();
         #[cfg(not(target_arch = "wasm32"))]
+        let pg_oauth_dialog = self.overlays.pg_oauth_dialog.clone();
+        #[cfg(not(target_arch = "wasm32"))]
         let ssh_challenge_dialog = self.overlays.ssh_challenge_dialog.clone();
         #[cfg(not(target_arch = "wasm32"))]
         let credential_export_dialog = self.overlays.credential_export_dialog.clone();
@@ -7817,6 +7897,10 @@ impl Render for AppView {
                 #[cfg(not(target_arch = "wasm32"))]
                 if let Some(hkd) = host_key_dialog.clone() {
                     empty = empty.child(hkd);
+                }
+                #[cfg(not(target_arch = "wasm32"))]
+                if let Some(pod) = pg_oauth_dialog.clone() {
+                    empty = empty.child(pod);
                 }
                 #[cfg(not(target_arch = "wasm32"))]
                 if let Some(scd) = ssh_challenge_dialog.clone() {
@@ -8334,6 +8418,9 @@ impl Render for AppView {
             .on_action(cx.listener(Self::handle_save_notebook))
             .on_action(cx.listener(Self::handle_run_notebook_cell))
             .on_action(cx.listener(Self::handle_run_all_notebook_cells))
+            .on_action(cx.listener(Self::handle_stop_notebook_run))
+            .on_action(cx.listener(Self::handle_open_as_notebook))
+            .on_action(cx.listener(Self::handle_convert_notebook_to_script))
             .on_action(cx.listener(Self::handle_close_tab_action))
             .on_action(cx.listener(Self::handle_toggle_sidebar))
             .on_action(cx.listener(Self::handle_show_sql_library))
@@ -8614,6 +8701,10 @@ impl Render for AppView {
         #[cfg(not(target_arch = "wasm32"))]
         if let Some(hkd) = host_key_dialog {
             stack = stack.child(hkd);
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(pod) = pg_oauth_dialog {
+            stack = stack.child(pod);
         }
         #[cfg(not(target_arch = "wasm32"))]
         if let Some(scd) = ssh_challenge_dialog {
@@ -8907,7 +8998,8 @@ impl Render for AppView {
                         crate::localization::text("shell.resume.integrated_credentials")
                     }
                     sqlly_core::AuthenticationType::AwsRdsIam { username, .. }
-                    | sqlly_core::AuthenticationType::GcpCloudSqlIam { username } => {
+                    | sqlly_core::AuthenticationType::GcpCloudSqlIam { username }
+                    | sqlly_core::AuthenticationType::PostgresOAuth { username, .. } => {
                         username.clone()
                     }
                     sqlly_core::AuthenticationType::AuthToken { .. } => {

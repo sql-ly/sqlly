@@ -1,0 +1,17 @@
+== Physical Plan ==
+*(2) Union
+:- *(2) Project [name#32]
+:  +- *(2) BroadcastHashJoin [id#31L], [customer_id#14L], LeftSemi, BuildRight, false, false
+:     :- *(2) ColumnarToRow
+:     :  +- FileScan parquet spark_catalog.default.customers[id#31L,name#32] Batched: true, DataFilters: [], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/tmp/spark-warehouse/customers], PartitionFilters: [], PushedFilters: [], ReadSchema: struct<id:bigint,name:string>
+:     +- BroadcastExchange HashedRelationBroadcastMode(List(input[0, bigint, true]),false), [plan_id=530]
+:        +- *(1) Project [customer_id#14L]
+:           +- *(1) Filter (isnotnull(total#15) AND (total#15 > 499.00))
+:              +- *(1) ColumnarToRow
+:                 +- FileScan parquet spark_catalog.default.orders[customer_id#14L,total#15] Batched: true, DataFilters: [isnotnull(total#15), (total#15 > 499.00)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/tmp/spark-warehouse/orders], PartitionFilters: [], PushedFilters: [IsNotNull(total), GreaterThan(total,499.00)], ReadSchema: struct<customer_id:bigint,total:decimal(11,2)>
++- *(2) Project [sku#75]
+   +- *(2) Filter (isnotnull(price#76) AND (price#76 < 1.00))
+      +- *(2) ColumnarToRow
+         +- FileScan parquet spark_catalog.default.order_items[sku#75,price#76,qty#77L] Batched: true, DataFilters: [isnotnull(price#76), (price#76 < 1.00)], Format: Parquet, Location: CatalogFileIndex(1 paths)[file:/tmp/spark-warehouse/order_items], PartitionFilters: [], PushedFilters: [IsNotNull(price), LessThan(price,1.00)], ReadSchema: struct<sku:string,price:decimal(11,2)>
+
+

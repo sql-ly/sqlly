@@ -1,0 +1,39 @@
+format: clickhouse-text (Certain)
+statements: 1
+
+== statement 1
+dialect: "ClickHouse"
+estimated_rows: 36790
+source_format: "clickhouse-text"
+statement_type: "EXPLAIN"
+operators: 7
+  #1 Limit preliminary LIMIT [Limit]
+      output_columns: ["country", "count()", "sum(total)"]
+      properties: [{name="Limit" value="5"}, {name="Offset" value="0"}]
+    #2 Sorting Sorting for ORDER BY [Sorting]
+        properties: [{name="Limit" value="5"}]
+        sort_keys: ["sum(total) DESC"]
+      #3 Aggregating [Aggregating]
+          group_keys: ["country"]
+          properties: [{name="Aggregates" value="count(), sum(total)"}, {name="Skip merging" value="0"}]
+        #4 Join JOIN FillRightFirst [Join]
+            estimated_rows: 36790
+            extra: ["c[50000] ⋈ o[36512]"]
+            join_predicate: "id = customer_id"
+            join_type: "inner"
+            properties: [{name="Strictness" value="all"}, {name="Algorithm" value="SpillingHashJoin(HashJoin)"}, {name="Cost" value="estimated 36.79 thousand"}, {name="Selectivity" value="estimated (NDV) 2.015e-05"}, {name="Output rows" value="estimated 36.79 thousand"}, {name="Left" value="rows estimated 50.00 thousand"}, {name="Right" value="rows estimated 36.51 thousand"}, {name="Input (left)" value="id, country"}, {name="Input (right)" value="customer_id, total"}]
+          #5 ReadFromMergeTree default.customers [ReadFromMergeTree]
+              estimated_rows: 49152
+              output_columns: ["id", "country"]
+              properties: [{name="Read type" value="Default"}, {name="Parts" value="1"}, {name="Granules" value="6"}, {name="Runtime filters" value="RF1(id, customer_id from default.orders)"}]
+              relation: "customers"
+              schema: "default"
+          #6 BuildRuntimeFilter Build runtime join filter on customer_id [BuildRuntimeFilter]
+              properties: [{name="Filter id" value="RF1"}, {name="Source table" value="default.orders"}]
+            #7 ReadFromMergeTree default.orders [ReadFromMergeTree]
+                estimated_rows: 1466368
+                filter: "placed_at >= '2023-06-01 00:00:00' AND status = 'paid'"
+                output_columns: ["total", "customer_id"]
+                properties: [{name="Read type" value="Default"}, {name="Parts" value="5"}, {name="Granules" value="179"}]
+                relation: "orders"
+                schema: "default"

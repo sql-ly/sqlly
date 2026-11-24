@@ -12,6 +12,12 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 
 pub fn base_dir() -> PathBuf {
+    #[cfg(test)]
+    if let Some(dir) =
+        crate::workspace_session::test_session_file().and_then(|f| f.parent().map(PathBuf::from))
+    {
+        return dir.join("result-cache");
+    }
     dirs::data_dir()
         .unwrap_or_else(std::env::temp_dir)
         .join("SQLLY")

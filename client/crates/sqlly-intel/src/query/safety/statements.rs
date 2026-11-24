@@ -187,6 +187,48 @@ pub(super) fn is_pure_use_batch(sql: &str, dest: Destination) -> bool {
         })
 }
 
+/// A T-SQL text that is exactly `SET SHOWPLAN_XML|SHOWPLAN_ALL|SHOWPLAN_TEXT
+/// ON|OFF` under every reading: `Some(true)` for ON. SQL Server takes it
+/// only alone in its batch, and while it is on the server compiles what
+/// follows without running it.
+pub(super) fn tsql_showplan_toggle(sql: &str) -> Option<bool> {
+    let units = unit_views(sql, Destination::Engine(DatabaseType::SqlServer));
+    let [unit] = units.as_slice() else {
+        return None;
+    };
+    if unit.views.ambiguity().is_some() {
+        return None;
+    }
+    let mut toggle = None;
+    for view in &unit.views.views {
+        let statements = statement_words(view);
+        let [statement] = statements.as_slice() else {
+            return None;
+        };
+        let on = match statement.words.as_slice() {
+            [set, option, value]
+                if set == "SET"
+                    && matches!(
+                        option.as_str(),
+                        "SHOWPLAN_XML" | "SHOWPLAN_ALL" | "SHOWPLAN_TEXT"
+                    ) =>
+            {
+                match value.as_str() {
+                    "ON" => true,
+                    "OFF" => false,
+                    _ => return None,
+                }
+            }
+            _ => return None,
+        };
+        if toggle.is_some_and(|t| t != on) {
+            return None;
+        }
+        toggle = Some(on);
+    }
+    toggle
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

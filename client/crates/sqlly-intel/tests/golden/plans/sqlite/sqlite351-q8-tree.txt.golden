@@ -1,0 +1,29 @@
+format: sqlite-eqp (Certain)
+statements: 1
+
+== statement 1
+dialect: "Sqlite"
+source_format: "sqlite-eqp"
+statement_type: "EXPLAIN QUERY PLAN"
+operators: 5
+  #1 MATERIALIZE m [MATERIALIZE]
+      subplan_name: "m"
+    #2 SCAN orders USING INDEX orders_customer_idx [SCAN]
+        index_name: "orders_customer_idx"
+        output_list: ["orders", "Index: orders_customer_idx"]
+        properties: [{name="Access" value="INDEX"}]
+        relation: "orders"
+  #3 SCAN a [SCAN]
+      output_list: ["a"]
+      relation: "a"
+      warnings: [{TableScan={table="a"}}]
+  #4 BLOOM FILTER ON b (t=?) [BLOOM]
+      filter: "t=?"
+      output_list: ["b", "Filter: t=?"]
+      relation: "b"
+  #5 SEARCH b USING AUTOMATIC COVERING INDEX (t=?) [SEARCH]
+      extra: ["AUTOMATIC COVERING INDEX"]
+      index_cond: "t=?"
+      output_list: ["b", "Index Cond: t=?"]
+      properties: [{name="Access" value="AUTOMATIC COVERING INDEX"}]
+      relation: "b"

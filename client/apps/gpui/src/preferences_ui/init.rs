@@ -629,6 +629,54 @@ impl PreferencesWindow {
                     }
                 }),
             ),
+            (
+                "ai_profile_price_input",
+                ai_profiles
+                    .profiles
+                    .first()
+                    .and_then(|p| p.price_per_1k_input_usd.map(|v| v.to_string()))
+                    .unwrap_or_default(),
+                crate::localization::text("settings.init.placeholder.price"),
+                Box::new(|this, text, cx| {
+                    if let Some(id) = this.cloud_ai.selected.clone() {
+                        if let Some(profile) = this
+                            .cloud_ai
+                            .profiles
+                            .profiles
+                            .iter_mut()
+                            .find(|p| p.id == id)
+                        {
+                            profile.price_per_1k_input_usd = crate::cloud_ai::parse_price(&text);
+                        }
+                        let _ = crate::cloud_ai::save_ai_profiles(&this.cloud_ai.profiles);
+                        cx.notify();
+                    }
+                }),
+            ),
+            (
+                "ai_profile_price_output",
+                ai_profiles
+                    .profiles
+                    .first()
+                    .and_then(|p| p.price_per_1k_output_usd.map(|v| v.to_string()))
+                    .unwrap_or_default(),
+                crate::localization::text("settings.init.placeholder.price"),
+                Box::new(|this, text, cx| {
+                    if let Some(id) = this.cloud_ai.selected.clone() {
+                        if let Some(profile) = this
+                            .cloud_ai
+                            .profiles
+                            .profiles
+                            .iter_mut()
+                            .find(|p| p.id == id)
+                        {
+                            profile.price_per_1k_output_usd = crate::cloud_ai::parse_price(&text);
+                        }
+                        let _ = crate::cloud_ai::save_ai_profiles(&this.cloud_ai.profiles);
+                        cx.notify();
+                    }
+                }),
+            ),
         ];
         #[cfg(not(target_arch = "wasm32"))]
         specs.push((
@@ -714,6 +762,9 @@ impl PreferencesWindow {
                     "ai_profile_name" => Some("settings.init.placeholder.profile_name"),
                     "ai_profile_model" => Some("settings.init.placeholder.model_id"),
                     "ai_profile_thinking_budget" => Some("settings.init.placeholder.token_budget"),
+                    "ai_profile_price_input" | "ai_profile_price_output" => {
+                        Some("settings.init.placeholder.price")
+                    }
                     id if id.starts_with("native_tool_") => {
                         Some("settings.init.placeholder.auto_detect")
                     }

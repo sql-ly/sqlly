@@ -1,0 +1,8 @@
+US|12500|9337125.0
+BR|12500|9337125.0
+QUERY PLAN
+|--SCAN o                                                       (loops=1 rows=40000)
+|--SEARCH c USING INTEGER PRIMARY KEY (rowid=?)                 (loops=10000 rows=10000)
+|--SEARCH oi USING INDEX order_items_order_idx (order_id=?)     (loops=10000 rows=25000)
+|--USE TEMP B-TREE FOR GROUP BY                                 (loops=1 rows=25000)
+`--USE TEMP B-TREE FOR ORDER BY                                 (loops=1 rows=2)

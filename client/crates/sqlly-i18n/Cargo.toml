@@ -1,10 +1,13 @@
 [package]
 name = "sqlly-i18n"
-version = "1.17.0"
+version = "1.20.0"
 edition.workspace = true
 license.workspace = true
 publish = false
 description = "Compiled SQLLY UI translations with runtime language and override support."
+
+[features]
+translator-locator = []
 
 [dependencies]
 serde = { workspace = true }

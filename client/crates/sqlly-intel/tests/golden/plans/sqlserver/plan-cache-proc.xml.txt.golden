@@ -1,0 +1,93 @@
+format: sqlserver-xml (Certain)
+statements: 2
+
+== statement 1
+dialect: "SqlServer"
+notes: ["Plan retrieved from the plan cache"]
+source_format: "sqlserver-xml"
+statement_text: "CREATE PROCEDURE dbo.orders_for_customer @customer_id INT, @min_total DECIMAL(12,2) = 0 AS BEGIN SET NOCOUNT ON;"
+statement_type: "SET ON/OFF"
+operators: 0
+
+== statement 2
+cardinality_estimator_version: 160
+dialect: "SqlServer"
+early_abort_reason: "GoodEnoughPlanFound"
+estimated_rows: 5.79623
+memory_grant: {granted_kb=0 max_used_kb=0 serial_desired_kb=544 serial_required_kb=512}
+notes: ["Plan retrieved from the plan cache", "Compile CPU: 3 ms", "Compile memory: 272 kB", "Cached plan size: 32 kB"]
+optimization_level: "FULL"
+parameters: [{compiled_value="100.00" data_type="decimal(12,2)" name="@min_total"}, {compiled_value="4242" data_type="int" name="@customer_id"}]
+planning_time_ms: 4
+query_hash: "0x3EEB3D8F2EAD7B0E"
+query_plan_hash: "0x75B14E95915ECB53"
+settings: [{name="QUOTED_IDENTIFIER" value="false"}, {name="ARITHABORT" value="false"}, {name="CONCAT_NULL_YIELDS_NULL" value="true"}, {name="ANSI_NULLS" value="true"}, {name="ANSI_PADDING" value="true"}, {name="ANSI_WARNINGS" value="true"}, {name="NUMERIC_ROUNDABORT" value="false"}]
+source_format: "sqlserver-xml"
+statement_text: "SELECT o.order_id, o.order_date, o.total FROM dbo.orders o WHERE o.customer_id = @customer_id AND o.total >= @min_total ORDER BY o.order_date DESC"
+statement_type: "SELECT"
+statistics_used: [{last_update="2026-11-23T23:03:31.64" modification_count=342 sampling_percent=100 schema="dbo" statistics="IX_orders_customer" table="orders"}, {last_update="2026-11-23T23:04:12.48" modification_count=0 sampling_percent=24.1267 schema="dbo" statistics="_WA_Sys_00000005_37A5467C" table="orders"}, {last_update="2026-11-23T23:03:31.77" modification_count=0 sampling_percent=100 schema="dbo" statistics="IX_orders_date" table="orders"}]
+total_subtree_cost: 0.031269
+warnings: [{KeyLookup={index="PK__orders__46596229A6DBB338" table="orders"}}]
+operators: 4
+  #0 Sort [Sort]
+      estimated_cost: 0.031269
+      estimated_cpu: 0.000123
+      estimated_executions: 1
+      estimated_io: 0.011261
+      estimated_row_width: 28
+      estimated_rows: 5.79623
+      execution_mode: "Row"
+      output_columns: ["o.order_id", "o.order_date", "o.total"]
+      output_list: ["o.order_id", "o.order_date", "o.total"]
+      properties: [{name="Distinct" value="0"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}, {name="Memory Fraction Input" value="1"}, {name="Memory Fraction Output" value="1"}]
+      sort_keys: ["o.order_date DESC"]
+    #1 Nested Loops [Inner Join]
+        estimated_cost: 0.019882
+        estimated_cpu: 0.000025
+        estimated_executions: 1
+        estimated_row_width: 28
+        estimated_rows: 5.79623
+        execution_mode: "Row"
+        join_type: "Inner"
+        output_columns: ["o.order_id", "o.order_date", "o.total"]
+        output_list: ["o.order_id", "o.order_date", "o.total"]
+        properties: [{name="Outer References" value="o.order_id"}, {name="Optimized" value="0"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}]
+      #2 Index Seek [Index Seek]
+          alias: "o"
+          database: "Shop"
+          estimated_cost: 0.003289
+          estimated_cpu: 0.000164
+          estimated_executions: 1
+          estimated_io: 0.003125
+          estimated_row_width: 11
+          estimated_rows: 6
+          estimated_rows_read: 6
+          execution_mode: "Row"
+          index_cond: "o.customer_id = [@customer_id]"
+          index_name: "IX_orders_customer"
+          output_columns: ["o.order_id"]
+          output_list: ["o.order_id"]
+          properties: [{name="Ordered" value="1"}, {name="ScanDirection" value="FORWARD"}, {name="ForcedIndex" value="0"}, {name="ForceSeek" value="0"}, {name="ForceScan" value="0"}, {name="NoExpandHint" value="0"}, {name="Storage" value="RowStore"}, {name="TableCardinality" value="300000"}, {name="EstimateRebinds" value="0"}, {name="EstimateRewinds" value="0"}, {name="IndexKind" value="NonClustered"}, {name="Storage" value="RowStore"}]
+          relation: "orders"
+          schema: "dbo"
+          table_cardinality: 300000
+      #4 Clustered Index Seek [Clustered Index Seek]
+          alias: "o"
+          database: "Shop"
+          estimated_cost: 0.016568
+          estimated_cpu: 0.000158
+          estimated_executions: 6
+          estimated_io: 0.003125
+          estimated_row_width: 24
+          estimated_rows: 0.966038
+          execution_mode: "Row"
+          filter: "[Shop].[dbo].[orders].[total] as [o].[total]>=[@min_total]"
+          index_cond: "o.order_id = [Shop].[dbo].[orders].[order_id] as [o].[order_id]"
+          index_name: "PK__orders__46596229A6DBB338"
+          output_columns: ["o.order_date", "o.total"]
+          output_list: ["o.order_date", "o.total"]
+          properties: [{name="Lookup" value="1"}, {name="Ordered" value="1"}, {name="ScanDirection" value="FORWARD"}, {name="ForcedIndex" value="0"}, {name="ForceSeek" value="0"}, {name="ForceScan" value="0"}, {name="NoExpandHint" value="0"}, {name="Storage" value="RowStore"}, {name="TableCardinality" value="300000"}, {name="EstimateRebinds" value="5"}, {name="EstimateRewinds" value="0"}, {name="IndexKind" value="Clustered"}, {name="Storage" value="RowStore"}]
+          relation: "orders"
+          schema: "dbo"
+          table_cardinality: 300000
+          warnings: [{KeyLookup={index="PK__orders__46596229A6DBB338" table="orders"}}]

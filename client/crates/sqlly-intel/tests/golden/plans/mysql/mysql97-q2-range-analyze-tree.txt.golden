@@ -1,0 +1,76 @@
+format: mysql-tree (Certain)
+statements: 1
+
+== statement 1
+dialect: "MySql"
+estimated_rows: 110
+execution_time_ms: 0.498
+has_actuals: yes
+source_format: "mysql-tree"
+statement_type: "EXPLAIN ANALYZE"
+total_subtree_cost: 124
+operators: 5
+  #1 Nested loop inner join [Nested loop inner join]
+      actual_rebinds: 1
+      actual_rows: 149
+      actual_rows_total: 149
+      actual_self_time_ms: 0.0262
+      actual_startup_ms: 0.147
+      actual_time_ms: 0.498
+      estimated_cost: 124
+      estimated_rows: 110
+      join_type: "Inner"
+      loops: 1
+      output_list: ["Actual time: 0.498 ms"]
+    #2 Filter: (c.id between 100 and 140) [Filter: (c.id between 100 and 140)]
+        actual_rebinds: 1
+        actual_rows: 41
+        actual_rows_total: 41
+        actual_self_time_ms: 0.0355
+        actual_startup_ms: 0.0444
+        actual_time_ms: 0.0536
+        estimated_cost: 8.47
+        estimated_rows: 41
+        filter: "c.id between 100 and 140"
+        loops: 1
+        output_list: ["Actual time: 0.0536 ms"]
+      #3 Index range scan on c using PRIMARY over (100 <= id <= 140) [Index range scan on c using PRIMARY over (100 <= id <= 140)]
+          actual_rebinds: 1
+          actual_rows: 41
+          actual_rows_total: 41
+          actual_self_time_ms: 0.0181
+          actual_startup_ms: 0.0115
+          actual_time_ms: 0.0181
+          estimated_cost: 8.47
+          estimated_rows: 41
+          index_cond: "(100 <= id <= 140)"
+          index_name: "PRIMARY"
+          loops: 1
+          output_list: ["Actual time: 0.0181 ms", "c", "Key: PRIMARY"]
+          relation: "c"
+    #4 Filter: (o.total > 500.00) [Filter: (o.total > 500.00)]
+        actual_rebinds: 41
+        actual_rows: 148.83
+        actual_rows_total: 148.83
+        actual_self_time_ms: 0.07667
+        actual_startup_ms: 0.00941
+        actual_time_ms: 0.4182
+        estimated_cost: 2.02
+        estimated_rows: 2.69
+        filter: "o.total > 500.00"
+        loops: 41
+        output_list: ["Actual time: 0.0102 ms"]
+      #5 Index lookup on o using orders_customer_idx (customer_id = c.id) [Index lookup on o using orders_customer_idx (customer_id = c.id)]
+          actual_rebinds: 41
+          actual_rows: 328
+          actual_rows_total: 328
+          actual_self_time_ms: 0.34153
+          actual_startup_ms: 0.00778
+          actual_time_ms: 0.34153
+          estimated_cost: 2.02
+          estimated_rows: 8.06
+          index_cond: "customer_id = c.id"
+          index_name: "orders_customer_idx"
+          loops: 41
+          output_list: ["Actual time: 0.00833 ms", "o", "Key: orders_customer_idx"]
+          relation: "o"
