@@ -16,12 +16,18 @@ pub(super) struct Statement<'a> {
     /// batch separator), for verbatim passthrough of formatter-off regions.
     pub(super) src_start: usize,
     pub(super) src_end: usize,
+    /// A client command line (MySQL `DELIMITER //`) that is passed through
+    /// as written, on a line of its own.
+    pub(super) verbatim: bool,
 }
 
 /// A T-SQL batch separator line: `GO`, an optional repeat count (`GO 5`), and
 /// any comments that share its line.
 pub(super) struct BatchSeparator<'a> {
     pub(super) go: Item<'a>,
+    /// A MySQL custom delimiter (`//`, `$$`), which may span several
+    /// tokens; it stays on the line of the statement it ends.
+    pub(super) custom: Option<String>,
     pub(super) count: Option<Item<'a>>,
     pub(super) trailing_comments: Vec<Item<'a>>,
 }
@@ -38,8 +44,73 @@ pub(super) fn split_statements_items<'a>(
     let mut cur: Vec<Item<'a>> = Vec::new();
     let mut depth = 0usize;
     let mut i = 0usize;
+    // The delimiter a MySQL `DELIMITER xx` line put in force.
+    let mut custom: Option<String> = None;
     while i < items.len() {
         let item = &items[i];
+        if dialect == Dialect::MySql {
+            if cur.is_empty()
+                && (i == 0 || item.newlines_before > 0)
+                && is_word(&item.tok, "delimiter")
+            {
+                let end = (i + 1..items.len())
+                    .find(|&k| items[k].newlines_before > 0)
+                    .unwrap_or(items.len());
+                let text: String = items[i + 1..end]
+                    .iter()
+                    .filter(|t| !matches!(t.tok.kind, TokenKind::Comment(_)))
+                    .map(|t| t.tok.text)
+                    .collect();
+                custom = (!text.is_empty() && text != ";").then_some(text);
+                out.push(Statement {
+                    items: items[i..end].to_vec(),
+                    semicolon: None,
+                    separator: None,
+                    src_start: item.tok.span.start,
+                    src_end: items[end - 1].tok.span.end,
+                    verbatim: true,
+                });
+                depth = 0;
+                i = end;
+                continue;
+            }
+            if let Some(delimiter) = &custom
+                && let Some(end) = custom_delimiter_end(items, i, delimiter)
+            {
+                let separator = BatchSeparator {
+                    go: *item,
+                    custom: Some(delimiter.clone()),
+                    count: None,
+                    trailing_comments: Vec::new(),
+                };
+                match out.last_mut() {
+                    Some(prev) if cur.is_empty() && prev.separator.is_none() && !prev.verbatim => {
+                        prev.separator = Some(separator);
+                    }
+                    _ => {
+                        let src_start = cur
+                            .first()
+                            .map(|i| i.tok.span.start)
+                            .unwrap_or(item.tok.span.start);
+                        let src_end = cur
+                            .last()
+                            .map(|i| i.tok.span.end)
+                            .unwrap_or(item.tok.span.start);
+                        out.push(Statement {
+                            items: std::mem::take(&mut cur),
+                            semicolon: None,
+                            separator: Some(separator),
+                            src_start,
+                            src_end,
+                            verbatim: false,
+                        });
+                    }
+                }
+                depth = 0;
+                i = end;
+                continue;
+            }
+        }
         if item.tok.kind == TokenKind::Semicolon {
             let src_start = cur
                 .first()
@@ -51,6 +122,7 @@ pub(super) fn split_statements_items<'a>(
                 separator: None,
                 src_start,
                 src_end: item.tok.span.end,
+                verbatim: false,
             });
             depth = 0;
             i += 1;
@@ -64,6 +136,7 @@ pub(super) fn split_statements_items<'a>(
             let count = tail.next_if(|t| matches!(t.tok.kind, TokenKind::Number(_)));
             let separator = BatchSeparator {
                 go: *item,
+                custom: None,
                 count,
                 trailing_comments: tail.collect(),
             };
@@ -87,6 +160,7 @@ pub(super) fn split_statements_items<'a>(
                         separator: Some(separator),
                         src_start,
                         src_end,
+                        verbatim: false,
                     });
                 }
             }
@@ -111,9 +185,26 @@ pub(super) fn split_statements_items<'a>(
             separator: None,
             src_start,
             src_end,
+            verbatim: false,
         });
     }
     out
+}
+
+/// When the touching tokens starting at `items[i]` spell `delimiter`, the
+/// index just past them.
+fn custom_delimiter_end(items: &[Item<'_>], i: usize, delimiter: &str) -> Option<usize> {
+    let mut rest = delimiter;
+    let mut k = i;
+    while !rest.is_empty() {
+        let item = items.get(k)?;
+        if k > i && item.tok.span.start != items[k - 1].tok.span.end {
+            return None;
+        }
+        rest = rest.strip_prefix(item.tok.text)?;
+        k += 1;
+    }
+    Some(k)
 }
 
 /// Words after which the statement still needs an operand, so a `GO` line
@@ -329,7 +420,22 @@ fn clause_start(
         "with" if only_comments_before => ClauseKind::With,
         "union" | "intersect" | "except" | "minus" => ClauseKind::SetOp,
         "set" if in_update => ClauseKind::UpdateSet,
-        "values" => ClauseKind::Values,
+        // `DEFAULT VALUES` and MySQL's `VALUES(col)` function are not a
+        // row list.
+        "values"
+            if !nodes[..i]
+                .iter()
+                .rev()
+                .find(|n| !n.is_comment())
+                .is_some_and(|n| match n {
+                    Node::Tok(it) => {
+                        it.tok.text == "=" || it.tok.text.eq_ignore_ascii_case("default")
+                    }
+                    _ => false,
+                }) =>
+        {
+            ClauseKind::Values
+        }
         "when" if in_merge => ClauseKind::MergeWhen,
         "using" if in_merge => ClauseKind::Using,
         "on" if in_merge => ClauseKind::On,
@@ -404,6 +510,9 @@ pub(super) fn segment_clauses<'a, 'n>(nodes: &'n [Node<'a>]) -> Vec<Clause<'a, '
 }
 
 /// Split top-level comma-separated elements. Returns (element, comma node).
+/// A list that ends on a comma (`a int,` while the next column is still
+/// being typed) yields a final empty element, so every emitter prints that
+/// comma instead of dropping it.
 pub(super) fn split_commas<'a, 'n>(
     nodes: &'n [Node<'a>],
 ) -> Vec<(&'n [Node<'a>], Option<&'n Node<'a>>)> {
@@ -415,9 +524,7 @@ pub(super) fn split_commas<'a, 'n>(
             start = i + 1;
         }
     }
-    if start < nodes.len() || out.is_empty() {
-        out.push((&nodes[start..], None));
-    }
+    out.push((&nodes[start..], None));
     out
 }
 

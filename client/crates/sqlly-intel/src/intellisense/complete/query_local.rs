@@ -9,7 +9,7 @@ use super::context::{
 };
 use super::filesystem::find_filesystem_table_columns;
 use crate::intellisense::score::qualified_object_score;
-use crate::intellisense::score::{push_match, push_match_joined};
+use crate::intellisense::score::{push_match, push_match_joined, push_scored};
 use crate::intellisense::types::{
     CompletionCatalog, CompletionItem, CompletionKind, CompletionObject, CompletionSource,
 };
@@ -113,6 +113,19 @@ pub(crate) fn add_query_local_items(
 ) {
     let mut label_buf = String::new();
     for parameter in query_parameters(sql, cursor) {
+        if prefix == "@" {
+            // A bare `@` asks for every variable in scope; the matcher has
+            // no letters to rank by.
+            push_scored(
+                items,
+                &parameter,
+                &parameter,
+                CompletionKind::Parameter,
+                CompletionSource::Inferred,
+                78,
+            );
+            continue;
+        }
         push_match(
             items,
             &parameter,

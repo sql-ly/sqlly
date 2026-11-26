@@ -27,6 +27,9 @@
 
 mod casing;
 mod emit;
+mod procedural;
+#[cfg(test)]
+mod procedural_tests;
 mod segment;
 #[cfg(test)]
 mod tests;
@@ -271,12 +274,49 @@ fn fixed_dialect(dialect: SqlDialect) -> Dialect {
 /// reuse by the main format pass.
 fn detect_dialect<'a>(input: &'a str) -> (Dialect, Option<Vec<Token<'a>>>) {
     let probe = StrictLexer::tokenize(input, Dialect::SqlServer);
+    let mut prev_word: Option<&str> = None;
     for t in &probe {
         match t.kind {
             TokenKind::Ident(IdentQuote::Bracket) => return (Dialect::SqlServer, Some(probe)),
             TokenKind::ParamMarker(ParamStyle::AtName) => return (Dialect::SqlServer, Some(probe)),
+            // A `#temp` / `##global` table where a table name goes. Read as
+            // PostgreSQL the `#` is an operator and `CREATE TABLE #t` comes
+            // back as `# t`, which no longer runs.
+            TokenKind::Ident(IdentQuote::None)
+                if t.text.starts_with('#')
+                    && prev_word.is_some_and(|w| casing::word_in(TEMP_TABLE_LEADERS, w)) =>
+            {
+                return (Dialect::SqlServer, Some(probe));
+            }
+            TokenKind::Whitespace | TokenKind::Comment(_) => continue,
+            // `dbo.Orders`: SQL Server's default schema.
+            TokenKind::Dot if prev_word.is_some_and(|w| w.eq_ignore_ascii_case("dbo")) => {
+                return (Dialect::SqlServer, Some(probe));
+            }
+            // `NVARCHAR(MAX)`, `SET NOCOUNT ON`, `UNIQUEIDENTIFIER`: words
+            // only T-SQL spells. Read as PostgreSQL, `ALTER TABLE … add` and
+            // a trigger's `after` are plain names and keep the typed case.
+            _ if t.is_word() && casing::word_in(TSQL_ONLY_WORDS, t.text) => {
+                return (Dialect::SqlServer, Some(probe));
+            }
+            // `AS BEGIN` / `ELSE BEGIN`: a T-SQL block (PostgreSQL bodies sit
+            // in a dollar-quoted string, MySQL ones follow `)` or `DO`), and
+            // `CREATE PROC`.
+            _ if t.is_word()
+                && prev_word.is_some_and(|w| {
+                    if t.text.eq_ignore_ascii_case("begin") {
+                        w.eq_ignore_ascii_case("as") || w.eq_ignore_ascii_case("else")
+                    } else {
+                        t.text.eq_ignore_ascii_case("proc")
+                            && casing::word_in(&["create", "alter", "drop"], w)
+                    }
+                }) =>
+            {
+                return (Dialect::SqlServer, Some(probe));
+            }
             _ => {}
         }
+        prev_word = t.is_word().then_some(t.text);
     }
     // `GO` on its own line is the T-SQL batch separator.
     if segment::has_batch_separator(&collect_items(input, &probe, Dialect::SqlServer)) {
@@ -288,6 +328,17 @@ fn detect_dialect<'a>(input: &'a str) -> (Dialect, Option<Vec<Token<'a>>>) {
         .any(|t| matches!(t.kind, TokenKind::Ident(IdentQuote::Backtick)))
     {
         return (Dialect::MySql, Some(probe));
+    }
+    // A `DELIMITER //` client line: a MySQL routine script.
+    let mut line_start = true;
+    for t in &probe {
+        match t.kind {
+            TokenKind::Whitespace => line_start |= t.text.contains('\n'),
+            _ if line_start && t.is_word() && t.text.eq_ignore_ascii_case("delimiter") => {
+                return (Dialect::MySql, Some(probe));
+            }
+            _ => line_start = false,
+        }
     }
     // A `?` placeholder (`WHERE id=?`) would glue into a PostgreSQL operator
     // (`=?`), so it reads as MySQL unless the text also shows PostgreSQL
@@ -303,6 +354,22 @@ fn detect_dialect<'a>(input: &'a str) -> (Dialect, Option<Vec<Token<'a>>>) {
     }
     (Dialect::Postgres, None)
 }
+
+/// Type and option names no other engine has.
+const TSQL_ONLY_WORDS: &[&str] = &[
+    "nvarchar",
+    "datetime2",
+    "datetimeoffset",
+    "smalldatetime",
+    "uniqueidentifier",
+    "nocount",
+    "xact_abort",
+];
+
+/// Words a T-SQL `#temp` table name directly follows.
+const TEMP_TABLE_LEADERS: &[&str] = &[
+    "table", "into", "from", "join", "update", "exists", "apply", "insert", "delete",
+];
 
 fn surrounding_style_is_upper(tokens: &[Token<'_>]) -> bool {
     let mut upper = 0usize;

@@ -64,6 +64,10 @@ pub(super) fn collect_items<'a>(
         let prev_is_operand = touches && prev.is_some_and(|p| is_operand(&p.tok));
         let prev_is_string =
             touches && prev.is_some_and(|p| matches!(p.tok.kind, TokenKind::StringLit(_)));
+        let prev_is_bare_at = touches
+            && prev.is_some_and(|p| {
+                p.tok.text == "@" && matches!(p.tok.kind, TokenKind::ParamMarker(_))
+            });
 
         // `[ … ]` as one verbatim item.
         if is_operator(&t, "[")
@@ -133,7 +137,9 @@ pub(super) fn collect_items<'a>(
             // Two literals written touching (`'a''b'` is one string to the
             // server's lexer in some modes, a triple-quoted BigQuery string
             // lexes as three) stay touching.
-            || (prev_is_string && matches!(t.kind, TokenKind::StringLit(_)));
+            || (prev_is_string && matches!(t.kind, TokenKind::StringLit(_)))
+            // The quoted half of a MySQL `@'host'` / `` @`var` ``.
+            || prev_is_bare_at;
         items.push(item(t, newlines, attach));
         newlines = 0;
         i += 1;
@@ -259,8 +265,13 @@ fn mark_context_keywords<'a>(items: &mut [Item<'a>]) {
     let at = |pos: Option<usize>| pos.and_then(|p| toks.get(p)).copied();
     let word = |t: Option<Token<'a>>, w: &str| t.is_some_and(|t| is_word(&t, w));
     let kind = |t: Option<Token<'a>>, k: TokenKind| t.is_some_and(|t| t.kind == k);
+    // Where the statement holding `p` starts, for the DDL words below.
+    let mut start = 0;
     for p in 0..code.len() {
         let k = code[p];
+        if items[k].tok.kind == TokenKind::Semicolon {
+            start = p + 1;
+        }
         if items[k].tok.kind != TokenKind::Ident(IdentQuote::None) {
             continue;
         }
@@ -269,7 +280,62 @@ fn mark_context_keywords<'a>(items: &mut [Item<'a>]) {
         let next = at(Some(p + 1));
         let next2 = at(Some(p + 2));
         let lower = items[k].tok.text.to_ascii_lowercase();
+        let after_dot = kind(prev, TokenKind::Dot);
+        let head = |w: &str| word(at(Some(start)), w) && p > start;
+        // `CREATE [OR ALTER | OR REPLACE] [UNIQUE | CONSTRAINT] <kind>`.
+        let creates = |what: &str| {
+            (head("create") || head("alter"))
+                && (start + 1..(start + 5).min(p)).any(|q| word(at(Some(q)), what))
+        };
+        if head("alter")
+            && word_in(TYPE_WORDS, &lower)
+            && !after_dot
+            && (word(prev, "type") || ["add", "column", "modify"].iter().any(|w| word(prev2, w)))
+        {
+            // `ALTER TABLE t ALTER COLUMN c int`, `ADD c int`: the type slot.
+            items[k].is_cast_type = true;
+            continue;
+        }
         let hit = match lower.as_str() {
+            // DDL words the dialect tables leave out.
+            "truncate" => p == start && word(next, "table"),
+            "add" => head("alter") && !after_dot && next.is_some_and(|t| t.is_word()),
+            "cascade" | "restrict" => {
+                (word(prev2, "on") && (word(prev, "delete") || word(prev, "update")))
+                    || ((head("drop") || head("truncate"))
+                        && next.is_none_or(|t| t.kind == TokenKind::Semicolon))
+            }
+            "no" => {
+                word(next, "action")
+                    || (creates("sequence")
+                        && ["cycle", "minvalue", "maxvalue", "cache"]
+                            .iter()
+                            .any(|w| word(next, w)))
+            }
+            "action" => word(prev, "no"),
+            "after" | "before" => {
+                creates("trigger")
+                    && ["insert", "update", "delete", "truncate"]
+                        .iter()
+                        .any(|w| word(next, w))
+            }
+            "instead" => creates("trigger") && word(next, "of"),
+            "of" => creates("trigger") && word(prev, "instead"),
+            "each" => {
+                creates("trigger")
+                    && word(prev, "for")
+                    && (word(next, "row") || word(next, "statement"))
+            }
+            "row" | "statement" => creates("trigger") && word(prev, "each"),
+            "execute" => creates("trigger") && (word(next, "function") || word(next, "procedure")),
+            "start" => creates("sequence") && word(next, "with"),
+            "increment" => creates("sequence") && word(next, "by"),
+            "minvalue" | "maxvalue" | "cache" => {
+                creates("sequence")
+                    && (word(prev, "no")
+                        || next.is_some_and(|t| matches!(t.kind, TokenKind::Number(_))))
+            }
+            "cycle" => creates("sequence") && !after_dot,
             "over" => kind(next, TokenKind::LParen) && kind(prev, TokenKind::RParen),
             "partition" => word(next, "by"),
             "within" => word(next, "group") && kind(prev, TokenKind::RParen),
@@ -580,6 +646,25 @@ fn classify_paren_from_history(history: &[Token]) -> ParenKind {
             if is_word(&before, "into") {
                 return ParenKind::InsertColumns;
             }
+            // `REFERENCES dbo.Customers (CustomerId)`, `CREATE VIEW v (a, b)`:
+            // a column list after a name, not a call.
+            if is_word(&before, "references") || is_word(&before, "view") {
+                return ParenKind::Plain;
+            }
+            // `PARTITION BY RANGE (created_at)` in DDL names a strategy.
+            if j == i
+                && is_word(&before, "by")
+                && j >= 2
+                && is_word(&history[j - 2], "partition")
+                && ["range", "list", "hash", "key"]
+                    .iter()
+                    .any(|w| is_word(&prev, w))
+                && history
+                    .first()
+                    .is_some_and(|t| is_word(t, "create") || is_word(t, "alter"))
+            {
+                return ParenKind::Plain;
+            }
             if is_word(&before, "table") {
                 return ParenKind::DdlBody;
             }
@@ -609,8 +694,18 @@ fn classify_index_paren(history: &[Token]) -> Option<ParenKind> {
     let mut k = rest.len();
     let mut last = prev;
     if is_word(&last, "clustered") || is_word(&last, "nonclustered") {
-        last = *rest.get(k.checked_sub(1)?)?;
-        k -= 1;
+        // `INDEX ix NONCLUSTERED (…)`, `PRIMARY KEY CLUSTERED (…)`: the
+        // word only ever sits in front of a key column list.
+        let Some(before) = k.checked_sub(1).and_then(|j| rest.get(j)) else {
+            return Some(ParenKind::IndexColumns);
+        };
+        if before.kind != TokenKind::Dot {
+            if !(is_word(before, "unique") || is_word(before, "key") || is_word(before, "index")) {
+                return Some(ParenKind::IndexColumns);
+            }
+            last = *before;
+            k -= 1;
+        }
     }
     if is_word(&last, "unique") {
         return Some(ParenKind::IndexColumns);
@@ -634,7 +729,9 @@ fn classify_index_paren(history: &[Token]) -> Option<ParenKind> {
         });
         return (!excluded).then_some(ParenKind::IndexColumns);
     }
-    if create_index && is_word(&prev, "include") {
+    // `INCLUDE (…)` also follows an inline index in a table body.
+    let after_list = rest.last().is_some_and(|t| t.kind == TokenKind::RParen);
+    if (create_index || after_list) && is_word(&prev, "include") {
         return Some(ParenKind::IndexColumns);
     }
     if !matches!(prev.kind, TokenKind::Keyword | TokenKind::Ident(_)) {
@@ -752,6 +849,8 @@ fn is_function_word(t: &Token) -> bool {
         "insert",
         "update",
         "delete",
+        "return",
+        "while",
         "'",
     ];
     match word_text(t) {

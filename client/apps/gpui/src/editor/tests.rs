@@ -7453,3 +7453,317 @@ fn scrollbar_geometry_catches_up_after_the_line_count_changes(cx: &mut gpui::Tes
         );
     });
 }
+
+#[test]
+fn format_as_you_go_leaves_an_unclosed_paren_alone() {
+    // `CREATE TABLE t\n (|` + Enter used to reformat to `CREATE TABLE t (`
+    // with the caret mapped back in front of the `(`, so every Enter opened
+    // a new line above the paren. A statement with a parenthesis still open
+    // is being typed: Enter is a plain newline after the `(`.
+    let prefs = crate::preferences::SqlFormattingPreferences::default();
+    for content in [
+        "CREATE TABLE Shared.ExternalSystemReferenceModel\n (",
+        "CREATE TABLE Shared.ExternalSystemReferenceModel\n(",
+        "create table  Shared.ExternalSystemReferenceModel   (",
+        "CREATE TABLE t (\nId INT NOT NULL PRIMARY KEY,",
+        "select a from t where b in (select c",
+    ] {
+        let cursor = content.len();
+        assert!(
+            format_as_you_go_edit(content, (0, content.len()), cursor, &prefs, fmt_indent())
+                .is_none(),
+            "{content:?}"
+        );
+    }
+    // Parens inside strings and comments do not count.
+    let content = "select '(' as a,b from t -- (";
+    assert!(
+        format_as_you_go_edit(
+            content,
+            (0, content.len()),
+            content.len(),
+            &prefs,
+            fmt_indent()
+        )
+        .is_some()
+    );
+}
+
+#[test]
+fn format_as_you_go_keeps_the_caret_after_typed_close_parens() {
+    let prefs = crate::preferences::SqlFormattingPreferences::default();
+    let content = "select count(*)\nfrom t where a in (select b from u)";
+    for needle in ["count(*)", "from u)"] {
+        let cursor = content.find(needle).unwrap() + needle.len();
+        let (_, formatted, caret) =
+            format_as_you_go_edit(content, (0, content.len()), cursor, &prefs, fmt_indent())
+                .expect("unformatted SQL changes");
+        assert!(
+            formatted[..caret].ends_with(')'),
+            "{needle}: {formatted:?} @ {caret}"
+        );
+    }
+}
+
+/// Type `script` one key at a time into a focused editor (`\n` presses the
+/// real Enter key) and check the caret after every key: everything typed so
+/// far sits before the caret, nothing typed sits after it, and an Enter
+/// always leaves the caret at the start of a fresh line below everything
+/// typed (format as you go may pull a lone `(` up onto the line above).
+fn type_statement_key_by_key(
+    cx: &mut gpui::TestAppContext,
+    script: &str,
+    format_as_you_go: bool,
+) -> String {
+    cx.update(|cx| {
+        cx.bind_keys([gpui::KeyBinding::new("enter", Enter, Some("SqlEditor"))]);
+    });
+    let (view, cx) = cx.add_window_view(|window, cx| {
+        let mut editor = SqlEditor::new(cx);
+        editor.set_services(Services::new(), cx);
+        editor.format_as_you_go_override = Some(format_as_you_go);
+        editor.focus_handle.focus(window, cx);
+        editor
+    });
+    let squash = |s: &str| -> String {
+        s.chars()
+            .filter(|c| !c.is_whitespace())
+            .flat_map(char::to_lowercase)
+            .collect()
+    };
+    let mut typed = String::new();
+    for ch in script.chars() {
+        typed.push(ch);
+        if ch == '\n' {
+            cx.simulate_keystrokes("enter");
+        } else {
+            cx.simulate_input(&ch.to_string());
+        }
+        cx.executor()
+            .advance_clock(std::time::Duration::from_millis(50));
+        cx.run_until_parked();
+        view.read_with(cx, |e, _| {
+            let text = e.text();
+            let (head, tail) = text.split_at(e.cursor);
+            let ctx = format!(
+                "after {typed:?} (fayg={format_as_you_go}): {text:?} @ {}",
+                e.cursor
+            );
+            assert_eq!(
+                squash(head),
+                squash(&typed),
+                "typed text before the caret, {ctx}"
+            );
+            assert_eq!(squash(tail), "", "nothing typed after the caret, {ctx}");
+            if ch == '\n' {
+                let line_start = head.rfind('\n').map_or(0, |i| i + 1);
+                assert!(
+                    head[line_start..].trim().is_empty(),
+                    "Enter leaves the caret at the start of a new line, {ctx}"
+                );
+            }
+        });
+    }
+    view.read_with(cx, |e, _| e.text().to_string())
+}
+
+const CREATE_TABLE_SCRIPTS: [&str; 3] = [
+    // The reported layout: paren on its own line, indented a space.
+    "CREATE TABLE Shared.ExternalSystemReferenceModel\n (\n\
+     Id INT NOT NULL PRIMARY KEY,\n\
+     ExternalSystem NVARCHAR(100) NOT NULL,\n\
+     ReferenceId NVARCHAR(200) NULL,\n\
+     CreatedAt DATETIME2 NOT NULL DEFAULT (SYSUTCDATETIME())\n\
+     );\n",
+    // Paren on the CREATE line.
+    "create table dbo.Orders (\n\
+     OrderId int identity(1,1) primary key,\n\
+     Total decimal(10, 2) not null,\n\
+     constraint CK_Total check (Total >= 0)\n\
+     )\n",
+    // Blank lines between columns.
+    "CREATE TABLE t\n(\n\na INT,\n\nb INT\n)\n\n",
+];
+
+#[gpui::test]
+fn typing_a_create_table_key_by_key_keeps_the_caret_with_format_as_you_go(
+    cx: &mut gpui::TestAppContext,
+) {
+    for script in CREATE_TABLE_SCRIPTS {
+        type_statement_key_by_key(cx, script, true);
+    }
+}
+
+#[gpui::test]
+fn typing_a_create_table_key_by_key_keeps_the_caret_without_format_as_you_go(
+    cx: &mut gpui::TestAppContext,
+) {
+    for script in CREATE_TABLE_SCRIPTS {
+        type_statement_key_by_key(cx, script, false);
+    }
+}
+
+/// CREATE / ALTER scripts as someone types them, one line per Enter.
+const TYPED_DDL_SCRIPTS: &[&str] = &[
+    "create procedure dbo.GetOrders\n@CustomerId int,\n@From datetime2 = null\nas\nbegin\nset nocount on;\nselect o.OrderId, o.Total\nfrom dbo.Orders o\nwhere o.CustomerId = @CustomerId;\nend\ngo\n",
+    "CREATE PROCEDURE dbo.p\nAS\nBEGIN\nSELECT 1;\nSELECT 2;\nIF @@ROWCOUNT > 0\nBEGIN\nPRINT 'x';\nEND\nEND\n",
+    "create function dbo.CalcTotal(@OrderId int)\nreturns decimal(18,2)\nas\nbegin\ndeclare @t decimal(18,2);\nselect @t = sum(Quantity) from dbo.OrderLines where OrderId = @OrderId;\nreturn @t;\nend\n",
+    "create function dbo.OrdersFor(@CustomerId int)\nreturns table\nas\nreturn (\nselect OrderId, Total\nfrom dbo.Orders\nwhere CustomerId = @CustomerId\n);\n",
+    "create view dbo.ActiveOrders\nas\nselect o.OrderId, o.Total\nfrom dbo.Orders o\nwhere o.Status = 'A';\n",
+    "create trigger dbo.trg on dbo.Orders\nafter insert, update\nas\nbegin\nset nocount on;\ninsert into dbo.Audit (OrderId)\nselect i.OrderId from inserted i;\nend\n",
+    "create index IX_Orders on dbo.Orders (CustomerId)\ninclude (Total)\nwhere Status = 'A';\n",
+    "alter table dbo.Orders\nadd Notes nvarchar(max) null,\nFlag bit not null;\n",
+    "select 1;\ncreate table #t (a int);\ninsert into #t values (1);\n",
+];
+
+/// Procedures, functions, views, triggers, indexes and ALTER TABLE typed key
+/// by key, with format as you go on and off: the caret never leaves the end
+/// of what was typed (the CREATE TABLE `(` + Enter bug, for every other
+/// kind of DDL), and the finished script ends on an unindented line.
+#[gpui::test]
+fn typing_ddl_scripts_keeps_the_caret_and_ends_unindented(cx: &mut gpui::TestAppContext) {
+    for script in TYPED_DDL_SCRIPTS {
+        for format_as_you_go in [true, false] {
+            let text = type_statement_key_by_key(cx, script, format_as_you_go);
+            let last_line = text.rsplit('\n').next().unwrap_or_default();
+            assert_eq!(
+                last_line, "",
+                "the line after the script is not indented (fayg={format_as_you_go}): {text:?}"
+            );
+            let closing = text.trim_end().rsplit('\n').next().unwrap_or_default();
+            if closing.trim_end_matches(';').eq_ignore_ascii_case("end")
+                || closing.eq_ignore_ascii_case("go")
+            {
+                assert!(
+                    !closing.starts_with([' ', '\t']),
+                    "the closing line sits at the margin (fayg={format_as_you_go}): {text:?}"
+                );
+            }
+        }
+    }
+}
+
+/// Without format as you go, Enter alone keeps a routine body in shape: the
+/// body stays one level in after `SELECT 1;`, a nested block goes one level
+/// deeper, and each `END` comes back out to its `BEGIN`.
+#[gpui::test]
+fn enter_keeps_a_procedure_body_indented_and_outdents_end(cx: &mut gpui::TestAppContext) {
+    let text = type_statement_key_by_key(
+        cx,
+        "CREATE PROCEDURE dbo.p\nAS\nBEGIN\nSELECT 1;\nSELECT 2;\nIF @@ROWCOUNT > 0\nBEGIN\nPRINT 'x';\nEND\nEND\n",
+        false,
+    );
+    assert_eq!(
+        text,
+        "CREATE PROCEDURE dbo.p\nAS\nBEGIN\n\tSELECT 1;\n\tSELECT 2;\n\tIF @@ROWCOUNT > 0\n\tBEGIN\n\t\tPRINT 'x';\n\tEND\nEND\n"
+    );
+}
+
+/// A trigger's `AFTER INSERT, UPDATE` names events: the `AS` under it is
+/// not the body of an UPDATE statement.
+#[gpui::test]
+fn enter_after_a_trigger_event_list_does_not_indent(cx: &mut gpui::TestAppContext) {
+    let text = type_statement_key_by_key(
+        cx,
+        "create trigger dbo.trg on dbo.Orders\nafter insert, update\nas\nbegin\nset nocount on;\nend\n",
+        false,
+    );
+    assert_eq!(
+        text,
+        "create trigger dbo.trg on dbo.Orders\nafter insert, update\nas\nbegin\n\tset nocount on;\nend\n"
+    );
+}
+
+#[test]
+fn block_end_lines_are_told_apart_from_case_ends() {
+    for line in ["end", "  END;", "\tEnd Try", "END CATCH;"] {
+        assert!(is_block_end_line(line), "{line:?}");
+    }
+    for line in ["end as total", "end,", "send", "end if", "select 1 end", ""] {
+        assert!(!is_block_end_line(line), "{line:?}");
+    }
+}
+
+#[test]
+fn open_block_indent_finds_the_matching_begin() {
+    let sql = "create proc p as\nbegin\n\tif 1 = 1\n\tbegin\n\t\tselect case when 1 = 1 then 'end' else 'begin' end;\n\t\t";
+    assert_eq!(open_block_indent(sql, sql.len()).as_deref(), Some("\t"));
+    let closed = format!("{sql}end\n\t");
+    assert_eq!(
+        open_block_indent(&closed, closed.len()).as_deref(),
+        Some("")
+    );
+    // A transaction is not a block, and an open CASE owns the next END.
+    assert_eq!(open_block_indent("begin tran;\n\t", 13), None);
+    let case = "begin\n\tselect case when a = 1 then 2\n\t";
+    assert_eq!(open_block_indent(case, case.len()), None);
+    assert_eq!(open_block_indent("select 1\n", 9), None);
+}
+
+#[test]
+fn a_semicolon_ends_the_select_column_context() {
+    let open = "begin\n\tselect a,\n\t\tb";
+    assert_eq!(select_column_context_start(open, open.len()), Some(7));
+    let done = "begin\n\tselect 1;";
+    assert_eq!(select_column_context_start(done, done.len()), None);
+    assert!(!in_select_column_context(done, done.len()));
+}
+
+#[test]
+fn statement_base_indent_is_the_statements_first_line() {
+    let view = "create view v as\nselect a\nfrom t\nwhere\n\ta = 1;";
+    assert_eq!(statement_base_indent(view, view.len()).as_deref(), Some(""));
+    let body = "create proc p as\nbegin\n\tselect a\n\tfrom t\n\twhere\n\t\ta = 1;";
+    assert_eq!(
+        statement_base_indent(body, body.len()).as_deref(),
+        Some("\t")
+    );
+    let second = "select 1;\n  update t\n    set a = 1;";
+    assert_eq!(
+        statement_base_indent(second, second.len()).as_deref(),
+        Some("  ")
+    );
+    assert_eq!(statement_base_indent("select 1", 8), None);
+}
+
+#[test]
+fn trigger_event_lists_do_not_ask_for_an_indent() {
+    for line in [
+        "after insert, update",
+        "for delete",
+        "instead of insert",
+        "AFTER INSERT, UPDATE, DELETE",
+    ] {
+        assert!(!ends_with_indent_keyword(line), "{line:?}");
+    }
+    assert!(ends_with_indent_keyword("begin"));
+}
+
+/// A tab bound to a connection formats in that engine's dialect when the
+/// setting is Auto Detect; an unbound tab keeps sniffing the text.
+#[gpui::test]
+fn auto_detect_formatting_follows_the_tabs_connection(cx: &mut gpui::TestAppContext) {
+    use sqlly_lang::sqlformat::SqlDialect;
+    use sqlly_lang::sqlmodel::DatabaseType;
+    let (view, cx) = cx.add_window_view(|_, cx| SqlEditor::new(cx));
+    let auto_detect =
+        crate::preferences::load_sql_formatting_preferences().dialect == SqlDialect::AutoDetect;
+    if !auto_detect {
+        return;
+    }
+    let dialect = |cx: &mut gpui::VisualTestContext| {
+        view.read_with(cx, |e, _| e.sql_formatting_preferences().dialect)
+    };
+    assert_eq!(dialect(cx), SqlDialect::AutoDetect);
+    for (database, expected) in [
+        (DatabaseType::SqlServer, SqlDialect::Tsql),
+        (DatabaseType::Postgres, SqlDialect::Postgresql),
+        (DatabaseType::MySql, SqlDialect::Mysql),
+        (DatabaseType::Sqlite, SqlDialect::Sqlite),
+        (DatabaseType::Oracle, SqlDialect::Oracle),
+        (DatabaseType::DuckDb, SqlDialect::AutoDetect),
+    ] {
+        view.update(cx, |e, cx| e.set_database_type(database, cx));
+        assert_eq!(dialect(cx), expected, "{database:?}");
+    }
+}

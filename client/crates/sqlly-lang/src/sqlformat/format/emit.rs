@@ -7,6 +7,7 @@ use super::casing::{
     TYPE_WORDS, apply_keyword_case, plain_identifier_ok, quote_plain, reserved_needs_quotes,
     safe_to_unquote, word_in,
 };
+use super::procedural::{Layout, Scanner};
 use super::segment::{
     BatchSeparator, Clause, ClauseKind, Statement, control_comment_state, find_alias_pos,
     find_case_end, segment_clauses, split_commas, split_statements_items,
@@ -70,6 +71,8 @@ pub(super) struct Formatter<'a, 'o, 'p> {
     /// The previous emitted token was `.` — the next word is the member of
     /// a qualified name (`o.type`), an identifier whatever it is spelled.
     after_dot: bool,
+    /// Open `BEGIN` / `IF` / `LOOP` blocks, carried across statements.
+    scanner: Scanner,
 }
 
 impl<'a, 'o, 'p> Formatter<'a, 'o, 'p> {
@@ -82,6 +85,7 @@ impl<'a, 'o, 'p> Formatter<'a, 'o, 'p> {
             ddl_body_depth: 0,
             after_cast_op: false,
             after_dot: false,
+            scanner: Scanner::new(o.dialect),
         }
     }
 
@@ -120,6 +124,7 @@ impl<'a, 'o, 'p> Formatter<'a, 'o, 'p> {
             self.emit_statement_body(stmt, multi_statement);
         }
         if let Some(sep) = &stmt.separator {
+            self.scanner.reset();
             self.emit_batch_separator(sep, has_body);
         }
     }
@@ -127,6 +132,16 @@ impl<'a, 'o, 'p> Formatter<'a, 'o, 'p> {
     /// A `GO` batch separator always gets its own line — never joined onto
     /// the statement before it or folded into a one-line rendering.
     fn emit_batch_separator(&mut self, sep: &BatchSeparator<'a>, after_body: bool) {
+        if let Some(delimiter) = &sep.custom {
+            if after_body {
+                self.w.space();
+            } else {
+                self.w.newline(0, 0);
+            }
+            self.w.push(delimiter);
+            self.w.last = LastTok::Operand;
+            return;
+        }
         let verbatim = !self.enabled;
         self.w.newline(0, 0);
         if after_body {
@@ -175,7 +190,19 @@ impl<'a, 'o, 'p> Formatter<'a, 'o, 'p> {
                 }
             }
         }
+        if stmt.verbatim {
+            self.scanner.reset();
+            self.w.newline(0, 0);
+            self.w
+                .push(self.src[stmt.src_start..stmt.src_end].trim_end());
+            self.w.last = LastTok::Operand;
+            return;
+        }
         let started_enabled = self.enabled;
+        // The scanner sees every statement, formatted or not: it tracks the
+        // blocks open across the statements of a batch.
+        let mut items = stmt.items.clone();
+        let units = self.scanner.scan(&mut items);
         if self.o.p.respect_control_comments {
             for item in &stmt.items[first_code..] {
                 if let TokenKind::Comment(_) = item.tok.kind
@@ -200,7 +227,57 @@ impl<'a, 'o, 'p> Formatter<'a, 'o, 'p> {
             return;
         }
 
-        let nodes = build_tree(&stmt.items);
+        if units.is_empty() {
+            // A lone `;`.
+            self.w.newline(self.scanner.body_indent(), 0);
+            self.w.join();
+            self.w.push(";");
+            return;
+        }
+        let multi = multi_statement || units.len() > 1 || units[0].indent > 0;
+        let max_blanks = self.o.p.max_consecutive_blank_lines() as usize;
+        let mut last_indent = 0;
+        for (ui, unit) in units.iter().enumerate() {
+            let unit_items = &items[unit.start..unit.end];
+            if unit_items.is_empty() {
+                continue;
+            }
+            last_indent = unit.indent;
+            self.w.newline(unit.indent, 0);
+            if ui > 0 {
+                let blanks = unit_items[0].newlines_before.saturating_sub(1) as usize;
+                self.w.blank_lines(blanks.min(max_blanks));
+            }
+            let semicolon = stmt.semicolon.is_some() && ui + 1 == units.len();
+            self.emit_unit(unit_items, unit.indent, unit.layout, multi, semicolon);
+        }
+
+        if stmt.semicolon.is_some() {
+            match self.o.p.semicolon_style {
+                SemicolonStyle::EndOfStatement => {
+                    self.w.join();
+                    self.w.push(";");
+                }
+                SemicolonStyle::OwnLine => {
+                    self.w.newline(last_indent, 0);
+                    self.w.push(";");
+                }
+            }
+        }
+    }
+
+    /// One unit of a statement (see [`Scanner`]): a whole plain statement,
+    /// or a header line, block word, or body statement of a routine.
+    /// `semicolon` says the statement's `;` follows this unit.
+    fn emit_unit(
+        &mut self,
+        items: &[Item<'a>],
+        indent: usize,
+        layout: Layout,
+        multi_statement: bool,
+        semicolon: bool,
+    ) {
+        let nodes = build_tree(items);
         // Whole-statement one-liner shortcuts.
         let shortcut_limit = if !multi_statement && self.o.p.keep_short_queries_on_one_line {
             Some(self.o.p.short_query_max_length().max(0) as usize)
@@ -218,38 +295,23 @@ impl<'a, 'o, 'p> Formatter<'a, 'o, 'p> {
             DmlStyle::Compact => Some(shortcut_limit.unwrap_or(0).max(self.o.max_line())),
             DmlStyle::Expanded => None,
         };
+        let lead = indent * self.o.indent_unit_width();
         if let Some(limit) = compact_limit
             && let Some(compact) = self.render_compact(&nodes)
-            && compact.chars().count() + usize::from(stmt.semicolon.is_some()) <= limit
+            && lead + compact.chars().count() + usize::from(semicolon) <= limit
         {
-            self.w.newline(0, 0);
             self.w.push(&compact);
-            if stmt.semicolon.is_some() {
-                self.w.join();
-                self.w.push(";");
-            }
             return;
         }
 
         let ctx = Ctx {
-            clause_indent: 0,
+            clause_indent: indent,
             clause_extra: 0,
             top_level: true,
         };
-        self.w.newline(0, 0);
-        self.emit_query_block(&nodes, &ctx);
-
-        if stmt.semicolon.is_some() {
-            match self.o.p.semicolon_style {
-                SemicolonStyle::EndOfStatement => {
-                    self.w.join();
-                    self.w.push(";");
-                }
-                SemicolonStyle::OwnLine => {
-                    self.w.newline(0, 0);
-                    self.w.push(";");
-                }
-            }
+        match layout {
+            Layout::Flat => self.emit_flow(&nodes, &ctx),
+            Layout::Auto => self.emit_query_block(&nodes, &ctx),
         }
     }
 
@@ -545,7 +607,11 @@ impl<'a, 'o, 'p> Formatter<'a, 'o, 'p> {
         let has_or = groups
             .iter()
             .any(|(op, _)| op_word(*op).as_deref() == Some("or"));
-        let parenthesize = self.o.p.parenthesize_mixed_boolean_logic && has_and && has_or;
+        // A condition still being typed (`… AND b OR`) is left as written:
+        // the parens would land differently once the operand arrives.
+        let dangling = groups.last().is_some_and(|(_, range)| range.is_empty());
+        let parenthesize =
+            self.o.p.parenthesize_mixed_boolean_logic && has_and && has_or && !dangling;
 
         let placement = self.o.p.boolean_operator_placement;
         self.w.new_scope();
@@ -1535,7 +1601,12 @@ impl<'a, 'o, 'p> Formatter<'a, 'o, 'p> {
                 self.w.mark(AlignTag::DataType);
             }
             if let Node::Tok(item) = &def[idx] {
-                if word_text(&item.tok).is_some() {
+                // `LineTotal AS (Quantity * UnitPrice)`: a computed column
+                // has an expression where the type would be.
+                if def[idx].is_word("as") {
+                    self.emit_node(&def[idx], ctx);
+                    idx += 1;
+                } else if word_text(&item.tok).is_some() {
                     self.emit_word_as(item, WordRole::DataType);
                     idx += 1;
                     if idx < def.len()
@@ -1575,7 +1646,15 @@ impl<'a, 'o, 'p> Formatter<'a, 'o, 'p> {
                 self.w.mark(AlignTag::Nullability);
                 tagged_null = true;
             }
-            self.emit_node(n, ctx);
+            match n {
+                Node::Tok(item)
+                    if item.tok.kind == TokenKind::Ident(IdentQuote::None)
+                        && word_in(COLUMN_MODIFIERS, item.tok.text) =>
+                {
+                    self.emit_word_as(item, WordRole::Keyword)
+                }
+                _ => self.emit_node(n, ctx),
+            }
             idx += 1;
         }
     }
@@ -1817,6 +1896,15 @@ impl<'a, 'o, 'p> Formatter<'a, 'o, 'p> {
             {
                 WordRole::DataType
             }
+            // A reserved word the lexer's short keyword list misses (`IF`,
+            // `WHILE`, `PRINT`, `CURSOR`, …) cannot be a bare name.
+            TokenKind::Ident(IdentQuote::None)
+                if !self.after_dot
+                    && !item.is_keyword_name
+                    && is_reserved_in_dialect(self.o.dialect, item.tok.text) =>
+            {
+                WordRole::Keyword
+            }
             _ => WordRole::Identifier,
         }
     }
@@ -1969,6 +2057,28 @@ impl<'a, 'o, 'p> Formatter<'a, 'o, 'p> {
 }
 
 /// The statement is INSERT / UPDATE / DELETE / MERGE (by its first word).
+/// Column options the keyword tables leave as plain names. Only consulted
+/// behind a column's name and type, where a bare name cannot stand.
+const COLUMN_MODIFIERS: &[&str] = &[
+    "persisted",
+    "sparse",
+    "rowguidcol",
+    "filestream",
+    "masked",
+    "hidden",
+    "stored",
+    "virtual",
+    "generated",
+    "always",
+    "collate",
+    "autoincrement",
+    "auto_increment",
+    "unsigned",
+    "zerofill",
+    "invisible",
+    "visible",
+];
+
 fn is_dml_statement(nodes: &[Node]) -> bool {
     nodes.iter().find(|n| !n.is_comment()).is_some_and(|n| {
         ["insert", "update", "delete", "merge"]

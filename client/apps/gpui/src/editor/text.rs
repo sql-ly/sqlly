@@ -560,7 +560,11 @@ pub(super) fn format_as_you_go_edit(
     let range = utf8_safe_edit_range(content, span.0..span.1);
     let target = content[range.clone()].trim_end();
     let range = range.start..range.start + target.len();
-    if !looks_like_statement(target) || cursor < range.start || cursor > range.end {
+    if !looks_like_statement(target)
+        || cursor < range.start
+        || cursor > range.end
+        || has_unclosed_paren(target)
+    {
         return None;
     }
     let formatted = crate::sql_formatter::format_sql(target, prefs, Some(indent));
@@ -590,6 +594,36 @@ pub(super) fn format_as_you_go_edit(
         .chars()
         .find(|ch| !ch.is_whitespace());
     while let Some(ch) = formatted[caret..].chars().next() {
+        if matches!(ch, '"' | ']' | '`') {
+            caret += ch.len_utf8();
+        } else {
+            break;
+        }
+    }
+    // Parentheses are not mapped by index, so ones the user typed between
+    // the last meaningful character and the caret (`create table t (|`,
+    // `count(*)|`) are stepped over here — otherwise Enter lands before
+    // them and the new line opens above the `(` every time.
+    let typed_start = match before.checked_sub(1) {
+        None => range.start,
+        Some(last) => {
+            let at = range.start + reflow_offset(&content[range.start..cursor], last)?;
+            at + content[at..].chars().next()?.len_utf8()
+        }
+    };
+    for typed in content[typed_start..cursor]
+        .chars()
+        .filter(|ch| matches!(ch, '(' | ')'))
+    {
+        let rest = &formatted[caret..];
+        let gap = rest.len() - rest.trim_start().len();
+        if rest[gap..].starts_with(typed) {
+            caret += gap + typed.len_utf8();
+        } else {
+            break;
+        }
+    }
+    while let Some(ch) = formatted[caret..].chars().next() {
         let closing_quote = matches!(ch, '"' | ']' | '`');
         let added_paren = ch == ')' && next_typed != Some(')');
         if closing_quote || added_paren {
@@ -600,6 +634,23 @@ pub(super) fn format_as_you_go_edit(
     }
     let caret = range.start + caret;
     Some((range, formatted.to_string(), caret))
+}
+
+/// Whether `text` opens a parenthesis it never closes (strings and comments
+/// ignored) — a column list or subquery still being typed. Format as you go
+/// leaves those alone: the formatter would pull the next line up onto the
+/// `(` and can drop a half-typed list's trailing comma.
+fn has_unclosed_paren(text: &str) -> bool {
+    use sqlly_lang::sqllex::{StrictLexer, TokenKind};
+    let mut depth = 0i32;
+    for token in StrictLexer::tokenize(text, sqlly_lang::sqlmodel::Dialect::SqlServer) {
+        match token.kind {
+            TokenKind::LParen => depth += 1,
+            TokenKind::RParen => depth -= 1,
+            _ => {}
+        }
+    }
+    depth > 0
 }
 
 /// Characters a reformat may add, drop, or move without changing meaning

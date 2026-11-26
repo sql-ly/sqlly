@@ -52,9 +52,10 @@ pub use clause_insert::{
     required_group_by_labels,
 };
 pub use complete::{
-    SLOT_VALUE_SCORE, add_builtin_function_items, at_at_items, at_drop_table_name, complete,
-    complete_from_snapshot, current_prefix, default_snippets, join_awaiting_on,
-    join_condition_without_on, query_aliases, replace_builtin_function_items, slot_value_items,
+    DDL_KINDS, SLOT_VALUE_SCORE, add_builtin_function_items, at_at_items, at_drop_table_name,
+    complete, complete_from_snapshot, current_prefix, ddl_items, default_snippets,
+    join_awaiting_on, join_condition_without_on, query_aliases, replace_builtin_function_items,
+    retain_rowset_functions_in_table_slot, slot_value_items,
 };
 pub use quoting::{QuotedPath, apply_identifier_quoting, quote_path_if_needed, quoted_path_at};
 pub use rank::{

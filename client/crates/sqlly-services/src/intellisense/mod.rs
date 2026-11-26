@@ -373,6 +373,7 @@ fn enriched_pipeline<S: IntellisenseService + ?Sized>(
             current_prefix(req.sql, req.cursor),
         );
     }
+    let mut ddl_slot = false;
     if let Some(system_names) = sqlly_intel::intellisense::at_at_items(dialect, req.sql, req.cursor)
     {
         // After `@@` only the dialect's system functions / variables make
@@ -389,14 +390,31 @@ fn enriched_pipeline<S: IntellisenseService + ?Sized>(
         // (feedback ifb_0fbc).
         items = settings;
         decision.allowed_kinds = [CompletionKind::Keyword].into_iter().collect();
+    } else if let Some(ddl) =
+        sqlly_intel::intellisense::ddl_items(dialect, req.sql, req.cursor, req.catalog)
+    {
+        // Inside a DDL head each slot takes one specific thing — the tables
+        // after `ALTER TABLE ▏`, the engine's types after a column name, a
+        // key's columns — and never a built-in function, a join condition
+        // or an EXEC snippet.
+        items = ddl;
+        decision.allowed_kinds = sqlly_intel::intellisense::DDL_KINDS.into_iter().collect();
+        ddl_slot = true;
     } else {
         sqlly_intel::intellisense::replace_builtin_function_items(
             &mut items,
             dialect,
             current_prefix(req.sql, req.cursor),
         );
+        sqlly_intel::intellisense::retain_rowset_functions_in_table_slot(
+            &mut items, req.sql, req.cursor,
+        );
     }
-    let slot_values = sqlly_intel::intellisense::slot_value_items(dialect, req.sql, req.cursor);
+    let slot_values = if ddl_slot {
+        Vec::new()
+    } else {
+        sqlly_intel::intellisense::slot_value_items(dialect, req.sql, req.cursor)
+    };
     if !slot_values.is_empty() {
         decision.allowed_kinds.insert(CompletionKind::Keyword);
         items.extend(slot_values);
@@ -405,7 +423,7 @@ fn enriched_pipeline<S: IntellisenseService + ?Sized>(
     // Merge stored-procedure EXEC declaration snippets (prefix-filtered only —
     // empty prefix skips every procedure to avoid O(all procs) snippet work).
     let prefix = current_prefix(req.sql, req.cursor).to_string();
-    if !prefix.is_empty() {
+    if !prefix.is_empty() && !ddl_slot {
         for proc in req.procedures {
             let label = proc.display_name();
             if let Some(fs) = qualified_object_score(&prefix, &label) {
@@ -423,8 +441,13 @@ fn enriched_pipeline<S: IntellisenseService + ?Sized>(
     }
 
     // Merge FK join candidates (when in a JOIN/ON context).
-    let join_items = joins::join_candidates_quoted(req.catalog, &ctx, req.database_type);
-    if ctx.join_on_missing {
+    let join_items = if ddl_slot {
+        Vec::new()
+    } else {
+        joins::join_candidates_quoted(req.catalog, &ctx, req.database_type)
+    };
+    if ddl_slot {
+    } else if ctx.join_on_missing {
         // `JOIN T t ▏`: the joined table's condition comes first and nothing
         // else belongs here yet — no other tables, no columns (feedback
         // ifb_e275). The bare ON keyword stays for a hand-written condition.
@@ -477,6 +500,7 @@ fn enriched_pipeline<S: IntellisenseService + ?Sized>(
 
     if let Some(vc) = &ctx.value_context
         && ctx.intent == IntelliSenseIntent::ValueLiteral
+        && !ddl_slot
     {
         let mut kind = column_value_kind_from_catalog(
             req.catalog,

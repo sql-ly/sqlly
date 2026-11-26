@@ -11,6 +11,7 @@
 //! - [`text`]: cursor prefix / previous-word helpers
 
 mod context;
+mod ddl;
 mod dotted;
 mod filesystem;
 mod query_local;
@@ -37,6 +38,7 @@ use crate::intellisense::types::{
 
 pub use context::{at_drop_table_name, join_awaiting_on, join_condition_without_on};
 pub(crate) use context::{detect_clause_context, looks_like_keyword, query_table_refs};
+pub use ddl::{DDL_KINDS, ddl_items};
 use dotted::{DottedPrefix, add_dotted_items};
 use filesystem::add_filesystem_items;
 pub use query_local::query_aliases;
@@ -62,6 +64,11 @@ pub fn complete(sql: &str, cursor: usize, catalog: &CompletionCatalog) -> Vec<Co
     if let Some(items) = crate::intellisense::set_statement_items(Dialect::SqlServer, sql, cursor) {
         return items;
     }
+    // A DDL head (`ALTER TABLE ▏`, a column's type, a key's column list)
+    // takes one specific thing per slot — never the query path's functions.
+    if let Some(items) = ddl_items(Dialect::SqlServer, sql, cursor, catalog) {
+        return items;
+    }
     let previous = previous_word(sql, cursor).to_ascii_uppercase();
     let ctx = clause_context_through_calls(sql, cursor);
     let query_refs = query_table_refs(sql, cursor);
@@ -83,7 +90,10 @@ pub fn complete(sql: &str, cursor: usize, catalog: &CompletionCatalog) -> Vec<Co
     // Just after a complete WHERE / HAVING / ON test: only AND / OR and the
     // following clauses once a separator is typed, and nothing while the caret
     // still touches the test. See feedback ifb_6f67.
+    // A bare `@` is the test's right-hand side being started with a variable,
+    // not a finished test.
     if !prefix.contains('.')
+        && prefix != "@"
         && let Some(keywords) =
             crate::modelengine::intellisense::after_predicate_keywords(sql, cursor)
     {
@@ -209,6 +219,18 @@ pub fn complete(sql: &str, cursor: usize, catalog: &CompletionCatalog) -> Vec<Co
                 &prefix,
             );
         }
+        // Inside a `BEGIN … END` block the statement that closes it.
+        if inside_open_block(sql, cursor.min(sql.len()) - prefix.len()) {
+            push_match(
+                &mut items,
+                "END",
+                "END",
+                CompletionKind::Keyword,
+                CompletionSource::Keyword,
+                10,
+                &prefix,
+            );
+        }
     }
     // `INSERT ▏` continues with INTO (a fresh statement, see feedback
     // ifb_3798); the general keyword list does not carry it.
@@ -223,7 +245,23 @@ pub fn complete(sql: &str, cursor: usize, catalog: &CompletionCatalog) -> Vec<Co
             &prefix,
         );
     }
+    // An open `CASE` continues with its own keywords; without them `EN▏`
+    // found only functions.
+    if !prefix.is_empty() && inside_open_case(sql, cursor - prefix.len().min(cursor)) {
+        for (rank, keyword) in ["END", "ELSE", "WHEN", "THEN"].into_iter().enumerate() {
+            push_match(
+                &mut items,
+                keyword,
+                keyword,
+                CompletionKind::Keyword,
+                CompletionSource::Keyword,
+                100 - rank as i32,
+                &prefix,
+            );
+        }
+    }
     add_builtin_function_items(&mut items, Dialect::SqlServer, &prefix);
+    retain_rowset_functions_in_table_slot(&mut items, sql, cursor);
     for database in &catalog.databases {
         push_match(
             &mut items,
@@ -646,6 +684,113 @@ fn at_statement_head(sql: &str, cursor: usize, prefix: &str) -> bool {
     .iter()
     .any(|w| last_word.eq_ignore_ascii_case(w));
     !previous_line.is_empty() && !ends_open && !continues
+}
+
+/// Whether a `CASE` in the statement before `end` is still waiting for its
+/// `END`.
+fn inside_open_case(sql: &str, end: usize) -> bool {
+    let range = crate::intellisense::statement_range(sql, end, Dialect::SqlServer);
+    let start = range.start.min(end);
+    let mut open = 0i32;
+    for token in scan::scan_tokens(&sql[start..end]) {
+        if token.kind != scan::ScanTokenKind::Word {
+            continue;
+        }
+        let word = token.text.as_str();
+        if word.eq_ignore_ascii_case("CASE") {
+            open += 1;
+        } else if word.eq_ignore_ascii_case("END") {
+            open = (open - 1).max(0);
+        }
+    }
+    open > 0
+}
+
+/// The built-in functions that return rows, by engine-neutral name: the only
+/// ones a FROM / JOIN source slot can hold.
+const ROWSET_FUNCTIONS: &[&str] = &[
+    "OPENJSON",
+    "OPENROWSET",
+    "OPENQUERY",
+    "OPENXML",
+    "OPENDATASOURCE",
+    "STRING_SPLIT",
+    "GENERATE_SERIES",
+    "GENERATE_SUBSCRIPTS",
+    "CHANGETABLE",
+    "CONTAINSTABLE",
+    "FREETEXTTABLE",
+    "UNNEST",
+    "JSON_TABLE",
+    "JSON_EACH",
+    "JSON_TREE",
+    "JSON_EACH_TEXT",
+    "JSONB_EACH",
+    "JSONB_EACH_TEXT",
+    "JSON_TO_RECORD",
+    "JSONB_TO_RECORD",
+    "JSON_TO_RECORDSET",
+    "JSONB_TO_RECORDSET",
+    "JSON_POPULATE_RECORDSET",
+    "JSONB_POPULATE_RECORDSET",
+    "JSON_ARRAY_ELEMENTS",
+    "JSON_ARRAY_ELEMENTS_TEXT",
+    "JSONB_ARRAY_ELEMENTS",
+    "JSONB_ARRAY_ELEMENTS_TEXT",
+    "JSON_OBJECT_KEYS",
+    "JSONB_OBJECT_KEYS",
+    "REGEXP_SPLIT_TO_TABLE",
+    "REGEXP_MATCHES",
+    "STRING_TO_TABLE",
+    "XMLTABLE",
+    "TABLE",
+    "FLATTEN",
+    "PRAGMA_TABLE_INFO",
+];
+
+/// In a FROM / JOIN source slot, drops the built-in functions that return a
+/// single value: `FROM ab▏` has no use for `ABS`. Functions from the catalog
+/// (the user's own table-valued ones) are kept.
+pub fn retain_rowset_functions_in_table_slot(
+    items: &mut Vec<CompletionItem>,
+    sql: &str,
+    cursor: usize,
+) {
+    if !clause_context_through_calls(sql, cursor).is_table_expecting() {
+        return;
+    }
+    items.retain(|item| {
+        !(item.kind == CompletionKind::Function && item.source == CompletionSource::Builtin)
+            || ROWSET_FUNCTIONS
+                .iter()
+                .any(|name| item.label.eq_ignore_ascii_case(name))
+    });
+}
+
+/// Whether a `BEGIN` before `end` is still waiting for its `END` (a routine
+/// body, an `IF` block, a `TRY`). `CASE … END` pairs are counted out.
+fn inside_open_block(sql: &str, end: usize) -> bool {
+    let mut open = 0i32;
+    let mut after_begin = false;
+    for token in scan::scan_tokens(&sql[..end]) {
+        if token.kind != scan::ScanTokenKind::Word {
+            after_begin = false;
+            continue;
+        }
+        let word = token.text.as_str();
+        let is = |keyword: &str| word.eq_ignore_ascii_case(keyword);
+        // `BEGIN TRANSACTION` opens no block.
+        if after_begin && (is("TRAN") || is("TRANSACTION") || is("DISTRIBUTED") || is("WORK")) {
+            open -= 1;
+        }
+        after_begin = is("BEGIN");
+        if after_begin || is("CASE") {
+            open += 1;
+        } else if is("END") {
+            open = (open - 1).max(0);
+        }
+    }
+    open > 0
 }
 
 /// Expression-level keywords offered inside column-expecting clauses

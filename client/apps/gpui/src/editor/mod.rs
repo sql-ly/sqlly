@@ -449,6 +449,9 @@ pub struct SqlEditor {
     ddl_nav_prefs: DdlNavigationPreferences,
     /// Active connection engine for literal rendering (paste-as-IN-list).
     database_type: sqlly_lang::sqlmodel::DatabaseType,
+    /// Whether `database_type` came from a connection rather than the
+    /// default: only then does it settle the formatter's Auto Detect.
+    database_type_known: bool,
     /// FIM (fill-in-the-middle) ghost-text suggestion. `Some(text)` when an
     /// inline AI completion is visible at the cursor; the ghost text is
     /// rendered in a dim color and accepted via Tab. Mirrors the Swift
@@ -728,6 +731,7 @@ impl SqlEditor {
             editor_prefs,
             ddl_nav_prefs: DdlNavigationPreferences::default(),
             database_type: sqlly_lang::sqlmodel::DatabaseType::SqlServer,
+            database_type_known: false,
             fim_suggestion: None,
             fim_visible: false,
             needs_focus: true,
@@ -1488,6 +1492,7 @@ impl SqlEditor {
         db: sqlly_lang::sqlmodel::DatabaseType,
         cx: &mut Context<Self>,
     ) {
+        self.database_type_known = true;
         if self.database_type != db {
             self.database_type = db;
             self.statement_cache.borrow_mut().0 = None;
@@ -1497,6 +1502,38 @@ impl SqlEditor {
 
     pub fn database_type(&self) -> sqlly_lang::sqlmodel::DatabaseType {
         self.database_type
+    }
+
+    /// The saved SQL formatting settings, with a dialect left on Auto Detect
+    /// settled by the tab's connection. Sniffing the text alone reads a
+    /// half-typed `alter table t add c bit` as PostgreSQL on a SQL Server
+    /// tab and leaves `add` and `bit` in the typed case.
+    fn sql_formatting_preferences(&self) -> sqlly_lang::sqlformat::SqlFormattingPreferences {
+        use sqlly_lang::sqlformat::SqlDialect;
+        use sqlly_lang::sqlmodel::{DatabaseType, Dialect};
+        let mut prefs = crate::preferences::load_sql_formatting_preferences();
+        if prefs.dialect != SqlDialect::AutoDetect || !self.database_type_known {
+            return prefs;
+        }
+        prefs.dialect = match (self.database_type, self.database_type.family()) {
+            // Engines that only borrow a family's grammar keep sniffing.
+            (
+                DatabaseType::Access
+                | DatabaseType::DuckDb
+                | DatabaseType::Spanner
+                | DatabaseType::Databricks
+                | DatabaseType::ClickHouse,
+                _,
+            ) => SqlDialect::AutoDetect,
+            (DatabaseType::Snowflake, _) => SqlDialect::Snowflake,
+            (DatabaseType::Oracle, _) => SqlDialect::Oracle,
+            (_, Dialect::SqlServer) => SqlDialect::Tsql,
+            (_, Dialect::Postgres) => SqlDialect::Postgresql,
+            (_, Dialect::MySql) => SqlDialect::Mysql,
+            (_, Dialect::Sqlite) => SqlDialect::Sqlite,
+            _ => SqlDialect::AutoDetect,
+        };
+        prefs
     }
 
     /// Number of runnable statements in the buffer (dialect-aware).
@@ -2485,7 +2522,7 @@ impl SqlEditor {
             &self.content,
             replace_end.min(statement_end)..statement_end.max(replace_end),
         );
-        let prefs = crate::preferences::load_sql_formatting_preferences();
+        let prefs = self.sql_formatting_preferences();
         let indent = crate::sql_formatter::EditorIndent {
             style: self.editor_prefs.indent_style,
             width: self.editor_prefs.spaces_per_tab(),
@@ -5124,9 +5161,42 @@ impl SqlEditor {
 
     fn insert_newline(&mut self, cx: &mut Context<Self>) {
         self.clear_extra_cursors();
+        self.outdent_block_end_line(cx);
         let range = self.selection().unwrap_or(self.cursor..self.cursor);
         let insert = self.newline_insert_text(range.start);
         self.replace_selection(&insert, cx);
+    }
+
+    /// Enter at the end of a line that is only a block's `END`: pull that
+    /// line back to its `BEGIN`'s indentation first. The `END` was typed at
+    /// the body's depth because that is where the caret was.
+    fn outdent_block_end_line(&mut self, cx: &mut Context<Self>) {
+        if self.selection().is_some() || self.is_markdown() {
+            return;
+        }
+        let cursor = self.cursor.min(self.content.len());
+        let line_start = self.content[..cursor].rfind('\n').map_or(0, |i| i + 1);
+        let at_line_end = self.content[cursor..]
+            .chars()
+            .next()
+            .is_none_or(|c| c == '\n');
+        let line = &self.content[line_start..cursor];
+        if !at_line_end || !is_block_end_line(line) {
+            return;
+        }
+        let current = line_indent_at(&self.content, line_start).to_string();
+        let Some(target) = open_block_indent(&self.content, line_start + current.len()) else {
+            return;
+        };
+        if target.len() >= current.len() || !current.starts_with(&target) {
+            return;
+        }
+        let removed = current.len() - target.len();
+        self.selection_anchor = Some(line_start + target.len());
+        self.cursor = line_start + current.len();
+        self.replace_selection("", cx);
+        self.selection_anchor = None;
+        self.cursor = cursor - removed;
     }
 
     /// The text Enter inserts at `at`: a line break plus the indentation the
@@ -5154,9 +5224,23 @@ impl SqlEditor {
             String::new()
         };
 
+        // A `;` finishes the statement: the next one starts where this one
+        // did, not under its last clause.
+        if after_indent.trim_end().ends_with(';')
+            && let Some(base) = statement_base_indent(&self.content, at)
+            && base.len() < indent.len()
+            && indent.starts_with(&base)
+        {
+            return format!("\n{base}");
+        }
+
+        // The list's last item steps back out to the SELECT's depth — only
+        // when the items were indented below it. `SELECT 1` inside a BEGIN
+        // block has nothing to step out of but the block itself.
         let final_indent = if extra.is_empty()
-            && in_select_column_context(&self.content, at)
             && !after_indent.trim_end().ends_with(',')
+            && select_column_context_start(&self.content, at)
+                .is_some_and(|select| line_indent_at(&self.content, select).len() < indent.len())
         {
             remove_one_indent_unit(&indent, &self.editor_prefs.indent_unit())
         } else {
@@ -5641,7 +5725,7 @@ impl SqlEditor {
         if self.is_markdown() || !looks_like_statement(&text) {
             return text;
         }
-        let prefs = crate::preferences::load_sql_formatting_preferences();
+        let prefs = self.sql_formatting_preferences();
         if !prefs.format_on_paste {
             return text;
         }
@@ -6928,7 +7012,7 @@ impl SqlEditor {
             return false;
         }
         // Cached after the first read — this runs on every Enter.
-        let prefs = crate::preferences::load_sql_formatting_preferences();
+        let prefs = self.sql_formatting_preferences();
         #[cfg(test)]
         let enabled = self
             .format_as_you_go_override
@@ -6982,7 +7066,7 @@ impl SqlEditor {
     /// Format the selection (whole buffer when nothing is selected) with the
     /// current on-disk SQL formatting preferences, as one undoable edit.
     pub fn format_sql_buffer(&mut self, cx: &mut Context<Self>) {
-        let prefs = crate::preferences::load_sql_formatting_preferences();
+        let prefs = self.sql_formatting_preferences();
         let range = self.selection().unwrap_or(0..self.content.len());
         self.format_sql_range(range, &prefs, cx);
     }
@@ -6990,7 +7074,7 @@ impl SqlEditor {
     /// Format Document: the whole buffer with the current SQL formatting
     /// settings, whatever is selected, as one undoable edit.
     pub fn format_sql_document(&mut self, cx: &mut Context<Self>) {
-        let prefs = crate::preferences::load_sql_formatting_preferences();
+        let prefs = self.sql_formatting_preferences();
         self.format_sql_document_with(&prefs, cx);
     }
 

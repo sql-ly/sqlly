@@ -1396,6 +1396,13 @@ pub(super) fn list_clause_at(sql: &str, cursor: usize) -> Option<ListClause> {
 /// Scans the content up to `cursor` tracking parenthesis depth. At depth 0
 /// (relative to the start), records the last SELECT and checks for terminators.
 pub(super) fn in_select_column_context(content: &str, cursor: usize) -> bool {
+    select_column_context_start(content, cursor).is_some()
+}
+
+/// The offset of the `SELECT` whose column list holds `cursor` (see
+/// [`in_select_column_context`]). A `;` ends the statement, so a finished
+/// `SELECT 1;` is not a list the next line continues.
+pub(super) fn select_column_context_start(content: &str, cursor: usize) -> Option<usize> {
     let bytes = content.as_bytes();
     let end = cursor.min(content.len());
     let mut paren_depth: i32 = 0;
@@ -1411,6 +1418,12 @@ pub(super) fn in_select_column_context(content: &str, cursor: usize) -> bool {
         }
         if b == b')' {
             paren_depth -= 1;
+            i += 1;
+            continue;
+        }
+        if b == b';' && paren_depth <= 0 {
+            last_select_at_depth0 = None;
+            paren_depth = 0;
             i += 1;
             continue;
         }
@@ -1434,7 +1447,102 @@ pub(super) fn in_select_column_context(content: &str, cursor: usize) -> bool {
         i += 1;
     }
 
-    last_select_at_depth0.is_some()
+    last_select_at_depth0
+}
+
+/// The leading whitespace of the line holding `offset`.
+pub(super) fn line_indent_at(content: &str, offset: usize) -> &str {
+    let offset = offset.min(content.len());
+    let line_start = content[..offset].rfind('\n').map_or(0, |i| i + 1);
+    let line = &content[line_start..];
+    let len = line
+        .find(|c: char| c != ' ' && c != '\t')
+        .unwrap_or(line.len());
+    &line[..len]
+}
+
+/// The indentation of the first line of the statement that ends just before
+/// `offset` (the caret after its `;`). The statement starts after the
+/// previous `;`, a batch `GO`, or the `BEGIN` of the block it sits in.
+pub(super) fn statement_base_indent(content: &str, offset: usize) -> Option<String> {
+    use sqlly_lang::sqllex::{StrictLexer, TokenKind};
+    let before = &content[..offset.min(content.len())];
+    let tokens: Vec<_> = StrictLexer::tokenize(before, sqlly_lang::sqlmodel::Dialect::SqlServer)
+        .into_iter()
+        .filter(|t| !t.is_trivia())
+        .collect();
+    let (last, body) = tokens.split_last()?;
+    if last.kind != TokenKind::Semicolon {
+        return None;
+    }
+    let mut first = 0;
+    for (i, token) in body.iter().enumerate() {
+        let word = token.text;
+        if token.kind == TokenKind::Semicolon || word.eq_ignore_ascii_case("go") {
+            first = i + 1;
+        } else if word.eq_ignore_ascii_case("begin") {
+            first = i + 1;
+            if body.get(i + 1).is_some_and(|next| {
+                next.text.eq_ignore_ascii_case("try") || next.text.eq_ignore_ascii_case("catch")
+            }) {
+                first = i + 2;
+            }
+        }
+    }
+    let start = body.get(first)?;
+    Some(line_indent_at(content, start.span.start).to_string())
+}
+
+/// Whether `line` (trimmed) is nothing but a block's closing `END` — `END`,
+/// `END;`, `END TRY`, `END CATCH` — and not an `END` that closes a `CASE`
+/// mid-expression (`END AS x`, `END,`).
+pub(super) fn is_block_end_line(line: &str) -> bool {
+    let line = line.trim().trim_end_matches(';').trim_end();
+    let mut words = line.split_whitespace();
+    let (Some(first), second, None) = (words.next(), words.next(), words.next()) else {
+        return false;
+    };
+    first.eq_ignore_ascii_case("end")
+        && second.is_none_or(|w| w.eq_ignore_ascii_case("try") || w.eq_ignore_ascii_case("catch"))
+}
+
+/// The indentation of the line whose `BEGIN` an `END` at `end_offset` would
+/// close, or `None` when no block is open there (or the innermost open
+/// construct is a `CASE`, whose `END` belongs to an expression).
+pub(super) fn open_block_indent(content: &str, end_offset: usize) -> Option<String> {
+    use sqlly_lang::sqllex::{StrictLexer, TokenKind};
+    let before = &content[..end_offset.min(content.len())];
+    let tokens: Vec<_> = StrictLexer::tokenize(before, sqlly_lang::sqlmodel::Dialect::SqlServer)
+        .into_iter()
+        .filter(|t| !t.is_trivia())
+        .collect();
+    // (offset of the opener, whether it is a block rather than a CASE)
+    let mut open: Vec<(usize, bool)> = Vec::new();
+    for (i, token) in tokens.iter().enumerate() {
+        if !matches!(token.kind, TokenKind::Keyword | TokenKind::Ident(_)) {
+            continue;
+        }
+        let word = token.text;
+        if word.eq_ignore_ascii_case("begin") {
+            // `BEGIN TRAN` opens a transaction, not a block.
+            let transaction = tokens.get(i + 1).is_some_and(|next| {
+                ["tran", "transaction", "distributed", "work"]
+                    .iter()
+                    .any(|w| next.text.eq_ignore_ascii_case(w))
+            });
+            if !transaction {
+                open.push((token.span.start, true));
+            }
+        } else if word.eq_ignore_ascii_case("case") {
+            open.push((token.span.start, false));
+        } else if word.eq_ignore_ascii_case("end") {
+            open.pop();
+        }
+    }
+    match open.last() {
+        Some(&(at, true)) => Some(line_indent_at(content, at).to_string()),
+        _ => None,
+    }
 }
 
 /// Returns the net open-paren depth across the full content prefix up to
@@ -1506,6 +1614,18 @@ pub(super) fn ends_with_indent_keyword(text: &str) -> bool {
     }
 
     let last = words.last().unwrap().to_lowercase();
+
+    // A trigger's event list (`AFTER INSERT, UPDATE`) names the statements;
+    // it does not start one.
+    if matches!(last.as_str(), "insert" | "update" | "delete") && words.len() >= 2 {
+        let previous = words[words.len() - 2].trim_end_matches(',').to_lowercase();
+        if matches!(
+            previous.as_str(),
+            "after" | "before" | "for" | "of" | "or" | "insert" | "update" | "delete"
+        ) {
+            return false;
+        }
+    }
 
     if last == "by" && words.len() >= 2 {
         let penultimate = words[words.len() - 2].to_lowercase();

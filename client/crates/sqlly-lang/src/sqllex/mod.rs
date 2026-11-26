@@ -264,7 +264,11 @@ impl<'a> StrictLexer<'a> {
             && (self.dialect == Dialect::SqlServer
                 || (matches!(self.dialect, Dialect::MySql | Dialect::Oracle)
                     && self.peek_at(1).is_some_and(|b| {
-                        is_ident_start(b) || (b == b'@' && self.dialect == Dialect::MySql)
+                        // MySQL accounts quote either side:
+                        // `` `root`@`localhost` ``, `'app'@'%'`.
+                        is_ident_start(b)
+                            || (self.dialect == Dialect::MySql
+                                && matches!(b, b'@' | b'`' | b'\'' | b'"'))
                     })))
         {
             self.pos += 1;
